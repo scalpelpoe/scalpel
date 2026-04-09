@@ -1,0 +1,107 @@
+{
+  "name": "scalpel",
+  "version": "0.8.4",
+  "description": "Path of Exile loot filter overlay editor",
+  "author": "Scalpel",
+  "license": "AGPL-3.0-only",
+  "homepage": "https://scalpel.fourth.party",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scalpelpoe/scalpel.git"
+  },
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "dist:win": "npm run build && electron-builder --win --x64",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "postinstall": "electron-rebuild",
+    "build:installer": "node installer/build-installer.js",
+    "lint": "eslint src/",
+    "format": "prettier --write src/",
+    "format:check": "prettier --check src/",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepare": "husky"
+  },
+  "dependencies": {
+    "electron-overlay-window": "^4.0.2",
+    "electron-store": "^8.2.0",
+    "uiohook-napi": "^1.5.4"
+  },
+  "devDependencies": {
+    "@electron/asar": "^4.1.1",
+    "@icon-park/react": "^1.4.2",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@typescript-eslint/eslint-plugin": "^8.58.1",
+    "@typescript-eslint/parser": "^8.58.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.27",
+    "electron": "^32.2.0",
+    "electron-builder": "^25.1.8",
+    "electron-rebuild": "^3.2.9",
+    "electron-vite": "^2.3.0",
+    "eslint": "^10.2.0",
+    "eslint-config-prettier": "^10.1.8",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "postcss": "^8.5.9",
+    "prettier": "^3.8.1",
+    "rcedit": "^5.0.2",
+    "react": "^18.3.1",
+    "react-colorful": "^5.6.1",
+    "react-dom": "^18.3.1",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.6.3",
+    "vitest": "^4.1.4"
+  },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": ["eslint --fix", "prettier --write"],
+    "src/**/*.{css,json,md}": ["prettier --write"]
+  },
+  "build": {
+    "appId": "com.filterscalpel.app",
+    "productName": "Scalpel",
+    "directories": {
+      "output": "dist"
+    },
+    "afterPack": "./scripts/afterPack.js",
+    "win": {
+      "target": "nsis",
+      "icon": "resources/icon.ico",
+      "signAndEditExecutable": true
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "allowElevation": true,
+      "createDesktopShortcut": false,
+      "artifactName": "Scalpel-Setup.${ext}"
+    },
+    "extraResources": [
+      {
+        "from": "resources/icon.ico",
+        "to": "icon.ico"
+      }
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "node_modules/uiohook-napi/**/*",
+      "node_modules/electron-overlay-window/**/*"
+    ],
+    "files": [
+      "out/**/*",
+      "node_modules/**/*",
+      "!node_modules/.cache",
+      "!node_modules/*/{test,tests,__tests__}/**",
+      "!node_modules/*/{example,examples}/**",
+      "!node_modules/*/*.md",
+      "!node_modules/*/*.ts",
+      "!node_modules/*/{.github,.vscode}/**"
+    ],
+    "npmRebuild": true,
+    "buildDependenciesFromSource": false
+  }
+}

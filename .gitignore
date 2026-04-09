@@ -1,0 +1,28 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+
+# AI slop confirmed
+.claude/
+
+# Internal docs
+docs/
+
+# Environment
+.env
+.env.*
+
+# Cloudflare
+.wrangler/
+
+# Signing certificates
+*.pfx
+*.p12
+
+# OS
+.DS_Store
+.vs/
+*.log

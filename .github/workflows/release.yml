@@ -1,0 +1,65 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Pack ASAR
+        run: node scripts/pack-asar.js
+
+      - name: Extract version
+        id: version
+        shell: bash
+        run: echo "version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
+
+      - name: Install wrangler
+        run: npm install -g wrangler
+
+      - name: Upload ASAR to R2
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $channel = "stable"
+          $distDir = "dist/v$version"
+
+          Write-Host "Uploading v$version to $channel channel..."
+
+          wrangler r2 object put "filterscalpel-releases/$channel/v$version/app.asar" --file="$distDir/app.asar" --remote
+
+          if (Test-Path "$distDir/app.asar.unpacked.zip") {
+            wrangler r2 object put "filterscalpel-releases/$channel/v$version/app.asar.unpacked.zip" --file="$distDir/app.asar.unpacked.zip" --remote
+          }
+
+          wrangler r2 object put "filterscalpel-releases/$channel/manifest.json" --file="$distDir/manifest.json" --remote
+
+          Write-Host "Release v$version published to $channel channel"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
