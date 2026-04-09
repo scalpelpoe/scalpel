@@ -4,7 +4,8 @@ import { createWriteStream, existsSync, readFileSync, writeFileSync, mkdirSync, 
 import { join, dirname } from 'path'
 import type { InstallManifest } from '../shared/types'
 
-const RELEASES_BASE = 'https://scalpel.fourth.party/releases'
+const GITHUB_REPO = 'scalpelpoe/scalpel'
+const GITHUB_API = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`
 const ELECTRON_BASE = 'https://github.com/electron/electron/releases/download'
 const CHECK_DELAY = 5000
 const CHECK_INTERVAL = 60_000
@@ -45,7 +46,13 @@ function writeLocalManifest(manifest: InstallManifest): void {
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: { 'Cache-Control': 'no-cache' } })
+  const res = await fetch(url, {
+    headers: {
+      'Cache-Control': 'no-cache',
+      'User-Agent': 'Scalpel-Updater',
+      Accept: 'application/json',
+    },
+  })
   if (!res.ok) throw new Error(`HTTP ${res.status} fetching ${url}`)
   return res.json() as Promise<T>
 }
@@ -84,12 +91,31 @@ function computeSha512(filePath: string): string {
   return createHash('sha512').update(data).digest('base64')
 }
 
-async function checkForUpdates(channel: string): Promise<void> {
+/** Cached release asset URLs from the latest GitHub Release */
+let cachedAssetUrls: Record<string, string> = {}
+
+async function checkForUpdates(_channel: string): Promise<void> {
   if (checking) return
   checking = true
 
   try {
-    const remote = await fetchJson<InstallManifest>(`${RELEASES_BASE}/${channel}/manifest.json`)
+    // Fetch latest release from GitHub API
+    const release = await fetchJson<{
+      tag_name: string
+      assets: Array<{ name: string; browser_download_url: string }>
+    }>(GITHUB_API)
+
+    // Find manifest.json asset
+    const manifestAsset = release.assets.find((a) => a.name === 'manifest.json')
+    if (!manifestAsset) return
+
+    // Cache all asset URLs for downloads
+    cachedAssetUrls = {}
+    for (const asset of release.assets) {
+      cachedAssetUrls[asset.name] = asset.browser_download_url
+    }
+
+    const remote = await fetchJson<InstallManifest>(manifestAsset.browser_download_url)
     const local = readLocalManifest()
 
     // If no local manifest, write one from current running versions
@@ -147,7 +173,11 @@ async function downloadAsarUpdate(): Promise<void> {
   const stagingDir = getStagingDir()
   mkdirSync(stagingDir, { recursive: true })
   const asarNewPath = join(stagingDir, 'app.asar.new')
-  const asarUrl = `${RELEASES_BASE}/${pendingChannel}/${remote.asarUrl}`
+  const asarUrl = cachedAssetUrls['app.asar']
+  if (!asarUrl) {
+    console.error('[Updater] No app.asar asset found in release')
+    return
+  }
 
   let lastError: Error | null = null
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
@@ -161,9 +191,9 @@ async function downloadAsarUpdate(): Promise<void> {
         throw new Error(`Hash mismatch: expected ${remote.asarSha512}, got ${hash}`)
       }
 
-      // Download unpacked native modules zip if present in manifest
-      if (remote.unpackedUrl) {
-        const unpackedZipUrl = `${RELEASES_BASE}/${pendingChannel}/${remote.unpackedUrl}`
+      // Download unpacked native modules zip if present in release assets
+      const unpackedZipUrl = cachedAssetUrls['app.asar.unpacked.zip']
+      if (unpackedZipUrl) {
         const unpackedZipPath = join(stagingDir, 'app.asar.unpacked.zip')
         await downloadFile(unpackedZipUrl, unpackedZipPath, remote.unpackedSize || 0)
 
@@ -205,7 +235,11 @@ async function downloadFullUpgrade(): Promise<void> {
   const stagingDir = getStagingDir()
   mkdirSync(stagingDir, { recursive: true })
   const electronZipUrl = `${ELECTRON_BASE}/v${remote.electronVersion}/electron-v${remote.electronVersion}-win32-x64.zip`
-  const asarUrl = `${RELEASES_BASE}/${pendingChannel}/${remote.asarUrl}`
+  const asarUrl = cachedAssetUrls['app.asar']
+  if (!asarUrl) {
+    console.error('[Updater] No app.asar asset found in release')
+    return
+  }
 
   try {
     const zipPath = join(stagingDir, 'electron.zip')
