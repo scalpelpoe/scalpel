@@ -478,8 +478,8 @@ export function SettingsPanel({
         </>
       )}
 
-      {/* Changelog - always visible */}
-      {tab !== 'faq' && (
+      {/* Changelog */}
+      {tab === 'faq' && (
         <>
           {/* Changelog */}
           <section>
