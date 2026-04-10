@@ -15,7 +15,6 @@ let mainWindow: BrowserWindow | null = null
 let installDir: string = ''
 let checking = false
 let pendingRemote: InstallManifest | null = null
-let pendingChannel: string = 'stable'
 
 /** User-writable directory for staging downloads before applying */
 function getStagingDir(): string {
@@ -154,16 +153,14 @@ async function checkForUpdates(_channel: string): Promise<void> {
   }
 }
 
-async function handleAsarUpdate(remote: InstallManifest, channel: string): Promise<void> {
+async function handleAsarUpdate(remote: InstallManifest, _channel: string): Promise<void> {
   mainWindow?.webContents.send('update-available', remote.version)
   pendingRemote = remote
-  pendingChannel = channel
 }
 
-async function handleFullUpgrade(remote: InstallManifest, channel: string): Promise<void> {
+async function handleFullUpgrade(remote: InstallManifest, _channel: string): Promise<void> {
   mainWindow?.webContents.send('update-available', remote.version)
   pendingRemote = remote
-  pendingChannel = channel
 }
 
 async function downloadAsarUpdate(): Promise<void> {
