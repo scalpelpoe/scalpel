@@ -242,21 +242,8 @@ export function SettingsPanel({
 
       {tab === 'macros' && (
         <>
-          {/* Stash tab scrolling */}
-          <section>
-            <div
-              onClick={() => update('stashScrollEnabled', !settings.stashScrollEnabled)}
-              className="flex items-center gap-[10px] cursor-pointer select-none"
-            >
-              <Toggle
-                checked={settings.stashScrollEnabled ?? false}
-                onChange={(val) => update('stashScrollEnabled', val)}
-              />
-              <span className="text-xs text-text">Stash tab scrolling (Ctrl + Scroll Wheel)</span>
-            </div>
-          </section>
-
-          {/* Chat Commands */}
+          {/* Chat Macros */}
+          <div className="text-[10px] text-accent tracking-[1.5px] uppercase mt-3 font-bold">Chat Macros</div>
           <section>
             <div className="flex flex-col gap-[6px]">
               {(settings.chatCommands ?? []).map((cmd, i) => (
@@ -297,6 +284,21 @@ export function SettingsPanel({
               >
                 + Add Command
               </button>
+            </div>
+          </section>
+
+          {/* Other Macros */}
+          <div className="text-[10px] text-accent tracking-[1.5px] uppercase mt-3 font-bold">Other Macros</div>
+          <section>
+            <div
+              onClick={() => update('stashScrollEnabled', !settings.stashScrollEnabled)}
+              className="flex items-center gap-[10px] cursor-pointer select-none"
+            >
+              <Toggle
+                checked={settings.stashScrollEnabled ?? false}
+                onChange={(val) => update('stashScrollEnabled', val)}
+              />
+              <span className="text-xs text-text">Stash tab scrolling (Ctrl + Scroll Wheel)</span>
             </div>
           </section>
         </>
