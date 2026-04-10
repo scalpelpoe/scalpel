@@ -43,11 +43,11 @@ function updatePanelRect(): void {
   const sidebarWidth = Math.round(tb.height * POE_SIDEBAR_RATIO)
   // panelRect is in physical pixels (for uiohook mouse hit testing)
   const physPanelWidth = PANEL_WIDTH * sf * overlayScale
-  const physPanelHeight = reportedPanelHeight * sf
+  const physPanelHeight = reportedPanelHeight * sf * overlayScale
   const panelLeft =
     (panelSide === 'left' ? tb.x + sidebarWidth - 1 : tb.x + tb.width - sidebarWidth - physPanelWidth + 1) +
-    dragOffsetX * sf
-  const top = tb.y + (PANEL_TOP + dragOffsetY) * sf
+    dragOffsetX * sf * overlayScale
+  const top = tb.y + (PANEL_TOP + dragOffsetY) * sf * overlayScale
   panelRect = {
     left: panelLeft,
     top,
