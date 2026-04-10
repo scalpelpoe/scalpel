@@ -20,11 +20,11 @@ jobs:
         env:
           npm_config_ignore_scripts: true
 
+      - name: Install Python setuptools (needed by node-gyp)
+        run: pip install setuptools
+
       - name: Rebuild native modules
         run: npx electron-rebuild
-        env:
-          npm_config_python: python3
-          SETUPTOOLS_USE_DISTUTILS: stdlib
 
       - name: Lint
         run: npm run lint
