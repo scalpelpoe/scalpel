@@ -5,6 +5,9 @@ on:
     tags:
       - 'v*'
 
+permissions:
+  contents: write
+
 jobs:
   release:
     runs-on: windows-latest
@@ -33,10 +36,8 @@ jobs:
       - name: Pack ASAR
         run: node scripts/pack-asar.js
 
-      - name: Build installer
-        run: npx electron-builder --win --x64
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build installer (no publish - we handle that separately)
+        run: npx electron-builder --win --x64 --publish never
 
       - name: Extract version
         id: version
