@@ -1,0 +1,29 @@
+# Dependencies
+node_modules/
+
+# Build output
+out/
+dist/
+
+# AI slop confirmed
+.claude/
+
+# Internal docs
+docs/
+
+# Environment
+.env
+.env.*
+
+# Signing certificates
+*.pfx
+*.p12
+
+# Local state
+.wrangler/
+test-maps.md
+
+# OS
+.DS_Store
+.vs/
+*.log

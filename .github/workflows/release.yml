@@ -1,0 +1,55 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Python setuptools (needed by node-gyp)
+        run: pip install setuptools
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      - name: Pack ASAR
+        run: node scripts/pack-asar.js
+
+      - name: Build installer (no publish - we handle that separately)
+        run: npx electron-builder --win --x64 --publish never
+
+      - name: Extract version
+        id: version
+        shell: bash
+        run: echo "version=$(node -p 'require("./package.json").version')" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            dist/v${{ steps.version.outputs.version }}/app.asar
+            dist/v${{ steps.version.outputs.version }}/app.asar.unpacked.zip
+            dist/v${{ steps.version.outputs.version }}/manifest.json
+            dist/Scalpel-Setup.exe
