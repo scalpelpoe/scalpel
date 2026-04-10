@@ -91,20 +91,9 @@ function computeSha512(filePath: string): string {
 /** Cached release asset URLs from the latest GitHub Release */
 let cachedAssetUrls: Record<string, string> = {}
 
-function debugLog(msg: string): void {
-  try {
-    const logPath = join(app.getPath('userData'), 'updater-debug.log')
-    const line = `${new Date().toISOString()} ${msg}\n`
-    require('fs').appendFileSync(logPath, line)
-  } catch {
-    /* ignore */
-  }
-}
-
 async function checkForUpdates(_channel: string): Promise<void> {
   if (checking) return
   checking = true
-  debugLog('checkForUpdates started')
 
   try {
     // Fetch latest release from GitHub API
@@ -123,11 +112,8 @@ async function checkForUpdates(_channel: string): Promise<void> {
       cachedAssetUrls[asset.name] = asset.browser_download_url
     }
 
-    debugLog(`manifest URL: ${manifestAsset.browser_download_url}`)
     const remote = await fetchJson<InstallManifest>(manifestAsset.browser_download_url)
-    debugLog(`remote version: ${remote.version}`)
     const local = readLocalManifest()
-    debugLog(`local version: ${local?.version ?? 'NO MANIFEST'}`)
 
     // If no local manifest, write one from current running versions
     if (!local) {
@@ -153,16 +139,12 @@ async function checkForUpdates(_channel: string): Promise<void> {
       ([name, version]) => local?.nativeModules[name] !== version,
     )
 
-    debugLog(`electronChanged: ${electronChanged}, nativeModulesChanged: ${nativeModulesChanged}`)
     if (electronChanged || nativeModulesChanged) {
-      debugLog('triggering full upgrade')
       await handleFullUpgrade(remote, _channel)
     } else {
-      debugLog('triggering asar update')
       await handleAsarUpdate(remote, _channel)
     }
   } catch (err) {
-    debugLog(`ERROR: ${(err as Error).message}`)
     console.error('[Updater] Check failed:', (err as Error).message)
   } finally {
     checking = false

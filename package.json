@@ -1,6 +1,6 @@
 {
   "name": "scalpel",
-  "version": "0.9.0-rc8",
+  "version": "0.9.0",
   "description": "Path of Exile loot filter overlay editor",
   "author": "Scalpel",
   "license": "AGPL-3.0-only",

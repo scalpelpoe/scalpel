@@ -1,5 +1,12 @@
 export const CHANGELOG: { version: string; notes: string[] }[] = [
   {
+    version: '0.9.0',
+    notes: [
+      'Scalpel is now open source and distributed via GitHub',
+      'Fixed issue with pricing socketed gems are supported by lines',
+    ],
+  },
+  {
     version: '0.8.4',
     notes: [
       'Fixed a bunch of broken price check stuff (Nightmare maps, 2 line mods, mods that specify sizes, keystones, skills, negative mods, flask mods, etc. It was exhausting and not exhaustive)',

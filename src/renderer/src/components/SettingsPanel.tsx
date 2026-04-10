@@ -96,12 +96,15 @@ export function SettingsPanel({
   return (
     <div className={`flex flex-col ${isOverlay ? 'gap-5 bg-bg-card rounded p-4 pb-5' : 'gap-6 pb-[18px]'}`}>
       <div className="flex items-center justify-between">
-        <h2
-          className="section-title"
-          style={!isOverlay ? { color: 'var(--accent)', fontSize: 16, fontWeight: 700 } : undefined}
-        >
-          {showFaq ? 'FAQ' : 'Settings'}
-        </h2>
+        <div className="flex flex-col">
+          <h2
+            className="section-title"
+            style={!isOverlay ? { color: 'var(--accent)', fontSize: 16, fontWeight: 700 } : undefined}
+          >
+            {showFaq ? 'FAQ' : 'Settings'}
+          </h2>
+          {!showFaq && <span className="text-[9px] text-accent opacity-60">Beta {__APP_VERSION__}</span>}
+        </div>
         <div className="flex gap-[6px]">
           {!showFaq && (
             <button onClick={() => setShowFaq(true)} className="text-[11px] text-text-dim px-3 py-1.5">

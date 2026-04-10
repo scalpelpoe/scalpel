@@ -43,6 +43,9 @@ export function TitleBar({
       <span className="text-accent font-bold tracking-[1px] flex items-center gap-1.5">
         <img src={appIcon} alt="" className="w-4 h-4" />
         Scalpel
+        <span className="text-[9px] text-accent font-medium opacity-60 self-end mb-px -ml-0.5">
+          Beta {__APP_VERSION__}
+        </span>
       </span>
       <div className="flex gap-1.5 items-center">
         {/* Tools tab -- only visible when active */}

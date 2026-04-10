@@ -2,8 +2,6 @@
 
 Path of Exile's first ever fourth-party tool. An overlay to edit your filter, price check items, and tons more.
 
-Scalpel is a standalone Electron app that runs alongside PoE as an overlay. It does not inject into the game, read game memory, or automate gameplay.
-
 ## Features
 
 - **Filter Editor** - Edit your loot filter in-game quickly and precisely (like a Scalpel, get it)
