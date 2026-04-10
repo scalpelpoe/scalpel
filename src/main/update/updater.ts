@@ -156,10 +156,10 @@ async function checkForUpdates(_channel: string): Promise<void> {
     debugLog(`electronChanged: ${electronChanged}, nativeModulesChanged: ${nativeModulesChanged}`)
     if (electronChanged || nativeModulesChanged) {
       debugLog('triggering full upgrade')
-      await handleFullUpgrade(remote, channel)
+      await handleFullUpgrade(remote, _channel)
     } else {
       debugLog('triggering asar update')
-      await handleAsarUpdate(remote, channel)
+      await handleAsarUpdate(remote, _channel)
     }
   } catch (err) {
     debugLog(`ERROR: ${(err as Error).message}`)
