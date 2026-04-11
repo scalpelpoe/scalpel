@@ -4,6 +4,7 @@ import { writeFileSync, existsSync } from 'fs'
 import { join } from 'path'
 import { app, globalShortcut } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
+import path from 'path'
 
 // ─── Accelerator → uiohook keycode mapping ────────────────────────────────────
 
@@ -199,23 +200,34 @@ export function sendChatCommand(command: string): Promise<void> {
     const safeCmd = cmd
       .replace(/[+^%~(){}[\]]/g, '{$&}') // Wrap SendKeys special chars in braces to send literally
       .replace(/"/g, '""') // Escape double quotes for VBScript string
-    writeFileSync(
-      script,
-      [
-        'Set WshShell = CreateObject("WScript.Shell")',
-        'WshShell.AppActivate "Path of Exile"',
-        'WScript.Sleep 50',
-        `WshShell.SendKeys "{ENTER}${safeCmd}{ENTER}"`,
-      ].join('\n'),
-    )
-    execFile('cscript', ['//Nologo', '//B', script], (err) => {
-      if (err) {
-        console.error('[hotkeys] Failed to send chat command:', err)
-        reject(err)
-        return
-      }
-      resolve()
-    })
+    if (process.platform === 'linux') {
+      execFile('bash', [getResourcesScriptPath('chat_command.sh'), safeCmd], (err) => {
+        if (err) {
+          console.error('[hotkeys] Failed to send reload command:', err)
+          reject(err)
+          return
+        }
+        resolve()
+      })
+    } else {
+      writeFileSync(
+        script,
+        [
+          'Set WshShell = CreateObject("WScript.Shell")',
+          'WshShell.AppActivate "Path of Exile"',
+          'WScript.Sleep 50',
+          `WshShell.SendKeys "{ENTER}${safeCmd}{ENTER}"`,
+        ].join('\n'),
+      )
+      execFile('cscript', ['//Nologo', '//B', script], (err) => {
+        if (err) {
+          console.error('[hotkeys] Failed to send chat command:', err)
+          reject(err)
+          return
+        }
+        resolve()
+      })
+    }
   })
 }
 
@@ -247,56 +259,32 @@ function isStashGridArea(x: number, y: number, tb: { x: number; y: number; width
 
 let reloadFilterScript: string | null = null
 
+function getResourcesScriptPath(script: string): string {
+  if (!app.isPackaged) {
+    // dev folder
+    return path.join(process.cwd(), 'resources', 'scripts', 'linux', script)
+  } else {
+    // prod folder
+    return path.join(process.resourcesPath, 'scripts', 'linux', script)
+  }
+}
+
 function getReloadFilterScript(): string {
   if (reloadFilterScript && existsSync(reloadFilterScript)) return reloadFilterScript
   const dir = app.getPath('userData')
 
-  if (process.platform === 'linux' && process.env.XDG_SESSION_TYPE?.toLowerCase() === 'wayland') {
-    reloadFilterScript = join(dir, 'reloadfilter.sh')
-    // Activate PoE, open chat with Enter, type command, send Enter
-    writeFileSync(
-      reloadFilterScript,
-      `#!/bin/bash
+  reloadFilterScript = join(dir, 'reloadfilter.vbs')
+  // Activate PoE, open chat with Enter, type command, send Enter
+  writeFileSync(
+    reloadFilterScript,
+    [
+      'Set WshShell = CreateObject("WScript.Shell")',
+      'WshShell.AppActivate "Path of Exile"',
+      'WScript.Sleep 100',
+      'WshShell.SendKeys "{ENTER}/reloaditemfilter{ENTER}"',
+    ].join('\n'),
+  )
 
-# Save actual clipboard
-OLD_CLIPBOARD=$(wl-paste -n)
-
-wl-copy "/reloaditemfilter"
-
-TARGET_WINDOW=$(xdotool search --name "Path of Exile" | head -n 1)
-if [ -z "$TARGET_WINDOW" ]; then
-    echo "Poe window not found."
-    exit 1
-fi
-
-xdotool windowactivate "$TARGET_WINDOW"
-sleep 0.1
-
-# <Enter>
-ydotool key 28:1 28:0
-sleep 0.05
-# <Ctrl> + <V>
-ydotool key 29:1 47:1 47:0 29:0
-sleep 0.05
-# <Enter>
-ydotool key 28:1 28:0
-
-sleep 0.2
-echo -n "$OLD_CLIPBOARD" | wl-copy`,
-    )
-  } else {
-    reloadFilterScript = join(dir, 'reloadfilter.vbs')
-    // Activate PoE, open chat with Enter, type command, send Enter
-    writeFileSync(
-      reloadFilterScript,
-      [
-        'Set WshShell = CreateObject("WScript.Shell")',
-        'WshShell.AppActivate "Path of Exile"',
-        'WScript.Sleep 100',
-        'WshShell.SendKeys "{ENTER}/reloaditemfilter{ENTER}"',
-      ].join('\n'),
-    )
-  }
   return reloadFilterScript
 }
 
@@ -304,10 +292,9 @@ echo -n "$OLD_CLIPBOARD" | wl-copy`,
  * Send /reloaditemfilter to PoE's chat to reload the loot filter in-game.
  */
 export function sendReloadFilterToPoE(): Promise<void> {
-  if (process.platform === 'linux' && process.env.XDG_SESSION_TYPE?.toLowerCase() === 'wayland') {
+  if (process.platform === 'linux') {
     return new Promise((resolve, reject) => {
-      const script = getReloadFilterScript()
-      execFile('bash', [script], (err) => {
+      execFile('bash', [getResourcesScriptPath('chat_command.sh'), '/reloaditemfilter'], (err) => {
         if (err) {
           console.error('[hotkeys] Failed to send reload command:', err)
           reject(err)
@@ -335,31 +322,50 @@ export function sendReloadFilterToPoE(): Promise<void> {
  * Send /itemfilter {name} to PoE's chat to switch the active filter in-game.
  */
 export function sendItemFilterCommand(filterName: string, currentFilter?: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const dir = app.getPath('userData')
-    const script = join(dir, 'itemfilter.vbs')
-    const lines = [
-      'Set WshShell = CreateObject("WScript.Shell")',
-      'WshShell.AppActivate "Path of Exile"',
-      'WScript.Sleep 100',
-    ]
-    if (currentFilter) {
-      // Switch to the current filter first to force PoE to rescan its filter directory,
-      // so it discovers the newly created file before we switch to it
-      lines.push(`WshShell.SendKeys "{ENTER}/itemfilter ${currentFilter}{ENTER}"`)
-      lines.push('WScript.Sleep 500')
-    }
-    lines.push(`WshShell.SendKeys "{ENTER}/itemfilter ${filterName}{ENTER}"`)
-    writeFileSync(script, lines.join('\n'))
-    execFile('cscript', ['//Nologo', '//B', script], (err) => {
-      if (err) {
-        console.error('[hotkeys] Failed to send itemfilter command:', err)
-        reject(err)
-        return
+  if (process.platform === 'linux') {
+    return new Promise((resolve, reject) => {
+      const args = [getResourcesScriptPath('chat_command.sh')]
+
+      if (currentFilter) {
+        args.push('/itemfilter ${currentFilter}')
       }
-      resolve()
+      args.push('/itemfilter ${filterName}')
+      execFile('bash', args, (err) => {
+        if (err) {
+          console.error('[hotkeys] Failed to send itemfilter command:', err)
+          reject(err)
+          return
+        }
+        resolve()
+      })
     })
-  })
+  } else {
+    return new Promise((resolve, reject) => {
+      const dir = app.getPath('userData')
+      const script = join(dir, 'itemfilter.vbs')
+      const lines = [
+        'Set WshShell = CreateObject("WScript.Shell")',
+        'WshShell.AppActivate "Path of Exile"',
+        'WScript.Sleep 100',
+      ]
+      if (currentFilter) {
+        // Switch to the current filter first to force PoE to rescan its filter directory,
+        // so it discovers the newly created file before we switch to it
+        lines.push(`WshShell.SendKeys "{ENTER}/itemfilter ${currentFilter}{ENTER}"`)
+        lines.push('WScript.Sleep 500')
+      }
+      lines.push(`WshShell.SendKeys "{ENTER}/itemfilter ${filterName}{ENTER}"`)
+      writeFileSync(script, lines.join('\n'))
+      execFile('cscript', ['//Nologo', '//B', script], (err) => {
+        if (err) {
+          console.error('[hotkeys] Failed to send itemfilter command:', err)
+          reject(err)
+          return
+        }
+        resolve()
+      })
+    })
+  }
 }
 
 // ─── Ctrl+C sender ───────────────────────────────────────────────────────────
@@ -382,9 +388,8 @@ function getSendKeysScript(): string {
  */
 export function sendCtrlCToActiveWindow(): Promise<void> {
   return new Promise((resolve, reject) => {
-    //test if linux on wayland
-    if (process.platform === 'linux' && process.env.XDG_SESSION_TYPE?.toLowerCase() === 'wayland')
-      execFile('ydotool', ['key', '-d', '40', '29:1', '46:1', '46:0', '29:0'], (err) => {
+    if (process.platform === 'linux')
+      execFile('bash', [getResourcesScriptPath('ctrl_c.sh')], (err) => {
         if (err) {
           console.error('[hotkeys] Failed to send Ctrl+C:', err)
           reject(err)

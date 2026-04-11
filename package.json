@@ -14,9 +14,9 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "dist:win": "npm run build && electron-builder --win --x64",
+    "dist:linux": "npm run build && electron-builder --linux AppImage --x64",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
-    "postinstall": "electron-rebuild",
-    "lint": "eslint src/",
+    "postinstall": "if [ \"$(uname)\" = \"Linux\" ]; then CFLAGS=\"-Wno-error=incompatible-pointer-types\" CXXFLAGS=\"-Wno-error=incompatible-pointer-types\" electron-rebuild; else electron-rebuild; fi",    "lint": "eslint src/",
     "format": "prettier --write src/",
     "format:check": "prettier --check src/",
     "test": "vitest run",
@@ -77,6 +77,15 @@
       "icon": "resources/icon.ico",
       "signAndEditExecutable": true
     },
+    "linux": {
+        "target": ["AppImage"],
+        "category": "Game",
+        "executableName": "scalpel",
+        "icon": "resources/icon.png",
+        "desktop": {
+          "StartupWMClass": "scalpel"
+        }
+      },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
@@ -89,12 +98,22 @@
       {
         "from": "resources/icon.ico",
         "to": "icon.ico"
+      },
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "resources/scripts",
+        "to": "scripts",
+        "filter": ["**/*"]
       }
     ],
     "asar": true,
     "asarUnpack": [
       "node_modules/uiohook-napi/**/*",
-      "node_modules/electron-overlay-window/**/*"
+      "node_modules/electron-overlay-window/**/*",
+            "resources/scripts/**/*"
     ],
     "files": [
       "out/**/*",

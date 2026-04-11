@@ -124,9 +124,10 @@ let tray: Tray | null = null
 
 function getAppIcon(): Electron.NativeImage {
   // In packaged app, resources/ is at process.resourcesPath; in dev, it's at project root
-  const devPath = join(__dirname, '../../resources/icon.ico')
-  const prodPath = join(process.resourcesPath, 'icon.ico')
-  const iconPath = existsSync(prodPath) ? prodPath : devPath
+  const iconExt = process.platform === 'win32' ? 'icon.ico' : 'icon.png'
+  const devPath = join(__dirname, '../../resources', iconExt)
+  const prodPath = join(process.resourcesPath, iconExt)
+  const iconPath = app.isPackaged ? prodPath : devPath
   return nativeImage.createFromPath(iconPath)
 }
 

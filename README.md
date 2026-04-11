@@ -19,6 +19,32 @@ Path of Exile's first ever fourth-party tool. An overlay to edit your filter, pr
 - Windows 10+ (Linux soon)
 - You're okay being an early adopter (Some of this ain't work good)
 
+### Linux
+To ensure features like chat commands and overlay window work correctly on Linux, you need to install a few system dependencies.
+
+#### Arch Linux / CachyOS / Manjaro
+```sh
+sudo pacman -S xdotool wl-clipboard ydotool
+```
+
+#### Ubuntu / Debian / Linux Mint
+```sh
+sudo apt update
+sudo apt install xdotool wl-clipboard ydotool
+```
+
+#### Fedora
+```sh
+sudo dnf install xdotool wl-clipboard ydotool
+```
+#### Post-Installation
+
+ydotool requires access to the /dev/uinput device to simulate key presses. You may need to:
+* Start the daemon: sudo ydotoold (or enable it via systemd).
+* Permissions: Add your user to the input group or use a udev rule if you want to avoid using sudo.
+* Note: On most modern distributions, xdotool works out of the box for window focus, while wl-clipboard provides the wl-copy and wl-paste commands used by the script.
+
+
 ## Official Releases
 
 Pre-built releases are available on the [Releases](https://github.com/scalpelpoe/scalpel/releases) page.
