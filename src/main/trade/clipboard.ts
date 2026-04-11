@@ -2,7 +2,7 @@ import { clipboard } from 'electron'
 import type { PoeItem, ItemRarity, AdvancedMod } from '../../shared/types'
 import itemClassesData from '../../shared/data/items/item-classes.json'
 
-const itemClasses = itemClassesData as Record<string, { bases: string[]; size: [number, number] }>
+const itemClasses = itemClassesData as unknown as Record<string, { bases: string[]; size: [number, number] }>
 const knownBaseTypes = new Set(Object.values(itemClasses).flatMap((c) => c.bases))
 const ITEM_SIZES: Record<string, [number, number]> = Object.fromEntries(
   Object.entries(itemClasses).map(([k, v]) => [k, v.size]),

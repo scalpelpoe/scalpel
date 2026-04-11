@@ -43,8 +43,11 @@ export const api = {
   reloadFilter: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('reload-filter'),
   lookupBaseType: (baseType: string, itemClass: string, rarity?: string, uniqueName?: string): Promise<void> =>
     ipcRenderer.invoke('lookup-base-type', baseType, itemClass, rarity, uniqueName),
-  getDivCardTiers: (): Promise<{ colors: Record<string, string>; cardTiers: Record<string, string> }> =>
-    ipcRenderer.invoke('get-div-card-tiers'),
+  getDivCardTiers: (): Promise<{
+    tierStyles: Record<string, { border: string; bg: string; text: string }>
+    cardTiers: Record<string, string>
+    hiddenCards: Record<string, boolean>
+  }> => ipcRenderer.invoke('get-div-card-tiers'),
   batchLookupDivCardPrices: (
     cardNames: string[],
     league: string,

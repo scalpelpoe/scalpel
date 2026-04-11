@@ -44,7 +44,7 @@ for (const [base, uniques] of Object.entries(_baseToUniques)) {
 
 // PoE inventory slot sizes [width, height] by item class
 export const ITEM_SIZES: Record<string, [number, number]> = Object.fromEntries(
-  Object.entries(itemClassesData as Record<string, { size: [number, number] }>).map(([k, v]) => [k, v.size]),
+  Object.entries(itemClassesData as unknown as Record<string, { size: [number, number] }>).map(([k, v]) => [k, v.size]),
 )
 
 // Map trade API currency keys to item-icons.json names
@@ -94,7 +94,7 @@ export function getItemSize(itemClass: string, name?: string): [number, number] 
     if (base) {
       // Find the item class for this base type
       for (const [_cls, data] of Object.entries(
-        itemClassesData as Record<string, { bases: string[]; size: [number, number] }>,
+        itemClassesData as unknown as Record<string, { bases: string[]; size: [number, number] }>,
       )) {
         if (data.bases.includes(base)) return data.size
       }

@@ -27,7 +27,7 @@ const uniqueToBase: Record<string, string> = {}
 for (const [base, uniques] of Object.entries(_baseToUniques)) {
   for (const name of uniques) uniqueToBase[name] = base
 }
-const itemClasses = itemClassesData as Record<string, { bases: string[]; size: [number, number] }>
+const itemClasses = itemClassesData as unknown as Record<string, { bases: string[]; size: [number, number] }>
 const classMap: Record<string, string> = {}
 for (const [cls, { bases }] of Object.entries(itemClasses)) {
   for (const base of bases) classMap[base] = cls

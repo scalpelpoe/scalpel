@@ -18,7 +18,7 @@ const fusIcon =
 
 const SOCKET_IMG: Record<string, string> = { R: socketRed, G: socketGreen, B: socketBlue, W: socketWhite }
 const CYCLE: Record<string, string> = { R: 'G', G: 'B', B: 'R', W: 'R' }
-const _itemClasses = itemClassesData as Record<string, { bases: string[]; size: [number, number] }>
+const _itemClasses = itemClassesData as unknown as Record<string, { bases: string[]; size: [number, number] }>
 const classSizes: Record<string, [number, number]> = Object.fromEntries(
   Object.entries(_itemClasses).map(([k, v]) => [k, v.size]),
 )

@@ -76,7 +76,7 @@ export interface FilterFile {
 
 // ─── Item Types ───────────────────────────────────────────────────────────
 
-export type ItemRarity = 'Normal' | 'Magic' | 'Rare' | 'Unique'
+export type ItemRarity = 'Normal' | 'Magic' | 'Rare' | 'Unique' | 'Gem' | 'Currency'
 
 export interface PoeItem {
   itemClass: string
@@ -103,6 +103,7 @@ export interface PoeItem {
   fractured: boolean
   transfigured: boolean
   blighted: boolean
+  uberBlighted: boolean
   scourged: boolean
   zanaMemory: boolean
   implicitCount: number

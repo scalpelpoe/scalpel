@@ -319,7 +319,7 @@ export function FilterPicker({
           <p className="text-xs text-text m-0 font-semibold">Update complete</p>
           <div className="text-[11px] text-text-dim">
             {(() => {
-              const s = mergeResult.stats
+              const s = mergeResult.stats as Record<string, number>
               const applied = s.applied ?? s.userOnly + s.bothChanged
               const skipped = s.skipped ?? 0
               return (

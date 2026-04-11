@@ -455,7 +455,9 @@ export default function App(): JSX.Element {
                 updatingFilter={updatingFilter}
                 mergeMessage={mergeMessage}
                 onQuickUpdate={() => window.api.quickUpdateFilter()}
-                onCheckForUpdate={() => window.api.checkForOnlineUpdate()}
+                onCheckForUpdate={async () => {
+                  await window.api.checkForOnlineUpdate()
+                }}
                 onFilterUpdated={(activeFile) => {
                   setUpdatedOnlineFilters((prev) => {
                     const next = new Set(prev)

@@ -18,7 +18,7 @@ import { SortHeader } from './SortHeader'
 import { FilterRow, EmptyFilterRow } from './FilterRow'
 import { DustEntryRow } from './DustEntryRow'
 
-const itemClasses = itemClassesData as Record<string, { bases: string[]; size: [number, number] }>
+const itemClasses = itemClassesData as unknown as Record<string, { bases: string[]; size: [number, number] }>
 const classMap: Record<string, string> = {}
 for (const [cls, { bases }] of Object.entries(itemClasses)) {
   for (const base of bases) classMap[base] = cls
@@ -133,7 +133,7 @@ export function DustExplorer({ onSelectItem }: { onSelectItem?: () => void } = {
         const maxVal = scaleRange(f.max, mn, mx, f.type)
         result = result.filter((e) => {
           const v = e[f.type]
-          if (v === null) return false
+          if (v === null || typeof v !== 'number') return false
           return v >= minVal && v <= maxVal
         })
       }
