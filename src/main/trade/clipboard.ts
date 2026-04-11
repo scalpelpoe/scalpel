@@ -13,25 +13,35 @@ export function registerFilterBaseTypes(baseTypes: string[]): void {
   for (const bt of baseTypes) knownBaseTypes.add(bt)
 }
 
+/** Try to find a known base type within a magic item name */
+function findBaseInName(name: string, candidates: Iterable<string>): string | null {
+  const sorted = [...candidates].sort((a, b) => b.length - a.length)
+  for (const base of sorted) {
+    if (name === base) return base
+    const idx = name.indexOf(base)
+    if (idx >= 0) {
+      const before = name[idx - 1]
+      const after = name[idx + base.length]
+      if ((!before || before === ' ') && (!after || after === ' ')) return base
+    }
+  }
+  return null
+}
+
 /** Strip "Superior" prefix and magic item affixes to get the real base type */
-function cleanBaseType(rawBase: string, rarity: ItemRarity): string {
+function cleanBaseType(rawBase: string, rarity: ItemRarity, itemClass?: string): string {
   const clean = rawBase.replace(/^Superior\s+/i, '')
   if (rarity === 'Magic') {
-    // Try to find a known base type within the magic item name
-    // Magic names are: [Prefix] BaseType [of Suffix]
-    // Sort by length descending so we match the longest base type first
-    // (e.g. "Spiraled Foil" before "Foil")
-    const sorted = [...knownBaseTypes].sort((a, b) => b.length - a.length)
-    for (const base of sorted) {
-      if (clean === base) return base
-      // Check if base appears as a substring with word boundaries
-      const idx = clean.indexOf(base)
-      if (idx >= 0) {
-        const before = clean[idx - 1]
-        const after = clean[idx + base.length]
-        if ((!before || before === ' ') && (!after || after === ' ')) return base
+    // First try bases specific to this item class (avoids false matches)
+    if (itemClass) {
+      const classBases = itemClasses[itemClass]?.bases
+      if (classBases?.length) {
+        const match = findBaseInName(clean, classBases)
+        if (match) return match
       }
     }
+    // Fall back to all known base types
+    return findBaseInName(clean, knownBaseTypes) ?? clean
   }
   return clean
 }
@@ -76,13 +86,22 @@ export function parseItemText(text: string): PoeItem | null {
   // Strip modifier prefixes -- filters treat these as separate conditions, not part of the base type
   // Keep Blighted/Blight-ravaged for maps and incubators since it's part of the actual base type name
   const keepBlight = itemClass === 'Maps' || itemClass === 'Incubators'
-  const baseType = cleanBaseType(
-    rawBaseType
-      .replace(/^Synthesised /, '')
-      .replace(keepBlight ? /(?:)/ : /^Blighted /i, '')
-      .replace(keepBlight ? /(?:)/ : /^Blight-[Rr]avaged /i, ''),
-    rarity as ItemRarity,
-  )
+  // Some item classes have a single canonical base type -- use it directly
+  // instead of trying to parse it from the magic name
+  const CLASS_TO_BASE: Record<string, string> = {
+    Blueprints: 'Blueprint',
+    Contracts: 'Contract',
+  }
+  const baseType =
+    CLASS_TO_BASE[itemClass] ??
+    cleanBaseType(
+      rawBaseType
+        .replace(/^Synthesised /, '')
+        .replace(keepBlight ? /(?:)/ : /^Blighted /i, '')
+        .replace(keepBlight ? /(?:)/ : /^Blight-[Rr]avaged /i, ''),
+      rarity as ItemRarity,
+      itemClass,
+    )
 
   // Detect Vaal gems: the gem tags line contains "Vaal" and a section starts with "Vaal <name>"
   const isGemClass = ['Gems', 'Support Gems', 'Skill Gems', 'Active Skill Gems', 'Support Skill Gems'].includes(

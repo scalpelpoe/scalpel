@@ -2,7 +2,7 @@ import type { PoeItem, PriceInfo } from '../../../shared/types'
 import { ArrowRight } from '@icon-park/react'
 import { chaosIcon, divineIcon } from '../shared/icons'
 import { iconMap, divCardArtMap, RARITY_COLORS } from '../shared/constants'
-import { formatPrice } from '../shared/utils'
+import { formatPrice, getItemIcon } from '../shared/utils'
 import dustValues from '../../../shared/data/economy/dust-values.json'
 import ninjaIcon from '../assets/other/poe-ninja.png'
 import dustIcon from '../assets/currency/thaumaturgic-dust.png'
@@ -83,31 +83,6 @@ function getDustInfo(item: PoeItem): { value: number; upTo?: boolean } | null {
     if (maxBaseDust) return { value: calcDust(maxBaseDust, item), upTo: true }
   }
   return null
-}
-
-function getItemIcon(item: PoeItem): string | null {
-  // Divination cards: use CDN card art
-  if (item.itemClass === 'Divination Cards') {
-    const art = divCardArtMap.get(item.baseType) ?? divCardArtMap.get(item.name)
-    if (art) return `https://web.poecdn.com/image/divination-card/${art}.png`
-  }
-  // Try exact name first (unique maps, special items)
-  if (iconMap[item.name]) return iconMap[item.name]
-  // Strip Foulborn/Imbued prefix for unique variant lookups
-  const strippedName = item.name.replace(/^(Foulborn|Imbued) /, '')
-  if (strippedName !== item.name && iconMap[strippedName]) return iconMap[strippedName]
-  // Map variants: blighted/zana have distinct icons keyed by prefix
-  if (item.itemClass === 'Maps' && item.baseType.startsWith('Map (Tier')) {
-    if (item.zanaMemory) {
-      const zanaKey = `Zana ${item.baseType}`
-      if (iconMap[zanaKey]) return iconMap[zanaKey]
-    }
-    if (item.blighted) {
-      const blightKey = `Blighted ${item.baseType}`
-      if (iconMap[blightKey]) return iconMap[blightKey]
-    }
-  }
-  return iconMap[item.baseType] ?? null
 }
 
 function RewardText({ reward }: { reward: string }): JSX.Element {
