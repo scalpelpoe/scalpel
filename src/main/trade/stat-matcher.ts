@@ -1116,6 +1116,116 @@ export function matchItemMods(
     }
   }
 
+  // Chronicle of Atzoatl room chips
+  if (itemInfo?.atzoatlRooms && itemInfo.atzoatlRooms.length > 0) {
+    const ATZOATL_ROOMS: Record<string, string> = {
+      // Special / untiereed
+      'Apex of Atzoatl': 'pseudo.pseudo_temple_apex',
+      Passageways: 'pseudo.pseudo_temple_passageways',
+      Halls: 'pseudo.pseudo_temple_halls',
+      Tunnels: 'pseudo.pseudo_temple_tunnels',
+      Pits: 'pseudo.pseudo_temple_the_pits',
+      'Banquet Hall': 'pseudo.pseudo_temple_banquet_hall',
+      Tombs: 'pseudo.pseudo_temple_tombs',
+      Antechamber: 'pseudo.pseudo_temple_antechamber',
+      Cellar: 'pseudo.pseudo_temple_cellar',
+      Cloister: 'pseudo.pseudo_temple_cloister',
+      Chasm: 'pseudo.pseudo_temple_chasm_room',
+      // Tiered rooms - T1
+      'Poison Garden': 'pseudo.pseudo_temple_poison_room_1',
+      'Sacrificial Chamber': 'pseudo.pseudo_temple_sacrifice_room_1',
+      'Tempest Generator': 'pseudo.pseudo_temple_storm_room_1',
+      'Trap Workshop': 'pseudo.pseudo_temple_trap_room_1',
+      "Surveyor's Study": 'pseudo.pseudo_temple_cartography_room_1',
+      'Royal Meeting Room': 'pseudo.pseudo_temple_queens_chambers_1',
+      'Storage Room': 'pseudo.pseudo_temple_chests_1',
+      'Corruption Chamber': 'pseudo.pseudo_temple_corruption_room_1',
+      'Explosives Room': 'pseudo.pseudo_temple_explosives_room_1',
+      "Armourer's Workshop": 'pseudo.pseudo_temple_armour_room_1',
+      'Sparring Room': 'pseudo.pseudo_temple_weapon_room_1',
+      Guardhouse: 'pseudo.pseudo_temple_breeding_room_1',
+      'Splinter Research Lab': 'pseudo.pseudo_temple_breach_room_1',
+      "Gemcutter's Workshop": 'pseudo.pseudo_temple_gem_room_1',
+      Vault: 'pseudo.pseudo_temple_currency_vault_1',
+      "Jeweller's Workshop": 'pseudo.pseudo_temple_trinket_room_1',
+      Workshop: 'pseudo.pseudo_temple_workshop_1',
+      'Shrine of Empowerment': 'pseudo.pseudo_temple_empowering_room_1',
+      'Pools of Restoration': 'pseudo.pseudo_temple_healing_room_1',
+      Hatchery: 'pseudo.pseudo_temple_boss_minions_1',
+      'Flame Workshop': 'pseudo.pseudo_temple_boss_fire_1',
+      'Lightning Workshop': 'pseudo.pseudo_temple_boss_lightning_1',
+      'Torment Cells': 'pseudo.pseudo_temple_torment_1',
+      'Strongbox Chamber': 'pseudo.pseudo_temple_strongbox_1',
+      'Hall of Mettle': 'pseudo.pseudo_temple_legion_1',
+      // Tiered rooms - T2
+      'Cultivar Chamber': 'pseudo.pseudo_temple_poison_room_2',
+      'Hall of Offerings': 'pseudo.pseudo_temple_sacrifice_room_2',
+      'Hurricane Engine': 'pseudo.pseudo_temple_storm_room_2',
+      'Temple Defense Workshop': 'pseudo.pseudo_temple_trap_room_2',
+      'Office of Cartography': 'pseudo.pseudo_temple_cartography_room_2',
+      'Hall of Lords': 'pseudo.pseudo_temple_queens_chambers_2',
+      Warehouses: 'pseudo.pseudo_temple_chests_2',
+      'Catalyst of Corruption': 'pseudo.pseudo_temple_corruption_room_2',
+      'Demolition Lab': 'pseudo.pseudo_temple_explosives_room_2',
+      Armoury: 'pseudo.pseudo_temple_armour_room_2',
+      'Arena of Valour': 'pseudo.pseudo_temple_weapon_room_2',
+      Barracks: 'pseudo.pseudo_temple_breeding_room_2',
+      'Breach Containment Chamber': 'pseudo.pseudo_temple_breach_room_2',
+      'Department of Thaumaturgy': 'pseudo.pseudo_temple_gem_room_2',
+      Treasury: 'pseudo.pseudo_temple_currency_vault_2',
+      'Jewellery Forge': 'pseudo.pseudo_temple_trinket_room_2',
+      'Engineering Department': 'pseudo.pseudo_temple_workshop_2',
+      'Sanctum of Unity': 'pseudo.pseudo_temple_empowering_room_2',
+      'Sanctum of Vitality': 'pseudo.pseudo_temple_healing_room_2',
+      'Automaton Lab': 'pseudo.pseudo_temple_boss_minions_2',
+      'Omnitect Forge': 'pseudo.pseudo_temple_boss_fire_2',
+      'Omnitect Reactor Plant': 'pseudo.pseudo_temple_boss_lightning_2',
+      'Torture Cages': 'pseudo.pseudo_temple_torment_2',
+      'Hall of Locks': 'pseudo.pseudo_temple_strongbox_2',
+      'Hall of Heroes': 'pseudo.pseudo_temple_legion_2',
+      // Tiered rooms - T3
+      'Toxic Grove': 'pseudo.pseudo_temple_poison_room_3',
+      'Apex of Ascension': 'pseudo.pseudo_temple_sacrifice_room_3',
+      'Storm of Corruption': 'pseudo.pseudo_temple_storm_room_3',
+      'Defense Research Lab': 'pseudo.pseudo_temple_trap_room_3',
+      'Atlas of Worlds': 'pseudo.pseudo_temple_cartography_room_3',
+      'Throne of Atziri': 'pseudo.pseudo_temple_queens_chambers_3',
+      'Museum of Artefacts': 'pseudo.pseudo_temple_chests_3',
+      'Locus of Corruption': 'pseudo.pseudo_temple_corruption_room_3',
+      'Shrine of Unmaking': 'pseudo.pseudo_temple_explosives_room_3',
+      'Chamber of Iron': 'pseudo.pseudo_temple_armour_room_3',
+      'Hall of Champions': 'pseudo.pseudo_temple_weapon_room_3',
+      'Hall of War': 'pseudo.pseudo_temple_breeding_room_3',
+      'House of the Others': 'pseudo.pseudo_temple_breach_room_3',
+      "Doryani's Institute": 'pseudo.pseudo_temple_gem_room_3',
+      'Wealth of the Vaal': 'pseudo.pseudo_temple_currency_vault_3',
+      'Glittering Halls': 'pseudo.pseudo_temple_trinket_room_3',
+      Factory: 'pseudo.pseudo_temple_workshop_3',
+      'Temple Nexus': 'pseudo.pseudo_temple_empowering_room_3',
+      'Sanctum of Immortality': 'pseudo.pseudo_temple_healing_room_3',
+      'Hybridisation Chamber': 'pseudo.pseudo_temple_boss_minions_3',
+      'Crucible of Flame': 'pseudo.pseudo_temple_boss_fire_3',
+      'Conduit of Lightning': 'pseudo.pseudo_temple_boss_lightning_3',
+      "Sadist's Den": 'pseudo.pseudo_temple_torment_3',
+      'Court of Sealed Death': 'pseudo.pseudo_temple_strongbox_3',
+      'Hall of Legends': 'pseudo.pseudo_temple_legion_3',
+    }
+    for (const room of itemInfo.atzoatlRooms) {
+      const statId = ATZOATL_ROOMS[room]
+      if (statId) {
+        filters.push({
+          id: statId,
+          text: room,
+          value: null,
+          min: null,
+          max: null,
+          enabled: true,
+          type: 'pseudo',
+        })
+      }
+    }
+  }
+
   // Map property chips (Item Quantity, Rarity, Pack Size, More X)
   const mapFilters: StatFilter[] = []
   if (itemInfo && itemInfo.itemClass === 'Maps' && itemInfo.rarity === 'Rare') {
