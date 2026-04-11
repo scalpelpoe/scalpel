@@ -250,17 +250,53 @@ let reloadFilterScript: string | null = null
 function getReloadFilterScript(): string {
   if (reloadFilterScript && existsSync(reloadFilterScript)) return reloadFilterScript
   const dir = app.getPath('userData')
-  reloadFilterScript = join(dir, 'reloadfilter.vbs')
-  // Activate PoE, open chat with Enter, type command, send Enter
-  writeFileSync(
-    reloadFilterScript,
-    [
-      'Set WshShell = CreateObject("WScript.Shell")',
-      'WshShell.AppActivate "Path of Exile"',
-      'WScript.Sleep 100',
-      'WshShell.SendKeys "{ENTER}/reloaditemfilter{ENTER}"',
-    ].join('\n'),
-  )
+
+  if (process.platform === 'linux' && process.env.XDG_SESSION_TYPE?.toLowerCase() === 'wayland') {
+    reloadFilterScript = join(dir, 'reloadfilter.sh')
+    // Activate PoE, open chat with Enter, type command, send Enter
+    writeFileSync(
+      reloadFilterScript,
+      `#!/bin/bash
+
+# Save actual clipboard
+OLD_CLIPBOARD=$(wl-paste -n)
+
+wl-copy "/reloaditemfilter"
+
+TARGET_WINDOW=$(xdotool search --name "Path of Exile" | head -n 1)
+if [ -z "$TARGET_WINDOW" ]; then
+    echo "Poe window not found."
+    exit 1
+fi
+
+xdotool windowactivate "$TARGET_WINDOW"
+sleep 0.1
+
+# <Enter>
+ydotool key 28:1 28:0
+sleep 0.05
+# <Ctrl> + <V>
+ydotool key 29:1 47:1 47:0 29:0
+sleep 0.05
+# <Enter>
+ydotool key 28:1 28:0
+
+sleep 0.2
+echo -n "$OLD_CLIPBOARD" | wl-copy`,
+    )
+  } else {
+    reloadFilterScript = join(dir, 'reloadfilter.vbs')
+    // Activate PoE, open chat with Enter, type command, send Enter
+    writeFileSync(
+      reloadFilterScript,
+      [
+        'Set WshShell = CreateObject("WScript.Shell")',
+        'WshShell.AppActivate "Path of Exile"',
+        'WScript.Sleep 100',
+        'WshShell.SendKeys "{ENTER}/reloaditemfilter{ENTER}"',
+      ].join('\n'),
+    )
+  }
   return reloadFilterScript
 }
 
@@ -268,17 +304,31 @@ function getReloadFilterScript(): string {
  * Send /reloaditemfilter to PoE's chat to reload the loot filter in-game.
  */
 export function sendReloadFilterToPoE(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const script = getReloadFilterScript()
-    execFile('cscript', ['//Nologo', '//B', script], (err) => {
-      if (err) {
-        console.error('[hotkeys] Failed to send reload command:', err)
-        reject(err)
-        return
-      }
-      resolve()
+  if (process.platform === 'linux' && process.env.XDG_SESSION_TYPE?.toLowerCase() === 'wayland') {
+    return new Promise((resolve, reject) => {
+      const script = getReloadFilterScript()
+      execFile('bash', [script], (err) => {
+        if (err) {
+          console.error('[hotkeys] Failed to send reload command:', err)
+          reject(err)
+          return
+        }
+        resolve()
+      })
     })
-  })
+  } else {
+    return new Promise((resolve, reject) => {
+      const script = getReloadFilterScript()
+      execFile('cscript', ['//Nologo', '//B', script], (err) => {
+        if (err) {
+          console.error('[hotkeys] Failed to send reload command:', err)
+          reject(err)
+          return
+        }
+        resolve()
+      })
+    })
+  }
 }
 
 /**
