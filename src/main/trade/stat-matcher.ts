@@ -1,6 +1,7 @@
 import { net } from 'electron'
 import type { AdvancedMod } from '../../shared/types'
 import { POE_TRADE_API } from '../../shared/endpoints'
+import { ATZOATL_ROOMS, ATZOATL_KEY_ROOMS } from '../../shared/data/trade/atzoatl'
 import type { StatFilter } from './trade'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -327,6 +328,8 @@ export function matchItemMods(
     transfigured?: boolean
     logbookFactions?: string[]
     logbookBosses?: string[]
+    atzoatlRooms?: string[]
+    atzoatlOpenCount?: number
   },
   advancedMods?: AdvancedMod[],
   defaultPercent = 90,
@@ -1114,6 +1117,28 @@ export function matchItemMods(
         })
       }
     }
+  }
+
+  // Chronicle of Atzoatl room chips
+  if (itemInfo?.atzoatlRooms && itemInfo.atzoatlRooms.length > 0) {
+    const openCount = itemInfo.atzoatlOpenCount ?? itemInfo.atzoatlRooms.length
+    itemInfo.atzoatlRooms.forEach((room, i) => {
+      const statId = ATZOATL_ROOMS[room]
+      if (!statId) return
+      const isOpen = i < openCount
+      const isKey = ATZOATL_KEY_ROOMS.has(room)
+      const label = isOpen ? `Open Room: ${room}` : `Obstructed: ${room}`
+      filters.push({
+        id: statId,
+        text: label,
+        value: null,
+        min: null,
+        max: null,
+        enabled: isOpen && isKey,
+        type: isKey ? 'temple-key' : 'temple',
+        option: isOpen ? 1 : 2,
+      })
+    })
   }
 
   // Map property chips (Item Quantity, Rarity, Pack Size, More X)

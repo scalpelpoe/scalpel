@@ -558,6 +558,21 @@ export function TradeListings({
                           {l.itemData.ilvl ? ` (iLvl ${l.itemData.ilvl})` : ''}
                         </div>
                       )}
+                      {l.itemData.baseType === 'Chronicle of Atzoatl' && (
+                        <div
+                          className="mt-1 pt-1 w-full"
+                          style={{
+                            backgroundImage:
+                              'linear-gradient(90deg, transparent, var(--border) 20%, var(--border) 80%, transparent)',
+                            backgroundSize: '200px 1px',
+                            backgroundRepeat: 'no-repeat',
+                            backgroundPosition: 'top center',
+                          }}
+                        >
+                          <div className="text-[10px] text-[#8787FE]">Trade API does not show rooms</div>
+                          <div className="text-[10px] text-[#8787FE]">Click Open in Trade to see them</div>
+                        </div>
+                      )}
                       {(l.itemData.gemLevel || l.itemData.quality) && (
                         <div className="text-[10px] text-text-dim flex gap-2">
                           {l.itemData.gemLevel && (

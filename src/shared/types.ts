@@ -136,6 +136,8 @@ export interface PoeItem {
   wingsTotal?: number
   logbookFactions?: string[]
   logbookBosses?: string[]
+  atzoatlRooms?: string[]
+  atzoatlOpenCount?: number
 }
 
 export interface AdvancedMod {
