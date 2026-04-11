@@ -139,6 +139,7 @@ export interface PoeItem {
   logbookBosses?: string[]
   atzoatlRooms?: string[]
   atzoatlOpenCount?: number
+  storedExperience?: number
 }
 
 export interface AdvancedMod {

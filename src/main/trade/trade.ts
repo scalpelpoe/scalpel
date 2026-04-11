@@ -38,6 +38,7 @@ interface TradeListing {
     identified?: boolean
     templeOpenRooms?: string[]
     templeObstructedRooms?: string[]
+    storedExperience?: number
   }
 }
 
@@ -361,7 +362,7 @@ export async function searchTrade(
   // Add misc filters (quality, ilvl, corrupted, mirrored)
   const miscFiltersAll = statFilters.filter(
     (f) =>
-      ((f.type === 'misc' || f.type === 'gem') && f.id !== 'misc.basetype') ||
+      ((f.type === 'misc' || f.type === 'gem' || f.type === 'currency') && f.id !== 'misc.basetype') ||
       f.id === 'misc.memory_level' ||
       f.id === 'misc.area_level',
   )
@@ -382,6 +383,11 @@ export async function searchTrade(
       miscQuery.memory_level = { ...(f.min != null ? { min: f.min } : {}), ...(f.max != null ? { max: f.max } : {}) }
     if (f.id === 'misc.area_level' && f.enabled)
       miscQuery.area_level = { ...(f.min != null ? { min: f.min } : {}), ...(f.max != null ? { max: f.max } : {}) }
+    if (f.id === 'misc.stored_experience' && f.enabled)
+      miscQuery.stored_experience = {
+        ...(f.min != null ? { min: f.min } : {}),
+        ...(f.max != null ? { max: f.max } : {}),
+      }
     // Influence filters (misc_filters for traditional influences)
     if (f.id.startsWith('misc.influence_') && f.enabled) {
       const influenceKeyMap: Record<string, string> = {
@@ -478,7 +484,7 @@ export async function searchTrade(
       f.enabled &&
       f.type !== 'timeless' &&
       f.id !== 'misc.memory_level' &&
-      (!['defence', 'weapon', 'socket', 'misc', 'gem', 'map', 'heist'].includes(f.type) ||
+      (!['defence', 'weapon', 'socket', 'misc', 'gem', 'map', 'heist', 'currency'].includes(f.type) ||
         miscPseudoIds.has(f.id) ||
         mapPseudoIds.has(f.id)),
   )
@@ -619,6 +625,9 @@ export async function searchTrade(
           quality: r.item.properties?.find((p) => p.name === 'Quality')?.values?.[0]?.[0]
             ? parseInt(r.item.properties.find((p) => p.name === 'Quality')!.values[0][0].replace(/[+%]/g, ''))
             : undefined,
+          storedExperience: r.item.properties?.find((p) => p.name.startsWith('Stored Experience'))?.values?.[0]?.[0]
+            ? parseInt(r.item.properties.find((p) => p.name.startsWith('Stored Experience'))!.values[0][0])
+            : undefined,
           corrupted: r.item.corrupted,
           mirrored: r.item.duplicated,
           identified: r.item.identified,
@@ -687,6 +696,8 @@ export function isBulkExchangeItem(itemClass: string, name: string, baseType: st
     'Incubators', // ilvl requirements
   ])
   if (regularTradeClasses.has(itemClass)) return false
+  // Specific items with variable properties that need regular trade
+  if (baseType === "Facetor's Lens") return false
 
   const bulkClasses = new Set([
     'Currency',

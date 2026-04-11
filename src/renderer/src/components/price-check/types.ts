@@ -36,6 +36,7 @@ export interface Listing {
     identified?: boolean
     templeOpenRooms?: string[]
     templeObstructedRooms?: string[]
+    storedExperience?: number
     armour?: number
     evasion?: number
     energyShield?: number

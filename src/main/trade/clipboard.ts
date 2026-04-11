@@ -152,6 +152,10 @@ export function parseItemText(text: string): PoeItem | null {
   const wingsParts = wingsLine?.split(':')[1]?.trim().split('/')
   const wingsRevealed = wingsParts ? parseInt(wingsParts[0]) : undefined
   const wingsTotal = wingsParts && wingsParts[1] ? parseInt(wingsParts[1]) : undefined
+  // Facetor's Lens: "Stored Experience: 999,627,082"
+  const storedExpLine = allLines.find((l) => l.startsWith('Stored Experience:'))
+  const storedExperience = storedExpLine ? parseInt(storedExpLine.split(':')[1].trim().replace(/,/g, '')) : undefined
+
   const gemLevel = extractNum(allLines, 'Level:') ?? 0
   const stackSizeLine = allLines.find((l) => l.startsWith('Stack Size:'))
   const stackSize = stackSizeLine ? parseInt(stackSizeLine.split(':')[1].trim().split('/')[0]) : 1
@@ -411,6 +415,7 @@ export function parseItemText(text: string): PoeItem | null {
     ...(ITEM_SIZES[itemClass] ? { width: ITEM_SIZES[itemClass][0], height: ITEM_SIZES[itemClass][1] } : {}),
     ...(monsterLevel != null ? { monsterLevel } : {}),
     ...(wingsRevealed != null ? { wingsRevealed, wingsTotal } : {}),
+    ...(storedExperience != null ? { storedExperience } : {}),
     ...(logbookFactions.length > 0 ? { logbookFactions } : {}),
     ...(logbookBosses.length > 0 ? { logbookBosses } : {}),
     ...(atzoatlOpenRooms.length > 0 || atzoatlObstructedRooms.length > 0
