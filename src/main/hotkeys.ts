@@ -332,16 +332,29 @@ function getSendKeysScript(): string {
  */
 export function sendCtrlCToActiveWindow(): Promise<void> {
   return new Promise((resolve, reject) => {
-    const script = getSendKeysScript()
-    execFile('cscript', ['//Nologo', '//B', script], (err) => {
-      if (err) {
-        console.error('[hotkeys] Failed to send Ctrl+C:', err)
-        reject(err)
-        return
-      }
-      // Give PoE ~150ms to process the keypress and write to clipboard
-      setTimeout(resolve, 150)
-    })
+    //test if linux on wayland
+    if (process.platform === 'linux' && process.env.XDG_SESSION_TYPE?.toLowerCase() === 'wayland')
+      execFile('ydotool', ['key', '-d', '40', '29:1', '46:1', '46:0', '29:0'], (err) => {
+        if (err) {
+          console.error('[hotkeys] Failed to send Ctrl+C:', err)
+          reject(err)
+          return
+        }
+        // Give PoE ~150ms to process the keypress and write to clipboard
+        setTimeout(resolve, 150)
+      })
+    else {
+      const script = getSendKeysScript()
+      execFile('cscript', ['//Nologo', '//B', script], (err) => {
+        if (err) {
+          console.error('[hotkeys] Failed to send Ctrl+C:', err)
+          reject(err)
+          return
+        }
+        // Give PoE ~150ms to process the keypress and write to clipboard
+        setTimeout(resolve, 150)
+      })
+    }
   })
 }
 
