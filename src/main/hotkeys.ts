@@ -327,9 +327,9 @@ export function sendItemFilterCommand(filterName: string, currentFilter?: string
       const args = [getResourcesScriptPath('chat_command.sh')]
 
       if (currentFilter) {
-        args.push('/itemfilter ${currentFilter}')
+        args.push(`/itemfilter ${currentFilter}`)
       }
-      args.push('/itemfilter ${filterName}')
+      args.push(`/itemfilter ${filterName}`)
       execFile('bash', args, (err) => {
         if (err) {
           console.error('[hotkeys] Failed to send itemfilter command:', err)
