@@ -330,6 +330,7 @@ export function matchItemMods(
     logbookBosses?: string[]
     atzoatlRooms?: string[]
     atzoatlOpenCount?: number
+    storedExperience?: number
   },
   advancedMods?: AdvancedMod[],
   defaultPercent = 90,
@@ -1081,6 +1082,20 @@ export function matchItemMods(
         type: 'heist',
       })
     }
+  }
+
+  // Facetor's Lens stored experience
+  if (itemInfo?.storedExperience != null) {
+    const expStr = itemInfo.storedExperience.toLocaleString()
+    filters.push({
+      id: 'misc.stored_experience',
+      text: `Stored Experience: ${expStr}`,
+      value: itemInfo.storedExperience,
+      min: itemInfo.storedExperience,
+      max: null,
+      enabled: true,
+      type: 'currency',
+    })
   }
 
   // Logbook faction and boss chips

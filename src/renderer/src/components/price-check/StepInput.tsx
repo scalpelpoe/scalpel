@@ -16,9 +16,13 @@ export function StepInput({
     onChange(String(current + delta * dir))
   }
 
+  const digits = value != null ? String(Math.abs(value)).length : 0
+  const width = digits >= 5 ? 60 + (digits - 4) * 8 : 60
+
   return (
     <div
-      className="relative w-[60px] h-7 shrink-0"
+      className="relative h-7 shrink-0"
+      style={{ width }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
@@ -27,7 +31,8 @@ export function StepInput({
         value={value ?? ''}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-[60px] h-7 px-[14px] py-[2px] text-[13px] rounded-[3px] text-center bg-black/30"
+        className="h-7 px-[14px] py-[2px] text-[13px] rounded-[3px] text-center bg-black/30"
+        style={{ width }}
       />
       {hovered && (
         <>

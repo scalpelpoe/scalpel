@@ -560,6 +560,14 @@ export function TradeListings({
                           {l.itemData.ilvl ? ` (iLvl ${l.itemData.ilvl})` : ''}
                         </div>
                       )}
+                      {l.itemData.storedExperience != null && (
+                        <div className="text-[10px] text-text-dim">
+                          Stored Experience:{' '}
+                          <span className="text-text font-semibold">
+                            {l.itemData.storedExperience.toLocaleString()}
+                          </span>
+                        </div>
+                      )}
                       {l.itemData.templeOpenRooms && l.itemData.templeOpenRooms.length > 0 && (
                         <div
                           className="mt-1 pt-1 w-full"
