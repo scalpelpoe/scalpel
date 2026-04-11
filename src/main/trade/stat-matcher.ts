@@ -2,6 +2,7 @@ import { net } from 'electron'
 import type { AdvancedMod } from '../../shared/types'
 import { POE_TRADE_API } from '../../shared/endpoints'
 import { ATZOATL_ROOMS, ATZOATL_KEY_ROOMS } from '../../shared/data/trade/atzoatl'
+import { BENEFICIAL_NEGATIVE_KEYWORDS } from '../../shared/data/trade/beneficial-negatives'
 import type { StatFilter } from './trade'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -139,6 +140,10 @@ function generateTextVariants(text: string): string[] {
   if (/\breduced\b/i.test(text)) {
     variants.push(text.replace(/\breduced\b/i, 'increased'))
   }
+  // "less" is stored as negative "more" in trade API
+  if (/\bless\b/i.test(text)) {
+    variants.push(text.replace(/\bless\b/i, 'more'))
+  }
   // Common PoE plural -> singular transformations
   const replacements: Array<[RegExp, string]> = [
     [/Flasks constantly apply their Flask Effects/g, 'Flask constantly applies its Flask Effect'],
@@ -171,6 +176,7 @@ export function matchModToStat(
 
   const isNegativeMod = /^-\d/.test(modText)
   const isReducedMod = /\breduced\b/i.test(modText)
+  const isLessMod = /\bless\b/i.test(modText)
 
   for (const variant of textVariants) {
     let nonLocalMatch: { statId: string; value: number | null; option?: number; _textLen: number } | null = null
@@ -196,8 +202,8 @@ export function matchModToStat(
         }
         // Restore negative sign when matching via sign-flipped variant
         if (isNegativeMod && value != null && value > 0) value = -value
-        // "reduced" mods are negative "increased" in trade API
-        if (isReducedMod && value != null && value > 0) value = -value
+        // "reduced" / "less" mods are negative "increased" / "more" in trade API
+        if ((isReducedMod || isLessMod) && value != null && value > 0) value = -value
         // For option-based stats (like "Map contains #'s Citadel"), resolve the option ID
         let option: number | undefined
         if (entry.option && rawValue && !value) {
@@ -505,14 +511,16 @@ export function matchItemMods(
       // For negative values: "reduced" mods use min (trade API expects min for beneficial reduction),
       // while truly negative mods (e.g. "-50% to Lightning Resistance") use max.
       const isNegative = matched.value != null && matched.value < 0
-      const isReducedNegative = isNegative && /\breduced\b/i.test(mod)
+      // Negative mods: default to "bad" (less negative = better, use min).
+      // Some keywords indicate the negative is beneficial (more negative = better, use max).
+      const isBeneficialNegative = isNegative && BENEFICIAL_NEGATIVE_KEYWORDS.some((p) => p.test(mod))
       const minValue =
-        matched.value != null && (!isNegative || isReducedNegative)
-          ? isFixedValue
+        matched.value != null && (!isNegative || !isBeneficialNegative)
+          ? isFixedValue || isNegative
             ? matched.value
             : Math.floor(matched.value * pct)
           : null
-      const maxValue = isNegative && !isReducedNegative ? matched.value : null
+      const maxValue = isBeneficialNegative && matched.value != null ? matched.value : null
 
       // Check if this contributes to a pseudo stat
       // Skip for cluster jewels -- their mods grant passives, not item stats
