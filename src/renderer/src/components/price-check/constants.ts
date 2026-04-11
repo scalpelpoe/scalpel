@@ -118,6 +118,7 @@ export const MOD_COLORS: Record<string, string> = {
   imbued: '#a8e6cf',
   enchant: '#a8e6cf',
   map: '#80cbc4',
+  explicit: '#8787FE',
 }
 
 export const MOD_BOLD_TYPES = new Set(['pseudo', 'defence', 'temple-key'])

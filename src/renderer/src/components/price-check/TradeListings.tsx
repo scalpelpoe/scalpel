@@ -663,7 +663,7 @@ export function TradeListings({
                           }}
                         >
                           {l.itemData.implicitMods.map((mod, mi) => (
-                            <div key={mi} className="text-[10px] text-[#8787FE]">
+                            <div key={mi} className="text-[10px]" style={{ color: MOD_COLORS.implicit }}>
                               {mod}
                             </div>
                           ))}
@@ -692,7 +692,7 @@ export function TradeListings({
                                     ? MOD_COLORS.foulborn
                                     : fracturedSet.has(mod)
                                       ? MOD_COLORS.fractured
-                                      : '#8787FE',
+                                      : MOD_COLORS.explicit,
                                 }}
                               >
                                 {mod}
