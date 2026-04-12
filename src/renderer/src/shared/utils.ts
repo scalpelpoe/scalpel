@@ -2,10 +2,10 @@ import type { PoeItem } from '../../../shared/types'
 import { iconMap, divCardArtMap } from './constants'
 
 export function formatPrice(value: number): string {
-  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`
+  if (value >= 1000) return `${parseFloat((value / 1000).toFixed(1))}k`
   if (value >= 10) return String(Math.round(value))
-  if (value >= 1) return value.toFixed(1)
-  return value.toFixed(2)
+  if (value >= 1) return String(parseFloat(value.toFixed(1)))
+  return String(parseFloat(value.toFixed(2)))
 }
 
 export function formatDust(value: number): string {

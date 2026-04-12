@@ -174,7 +174,9 @@ export function parseItemText(text: string): PoeItem | null {
 
   const gemLevel = extractNum(allLines, 'Level:') ?? 0
   const stackSizeLine = allLines.find((l) => l.startsWith('Stack Size:'))
-  const stackSize = stackSizeLine ? parseInt(stackSizeLine.split(':')[1].trim().split('/')[0]) : 1
+  const stackParts = stackSizeLine?.split(':')[1]?.trim().split('/') ?? []
+  const stackSize = stackParts[0] ? parseInt(stackParts[0]) : 1
+  const maxStackSize = stackParts[1] ? parseInt(stackParts[1]) : undefined
 
   // Requirements
   // Defenses (total computed values from the item header)
@@ -409,6 +411,7 @@ export function parseItemText(text: string): PoeItem | null {
     implicitCount,
     gemLevel,
     stackSize,
+    maxStackSize,
     influence,
     explicits,
     implicits,

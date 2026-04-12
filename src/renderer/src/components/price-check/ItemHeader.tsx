@@ -1,6 +1,7 @@
 import type { PriceInfo } from '../../../../shared/types'
-import { chaosIcon, divineIcon, ninjaIcon, formatPrice } from './constants'
+import { chaosIcon, divineIcon, formatPrice } from './constants'
 import { IconGlow } from '../../shared/IconGlow'
+import { PriceChip } from '../../shared/PriceChip'
 
 export function ItemHeader({
   heroIcon,
@@ -10,6 +11,8 @@ export function ItemHeader({
   isDivCard,
   priceInfo,
   chaosPerDivine,
+  stackSize,
+  maxStackSize,
 }: {
   heroIcon: string | null
   heroName: string
@@ -18,6 +21,8 @@ export function ItemHeader({
   isDivCard: boolean
   priceInfo?: PriceInfo
   chaosPerDivine?: number
+  stackSize?: number
+  maxStackSize?: number
 }): JSX.Element {
   return (
     <div className="bg-bg-card border-b border-border px-[14px] py-[10px] flex gap-[10px] items-center">
@@ -37,20 +42,25 @@ export function ItemHeader({
         {heroName !== baseType && <div className="text-text-dim text-[11px]">{baseType}</div>}
       </div>
       <div className="flex flex-col gap-1 items-end shrink-0">
-        {/* Ninja price chip */}
+        {/* Ninja price + stack pricing chips */}
         {priceInfo && priceInfo.chaosValue > 0 && (
-          <div className="flex items-center gap-[3px] bg-black/30 rounded-full px-2 py-[3px] text-[11px] font-[inherit]">
-            <img src={ninjaIcon} alt="" className="w-[10px] h-[10px]" />
-            {priceInfo.divineValue != null && priceInfo.divineValue >= 1 ? (
-              <>
-                <span className="font-semibold">{formatPrice(priceInfo.divineValue)}</span>
-                <img src={divineIcon} alt="" className="w-3 h-3" />
-              </>
-            ) : (
-              <>
-                <span className="font-semibold">{formatPrice(priceInfo.chaosValue)}</span>
-                <img src={chaosIcon} alt="" className="w-3 h-3" />
-              </>
+          <div className="flex items-center gap-1 flex-wrap justify-end">
+            <PriceChip chaosValue={priceInfo.chaosValue} divineValue={priceInfo.divineValue} showNinja />
+            {stackSize != null && stackSize > 1 && (
+              <PriceChip
+                chaosValue={priceInfo.chaosValue * stackSize}
+                chaosPerDivine={chaosPerDivine}
+                label={`${stackSize}x =`}
+                size="sm"
+              />
+            )}
+            {maxStackSize != null && maxStackSize > 1 && maxStackSize !== stackSize && (
+              <PriceChip
+                chaosValue={priceInfo.chaosValue * maxStackSize}
+                chaosPerDivine={chaosPerDivine}
+                label={`${maxStackSize}x =`}
+                size="sm"
+              />
             )}
           </div>
         )}

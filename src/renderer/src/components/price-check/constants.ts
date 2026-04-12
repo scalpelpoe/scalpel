@@ -36,6 +36,17 @@ export const INFLUENCE_ICONS: Record<string, string> = {
   'misc.influence_eater_of_worlds': eaterOfWorldsIcon,
 }
 
+export const INFLUENCE_ICONS_BY_NAME: Record<string, string> = {
+  Elder: elderIcon,
+  Shaper: shaperIcon,
+  Crusader: crusaderIcon,
+  Redeemer: redeemerIcon,
+  Hunter: hunterIcon,
+  Warlord: warlordIcon,
+  'Searing Exarch': searingExarchIcon,
+  'Eater of Worlds': eaterOfWorldsIcon,
+}
+
 const _baseToUniques = baseToUniques as Record<string, string[]>
 export const uniqueToBase: Record<string, string> = {}
 for (const [base, uniques] of Object.entries(_baseToUniques)) {

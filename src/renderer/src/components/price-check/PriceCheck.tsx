@@ -5,8 +5,6 @@ import {
   INFLUENCE_ICONS,
   iconMap,
   chaosIcon,
-  divineIcon,
-  ninjaIcon,
   getItemIcon,
   formatPrice,
   getItemSize,
@@ -14,6 +12,7 @@ import {
 } from './constants'
 import { isFaustusItem } from '../../../../shared/data/trade/faustus-items'
 import { FilterChip } from './FilterChip'
+import { PriceChip } from '../../shared/PriceChip'
 import { ItemHeader } from './ItemHeader'
 import { StatFilterRow } from './StatFilterRow'
 import { TradeListings } from './TradeListings'
@@ -222,6 +221,8 @@ export function PriceCheck({
         isDivCard={isDivCard}
         priceInfo={priceInfo}
         chaosPerDivine={chaosPerDivine}
+        stackSize={item.stackSize > 1 ? item.stackSize : undefined}
+        maxStackSize={item.maxStackSize}
       />
 
       <div className="flex-1 overflow-y-auto px-[14px] py-[10px] flex flex-col gap-[10px]">
@@ -516,20 +517,7 @@ export function PriceCheck({
               </div>
             </div>
             {priceInfo && priceInfo.chaosValue > 0 && (
-              <div className="flex items-center gap-[3px] bg-black/30 rounded-full px-2 py-[3px] text-[11px] shrink-0">
-                <img src={ninjaIcon} alt="" className="w-[10px] h-[10px]" />
-                {priceInfo.divineValue != null && priceInfo.divineValue >= 1 ? (
-                  <>
-                    <span className="font-semibold text-text">{formatPrice(priceInfo.divineValue)}</span>
-                    <img src={divineIcon} alt="" className="w-3 h-3" />
-                  </>
-                ) : (
-                  <>
-                    <span className="font-semibold text-text">{formatPrice(priceInfo.chaosValue)}</span>
-                    <img src={chaosIcon} alt="" className="w-3 h-3" />
-                  </>
-                )}
-              </div>
+              <PriceChip chaosValue={priceInfo.chaosValue} divineValue={priceInfo.divineValue} showNinja />
             )}
           </div>
         )}

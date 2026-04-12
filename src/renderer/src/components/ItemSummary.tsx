@@ -1,10 +1,10 @@
 import type { PoeItem, PriceInfo } from '../../../shared/types'
 import { ArrowRight } from '@icon-park/react'
-import { chaosIcon, divineIcon } from '../shared/icons'
+import { PriceChip, InfoChip } from '../shared/PriceChip'
+import { INFLUENCE_ICONS_BY_NAME } from './price-check/constants'
 import { iconMap, divCardArtMap, RARITY_COLORS } from '../shared/constants'
-import { formatPrice, getItemIcon } from '../shared/utils'
+import { getItemIcon } from '../shared/utils'
 import dustValues from '../../../shared/data/economy/dust-values.json'
-import ninjaIcon from '../assets/other/poe-ninja.png'
 import dustIcon from '../assets/currency/thaumaturgic-dust.png'
 import socketRed from '../assets/sockets/socket-red.png'
 import socketGreen from '../assets/sockets/socket-green.png'
@@ -236,29 +236,13 @@ export function ItemSummary({
           const dustInfo = getDustInfo(item)
           const hasPrice = priceInfo && priceInfo.chaosValue > 0
           if (!hasPrice && !dustInfo) return null
-          const chipClass =
-            'inline-flex items-center gap-1 rounded-full text-[11px] leading-none bg-black/25 px-2 py-[3px]'
           return (
             <div className="flex gap-[6px] items-center">
               {hasPrice && (
-                <span className={chipClass}>
-                  <img src={ninjaIcon} alt="" className="w-3 h-3" />
-                  {priceInfo.divineValue != null && priceInfo.divineValue >= 1 ? (
-                    <>
-                      <span className="text-white font-semibold">{formatPrice(priceInfo.divineValue)}</span>
-                      <img src={divineIcon} alt="div" className="w-3.5 h-3.5" />
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-white font-semibold">{formatPrice(priceInfo!.chaosValue)}</span>
-                      <img src={chaosIcon} alt="chaos" className="w-3.5 h-3.5" />
-                    </>
-                  )}
-                </span>
+                <PriceChip chaosValue={priceInfo.chaosValue} divineValue={priceInfo.divineValue} showNinja />
               )}
               {dustInfo != null && (
-                <span className={chipClass}>
-                  <img src={dustIcon} alt="" className="w-3.5 h-3.5" />
+                <InfoChip icon={dustIcon}>
                   <span className="text-white font-semibold">
                     {dustInfo.upTo ? `Up to: ${dustInfo.value.toLocaleString()}` : dustInfo.value.toLocaleString()}
                   </span>
@@ -276,7 +260,7 @@ export function ItemSummary({
                       Explore
                     </button>
                   )}
-                </span>
+                </InfoChip>
               )}
             </div>
           )
@@ -383,12 +367,9 @@ export function ItemSummary({
             </span>
           )}
           {item.influence.map((inf) => (
-            <span
-              key={inf}
-              className="inline-flex items-center rounded-full text-[11px] font-semibold bg-black/25 px-2 py-[3px] text-[#c8a96e]"
-            >
-              {inf}
-            </span>
+            <InfoChip key={inf} icon={INFLUENCE_ICONS_BY_NAME[inf]} color="#c8a96e">
+              <span className="font-semibold">{inf}</span>
+            </InfoChip>
           ))}
         </div>
       </div>

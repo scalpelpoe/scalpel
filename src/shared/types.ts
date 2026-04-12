@@ -109,6 +109,7 @@ export interface PoeItem {
   implicitCount: number
   gemLevel: number
   stackSize: number
+  maxStackSize?: number
   influence: string[]
   explicits: string[]
   implicits: string[]
