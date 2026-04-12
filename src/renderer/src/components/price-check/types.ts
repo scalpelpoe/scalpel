@@ -27,6 +27,7 @@ export interface Listing {
     implicitMods?: string[]
     fracturedMods?: string[]
     foulbornMods?: string[]
+    craftedMods?: string[]
     ilvl?: number
     sockets?: Array<{ group: number; sColour: string }>
     gemLevel?: number

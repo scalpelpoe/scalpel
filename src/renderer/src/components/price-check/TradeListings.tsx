@@ -695,6 +695,7 @@ export function TradeListings({
                           {(() => {
                             const fracturedSet = new Set(l.itemData!.fracturedMods ?? [])
                             const foulbornSet = new Set(l.itemData!.foulbornMods ?? [])
+                            const craftedSet = new Set(l.itemData!.craftedMods ?? [])
                             const tiers = l.itemData!.modTiers
                             const mods = l.itemData!.explicitMods!
                             // Group: fractured first, then prefixes, then suffixes, preserving API order within each
@@ -721,7 +722,9 @@ export function TradeListings({
                                     ? MOD_COLORS.foulborn
                                     : fracturedSet.has(mod)
                                       ? MOD_COLORS.fractured
-                                      : MOD_COLORS.explicit
+                                      : craftedSet.has(mod)
+                                        ? MOD_COLORS.crafted
+                                        : MOD_COLORS.explicit
                                 }
                                 tierInfo={tiers?.[mod]}
                               />

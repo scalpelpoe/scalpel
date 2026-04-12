@@ -30,6 +30,7 @@ interface TradeListing {
     implicitMods?: string[]
     fracturedMods?: string[]
     foulbornMods?: string[]
+    craftedMods?: string[]
     ilvl?: number
     sockets?: Array<{ group: number; sColour: string }>
     gemLevel?: number
@@ -640,10 +641,12 @@ export async function searchTrade(
           explicitMods: [
             ...(r.item.fracturedMods ?? []),
             ...(r.item.explicitMods ?? []),
+            ...(r.item.craftedMods ?? []),
             ...(r.item.mutatedMods ?? []),
           ],
           implicitMods: r.item.implicitMods,
           fracturedMods: r.item.fracturedMods,
+          craftedMods: r.item.craftedMods,
           foulbornMods: r.item.mutatedMods,
           ilvl: r.item.ilvl,
           sockets: r.item.sockets,

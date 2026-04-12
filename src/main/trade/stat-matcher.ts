@@ -422,7 +422,7 @@ export function matchItemMods(
   const isTimelessJewel = itemInfo?.baseType === 'Timeless Jewel'
 
   for (const mod of isGemItem ? [] : explicits) {
-    const isCrafted = /\s*\(crafted\)\s*$/i.test(mod)
+    let isCrafted = /\s*\(crafted\)\s*$/i.test(mod)
     const cleaned = mod.replace(/\s*\(crafted\)\s*$/i, '').trim()
     // Skip timeless jewel mods handled by the timeless chip system
     if (
@@ -458,6 +458,7 @@ export function matchItemMods(
         })
         if (advMod?.fractured) isFractured = true
         if (advMod?.foulborn) isFoulborn = true
+        if (advMod?.crafted) isCrafted = true
       }
 
       // Tinctures: disambiguate duplicate stat texts (e.g. "#% increased effect" has two stat IDs)
@@ -468,10 +469,11 @@ export function matchItemMods(
         matched.statId = TINCTURE_STAT_REMAP[matched.statId]
       }
 
-      // For fractured mods, remap the stat ID from explicit.stat_X to fractured.stat_X
+      // Remap stat ID prefix based on mod source (fractured/crafted)
       if (isFractured && matched.statId.startsWith('explicit.')) {
-        const fracturedId = 'fractured.' + matched.statId.split('.').slice(1).join('.')
-        matched.statId = fracturedId
+        matched.statId = 'fractured.' + matched.statId.split('.').slice(1).join('.')
+      } else if (isCrafted && matched.statId.startsWith('explicit.')) {
+        matched.statId = 'crafted.' + matched.statId.split('.').slice(1).join('.')
       }
 
       // Determine if this value is fixed or rolled
