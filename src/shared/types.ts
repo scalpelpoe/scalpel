@@ -153,6 +153,7 @@ export interface AdvancedMod {
   crafted?: boolean
   eldritch?: boolean
   foulborn?: boolean
+  magnitudeMultiplier?: number
 }
 
 // ─── IPC Channel Payloads ─────────────────────────────────────────────────────

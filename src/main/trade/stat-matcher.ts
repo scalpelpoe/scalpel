@@ -423,7 +423,7 @@ export function matchItemMods(
 
   for (const mod of isGemItem ? [] : explicits) {
     let isCrafted = /\s*\(crafted\)\s*$/i.test(mod)
-    const cleaned = mod.replace(/\s*\(crafted\)\s*$/i, '').trim()
+    let cleaned = mod.replace(/\s*\(crafted\)\s*$/i, '').trim()
     // Skip timeless jewel mods handled by the timeless chip system
     if (
       isTimelessJewel &&
@@ -459,6 +459,13 @@ export function matchItemMods(
         if (advMod?.fractured) isFractured = true
         if (advMod?.foulborn) isFoulborn = true
         if (advMod?.crafted) isCrafted = true
+        // Apply magnitude multiplier from implicit (e.g. Cogwork Ring "25% increased Suffix Modifier magnitudes")
+        if (advMod?.magnitudeMultiplier && matched.value != null) {
+          const oldVal = matched.value
+          matched.value = Math.trunc(oldVal * advMod.magnitudeMultiplier)
+          // Update the display text to show the multiplied value
+          cleaned = cleaned.replace(String(Math.abs(oldVal)), String(Math.abs(matched.value)))
+        }
       }
 
       // Tinctures: disambiguate duplicate stat texts (e.g. "#% increased effect" has two stat IDs)

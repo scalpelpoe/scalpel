@@ -688,9 +688,19 @@ export async function searchTrade(
             const mods = r.item!.extended?.mods
             const hashes = r.item!.extended?.hashes
             if (!mods || !hashes) return undefined
+
+            // Detect implicit magnitude multipliers (e.g. "25% increased Suffix Modifier magnitudes")
+            let prefixMult = 1
+            let suffixMult = 1
+            for (const imp of r.item!.implicitMods ?? []) {
+              const mm = imp.match(/(\d+)% increased (Prefix|Suffix) Modifier magnitudes/)
+              if (mm) {
+                if (mm[2] === 'Prefix') prefixMult += parseInt(mm[1]) / 100
+                if (mm[2] === 'Suffix') suffixMult += parseInt(mm[1]) / 100
+              }
+            }
+
             const result: Record<string, { tier: string; name: string; ranges: string }> = {}
-            // hashes maps each mod category to [[statHash, [modIndex, ...]], ...]
-            // The hashes array order matches the display text array order
             const categories: Array<{ key: string; texts?: string[] }> = [
               { key: 'explicit', texts: r.item!.explicitMods },
               { key: 'implicit', texts: r.item!.implicitMods },
@@ -706,8 +716,21 @@ export async function searchTrade(
                 const modIdx = hashEntries[i][1][0]
                 const m = modEntries[modIdx]
                 if (!m) continue
+                // Apply implicit multiplier to prefix/suffix ranges
+                const isAffixCategory = key === 'explicit' || key === 'fractured' || key === 'crafted'
+                const mult = isAffixCategory
+                  ? m.tier.startsWith('P')
+                    ? prefixMult
+                    : m.tier.startsWith('S')
+                      ? suffixMult
+                      : 1
+                  : 1
                 const ranges = m.magnitudes
-                  .map((mag) => (mag.min === mag.max ? mag.min : `${mag.min}-${mag.max}`))
+                  .map((mag) => {
+                    const min = Math.trunc(parseFloat(mag.min) * mult)
+                    const max = Math.trunc(parseFloat(mag.max) * mult)
+                    return min === max ? String(min) : `${min}-${max}`
+                  })
                   .join(', ')
                 result[texts[i]] = { tier: m.tier, name: m.name, ranges }
               }

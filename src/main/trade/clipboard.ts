@@ -585,17 +585,25 @@ function parseAdvancedMods(text: string): AdvancedMod[] {
       const isCrafted = modPrefix === 'master crafted'
       const isEldritch = modPrefix === 'searing exarch' || modPrefix === 'eater of worlds'
       const isFoulborn = modPrefix === 'foulborn'
+      const rawTags = match[5] ?? ''
+      // Parse magnitude multiplier from tag suffix like "— 25% Increased" or "— 8% Increased"
+      const multMatch = rawTags.match(/(\d+)%\s+Increased\s*$/)
+      const magnitudeMultiplier = multMatch ? 1 + parseInt(multMatch[1]) / 100 : undefined
       currentMod = {
         type: (modType === 'unique' ? 'prefix' : modType) as 'prefix' | 'suffix' | 'implicit',
         name: match[3] ?? '',
         tier: match[4] ? parseInt(match[4]) : 0,
-        tags: match[5] ? match[5].split(',').map((t) => t.trim()) : [],
+        tags: rawTags
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean),
         lines: [],
         ranges: [],
         fractured: isFractured,
         crafted: isCrafted,
         eldritch: isEldritch,
         foulborn: isFoulborn,
+        magnitudeMultiplier,
       }
       continue
     }
