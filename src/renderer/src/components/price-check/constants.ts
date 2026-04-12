@@ -119,6 +119,8 @@ export const MOD_COLORS: Record<string, string> = {
   enchant: '#a8e6cf',
   map: '#80cbc4',
   explicit: '#8787FE',
+  tierPrefix: '#ec7676',
+  tierSuffix: '#7aaff1',
 }
 
 export const MOD_BOLD_TYPES = new Set(['pseudo', 'defence', 'temple-key'])

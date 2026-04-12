@@ -40,6 +40,7 @@ interface TradeListing {
     templeOpenRooms?: string[]
     templeObstructedRooms?: string[]
     storedExperience?: number
+    modTiers?: Record<string, { tier: string; name: string; ranges: string }>
   }
 }
 
@@ -589,6 +590,8 @@ export async function searchTrade(
         implicitMods?: string[]
         mutatedMods?: string[]
         fracturedMods?: string[]
+        craftedMods?: string[]
+        enchantMods?: string[]
         ilvl?: number
         sockets?: Array<{ group: number; sColour: string }>
         properties?: Array<{ name: string; values: Array<[string, number]> }>
@@ -596,7 +599,24 @@ export async function searchTrade(
         corrupted?: boolean
         duplicated?: boolean
         identified?: boolean
-        extended?: { ar?: number; ev?: number; es?: number; pdps?: number; edps?: number; dps?: number }
+        extended?: {
+          ar?: number
+          ev?: number
+          es?: number
+          pdps?: number
+          edps?: number
+          dps?: number
+          mods?: Record<
+            string,
+            Array<{
+              name: string
+              tier: string
+              level: number
+              magnitudes: Array<{ hash: string; min: string; max: string }>
+            }>
+          >
+          hashes?: Record<string, Array<[string, number[]]>>
+        }
       }
     }>
   }
@@ -660,6 +680,36 @@ export async function searchTrade(
             }
             if (open.length === 0 && obstructed.length === 0) return {}
             return { templeOpenRooms: open, templeObstructedRooms: obstructed }
+          })(),
+          modTiers: (() => {
+            const mods = r.item!.extended?.mods
+            const hashes = r.item!.extended?.hashes
+            if (!mods || !hashes) return undefined
+            const result: Record<string, { tier: string; name: string; ranges: string }> = {}
+            // hashes maps each mod category to [[statHash, [modIndex, ...]], ...]
+            // The hashes array order matches the display text array order
+            const categories: Array<{ key: string; texts?: string[] }> = [
+              { key: 'explicit', texts: r.item!.explicitMods },
+              { key: 'implicit', texts: r.item!.implicitMods },
+              { key: 'fractured', texts: r.item!.fracturedMods },
+              { key: 'crafted', texts: r.item!.craftedMods },
+              { key: 'enchant', texts: r.item!.enchantMods },
+            ]
+            for (const { key, texts } of categories) {
+              const modEntries = mods[key]
+              const hashEntries = hashes[key]
+              if (!modEntries || !hashEntries || !texts) continue
+              for (let i = 0; i < hashEntries.length && i < texts.length; i++) {
+                const modIdx = hashEntries[i][1][0]
+                const m = modEntries[modIdx]
+                if (!m) continue
+                const ranges = m.magnitudes
+                  .map((mag) => (mag.min === mag.max ? mag.min : `${mag.min}-${mag.max}`))
+                  .join(', ')
+                result[texts[i]] = { tier: m.tier, name: m.name, ranges }
+              }
+            }
+            return Object.keys(result).length > 0 ? result : undefined
           })(),
           armour: r.item.extended?.ar,
           evasion: r.item.extended?.ev,

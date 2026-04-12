@@ -332,6 +332,7 @@ export function matchItemMods(
     wingsTotal?: number
     mapReward?: string
     transfigured?: boolean
+    synthesised?: boolean
     logbookFactions?: string[]
     logbookBosses?: string[]
     atzoatlRooms?: string[]
@@ -359,24 +360,14 @@ export function matchItemMods(
 
   for (const mod of implicits) {
     const cleaned = mod.replace(/\s*\(implicit\)\s*$/i, '').trim()
-    const matched = matchModToStat(cleaned, false, 'implicit')
-    if (!matched) {
-      // Try matching as explicit as some corruption implicits share explicit stat IDs
-      const fallback = matchModToStat(cleaned, false, 'explicit')
-      if (fallback) {
-        // Use the implicit version of the ID
-        const implicitId = 'implicit.' + fallback.statId.split('.')[1]
-        filters.push({
-          id: implicitId,
-          text: cleaned,
-          value: fallback.value,
-          min: fallback.value,
-          max: null,
-          enabled: !!itemInfo?.corrupted,
-          type: 'implicit',
-        })
-      }
-    }
+    // Try implicit stats first, then fall back to explicit (non-local, then local) and remap the ID
+    const matched =
+      matchModToStat(cleaned, false, 'implicit') ??
+      (() => {
+        const fallback = matchModToStat(cleaned, false, 'explicit') ?? matchModToStat(cleaned, true, 'explicit')
+        if (!fallback) return null
+        return { ...fallback, statId: 'implicit.' + fallback.statId.split('.')[1] }
+      })()
     if (matched) {
       // Check if this contributes to a pseudo stat
       // Skip "X per Y" mods -- they're conditional and shouldn't inflate pseudo totals
@@ -415,9 +406,9 @@ export function matchItemMods(
         max: null,
         enabled:
           !!itemInfo?.corrupted ||
+          !!itemInfo?.synthesised ||
           (!!matched.option && itemInfo?.itemClass !== 'Expedition Logbooks') ||
-          itemInfo?.itemClass === 'Maps' ||
-          isEldritch,
+          itemInfo?.itemClass === 'Maps',
         type: 'implicit',
         option: matched.option,
       })

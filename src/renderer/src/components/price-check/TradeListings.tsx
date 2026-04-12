@@ -1,6 +1,7 @@
 import { Down, Up, Star } from '@icon-park/react'
 import type { Listing } from './types'
 import { ATZOATL_KEY_ROOMS } from '../../../../shared/data/trade/atzoatl'
+import { ModLine } from './ModLine'
 import {
   CURRENCY_ICONS,
   SOCKET_IMGS,
@@ -506,46 +507,46 @@ export function TradeListings({
                       </div>
                     )}
 
-                    {/* Right: Item info + mods */}
-                    <div className="flex-1 flex flex-col gap-[2px] text-center items-center z-[1] relative">
-                      {/* Copy to clipboard */}
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          const lines: string[] = []
-                          lines.push(`Rarity: ${itemRarity}`)
-                          if (l.itemData!.name && l.itemData!.name !== l.itemData!.baseType)
-                            lines.push(l.itemData!.name)
-                          if (l.itemData!.baseType) lines.push(l.itemData!.baseType)
+                    {/* Copy to clipboard -- positioned relative to the full dropdown */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        const lines: string[] = []
+                        lines.push(`Rarity: ${itemRarity}`)
+                        if (l.itemData!.name && l.itemData!.name !== l.itemData!.baseType) lines.push(l.itemData!.name)
+                        if (l.itemData!.baseType) lines.push(l.itemData!.baseType)
+                        lines.push('--------')
+                        if (l.itemData!.ilvl) lines.push(`Item Level: ${l.itemData!.ilvl}`)
+                        if (l.itemData!.implicitMods?.length) {
                           lines.push('--------')
-                          if (l.itemData!.ilvl) lines.push(`Item Level: ${l.itemData!.ilvl}`)
-                          if (l.itemData!.implicitMods?.length) {
-                            lines.push('--------')
-                            l.itemData!.implicitMods.forEach((m) => lines.push(`${m} (implicit)`))
-                          }
-                          if (l.itemData!.explicitMods?.length) {
-                            lines.push('--------')
-                            l.itemData!.explicitMods.forEach((m) => lines.push(m))
-                          }
-                          navigator.clipboard.writeText(lines.join('\n'))
-                          const btn = e.currentTarget
-                          btn.textContent = 'Copied!'
-                          setTimeout(() => {
-                            btn.textContent = 'Copy to Clipboard'
-                          }, 1500)
-                        }}
-                        className="absolute top-0 right-0 px-2 py-[2px] text-[9px] font-semibold bg-white/[0.06] text-text-dim border-none rounded-[3px] cursor-pointer"
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = 'rgba(255,255,255,0.12)'
-                          e.currentTarget.style.color = 'var(--text)'
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
-                          e.currentTarget.style.color = 'var(--text-dim)'
-                        }}
-                      >
-                        Copy to Clipboard
-                      </button>
+                          l.itemData!.implicitMods.forEach((m) => lines.push(`${m} (implicit)`))
+                        }
+                        if (l.itemData!.explicitMods?.length) {
+                          lines.push('--------')
+                          l.itemData!.explicitMods.forEach((m) => lines.push(m))
+                        }
+                        navigator.clipboard.writeText(lines.join('\n'))
+                        const btn = e.currentTarget
+                        btn.textContent = 'Copied!'
+                        setTimeout(() => {
+                          btn.textContent = 'Copy to Clipboard'
+                        }, 1500)
+                      }}
+                      className="absolute top-3 right-4 px-2 py-[2px] text-[9px] font-semibold bg-white/[0.06] text-text-dim border-none rounded-[3px] cursor-pointer z-[2]"
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.12)'
+                        e.currentTarget.style.color = 'var(--text)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(255,255,255,0.06)'
+                        e.currentTarget.style.color = 'var(--text-dim)'
+                      }}
+                    >
+                      Copy to Clipboard
+                    </button>
+
+                    {/* Right: Item info + mods */}
+                    <div className="flex-1 flex flex-col gap-[2px] text-center items-center z-[1] relative max-w-[280px] mx-auto">
                       {l.itemData.name && l.itemData.name !== l.itemData.baseType && (
                         <div
                           className="text-xs font-semibold"
@@ -671,9 +672,12 @@ export function TradeListings({
                           }}
                         >
                           {l.itemData.implicitMods.map((mod, mi) => (
-                            <div key={mi} className="text-[10px]" style={{ color: MOD_COLORS.implicit }}>
-                              {mod}
-                            </div>
+                            <ModLine
+                              key={mi}
+                              text={mod}
+                              color={MOD_COLORS.implicit}
+                              tierInfo={l.itemData!.modTiers?.[mod]}
+                            />
                           ))}
                         </div>
                       )}
@@ -691,20 +695,36 @@ export function TradeListings({
                           {(() => {
                             const fracturedSet = new Set(l.itemData!.fracturedMods ?? [])
                             const foulbornSet = new Set(l.itemData!.foulbornMods ?? [])
-                            return l.itemData!.explicitMods!.map((mod, mi) => (
-                              <div
+                            const tiers = l.itemData!.modTiers
+                            const mods = l.itemData!.explicitMods!
+                            // Group: fractured first, then prefixes, then suffixes, preserving API order within each
+                            const fractured = mods.filter((m) => fracturedSet.has(m))
+                            const prefixes = mods.filter(
+                              (m) => !fracturedSet.has(m) && tiers?.[m]?.tier.startsWith('P'),
+                            )
+                            const suffixes = mods.filter(
+                              (m) => !fracturedSet.has(m) && tiers?.[m]?.tier.startsWith('S'),
+                            )
+                            const other = mods.filter(
+                              (m) =>
+                                !fracturedSet.has(m) &&
+                                !tiers?.[m]?.tier.startsWith('P') &&
+                                !tiers?.[m]?.tier.startsWith('S'),
+                            )
+                            const sorted = [...fractured, ...prefixes, ...suffixes, ...other]
+                            return sorted.map((mod, mi) => (
+                              <ModLine
                                 key={mi}
-                                className="text-[10px]"
-                                style={{
-                                  color: foulbornSet.has(mod)
+                                text={mod}
+                                color={
+                                  foulbornSet.has(mod)
                                     ? MOD_COLORS.foulborn
                                     : fracturedSet.has(mod)
                                       ? MOD_COLORS.fractured
-                                      : MOD_COLORS.explicit,
-                                }}
-                              >
-                                {mod}
-                              </div>
+                                      : MOD_COLORS.explicit
+                                }
+                                tierInfo={tiers?.[mod]}
+                              />
                             ))
                           })()}
                         </div>

@@ -227,6 +227,7 @@ export async function preloadPriceCheck(item: PoeItem, store: Store<AppSettings>
       wingsTotal: item.wingsTotal,
       mapReward: item.mapReward,
       transfigured: item.transfigured,
+      synthesised: item.synthesised,
       logbookFactions: item.logbookFactions,
       logbookBosses: item.logbookBosses,
       atzoatlRooms: item.atzoatlRooms,

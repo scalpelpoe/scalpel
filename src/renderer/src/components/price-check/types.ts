@@ -37,6 +37,7 @@ export interface Listing {
     templeOpenRooms?: string[]
     templeObstructedRooms?: string[]
     storedExperience?: number
+    modTiers?: Record<string, { tier: string; name: string; ranges: string }>
     armour?: number
     evasion?: number
     energyShield?: number
