@@ -123,6 +123,20 @@ export const MOD_COLORS: Record<string, string> = {
 
 export const MOD_BOLD_TYPES = new Set(['pseudo', 'defence', 'temple-key'])
 
+export const CHIP_COLORS: Record<string, string> = {
+  'pseudo.pseudo_number_of_empty_prefix_mods': '#4caf50',
+  'pseudo.pseudo_number_of_empty_suffix_mods': '#4caf50',
+  'misc.corrupted': '#ef5350',
+  'misc.mirrored': '#8787FE',
+  'misc.identified': '#ffb74d',
+}
+
+export function getChipColor(id: string): string {
+  if (CHIP_COLORS[id]) return CHIP_COLORS[id]
+  if (id.startsWith('misc.influence_')) return '#c8a2c8'
+  return 'var(--accent)'
+}
+
 export function getModColor(type: string, foulborn?: boolean): string {
   if (foulborn) return MOD_COLORS.foulborn
   return MOD_COLORS[type] ?? 'var(--text)'

@@ -322,7 +322,7 @@ export async function searchTrade(
   }
 
   // Add socket filters
-  const socketFilters = statFilters.filter((f) => f.type === 'socket' && f.enabled)
+  const socketFilters = statFilters.filter((f) => (f.type === 'socket' || f.id === 'socket.white_sockets') && f.enabled)
   if (socketFilters.length > 0) {
     const socketQuery: Record<string, Record<string, number>> = {}
     for (const f of socketFilters) {
@@ -491,6 +491,7 @@ export async function searchTrade(
       f.enabled &&
       f.type !== 'timeless' &&
       f.id !== 'misc.memory_level' &&
+      f.id !== 'socket.white_sockets' &&
       (!['defence', 'weapon', 'socket', 'misc', 'gem', 'map', 'heist', 'currency'].includes(f.type) ||
         miscPseudoIds.has(f.id) ||
         mapPseudoIds.has(f.id)),

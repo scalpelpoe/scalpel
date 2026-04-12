@@ -1,6 +1,16 @@
 import { useState, useEffect, useRef, useMemo } from 'react'
 import type { PriceCheckProps, StatFilter, Listing, BulkListing } from './types'
-import { RARITY_COLORS, INFLUENCE_ICONS, iconMap, chaosIcon, getItemIcon, formatPrice, getItemSize } from './constants'
+import {
+  RARITY_COLORS,
+  INFLUENCE_ICONS,
+  iconMap,
+  chaosIcon,
+  getItemIcon,
+  formatPrice,
+  getItemSize,
+  getChipColor,
+} from './constants'
+import { FilterChip } from './FilterChip'
 import { ItemHeader } from './ItemHeader'
 import { StatFilterRow } from './StatFilterRow'
 import { TradeListings } from './TradeListings'
@@ -166,6 +176,10 @@ export function PriceCheck({
     setFilters((prev) => {
       const target = prev[idx]
       const toggling = !target.enabled
+      // Prevent disabling fractured chip while any fractured row is enabled
+      if (!toggling && target.id === 'misc.fractured' && prev.some((f) => f.type === 'fractured' && f.enabled)) {
+        return prev
+      }
       return prev.map((f, i) => {
         if (i === idx) {
           if (toggling && f.type === 'timeless') return { ...f, enabled: true }
@@ -308,7 +322,9 @@ export function PriceCheck({
                     f.min === f.value,
                 )
                 return (
-                  <div
+                  <FilterChip
+                    label="Exact Values"
+                    active={isFullValues}
                     onClick={() =>
                       setFilters((prev) =>
                         prev.map((f) => {
@@ -318,98 +334,69 @@ export function PriceCheck({
                         }),
                       )
                     }
-                    className="flex items-center gap-1 px-[10px] py-1 rounded-full cursor-pointer text-[11px] font-semibold select-none"
-                    style={{
-                      background: isFullValues ? 'rgba(200,169,110,0.13)' : 'rgba(0,0,0,0.25)',
-                      border: isFullValues ? '1px solid rgba(200,169,110,0.4)' : '1px solid var(--border)',
-                      opacity: isFullValues ? 1 : 0.5,
-                      color: isFullValues ? 'var(--accent)' : 'var(--text-dim)',
-                    }}
-                  >
-                    Exact Values
-                  </div>
+                  />
                 )
               })()}
+              {/* Base chip -- non-corrupted, non-mirrored, non-unique only */}
+              {(() => {
+                if (item.rarity === 'Unique') return null
+                if (filters.some((f) => f.id === 'misc.corrupted' && f.enabled)) return null
+                if (filters.some((f) => f.id === 'misc.mirrored' && f.enabled)) return null
+
+                const isBaseMode =
+                  filters.some((f) => f.id === 'misc.basetype' && f.enabled) &&
+                  filters.some((f) => f.id === 'misc.ilvl' && f.enabled) &&
+                  filters.filter(
+                    (f) =>
+                      f.type !== 'socket' &&
+                      f.type !== 'misc' &&
+                      f.type !== 'timeless' &&
+                      f.type !== 'fractured' &&
+                      f.type !== 'currency' &&
+                      f.enabled,
+                  ).length === 0
+
+                return (
+                  <FilterChip
+                    label="Base"
+                    active={isBaseMode}
+                    onClick={() =>
+                      setFilters((prev) =>
+                        prev.map((f) => {
+                          if (f.id === 'misc.basetype' || f.id === 'misc.ilvl') return { ...f, enabled: true }
+                          if (
+                            f.type === 'socket' ||
+                            f.type === 'misc' ||
+                            f.type === 'timeless' ||
+                            f.type === 'fractured' ||
+                            f.type === 'currency'
+                          )
+                            return f
+                          return { ...f, enabled: false }
+                        }),
+                      )
+                    }
+                  />
+                )
+              })()}
+              {/* Filter chips (sockets, quality, ilvl, corrupted, etc.) */}
               {filters.map((f, i) => {
                 if (f.type !== 'socket' && f.type !== 'misc') return null
-                const isOpenAffix = f.id.startsWith('pseudo.pseudo_number_of_empty_')
-                const isInfluence = f.id.startsWith('misc.influence_')
-                const chipColor = isOpenAffix
-                  ? '#4caf50'
-                  : f.id === 'misc.corrupted'
-                    ? '#ef5350'
-                    : f.id === 'misc.mirrored'
-                      ? '#8787FE'
-                      : f.id === 'misc.identified'
-                        ? '#ffb74d'
-                        : isInfluence
-                          ? '#c8a2c8'
-                          : 'var(--accent)'
-                const influenceIcon = isInfluence ? INFLUENCE_ICONS[f.id] : null
                 return (
-                  <div
+                  <FilterChip
                     key={i}
+                    label={f.text}
+                    active={f.enabled}
                     onClick={() => toggleFilter(i)}
-                    className="flex items-center gap-1 px-[10px] py-1 rounded-full cursor-pointer text-[11px] font-semibold select-none relative overflow-hidden"
-                    style={{
-                      background: f.enabled
-                        ? chipColor === 'var(--accent)'
-                          ? 'rgba(200,169,110,0.13)'
-                          : `${chipColor}22`
-                        : 'rgba(0,0,0,0.25)',
-                      border: f.enabled
-                        ? chipColor === 'var(--accent)'
-                          ? '1px solid rgba(200,169,110,0.4)'
-                          : `1px solid ${chipColor}66`
-                        : '1px solid var(--border)',
-                      opacity: f.enabled ? 1 : 0.5,
-                      color: f.enabled ? chipColor : 'var(--text-dim)',
-                    }}
-                  >
-                    {influenceIcon && f.enabled && (
-                      <img
-                        src={influenceIcon}
-                        alt=""
-                        className="absolute left-0 top-1/2 -translate-y-1/2 pointer-events-none"
-                        style={{
-                          width: 28,
-                          height: 28,
-                          objectFit: 'contain',
-                          filter: 'blur(6px) saturate(3)',
-                          opacity: 0.5,
-                        }}
-                      />
-                    )}
-                    {influenceIcon && (
-                      <img
-                        src={influenceIcon}
-                        alt=""
-                        className="relative -ml-[3px]"
-                        style={{ width: 14, height: 14 }}
-                      />
-                    )}
-                    <span className="relative">{f.text}</span>
-                  </div>
+                    color={getChipColor(f.id)}
+                    icon={f.id.startsWith('misc.influence_') ? INFLUENCE_ICONS[f.id] : undefined}
+                  />
                 )
               })}
               {/* Timeless jewel chips */}
               {filters.map((f, i) => {
                 if (f.type !== 'timeless') return null
-                return (
-                  <div
-                    key={i}
-                    onClick={() => toggleFilter(i)}
-                    className="flex items-center gap-1 px-[10px] py-1 rounded-full cursor-pointer text-[11px] font-semibold select-none"
-                    style={{
-                      background: f.enabled ? 'rgba(200,169,110,0.13)' : 'rgba(0,0,0,0.25)',
-                      border: f.enabled ? '1px solid rgba(200,169,110,0.4)' : '1px solid var(--border)',
-                      opacity: f.enabled ? 1 : 0.5,
-                      color: f.enabled ? 'var(--accent)' : 'var(--text-dim)',
-                    }}
-                  >
-                    {f.text}
-                  </div>
-                )
+                return <FilterChip key={i} label={f.text} active={f.enabled} onClick={() => toggleFilter(i)} />
               })}
             </div>
           )}

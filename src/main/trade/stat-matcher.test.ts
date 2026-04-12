@@ -217,17 +217,17 @@ describe('matchItemMods', () => {
       expect(linkChip).toBeUndefined()
     })
 
-    it('generates white socket chip', () => {
+    it('generates white socket row (disabled by default)', () => {
       const filters = matchItemMods([], [], undefined, makeItemInfo({ sockets: 'W-R-G', linkedSockets: 3 }))
-      const whiteChip = filters.find((f) => f.id === 'socket.white_sockets')
-      expect(whiteChip).toBeDefined()
-      expect(whiteChip!.value).toBe(1)
-      expect(whiteChip!.enabled).toBe(true)
+      const whiteRow = filters.find((f) => f.id === 'socket.white_sockets')
+      expect(whiteRow).toBeDefined()
+      expect(whiteRow!.value).toBe(1)
+      expect(whiteRow!.enabled).toBe(false)
     })
 
     it('generates abyssal socket chip', () => {
       const filters = matchItemMods([], [], undefined, makeItemInfo({ sockets: 'A-R', linkedSockets: 2 }))
-      const abyssChip = filters.find((f) => f.id === 'explicit.stat_3527617737')
+      const abyssChip = filters.find((f) => f.id === 'implicit.stat_3527617737')
       expect(abyssChip).toBeDefined()
       expect(abyssChip!.value).toBe(1)
     })

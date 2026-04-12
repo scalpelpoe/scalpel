@@ -782,25 +782,28 @@ export function matchItemMods(
 
     // Only show sockets chip for: white sockets, 6 sockets, or abyssal sockets
     if (w > 0) {
-      miscFilters.push({
+      filters.push({
         id: 'socket.white_sockets',
-        text: `${w} White Socket${w > 1 ? 's' : ''}`,
+        text: 'White Sockets',
         value: w,
-        min: totalSockets,
+        min: w,
         max: null,
-        enabled: true,
-        type: 'socket',
+        enabled: false,
+        type: 'explicit',
       })
     }
     if (a > 0) {
+      const abyssIsImplicit =
+        !advancedMods ||
+        advancedMods.some((am) => am.type === 'implicit' && am.lines.some((l) => /Abyssal Socket/i.test(l)))
       miscFilters.push({
-        id: 'explicit.stat_3527617737',
-        text: `${a} Abyssal Socket${a > 1 ? 's' : ''}`,
+        id: `${abyssIsImplicit ? 'implicit' : 'explicit'}.stat_3527617737`,
+        text: 'Abyssal Sockets',
         value: a,
         min: a,
         max: null,
         enabled: true,
-        type: 'explicit',
+        type: abyssIsImplicit ? 'implicit' : 'explicit',
       })
     }
     if (itemInfo.linkedSockets >= 5) {
