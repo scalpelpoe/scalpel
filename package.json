@@ -14,6 +14,8 @@
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "dist:win": "npm run build && electron-builder --win --x64",
+    "dist:linux": "npm run build && electron-builder --linux --x64",
+    "dist:mac": "npm run build && electron-builder --mac",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "postinstall": "electron-rebuild",
     "lint": "eslint src/",
@@ -77,6 +79,21 @@
       "icon": "resources/icon.ico",
       "signAndEditExecutable": true
     },
+    "mac": {
+      "target": "dmg",
+      "icon": "resources/icon.icns",
+      "identity": null,
+      "artifactName": "Scalpel-${version}-mac.${ext}"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "resources/icon.png",
+      "category": "Game",
+      "artifactName": "Scalpel-${version}-linux.${ext}"
+    },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
@@ -89,6 +106,14 @@
       {
         "from": "resources/icon.ico",
         "to": "icon.ico"
+      },
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
+      },
+      {
+        "from": "resources/icon.icns",
+        "to": "icon.icns"
       }
     ],
     "asar": true,

@@ -1,4 +1,4 @@
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { BrowserWindow, dialog, ipcMain, app } from 'electron'
 import { readFileSync, existsSync, readdirSync } from 'fs'
 import { join, basename } from 'path'
 import Store from 'electron-store'
@@ -8,6 +8,20 @@ import { getAppWindow } from '../app-window'
 import { updateOnlineSyncDir } from '../online-sync'
 import type { AppSettings, FilterListEntry } from '../../shared/types'
 
+/** Default directory where PoE stores .filter files, per platform. */
+function getDefaultFilterDir(): string {
+  switch (process.platform) {
+    case 'win32':
+      return join(app.getPath('home'), 'Documents', 'My Games', 'Path of Exile')
+    case 'linux':
+      return join(app.getPath('home'), '.local', 'share', 'Steam', 'steamapps', 'common', 'Path of Exile')
+    case 'darwin':
+      return join(app.getPath('home'), 'Library', 'Application Support', 'Path of Exile', 'Preferences', 'ItemFilters')
+    default:
+      return app.getPath('home')
+  }
+}
+
 export function register(store: Store<AppSettings>): void {
   ipcMain.handle('pick-filter-file', async (event) => {
     const sender = BrowserWindow.fromWebContents(event.sender)
@@ -15,7 +29,7 @@ export function register(store: Store<AppSettings>): void {
 
     const dialogOpts = {
       title: 'Select your .filter file',
-      defaultPath: `${process.env.USERPROFILE}\\Documents\\My Games\\Path of Exile`,
+      defaultPath: getDefaultFilterDir(),
       filters: [{ name: 'PoE Filter', extensions: ['filter'] }],
       properties: ['openFile'] as 'openFile'[],
     }
@@ -52,7 +66,7 @@ export function register(store: Store<AppSettings>): void {
     const parent = !isOverlay && sender ? sender : undefined
     const dialogOpts = {
       title: 'Select your Path of Exile filter folder',
-      defaultPath: `${process.env.USERPROFILE}\\Documents\\My Games\\Path of Exile`,
+      defaultPath: getDefaultFilterDir(),
       properties: ['openDirectory'] as 'openDirectory'[],
     }
     const result = parent ? await dialog.showOpenDialog(parent, dialogOpts) : await dialog.showOpenDialog(dialogOpts)

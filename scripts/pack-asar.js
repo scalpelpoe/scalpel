@@ -126,7 +126,11 @@ asar.createPackageWithOptions(tempAppDir, asarPath, {
   if (fs.existsSync(unpackedDir)) {
     const { execSync } = require('child_process')
     const zipPath = path.join(versionDir, 'app.asar.unpacked.zip')
-    execSync(`powershell -NoProfile -Command "Compress-Archive -Path '${unpackedDir}\\*' -DestinationPath '${zipPath}' -Force"`, { stdio: 'inherit' })
+    if (process.platform === 'win32') {
+      execSync(`powershell -NoProfile -Command "Compress-Archive -Path '${unpackedDir}\\*' -DestinationPath '${zipPath}' -Force"`, { stdio: 'inherit' })
+    } else {
+      execSync(`cd "${unpackedDir}" && zip -r "${zipPath}" .`, { stdio: 'inherit' })
+    }
     console.log(`Zipped unpacked modules: ${(fs.statSync(zipPath).size / 1024 / 1024).toFixed(1)} MB`)
   }
 

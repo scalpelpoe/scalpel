@@ -1,6 +1,6 @@
-import { BrowserWindow, ipcMain, app, nativeImage } from 'electron'
+import { BrowserWindow, ipcMain, app } from 'electron'
 import { join } from 'path'
-import { existsSync } from 'fs'
+import { getAppIcon } from './platform'
 
 let appWindow: BrowserWindow | null = null
 let quitting = false
@@ -10,10 +10,7 @@ app.on('before-quit', () => {
 })
 
 export function createAppWindow(): BrowserWindow {
-  const devIcon = join(__dirname, '../../resources/icon.ico')
-  const prodIcon = join(process.resourcesPath, 'icon.ico')
-  const iconPath = existsSync(prodIcon) ? prodIcon : devIcon
-  const icon = existsSync(iconPath) ? nativeImage.createFromPath(iconPath) : undefined
+  const icon = getAppIcon()
 
   appWindow = new BrowserWindow({
     width: 520,

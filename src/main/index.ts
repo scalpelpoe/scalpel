@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, screen } from 'electron'
+import { app, BrowserWindow, ipcMain, Tray, Menu, screen } from 'electron'
 
 // Prevent unhandled JS exceptions from crashing the native overlay thread
 // electron-overlay-window's tsfn_to_js_proxy calls napi_fatal_error if napi_call_function
@@ -10,10 +10,9 @@ process.on('unhandledRejection', (err) => {
   console.error('[UNHANDLED REJECTION]', err)
 })
 
-import { existsSync } from 'fs'
-import { join } from 'path'
 import { execSync } from 'child_process'
 import Store from 'electron-store'
+import { getAppIcon } from './platform'
 import {
   createOverlayWindow,
   hideOverlay,
@@ -56,6 +55,7 @@ import type { AppSettings } from '../shared/types'
 // ---- Elevation detection ---------------------------------------------------
 
 function isElevated(): boolean {
+  if (process.platform !== 'win32') return false
   try {
     execSync('net session', { stdio: 'ignore' })
     return true
@@ -126,16 +126,9 @@ ipcMain.on('close-overlay', () => hideOverlay())
 
 let tray: Tray | null = null
 
-function getAppIcon(): Electron.NativeImage {
-  // In packaged app, resources/ is at process.resourcesPath; in dev, it's at project root
-  const devPath = join(__dirname, '../../resources/icon.ico')
-  const prodPath = join(process.resourcesPath, 'icon.ico')
-  const iconPath = existsSync(prodPath) ? prodPath : devPath
-  return nativeImage.createFromPath(iconPath)
-}
-
 function createTray(): void {
   const icon = getAppIcon()
+  if (!icon) return
   tray = new Tray(icon)
   tray.setToolTip('Scalpel')
 
