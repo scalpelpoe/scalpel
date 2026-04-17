@@ -128,6 +128,8 @@ uIOhook.on('mousemove', (e) => {
 // before PoE grabs focus and causes a flash.
 uIOhook.on('mousedown', (e) => {
   if (!overlayVisible) return
+  // Only process clicks if the overlay window is actually visible on screen
+  if (!overlayWindow || overlayWindow.isDestroyed() || !overlayWindow.isVisible()) return
   if (!isInsidePanel(e.x, e.y)) {
     // Ensure click-through is enabled so the click reaches the game
     if (mouseOverPanel) {
@@ -173,36 +175,36 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
   // Prevent Windows show/hide animation by using opacity instead of hide/show.
   // electron-overlay-window calls hide()/showInactive() on focus changes, which
   // triggers the OS zoom animation. We intercept to use opacity instead.
+  const origHide = overlayWindow.hide.bind(overlayWindow)
   const origShowInactive = overlayWindow.showInactive.bind(overlayWindow)
-  let windowShown = false
-
   let opacityHidden = false
 
   overlayWindow.hide = () => {
-    if (windowShown) {
-      if (Date.now() - lastShowTime < 500) return
-      overlayWindow!.setOpacity(0)
-      overlayWindow!.setIgnoreMouseEvents(true)
-      // Drop to a lower z-level so the taskbar can appear above us when alt-tabbing.
-      // We restore to screen-saver level in showInactive when PoE regains focus.
-      overlayWindow!.setAlwaysOnTop(true, 'floating')
-      opacityHidden = true
-      if (onGameBlur) setImmediate(onGameBlur)
-    }
+    if (Date.now() - lastShowTime < 500) return
+
+    // Make it invisible first so hide animation is imperceptible
+    overlayWindow!.setOpacity(0)
+
+    // Don't forward clicks - let the OS handle them naturally
+    overlayWindow!.setIgnoreMouseEvents(true)
+
+    // Actually hide the window from the OS so taskbar appears properly
+    // This prevents Windows from treating the transparent overlay as a fullscreen app
+    // origHide() will handle focus transitions internally - don't call focusTarget() separately
+    origHide()
+
+    opacityHidden = true
+    if (onGameBlur) setImmediate(onGameBlur)
   }
+
   overlayWindow.showInactive = () => {
-    if (!windowShown) {
-      origShowInactive()
-      windowShown = true
-    }
-    // Toggle alwaysOnTop off/on to force Windows to re-stack the window.
-    // Going from one topmost level to another ('floating' -> 'screen-saver')
-    // doesn't always trigger a re-stack, especially with sibling Electron windows.
-    overlayWindow!.setAlwaysOnTop(false)
-    overlayWindow!.setAlwaysOnTop(true, 'screen-saver')
-    overlayWindow!.moveTop()
+    // Restore opacity before showing so it's visible immediately
     overlayWindow!.setOpacity(1)
     opacityHidden = false
+
+    // Show the window
+    origShowInactive()
+
     if (onGameFocus) setImmediate(onGameFocus)
   }
 
@@ -232,12 +234,11 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
   })
   OverlayController.events.on('focus', () => {
     if (!overlayWindow || overlayWindow.isDestroyed()) return
-    // Always restore z-level when PoE regains focus, even if overlay is hidden.
-    // Without this, returning from another app (e.g. alt-tab to Spotify and back)
-    // leaves the overlay at 'floating' level, stuck behind the game.
-    overlayWindow.setAlwaysOnTop(true, 'screen-saver')
-    overlayWindow.moveTop()
-    // Resync game bounds so panelRect is accurate for click-through hit testing
+
+    // Only show the overlay if POE actually has focus (not another window)
+    // This prevents the overlay from appearing on top of other windows during rapid alt-tab
+    if (!OverlayController.targetHasFocus) return
+
     const tb = OverlayController.targetBounds
     if (tb && tb.width) sendGameBounds(tb.width, tb.height)
     if (overlayVisible) {
