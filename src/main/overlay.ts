@@ -175,12 +175,11 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
   // Prevent Windows show/hide animation by using opacity instead of hide/show.
   // electron-overlay-window calls hide()/showInactive() on focus changes, which
   // triggers the OS zoom animation. We intercept to use opacity instead.
-  const origHide = overlayWindow.hide.bind(overlayWindow)
   const origShowInactive = overlayWindow.showInactive.bind(overlayWindow)
   let opacityHidden = false
 
   overlayWindow.hide = () => {
-    if (Date.now() - lastShowTime < 500) return
+    if (Date.now() - lastShowTime < 100) return
 
     // Make it invisible and click-through - don't actually hide from OS to avoid animation
     overlayWindow!.setOpacity(0)
@@ -198,7 +197,6 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
     overlayWindow!.setOpacity(1)
     opacityHidden = false
 
-    // Show without OS animation
     overlayWindow!.setSkipTaskbar(true)
     origShowInactive()
 
