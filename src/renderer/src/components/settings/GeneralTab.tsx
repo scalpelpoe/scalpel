@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import type { AppSettings } from '../../../../shared/types'
 import { Toggle } from '../Toggle'
 
@@ -7,6 +8,12 @@ interface Props {
 }
 
 export function GeneralTab({ settings, update }: Props): JSX.Element {
+  const [scaleInput, setScaleInput] = useState(String(Math.round(settings.overlayScale * 100)))
+
+  useEffect(() => {
+    setScaleInput(String(Math.round(settings.overlayScale * 100)))
+  }, [settings.overlayScale])
+
   return (
     <>
       {/* League */}
@@ -63,7 +70,7 @@ export function GeneralTab({ settings, update }: Props): JSX.Element {
       {/* Overlay scale */}
       <section>
         <label>Overlay scale</label>
-        <div className="flex gap-1.5 mt-[6px]">
+        <div className="flex items-center gap-1.5 mt-[6px]">
           {[0.75, 1, 1.25, 1.5, 2].map((scale) => (
             <button
               key={scale}
@@ -75,6 +82,23 @@ export function GeneralTab({ settings, update }: Props): JSX.Element {
               {Math.round(scale * 100)}%
             </button>
           ))}
+          <input
+            type="number"
+            min={50}
+            max={300}
+            step={5}
+            value={scaleInput}
+            onChange={(e) => setScaleInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                const v = Math.min(300, Math.max(50, Number(scaleInput)))
+                update('overlayScale', v / 100)
+              }
+            }}
+            onBlur={() => setScaleInput(String(Math.round(settings.overlayScale * 100)))}
+            className="w-[52px] text-center text-[11px] bg-bg-solid border border-border rounded px-1 py-1 text-text"
+          />
+          <span className="text-[11px] text-text-dim">%</span>
         </div>
       </section>
 
