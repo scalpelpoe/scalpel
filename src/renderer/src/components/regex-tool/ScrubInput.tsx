@@ -12,6 +12,8 @@ interface ScrubInputProps {
   defaultValue?: number | null
   /** Override text color (e.g. to tint when the value is invalid) */
   color?: string
+  /** Decorative suffix shown next to the value in display mode (not during edit). */
+  suffix?: string
 }
 
 export function ScrubInput({
@@ -23,6 +25,7 @@ export function ScrubInput({
   step = 1,
   defaultValue,
   color,
+  suffix,
 }: ScrubInputProps): JSX.Element {
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState('')
@@ -118,7 +121,10 @@ export function ScrubInput({
           max={max}
         />
       ) : (
-        <span style={value == null ? { opacity: 0.4 } : undefined}>{value ?? placeholder}</span>
+        <span style={value == null ? { opacity: 0.4 } : undefined}>
+          {value ?? placeholder}
+          {suffix}
+        </span>
       )}
       <SortFour size={11} theme="outline" fill="currentColor" style={{ transform: 'rotate(90deg)', opacity: 0.35 }} />
     </div>
