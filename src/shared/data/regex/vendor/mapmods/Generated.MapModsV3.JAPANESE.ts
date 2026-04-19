@@ -407,7 +407,7 @@ export const regexMapModsJAPANESE: Regex<MapModsTokenOption> = {
       regex: '適',
       rawText: 'プレイヤーは適用されるフラスコの効果が40%低下する|エリアで見つかるカレンシーの量が47%上昇する',
       generalizedText:
-        '^プレイヤーは適用されるフラスコの効果が#%低下する$|^エリアで見つかるカレンシーの量が#%上昇する$',
+        '^プレイヤーは適用されるフラスコの効果が#%低下する$|^エ��アで見つかるカレンシーの量が#%上昇する$',
       options: { scary: 1001, nm: true },
     },
     {
@@ -770,7 +770,7 @@ export const regexMapModsJAPANESE: Regex<MapModsTokenOption> = {
       id: 1541760497,
       regex: 'ンを',
       rawText: 'モンスターはスタンを受けることがない|モンスターのライフが(15-30)%上昇する',
-      generalizedText: '^モンスターはスタンを受けることがない$|^モン��ターのライフが#%上昇する$',
+      generalizedText: '^モンスターはスタンを受けることがない$|^モンスターのライフが#%上昇する$',
       options: { scary: 100, nm: false },
     },
     {
@@ -812,7 +812,7 @@ export const regexMapModsJAPANESE: Regex<MapModsTokenOption> = {
       id: 1723792253,
       regex: 'ゴース',
       rawText: 'エリアにはゴーストが出現する',
-      generalizedText: '^エリアにはゴーストが出現する$',
+      generalizedText: '^���リアにはゴーストが出現する$',
       options: { scary: 4, nm: false },
     },
     {

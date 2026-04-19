@@ -182,27 +182,24 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
   overlayWindow.hide = () => {
     if (Date.now() - lastShowTime < 500) return
 
-    // Make it invisible first so hide animation is imperceptible
+    // Make it invisible and click-through - don't actually hide from OS to avoid animation
     overlayWindow!.setOpacity(0)
-
-    // Don't forward clicks - let the OS handle them naturally
     overlayWindow!.setIgnoreMouseEvents(true)
-
-    // Actually hide the window from the OS so taskbar appears properly
-    // This prevents Windows from treating the transparent overlay as a fullscreen app
-    // origHide() will handle focus transitions internally - don't call focusTarget() separately
-    origHide()
 
     opacityHidden = true
     if (onGameBlur) setImmediate(onGameBlur)
   }
 
   overlayWindow.showInactive = () => {
+    // Only show the overlay if POE actually has focus (alt-tab fix)
+    if (!OverlayController.targetHasFocus) return
+
     // Restore opacity before showing so it's visible immediately
     overlayWindow!.setOpacity(1)
     opacityHidden = false
 
-    // Show the window
+    // Show without OS animation
+    overlayWindow!.setSkipTaskbar(true)
     origShowInactive()
 
     if (onGameFocus) setImmediate(onGameFocus)
