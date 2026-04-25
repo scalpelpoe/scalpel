@@ -14,6 +14,7 @@ import {
   DoneStep,
 } from './app-window/onboarding-steps'
 import { AppSettingsWrapper } from './app-window/AppSettingsWrapper'
+import { AppUpdateBanner } from './app-window/AppUpdateBanner'
 
 /** Convert a KeyboardEvent into Electron accelerator format */
 export function AppWindow(): JSX.Element {
@@ -65,6 +66,7 @@ export function AppWindow(): JSX.Element {
 
   return (
     <div className="w-screen h-screen bg-bg-solid flex flex-col overflow-hidden">
+      <AppUpdateBanner />
       {/* Content */}
       <div
         className="flex-1 overflow-y-auto overflow-x-hidden flex justify-center"

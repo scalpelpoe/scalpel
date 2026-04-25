@@ -1,4 +1,5 @@
 import type { OverlayData } from '../../../shared/types'
+import { UpdateAvailableBanner, JustUpdatedBanner, BrickedReleaseBanner } from '../shared/update-banners'
 
 interface UpdateBannerProps {
   updateVersion: string | null
@@ -6,6 +7,7 @@ interface UpdateBannerProps {
   updateReady: boolean
   justUpdated: string | null
   needsElevation: boolean
+  brickedRelease: { version: string; message: string | null } | null
   view: string
   overlayData: OverlayData | null
   priceCheckData: unknown
@@ -19,6 +21,7 @@ export function UpdateBanner({
   updateReady,
   justUpdated,
   needsElevation,
+  brickedRelease,
   view,
   overlayData,
   priceCheckData,
@@ -27,54 +30,20 @@ export function UpdateBanner({
 }: UpdateBannerProps): JSX.Element {
   return (
     <>
-      {/* Update banner */}
-      {updateVersion && (
-        <div className="relative flex items-center justify-between px-3.5 py-2 text-[11px] overflow-hidden shrink-0 bg-[rgba(255,183,77,0.24)]">
-          {/* Progress fill */}
-          {(updateProgress !== null || updateReady) && (
-            <div
-              className="absolute top-0 left-0 bottom-0 transition-all duration-300 ease-linear"
-              style={{
-                width: `${updateReady ? 100 : updateProgress}%`,
-                background: updateReady ? 'rgba(76,175,80,0.25)' : 'rgba(76,175,80,0.15)',
-              }}
-            />
-          )}
-          <span className="text-text font-semibold relative z-[1]">
-            {updateReady
-              ? `Scalpel Update Ready (v${updateVersion}) - restart to apply`
-              : updateProgress !== null
-                ? `Downloading v${updateVersion}... ${updateProgress}%`
-                : `Scalpel Update Available (v${updateVersion})`}
-          </span>
-          <div className="relative z-[1]">
-            {updateReady ? (
-              <button
-                onClick={() => onSaveAndInstall({ view, overlayData, priceCheckData })}
-                className="px-3 py-1 text-[11px] font-semibold border-none rounded cursor-pointer bg-[#4caf50] text-white"
-              >
-                Restart
-              </button>
-            ) : updateProgress === null ? (
-              <button
-                onClick={onDownloadUpdate}
-                className="px-3 py-1 text-[11px] font-semibold bg-accent text-bg-solid border-none rounded cursor-pointer"
-              >
-                Update
-              </button>
-            ) : null}
-          </div>
-        </div>
+      {/* Update banner -- suppressed when a bricked-release advisory is active, since
+          auto-update is the mechanism we're telling the user can't work for them. */}
+      {updateVersion && !brickedRelease && (
+        <UpdateAvailableBanner
+          version={updateVersion}
+          progress={updateProgress}
+          ready={updateReady}
+          onDownload={onDownloadUpdate}
+          onRestart={() => onSaveAndInstall({ view, overlayData, priceCheckData })}
+        />
       )}
 
-      {/* Just updated banner */}
-      {justUpdated && (
-        <div className="flex items-center justify-center px-3.5 py-1.5 text-[11px] shrink-0 bg-[rgba(76,175,80,0.2)]">
-          <span className="text-text font-semibold">Updated to v{justUpdated}</span>
-        </div>
-      )}
+      {justUpdated && <JustUpdatedBanner version={justUpdated} />}
 
-      {/* Elevation warning */}
       {needsElevation && (
         <div className="flex items-center justify-between px-3.5 py-1.5 text-[11px] shrink-0 gap-2 bg-[rgba(239,83,80,0.15)]">
           <span className="font-semibold text-[#ef5350]">
@@ -82,6 +51,8 @@ export function UpdateBanner({
           </span>
         </div>
       )}
+
+      {brickedRelease && <BrickedReleaseBanner version={brickedRelease.version} message={brickedRelease.message} />}
     </>
   )
 }

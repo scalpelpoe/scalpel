@@ -3,6 +3,7 @@ import type { AdvancedMod } from '../../shared/types'
 import { POE_TRADE_API } from '../../shared/endpoints'
 import { ATZOATL_ROOMS, ATZOATL_KEY_ROOMS } from '../../shared/data/trade/atzoatl'
 import { BENEFICIAL_NEGATIVE_KEYWORDS } from '../../shared/data/trade/beneficial-negatives'
+import { STAT_ID_REMAPS } from './stat-exceptions'
 import type { StatFilter } from './trade'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -49,12 +50,20 @@ export const ITEM_CLASS_TO_CATEGORY: Record<string, string> = {
 
 let statEntries: StatEntry[] = []
 let statsFetched = false
+let refreshTimer: ReturnType<typeof setInterval> | null = null
 
 // Build regex patterns from stat text: "+# to maximum Life" -> /^\+(\d+(?:\.\d+)?) to maximum Life$/
 /** Direct text-to-stat mappings for mods where clipboard text is completely different
  *  from the trade API stat text (e.g. corruption implicits with different wording) */
 const DIRECT_MOD_MAPPINGS: Record<string, { statId: string; value: number | null }> = {
   'contains a vaal side area': { statId: 'implicit.stat_2156201537', value: null },
+  // "Trigger a Socketed Spell" bench craft. Trade API stores this under the chance-to-
+  // trigger stat (crafted.stat_3079007202), with item-specific "8 second Cooldown" +
+  // "150% more Cost" baked into the text. The bench version drops the chance prefix
+  // and rephrases "on Using a Skill" -> "when you Use a Skill", so text matching can't
+  // reach it. Mapped with value: null since the stat has no user-adjustable roll.
+  'trigger a socketed spell when you use a skill, with a 8 second cooldown\nspells triggered this way have 150% more cost':
+    { statId: 'crafted.stat_3079007202', value: null },
 }
 
 /** Stat IDs to skip entirely (duplicates where only one works for searching) */
@@ -63,8 +72,13 @@ const BLOCKED_STAT_IDS = new Set([
 ])
 
 function statTextToPattern(text: string): RegExp {
-  // Escape regex special chars except #
-  const escaped = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/#/g, '(.+?)')
+  // Normalize whitespace (including `\n` between multi-line stat parts) to a single
+  // space before escaping, so a two-line crafted mod like
+  //   "Trigger a Socketed Spell ... Cooldown\nSpells Triggered this way ..."
+  // matches regardless of whether the caller joined its lines with `\n` or ` `.
+  // Callers also normalize their input text to a single space before `.match(pattern)`.
+  const normalized = text.replace(/\s+/g, ' ')
+  const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/#/g, '(.+?)')
   return new RegExp('^' + escaped + '$', 'i')
 }
 
@@ -72,7 +86,9 @@ function statTextToPattern(text: string): RegExp {
  *  Used as fallback when exact matching fails -- handles cases where
  *  trade API has a fixed number but the item text has a different value. */
 function statTextToRelaxedPattern(text: string): RegExp {
-  let escaped = text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/#/g, '(.+?)')
+  // Same whitespace normalization as statTextToPattern -- see that function for details.
+  const normalized = text.replace(/\s+/g, ' ')
+  let escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/#/g, '(.+?)')
   // Replace hardcoded numbers (e.g. "50%", "20") with capture groups
   escaped = escaped.replace(/\d+(?:\\\.\d+)?/g, '(.+?)')
   return new RegExp('^' + escaped + '$', 'i')
@@ -80,7 +96,19 @@ function statTextToRelaxedPattern(text: string): RegExp {
 
 /** Fetch stat entries from the PoE trade API (simple GET, no rate limiting needed) */
 async function fetchStats(): Promise<void> {
-  if (statsFetched) return
+  if (statsFetched) {
+    // Refresh in the background every 6 hours for league changes
+    if (!refreshTimer) {
+      refreshTimer = setInterval(
+        () => {
+          statsFetched = false
+          fetchStats()
+        },
+        6 * 60 * 60 * 1000,
+      )
+    }
+    return
+  }
   try {
     const data = await new Promise<string>((resolve, reject) => {
       const request = net.request({
@@ -256,7 +284,11 @@ export function matchModToStat(
   const directKey = modText.toLowerCase().trim()
   if (DIRECT_MOD_MAPPINGS[directKey]) return DIRECT_MOD_MAPPINGS[directKey]
 
-  return _matchModToStat(modText, preferLocal, modType)
+  const result = _matchModToStat(modText, preferLocal, modType)
+  if (result && STAT_ID_REMAPS[result.statId]) {
+    result.statId = STAT_ID_REMAPS[result.statId]
+  }
+  return result
 }
 
 function _matchModToStat(
@@ -274,6 +306,9 @@ function _matchModToStat(
 
   for (const variant of textVariants) {
     const variantFlipped = isFlippedToNegative && (/\breduced\b/i.test(variant) || /\bless\b/i.test(variant))
+    // Match against whitespace-normalized input so multi-line mods joined with "\n"
+    // match stat patterns whose text uses " " (or vice versa).
+    const normalizedVariant = variant.replace(/\s+/g, ' ')
     let nonLocalMatch: { statId: string; value: number | null; option?: number; _textLen: number } | null = null
     let localMatch: { statId: string; value: number | null; option?: number; _textLen: number } | null = null
 
@@ -283,7 +318,7 @@ function _matchModToStat(
       const isLocal = entry.text.includes('(Local)')
       const textForPattern = isLocal ? entry.text.replace(/\s*\(Local\)/, '') : entry.text
       const pattern = statTextToPattern(textForPattern)
-      const match = variant.match(pattern)
+      const match = normalizedVariant.match(pattern)
       if (match) {
         // For stats with two numeric values (e.g. "Adds # to # Damage"), average them
         const numericCaptures = Array.from(match)
@@ -298,8 +333,10 @@ function _matchModToStat(
         }
         // Restore negative sign when matching via sign-flipped variant
         if (isNegativeMod && value != null && value > 0) value = -value
-        // "reduced" / "less" mods are negative "increased" / "more" in trade API
-        if ((isReducedMod || isLessMod) && value != null && value > 0) value = -value
+        // "reduced"/"less" mods are usually negative "increased"/"more" in trade API,
+        // but only negate if the matched stat text doesn't already contain "reduced"/"less"
+        const statHasReduced = /\breduced\b/i.test(entry.text) || /\bless\b/i.test(entry.text)
+        if ((isReducedMod || isLessMod) && !statHasReduced && value != null && value > 0) value = -value
         // "increased" matched as "reduced" (or "more" as "less") -- negate
         if (variantFlipped && value != null && value > 0) value = -value
         // For option-based stats (like "Map contains #'s Citadel"), resolve the option ID
@@ -325,13 +362,14 @@ function _matchModToStat(
   // Fallback: try relaxed patterns where hardcoded numbers in stat text become wildcards.
   // Handles cases like trade API having "increased by 50% of Overcapped" but item text has a different value.
   for (const variant of textVariants) {
+    const normalizedVariant = variant.replace(/\s+/g, ' ')
     let bestMatch: { statId: string; value: number | null; option?: number; _textLen: number } | null = null
     for (const entry of statEntries) {
       if (!entry.id.startsWith(typePrefix)) continue
       if (BLOCKED_STAT_IDS.has(entry.id)) continue
       if (entry.text.includes('(Local)')) continue // skip local in relaxed mode
       const relaxedPattern = statTextToRelaxedPattern(entry.text)
-      const match = variant.match(relaxedPattern)
+      const match = normalizedVariant.match(relaxedPattern)
       if (match) {
         const numericCaptures = Array.from(match)
           .slice(1)
@@ -467,6 +505,8 @@ export function matchItemMods(
     eleDamageAvg?: number
     chaosDamageAvg?: number
     attacksPerSecond?: number
+    critChance?: number
+    heistJob?: { skill: string; level: number }
     monsterLevel?: number
     wingsRevealed?: number
     wingsTotal?: number
@@ -560,19 +600,25 @@ export function matchItemMods(
         /Commanded|Commissioned|Carved|Bathed|Denoted|Remembrancing/i.test(cleaned))
     )
       continue
+    // Detect crafted/fractured/foulborn from advanced mod data BEFORE matching, so
+    // crafted mods (like "Trigger a Socketed Spell when you Use a Skill") are queried
+    // against the crafted.* stat list instead of explicit.* -- matching the wrong list
+    // fails silently and the mod disappears from the price checker.
+    let isFractured = false
+    let isFoulborn = false
+    let advMod: ReturnType<typeof findAdvMod> = undefined
+    if (advancedMods) {
+      advMod = findAdvMod(advancedMods, cleaned, 'explicit')
+      if (advMod?.fractured) isFractured = true
+      if (advMod?.foulborn) isFoulborn = true
+      if (advMod?.crafted) isCrafted = true
+    }
     const useLocal = hasLocalMods && isLocalMod(cleaned, isWeapon)
     const matched = matchModToStat(cleaned, useLocal, isCrafted ? 'crafted' : 'explicit')
     if (matched) {
       const lowPriority = isLowPriority(cleaned)
 
-      // Check if this mod is fractured or foulborn (from advanced mod data)
-      let isFractured = false
-      let isFoulborn = false
-      if (advancedMods) {
-        const advMod = findAdvMod(advancedMods, cleaned, 'explicit')
-        if (advMod?.fractured) isFractured = true
-        if (advMod?.foulborn) isFoulborn = true
-        if (advMod?.crafted) isCrafted = true
+      if (advancedMods && advMod) {
         // Apply magnitude multiplier from implicit (e.g. Cogwork Ring "25% increased Suffix Modifier magnitudes")
         if (advMod?.magnitudeMultiplier && matched.value != null) {
           const oldVal = matched.value
@@ -597,10 +643,12 @@ export function matchItemMods(
         matched.statId = 'crafted.' + matched.statId.split('.').slice(1).join('.')
       }
 
-      // Determine if this value is fixed or rolled
+      // Determine if this value is fixed or rolled, and capture tier/range for display
       // Fixed values (min === max in tier range, or no range) use exact match
       // Rolled values use percentage-based min
       let isFixedValue = false
+      let matchedTier: number | undefined
+      let matchedRange: { min: number; max: number } | undefined
       if (advancedMods && matched.value != null) {
         const rawCleaned = mod.replace(/\s*\(crafted\)\s*$/i, '').trim()
         const advMod = findAdvMod(advancedMods, cleaned, 'explicit', rawCleaned)
@@ -608,6 +656,8 @@ export function matchItemMods(
           const range = advMod.ranges.find((r) => r.value === matched.value || r.value === -(matched.value ?? 0))
           if (range && range.min === range.max) isFixedValue = true
           if (!range && advMod.ranges.length === 0) isFixedValue = true
+          if (advMod.tier > 0) matchedTier = advMod.tier
+          if (range && range.min !== range.max) matchedRange = { min: range.min, max: range.max }
         }
       }
       // For negative values: "reduced" mods use min (trade API expects min for beneficial reduction),
@@ -616,7 +666,7 @@ export function matchItemMods(
       // Negative mods: default to "bad" (less negative = better, use min).
       // Some keywords indicate the negative is beneficial (more negative = better, use max).
       const isBeneficialNegative = isNegative && BENEFICIAL_NEGATIVE_KEYWORDS.some((p) => p.test(mod))
-      const minValue =
+      let minValue =
         matched.value != null && (!isNegative || !isBeneficialNegative)
           ? isFixedValue
             ? matched.value
@@ -624,6 +674,18 @@ export function matchItemMods(
               ? Math.ceil(matched.value * (2 - pct)) // -30 at 90% -> -33 (more negative = wider search)
               : Math.floor(matched.value * pct)
           : null
+      // For uniques, don't default below the mod's minimum possible roll unless the item's actual
+      // value is already below it (e.g. from Volatile Vaal Orb)
+      if (
+        minValue != null &&
+        itemInfo?.rarity === 'Unique' &&
+        matchedRange &&
+        matched.value != null &&
+        matched.value >= matchedRange.min &&
+        minValue < matchedRange.min
+      ) {
+        minValue = matchedRange.min
+      }
       const maxValue = isBeneficialNegative && matched.value != null ? matched.value : null
 
       // Check if this contributes to a pseudo stat
@@ -679,6 +741,8 @@ export function matchItemMods(
         type: isFractured ? 'fractured' : isCrafted ? 'crafted' : 'explicit',
         option: matched.option,
         foulborn: isFoulborn || undefined,
+        modTier: matchedTier,
+        modRange: matchedRange,
       })
       // For fractured mods, also add the unfractured (explicit) version, disabled by default
       if (isFractured) {
@@ -691,6 +755,8 @@ export function matchItemMods(
           max: null,
           enabled: false,
           type: 'explicit',
+          modTier: matchedTier,
+          modRange: matchedRange,
         })
       }
     }
@@ -870,6 +936,32 @@ export function matchItemMods(
         enabled: false,
         type: 'weapon',
       })
+
+    // APS chip. One decimal is plenty of precision for search purposes.
+    weaponFilters.push({
+      id: 'weapon.aps',
+      text: `Attacks per Second: ${aps.toFixed(1)}`,
+      value: aps,
+      min: Math.floor(aps * pct * 10) / 10,
+      max: null,
+      enabled: false,
+      type: 'weapon',
+    })
+  }
+
+  // Critical strike chance chip (parsed from clipboard, independent of APS so it's
+  // outside the `if (attacksPerSecond)` block).
+  if (itemInfo?.critChance && itemInfo.critChance > 0) {
+    const crit = itemInfo.critChance
+    weaponFilters.push({
+      id: 'weapon.crit',
+      text: `Critical Strike Chance: ${crit.toFixed(1)}%`,
+      value: crit,
+      min: Math.floor(crit * pct * 10) / 10,
+      max: null,
+      enabled: false,
+      type: 'weapon',
+    })
   }
 
   // Add socket/link/quality/ilvl filters
@@ -1007,10 +1099,12 @@ export function matchItemMods(
         type: 'misc',
       })
     }
-    // Open prefix/suffix chips (from advanced mod data, non-uniques only)
+    // Open prefix/suffix chips (from advanced mod data, non-uniques only).
+    // Crafted affixes count as "empty" since they're replaceable -- a crafted suffix
+    // plus a literally-empty suffix is counted as 2 open suffixes for pricing purposes.
     if (advancedMods && advancedMods.length > 0 && itemInfo.rarity !== 'Unique') {
-      const prefixCount = advancedMods.filter((m) => m.type === 'prefix').length
-      const suffixCount = advancedMods.filter((m) => m.type === 'suffix').length
+      const prefixCount = advancedMods.filter((m) => m.type === 'prefix' && !m.crafted).length
+      const suffixCount = advancedMods.filter((m) => m.type === 'suffix' && !m.crafted).length
       // Max affixes depends on item: normal equipment has 3/3, jewels have 2/2
       const isJewel = itemInfo.itemClass === 'Jewels' || itemInfo.itemClass === 'Abyss Jewels'
       const maxPrefixes = isJewel ? 2 : 3
@@ -1162,8 +1256,8 @@ export function matchItemMods(
     }
   }
 
-  // Heist job skill requirement (always min 1, actual level doesn't matter for searching)
-  if (itemInfo?.heistJob) {
+  // Heist job skill requirement (contracts only; blueprints have multiple jobs that don't filter search)
+  if (itemInfo?.heistJob && itemInfo.itemClass === 'Contracts') {
     const skillKey = itemInfo.heistJob.skill.toLowerCase().replace(/\s+/g, '_')
     miscFilters.push({
       id: `heist.heist_${skillKey}`,
@@ -1192,7 +1286,7 @@ export function matchItemMods(
   // Heist blueprint wings revealed
   if (itemInfo?.wingsRevealed != null) {
     miscFilters.push({
-      id: 'heist.wings_revealed',
+      id: 'heist.heist_wings',
       text: `Wings Revealed: ${itemInfo.wingsRevealed}`,
       value: itemInfo.wingsRevealed,
       min: itemInfo.wingsRevealed,
@@ -1202,7 +1296,7 @@ export function matchItemMods(
     })
     if (itemInfo.wingsTotal) {
       miscFilters.push({
-        id: 'heist.max_wings',
+        id: 'heist.heist_max_wings',
         text: `Total Wings: ${itemInfo.wingsTotal}`,
         value: itemInfo.wingsTotal,
         min: itemInfo.wingsTotal,

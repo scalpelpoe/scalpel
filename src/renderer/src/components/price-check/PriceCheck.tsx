@@ -10,14 +10,20 @@ import {
   getItemSize,
   getChipColor,
 } from './constants'
-import { isFaustusItem } from '../../../../shared/data/trade/faustus-items'
 import { FilterChip } from './FilterChip'
 import { PriceChip } from '../../shared/PriceChip'
+import { FaustusBanner } from './FaustusBanner'
 import { ItemHeader } from './ItemHeader'
 import { getDustInfo } from '../../shared/dust'
 import { StatFilterRow } from './StatFilterRow'
 import { TradeListings } from './TradeListings'
 import { BulkListings } from './BulkListings'
+import { ListingRowsSkeleton } from './PriceCheckSkeleton'
+import { RateLimitBar } from './RateLimitBar'
+import { BASE_DEFAULT_ITEM_CLASSES, applyBaseModeToFilters, shouldIncludeImplicitsInBase } from './base-mode'
+import type { ListedTime, PriceOption, ResultsView, StatusOption } from './search-settings'
+import { LISTED_TIME_OPTIONS, PRICE_OPTIONS, STATUS_OPTIONS } from './search-settings'
+import { SearchSettingDropdown } from './SearchSettingDropdown'
 
 export function PriceCheck({
   item,
@@ -34,58 +40,16 @@ export function PriceCheck({
   const heroIcon = selectedUnique ? (iconMap[selectedUnique] ?? getItemIcon(item)) : getItemIcon(item)
   const heroName = selectedUnique ?? item.name
   const [loggedIn, setLoggedIn] = useState(false)
+  // Rate-limit state comes from main already merged across all policies we've seen. The
+  // RateLimitBar handles decay + blending; we just store the latest snapshot here.
   const [rateLimitTiers, setRateLimitTiers] = useState<
-    Array<{ used: number; max: number; window: number; penalty: number }>
+    Array<{ used: number; max: number; window: number; penalty: number; lastUpdate?: number }>
   >([])
-  const rateLimitDecay = useRef<{
-    peak: number
-    max: number
-    windowMs: number
-    startTime: number
-    timer: ReturnType<typeof setTimeout> | null
-  }>({ peak: 0, max: 12, windowMs: 10000, startTime: 0, timer: null })
 
   useEffect(() => {
     window.api.poeCheckAuth().then((r) => setLoggedIn(r.loggedIn))
-    const unsub = window.api.onRateLimit((state) => {
-      const first = state.tiers[0]
-      if (!first) return
-      const d = rateLimitDecay.current
-
-      if (first.used >= d.peak) {
-        d.peak = first.used
-        d.max = first.max
-        d.windowMs = first.window * 1000
-        d.startTime = Date.now()
-      }
-
-      // Update tiers with current values
-      setRateLimitTiers(state.tiers)
-
-      // Schedule step-down ticks
-      if (d.timer) clearTimeout(d.timer)
-      const scheduleStep = (): void => {
-        const elapsed = Date.now() - d.startTime
-        const stepsRemaining = Math.max(0, Math.ceil(d.peak * (1 - elapsed / d.windowMs)))
-        const stepInterval = d.windowMs / d.peak
-
-        setRateLimitTiers((prev) => prev.map((t, i) => (i === 0 ? { ...t, used: stepsRemaining } : t)))
-
-        if (stepsRemaining > 0) {
-          const nextStepIn = stepInterval - (elapsed % stepInterval)
-          d.timer = setTimeout(scheduleStep, nextStepIn)
-        } else {
-          d.peak = 0
-          d.timer = null
-        }
-      }
-      const firstStepIn = d.windowMs / d.peak
-      d.timer = setTimeout(scheduleStep, firstStepIn)
-    })
-    return () => {
-      unsub()
-      if (rateLimitDecay.current.timer) clearTimeout(rateLimitDecay.current.timer)
-    }
+    const unsub = window.api.onRateLimit((state) => setRateLimitTiers(state.tiers))
+    return () => unsub()
   }, [])
 
   const [filters, setFilters] = useState<StatFilter[]>(initialFilters)
@@ -103,14 +67,64 @@ export function PriceCheck({
   const [searching, setSearching] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [searched, setSearched] = useState(false)
+  const [remainingIds, setRemainingIds] = useState<string[]>([])
+  const [loadingMore, setLoadingMore] = useState(false)
   const autoSearched = useRef(false)
   const [isBulk, setIsBulk] = useState<boolean | null>(null)
   const [bulkListings, setBulkListings] = useState<BulkListing[]>([])
+
+  // Per-search settings overrides (exposed via the Settings chip). Defaults come from the
+  // user's global settings once they load; left blank for "listed" ("any time").
+  const [showSettings, setShowSettings] = useState(false)
+  const [listedTime, setListedTime] = useState<ListedTime>('')
+  const [priceOption, setPriceOption] = useState<PriceOption>('chaos_divine')
+  const [statusOption, setStatusOption] = useState<StatusOption>('any')
+  const [resultsView, setResultsView] = useState<ResultsView>('default')
+
+  const includeImplicits = shouldIncludeImplicitsInBase(item.rarity, item.corrupted)
+  const applyBaseMode = (): void => {
+    setFilters((prev) => applyBaseModeToFilters(prev, item.rarity, item.corrupted))
+  }
 
   // Check if this is a bulk exchange item on mount
   useEffect(() => {
     window.api.checkBulkItem(item.name, item.baseType, item.itemClass, item.rarity).then(setIsBulk)
   }, [item.name, item.baseType, item.itemClass])
+
+  // Auto-apply Base mode:
+  //   - Item classes in BASE_DEFAULT_ITEM_CLASSES: always (e.g. Blueprints, Contracts)
+  //   - Uniques (for everyone): apply Base but keep the disabled rows visible above the fold
+  //   - Setting "Default all items to Base": same as uniques behavior for all items
+  const baseModeApplied = useRef(false)
+  const baseModeExpandedIndices = useRef<Set<number> | null>(null)
+  const keepUncheckedVisible = useRef(false)
+  const neverAutoSearch = useRef(false)
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
+  useEffect(() => {
+    if (baseModeApplied.current) return
+    window.api.getSettings().then((s) => {
+      if (baseModeApplied.current) return
+      keepUncheckedVisible.current = !!s.tradeKeepUncheckedVisible
+      neverAutoSearch.current = !!s.tradeNeverAutoSearch
+      // Seed the per-search dropdowns from the user's global preferences.
+      if (s.tradePriceOption) setPriceOption(s.tradePriceOption as PriceOption)
+      if (s.tradeStatus) setStatusOption(s.tradeStatus as StatusOption)
+      if (s.tradeDefaultListedTime !== undefined) setListedTime(s.tradeDefaultListedTime as ListedTime)
+      if (s.tradeResultsView) setResultsView(s.tradeResultsView)
+      setSettingsLoaded(true)
+      const isClassDefault = BASE_DEFAULT_ITEM_CLASSES.has(item.itemClass)
+      const isUnique = item.rarity === 'Unique'
+      const keepRowsVisible = isUnique || !!s.tradeDefaultToBase
+      if (isClassDefault || keepRowsVisible) {
+        if (keepRowsVisible) {
+          // Snapshot indices of filters that were enabled pre-Base so they stay visible after a search
+          baseModeExpandedIndices.current = new Set(filters.map((f, i) => (f.enabled ? i : -1)).filter((i) => i >= 0))
+        }
+        applyBaseMode()
+      }
+      baseModeApplied.current = true
+    })
+  }, [])
 
   const searchName = selectedUnique ?? item.name
 
@@ -133,11 +147,23 @@ export function PriceCheck({
   const doSearch = async (): Promise<void> => {
     setSearching(true)
     setError(null)
+    // With "don't hide unchecked" on, still collapse on the first auto-search, then skip
+    // re-collapse on subsequent manual searches. If "never auto-search" is also on, there
+    // is no auto-search -- the user is actively unchecking from the start, so skip even the
+    // first manual search.
+    const skipCollapse = keepUncheckedVisible.current && (searched || neverAutoSearch.current)
     setSearched(true)
-    setFiltersCollapsed(true)
-    // Snapshot which filters are currently enabled -- these stay visible when collapsed
-    const enabledIndices = new Set(filters.map((f, i) => (f.enabled ? i : -1)).filter((i) => i >= 0))
-    setCollapsedVisibleIndices(enabledIndices)
+    if (!skipCollapse) {
+      setFiltersCollapsed(true)
+      // Snapshot which filters are currently enabled -- these stay visible when collapsed.
+      // Also keep rows that were originally on before auto-Base disabled them, so the user
+      // can still see the "turned off" rows above the fold rather than hidden behind "more filters".
+      const enabledIndices = new Set(filters.map((f, i) => (f.enabled ? i : -1)).filter((i) => i >= 0))
+      if (baseModeExpandedIndices.current) {
+        for (const i of baseModeExpandedIndices.current) enabledIndices.add(i)
+      }
+      setCollapsedVisibleIndices(enabledIndices)
+    }
     try {
       const result = await window.api.tradeSearch(
         {
@@ -150,21 +176,40 @@ export function PriceCheck({
           energyShield: item.energyShield,
           ward: item.ward,
           block: item.block,
+          vaalGem: item.vaalGem,
         },
         filters,
+        { listedTime, priceOption, statusOption },
       )
       setListings(result.listings)
       setTotal(result.total)
       setQueryId(result.queryId)
+      setRemainingIds(result.remainingIds ?? [])
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Search failed')
     }
     setSearching(false)
   }
 
-  // Auto-search on first mount (wait for bulk check to complete first)
+  const loadMore = async (): Promise<void> => {
+    if (!queryId || remainingIds.length === 0 || loadingMore) return
+    setLoadingMore(true)
+    try {
+      const result = await window.api.fetchMoreListings(queryId, remainingIds)
+      setListings((prev) => [...prev, ...result.listings])
+      setRemainingIds(result.remainingIds)
+    } catch {
+      // silently fail
+    }
+    setLoadingMore(false)
+  }
+
+  // Auto-search on first mount (wait for bulk check AND settings load first).
+  // Gated by the "Never auto-search" setting -- user must click Search manually in that case.
   useEffect(() => {
     if (isBulk === null) return // still checking
+    if (!settingsLoaded) return
+    if (neverAutoSearch.current) return
     if (!autoSearched.current && (!unidCandidates || selectedUnique)) {
       autoSearched.current = true
       if (isBulk) {
@@ -173,7 +218,7 @@ export function PriceCheck({
         doSearch()
       }
     }
-  }, [selectedUnique, isBulk])
+  }, [selectedUnique, isBulk, settingsLoaded])
 
   const toggleFilter = (idx: number): void => {
     setFilters((prev) => {
@@ -345,15 +390,15 @@ export function PriceCheck({
                   />
                 )
               })()}
-              {/* Base chip -- non-corrupted, non-mirrored, non-unique only */}
+              {/* Base chip -- non-mirrored */}
               {(() => {
-                if (item.rarity === 'Unique') return null
-                if (filters.some((f) => f.id === 'misc.corrupted' && f.enabled)) return null
                 if (filters.some((f) => f.id === 'misc.mirrored' && f.enabled)) return null
 
                 const isBaseMode =
                   filters.some((f) => f.id === 'misc.basetype' && f.enabled) &&
                   filters.some((f) => f.id === 'misc.ilvl' && f.enabled) &&
+                  (includeImplicits ||
+                    !filters.some((f) => (f.type === 'implicit' || f.type === 'enchant') && f.enabled)) &&
                   filters.filter(
                     (f) =>
                       f.type !== 'socket' &&
@@ -361,8 +406,10 @@ export function PriceCheck({
                       f.type !== 'timeless' &&
                       f.type !== 'fractured' &&
                       f.type !== 'currency' &&
+                      f.type !== 'heist' &&
                       f.type !== 'implicit' &&
                       f.type !== 'enchant' &&
+                      !f.foulborn &&
                       f.enabled,
                   ).length === 0
 
@@ -371,23 +418,9 @@ export function PriceCheck({
                     label="Base"
                     active={isBaseMode}
                     onClick={() => {
-                      setFilters((prev) =>
-                        prev.map((f) => {
-                          if (f.id === 'misc.basetype' || f.id === 'misc.ilvl') return { ...f, enabled: true }
-                          if (f.type === 'implicit' || f.type === 'enchant') return { ...f, enabled: true }
-                          if (
-                            f.type === 'socket' ||
-                            f.type === 'misc' ||
-                            f.type === 'timeless' ||
-                            f.type === 'fractured' ||
-                            f.type === 'currency'
-                          )
-                            return f
-                          return { ...f, enabled: false }
-                        }),
-                      )
-                      // Promote implicit/enchant filters into the visible set
-                      if (collapsedVisibleIndices) {
+                      applyBaseMode()
+                      // Promote implicit/enchant filters into the visible set when we're enabling them
+                      if (includeImplicits && collapsedVisibleIndices) {
                         const promoted = new Set(collapsedVisibleIndices)
                         filters.forEach((f, i) => {
                           if (f.type === 'implicit' || f.type === 'enchant') promoted.add(i)
@@ -417,6 +450,10 @@ export function PriceCheck({
                 if (f.type !== 'timeless') return null
                 return <FilterChip key={i} label={f.text} active={f.enabled} onClick={() => toggleFilter(i)} />
               })}
+              {/* Per-search Settings chip -- toggles a dropdown row above the search button */}
+              {!isBulk && (
+                <FilterChip label="Settings" active={showSettings} onClick={() => setShowSettings((v) => !v)} />
+              )}
             </div>
           )}
 
@@ -452,6 +489,7 @@ export function PriceCheck({
                     toggleFilter={toggleFilter}
                     updateFilterMin={updateFilterMin}
                     updateFilterMax={updateFilterMax}
+                    itemRarity={item.rarity}
                   />
                 ))}
 
@@ -490,6 +528,15 @@ export function PriceCheck({
             )
           })()}
 
+        {/* Per-search settings row (Listed / Buyout currency / Trade listings) */}
+        {showSettings && !isBulk && (
+          <div className="grid grid-cols-3 gap-[6px]">
+            <SearchSettingDropdown value={listedTime} options={LISTED_TIME_OPTIONS} onChange={setListedTime} />
+            <SearchSettingDropdown value={priceOption} options={PRICE_OPTIONS} onChange={setPriceOption} />
+            <SearchSettingDropdown value={statusOption} options={STATUS_OPTIONS} onChange={setStatusOption} />
+          </div>
+        )}
+
         {/* Search buttons */}
         <div className="flex gap-[6px]">
           <button
@@ -520,35 +567,14 @@ export function PriceCheck({
           )}
         </div>
 
-        {/* Faustus exchange warning */}
-        {isFaustusItem(item.itemClass, item.baseType, item.rarity) && (
-          <div className="flex items-center gap-2 px-3 py-2 mx-[-14px] bg-[rgba(255,200,60,0.08)]">
-            <div className="flex-1">
-              <div className="text-[11px] text-[#ffc83c] font-semibold">
-                You should check Faustus to price this item
-              </div>
-              <div className="text-[10px] text-text-dim">
-                The in-game Currency Exchange will have more accurate pricing than bulk trade
-              </div>
-            </div>
-            {priceInfo && priceInfo.chaosValue > 0 && (
-              <div className="flex flex-col gap-1 items-end shrink-0">
-                <PriceChip chaosValue={priceInfo.chaosValue} divineValue={priceInfo.divineValue} showNinja />
-                {item.stackSize > 1 && (
-                  <PriceChip
-                    chaosValue={priceInfo.chaosValue * item.stackSize}
-                    chaosPerDivine={chaosPerDivine}
-                    label={`${item.stackSize}x =`}
-                    size="sm"
-                  />
-                )}
-              </div>
-            )}
-          </div>
-        )}
+        <FaustusBanner item={item} priceInfo={priceInfo} chaosPerDivine={chaosPerDivine} />
 
         {/* Error */}
         {error && <div className="text-[10px] text-[#ef5350] px-1">{error}</div>}
+
+        {/* Searching placeholder rows so the results area isn't empty while the trade
+            API is in flight (can take several seconds under rate limit). */}
+        {searching && <ListingRowsSkeleton />}
 
         {/* Bulk Exchange Results */}
         {isBulk && searched && !searching && bulkListings.length > 0 && (
@@ -575,6 +601,9 @@ export function PriceCheck({
             setActionStatus={setActionStatus}
             queryId={queryId}
             league={league}
+            onLoadMore={remainingIds.length > 0 ? loadMore : undefined}
+            loadingMore={loadingMore}
+            resultsView={resultsView}
           />
         )}
 
@@ -582,66 +611,7 @@ export function PriceCheck({
           <div className="text-[11px] text-text-dim text-center p-2">No listings found</div>
         )}
       </div>
-      {/* Rate limit bar */}
-      {searched &&
-        !searching &&
-        (() => {
-          const first = rateLimitTiers[0]
-          const pct = first ? first.used / first.max : 0
-          const hasPenalty = rateLimitTiers.some((t) => t.penalty > 0)
-          const barColor = hasPenalty
-            ? '#c44'
-            : pct > 0.8
-              ? '#c44'
-              : pct > 0.5
-                ? '#b8943a'
-                : pct > 0
-                  ? '#3a7a3a'
-                  : 'rgba(255,255,255,0.06)'
-          return (
-            <div
-              className="rate-limit-bar px-[14px] py-1 flex items-center gap-2 border-t border-border relative"
-              onMouseMove={(e) => {
-                const tip = e.currentTarget.querySelector('.rate-limit-tooltip') as HTMLElement
-                if (tip) {
-                  const rect = e.currentTarget.getBoundingClientRect()
-                  const tipWidth = tip.offsetWidth
-                  const x = e.clientX - rect.left
-                  const minX = tipWidth / 2
-                  const maxX = rect.width - tipWidth / 2
-                  tip.style.left = `${Math.max(minX, Math.min(x, maxX))}px`
-                }
-              }}
-            >
-              <div className="flex-1 h-[3px] rounded-sm bg-white/[0.08] overflow-hidden">
-                <div
-                  className="h-full rounded-sm transition-[width] duration-[400ms] ease-[ease]"
-                  style={{
-                    width: `${Math.min(100, pct * 100)}%`,
-                    background: barColor,
-                    ...(hasPenalty ? { animation: 'pulse-red 1s ease-in-out infinite' } : {}),
-                  }}
-                />
-              </div>
-              {hasPenalty && (
-                <span className="text-[9px] text-[#ef5350] font-semibold">
-                  {rateLimitTiers.find((t) => t.penalty > 0)!.penalty}s
-                </span>
-              )}
-              <div className="rate-limit-tooltip absolute bottom-full mb-[6px] -translate-x-1/2 px-[10px] py-[6px] bg-bg-card border border-border rounded text-[10px] text-text-dim whitespace-nowrap pointer-events-none opacity-0 transition-opacity duration-150 flex flex-col gap-[2px]">
-                <div className="font-semibold text-text mb-[2px]">Trade API Rate Limit</div>
-                {rateLimitTiers.map((t, i) => (
-                  <div key={i} className="flex justify-between gap-3">
-                    <span>
-                      {t.used}/{t.max}
-                    </span>
-                    <span className="text-text-dim">per {t.window}s</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )
-        })()}
+      {searched && !searching && <RateLimitBar rateLimitTiers={rateLimitTiers} />}
     </div>
   )
 }

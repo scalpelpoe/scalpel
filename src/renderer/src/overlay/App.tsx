@@ -1,19 +1,27 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import type { AppSettings, OverlayData, PoeItem } from '../../../shared/types'
 import { FilterPanel } from '../components/FilterPanel'
-import { HistoryPanel } from '../components/HistoryPanel'
 import { SettingsPanel } from '../components/SettingsPanel'
 import { SocketRecolor } from '../components/SocketRecolor'
 import { DustExplorer } from '../components/dust-explorer'
 import { DivCardExplorer } from '../components/div-card-explorer'
 import { RegexTool } from '../components/regex-tool'
 import { PriceCheck } from '../components/price-check'
+import { PriceCheckSkeleton } from '../components/price-check/PriceCheckSkeleton'
 import { SnapGhosts } from './SnapGhosts'
 import { TitleBar } from './TitleBar'
+import { ErrorBanner } from '../components/ErrorBanner'
 import { UpdateBanner } from './UpdateBanner'
 import { FilterInfoBanner } from './FilterInfoBanner'
 import { AuditView } from './AuditView'
 import { Notice } from './Notice'
+import { SisterOverlay } from './SisterOverlay'
+import { TierItemsSister } from './TierItemsSister'
+import { getActiveMatch } from '../shared/activeMatch'
+import { ItemSearchCombobox } from '../components/ItemSearchCombobox'
+import { Clipboard } from '@icon-park/react'
+import { IP } from '../shared/constants'
+import { prettyHotkey } from '../components/settings'
 
 type View =
   | 'idle'
@@ -21,7 +29,6 @@ type View =
   | 'no-filter'
   | 'no-item'
   | 'setup'
-  | 'history'
   | 'audit'
   | 'tools'
   | 'dust'
@@ -49,6 +56,9 @@ export default function App(): JSX.Element {
   const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
   const dragging = useRef<{ startX: number; startY: number; origOffsetX: number; origOffsetY: number } | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const sisterRef = useRef<HTMLDivElement>(null)
+  const tierSisterRef = useRef<HTMLDivElement>(null)
+  const [tierSisterOpen, setTierSisterOpen] = useState(false)
 
   // Lifted breakpoint selection -- persists across tier-move refreshes
   const [selectedBpIndex, setSelectedBpIndex] = useState<number | null>(null)
@@ -57,6 +67,7 @@ export default function App(): JSX.Element {
   const prevItemKey = useRef<string>('')
   const priceCheckPending = useRef(false)
   const auditPending = useRef(false)
+  const filterHotkeyPending = useRef(false)
   const [auditBlockIndex, setAuditBlockIndex] = useState<number | null>(null)
   const contentRef = useRef<HTMLDivElement>(null)
 
@@ -68,6 +79,7 @@ export default function App(): JSX.Element {
   const [updateProgress, setUpdateProgress] = useState<number | null>(null)
   const [updateReady, setUpdateReady] = useState(false)
   const [justUpdated, setJustUpdated] = useState<string | null>(null)
+  const [brickedRelease, setBrickedRelease] = useState<{ version: string; message: string | null } | null>(null)
 
   // Price check state
   const [priceCheckData, setPriceCheckData] = useState<{
@@ -87,6 +99,18 @@ export default function App(): JSX.Element {
     unidCandidates?: Array<{ name: string; chaosValue: number }>
   } | null>(null)
 
+  // Transient settings banner (hotkey collisions -> red, protected PoE hotkeys -> orange)
+  const [settingsError, setSettingsError] = useState<string | null>(null)
+  const [settingsErrorTone, setSettingsErrorTone] = useState<'error' | 'warn'>('error')
+  const settingsErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const showSettingsError = (msg: string, tone: 'error' | 'warn' = 'error'): void => {
+    setSettingsError(msg)
+    setSettingsErrorTone(tone)
+    if (settingsErrorTimer.current) clearTimeout(settingsErrorTimer.current)
+    const ms = tone === 'warn' ? 5000 : 3000
+    settingsErrorTimer.current = setTimeout(() => setSettingsError(null), ms)
+  }
+
   // Elevation warning
   const [needsElevation, setNeedsElevation] = useState(false)
 
@@ -103,11 +127,18 @@ export default function App(): JSX.Element {
       if (state.poeVersion) setPoeVersion(state.poeVersion)
       if (state.gameBounds) setGameBounds(state.gameBounds)
     })
+    // Pull cached updater state so a late-mount overlay sees anything that already fired.
+    window.api.getUpdateState().then((s) => {
+      if (s.updateVersion) setUpdateVersion(s.updateVersion)
+      if (s.updateReady) setUpdateReady(true)
+      if (s.brickedRelease) setBrickedRelease(s.brickedRelease)
+    })
     const unsubElevation = window.api.onElevationHint(() => setNeedsElevation(true))
 
     const unsubs = [
       window.api.onPoeVersion((v) => setPoeVersion(v)),
       window.api.onUpdateAvailable((version) => setUpdateVersion(version)),
+      window.api.onBrickedRelease((info) => setBrickedRelease(info)),
       window.api.onUpdateDownloadProgress((percent) => setUpdateProgress(percent)),
       window.api.onUpdateDownloaded(() => {
         setUpdateProgress(null)
@@ -126,7 +157,13 @@ export default function App(): JSX.Element {
           }
         }
       }),
-      window.api.onCursorSide((side) => setCursorSide(side)),
+      window.api.onCursorSide((side) => {
+        // While the panel is dragged away from either edge, ignore cursor-side flips
+        // (basePanelLeft follows cursorSide, so flipping would yank the floating panel
+        // between the two mount X positions when hotkeying between stash and inventory).
+        if (dragOffsetRef.current.x !== 0 || dragOffsetRef.current.y !== 0) return
+        setCursorSide(side)
+      }),
       window.api.onOverlayData((data) => {
         setOverlayData(data)
         setSearchId((id) => id + 1)
@@ -147,19 +184,33 @@ export default function App(): JSX.Element {
           setView('audit')
         } else if (priceCheckPending.current) {
           priceCheckPending.current = false
+        } else if (filterHotkeyPending.current) {
+          // User pressed the filter hotkey: always jump to item view, even if the same
+          // item was already loaded on another tab (e.g. pricecheck).
+          filterHotkeyPending.current = false
+          setView('item')
         } else if (isNewItem) {
           // New item from hotkey: always go to item view
           setView('item')
         } else {
-          // Same item re-shown (e.g. after zone transition): re-show if hidden, keep current view otherwise
-          setView((prev) => (prev === 'idle' ? 'item' : prev))
+          // Same item re-shown (e.g. after zone transition, or re-picking the same row
+          // from the search combobox): re-show if hidden, and also leave the notice views
+          // ('no-item', 'no-filter') since the user explicitly surfaced an item.
+          setView((prev) => (prev === 'idle' || prev === 'no-item' || prev === 'no-filter' ? 'item' : prev))
         }
       }),
       window.api.onPriceCheck((data) => {
         setPriceCheckData({ ...data, _key: Date.now() } as typeof data & { _key: number })
       }),
+      window.api.onFilterHotkeyOpen(() => {
+        filterHotkeyPending.current = true
+      }),
       window.api.onPriceCheckOpen(() => {
         priceCheckPending.current = true
+        // Keep the previous priceCheckData mounted until the new data arrives -- nulling
+        // here unmounts the sister mid-drill-down, which re-plays its slide animation and
+        // loses its internal entry state. Showing one frame of stale data is cheaper than
+        // losing the "stay open across clicks" behavior users expect.
         setView('pricecheck')
       }),
       window.api.onNoFilterLoaded(() => setView('no-filter')),
@@ -264,7 +315,6 @@ export default function App(): JSX.Element {
   // Report the panel's actual visual bounding rect to the main process for click-through
   // hit testing. Using getBoundingClientRect on the wrapper (which has the CSS transform)
   // gives us the true visual position, accounting for scale, drag offset, and side.
-  // Single source of truth -- main process just converts CSS coords to physical pixels.
   //
   // Polled on a short interval rather than one-shot useEffect because:
   // - CSS animations (slide-in) change the rect over time
@@ -272,13 +322,30 @@ export default function App(): JSX.Element {
   // - One-shot after state change would capture the animation start, not end
   useEffect(() => {
     if (isHidden) {
-      window.api.reportPanelRect({ left: 0, top: 0, width: 0, height: 0 })
+      window.api.reportPanelRect([])
       return
     }
     const tick = (): void => {
       if (!wrapperRef.current) return
-      const rect = wrapperRef.current.getBoundingClientRect()
-      window.api.reportPanelRect({ left: rect.left, top: rect.top, width: rect.width, height: rect.height })
+      const rects: Array<{ left: number; top: number; width: number; height: number }> = []
+      const main = wrapperRef.current.getBoundingClientRect()
+      rects.push({ left: main.left, top: main.top, width: main.width, height: main.height })
+      // Report the sister rect separately (not as a union) so the empty space under a
+      // shorter sister stays click-through to PoE.
+      const sister = sisterRef.current?.getBoundingClientRect()
+      if (sister && sister.width > 0 && sister.height > 0) {
+        rects.push({ left: sister.left, top: sister.top, width: sister.width, height: sister.height })
+      }
+      const tierSister = tierSisterRef.current?.getBoundingClientRect()
+      if (tierSister && tierSister.width > 0 && tierSister.height > 0) {
+        rects.push({
+          left: tierSister.left,
+          top: tierSister.top,
+          width: tierSister.width,
+          height: tierSister.height,
+        })
+      }
+      window.api.reportPanelRect(rects)
     }
     tick()
     const interval = setInterval(tick, 100)
@@ -313,9 +380,13 @@ export default function App(): JSX.Element {
       const nx = dragging.current.origOffsetX + ev.clientX - dragging.current.startX
       const ny = dragging.current.origOffsetY + ev.clientY - dragging.current.startY
       dragOffsetRef.current = { x: nx, y: ny }
+      const scaleStr = settings?.overlayScale && settings.overlayScale !== 1 ? ` scale(${settings.overlayScale})` : ''
       if (wrapperRef.current) {
-        const scaleStr = settings?.overlayScale && settings.overlayScale !== 1 ? ` scale(${settings.overlayScale})` : ''
         wrapperRef.current.style.transform = `translate(${nx}px, ${ny}px)${scaleStr}`
+      }
+      // Follow the drag live so the sister overlay stays glued to the main panel.
+      if (sisterRef.current) {
+        sisterRef.current.style.transform = `translate(${nx}px, ${ny}px)${scaleStr}`
       }
       // Check snap proximity to mount points
       const currentLeft = (basePanelLeft ?? 0) + nx
@@ -340,6 +411,12 @@ export default function App(): JSX.Element {
         const el = wrapperRef.current
         el.style.transition = 'transform 0.2s ease-out'
         el.style.transform = `translate(${targetDx}px, 0px)${scaleStr}`
+        // Sister rides the same transition so it stays glued to the main panel during snap.
+        const sEl = sisterRef.current
+        if (sEl) {
+          sEl.style.transition = 'transform 0.2s ease-out'
+          sEl.style.transform = `translate(${targetDx}px, 0px)${scaleStr}`
+        }
         const onEnd = (): void => {
           el.removeEventListener('transitionend', onEnd)
           el.style.transition = ''
@@ -347,6 +424,10 @@ export default function App(): JSX.Element {
           // transform update if the value matches what it last rendered
           el.style.left = `${targetMountX}px`
           el.style.transform = `translate(0px, 0px)${scaleStr}`
+          if (sEl) {
+            sEl.style.transition = ''
+            sEl.style.transform = `translate(0px, 0px)${scaleStr}`
+          }
           dragOffsetRef.current = { x: 0, y: 0 }
           setDragOffset({ x: 0, y: 0 })
           panelRef.current?.classList.remove('panel-unmounted')
@@ -367,10 +448,92 @@ export default function App(): JSX.Element {
   }
 
   const isFullHeightView =
-    view === 'dust' || view === 'divcards' || view === 'pricecheck' || view === 'item' || view === 'regex'
+    view === 'dust' ||
+    view === 'divcards' ||
+    view === 'pricecheck' ||
+    view === 'item' ||
+    view === 'regex' ||
+    view === 'audit'
+
+  // Sister overlay pinned immediately adjacent to the main panel on the opposite side
+  // of where the main panel is mounted.
+  const SISTER_WIDTH = 130
+  const SISTER_GAP = 6
+  // Line the sister top with the main panel's content area: 30px nav row + 10px vertical
+  // padding + 1px border ~= 51px below the panel top.
+  const SISTER_NAV_OFFSET = 51
+  // Panel and sister both scale inward (toward each other) from opposite outer edges, so
+  // overlayScale > 1 eats into the gap from both sides. Add (S-1)*(PANEL+SISTER) worth of
+  // CSS px so the post-scale visible gap stays at SISTER_GAP regardless of scale.
+  const overlayScale = settings?.overlayScale ?? 1
+  const sisterScaleOffset = (overlayScale - 1) * (PANEL_WIDTH + SISTER_WIDTH)
+  const sisterLeft =
+    cursorSide === 'left'
+      ? (basePanelLeft ?? 0) + PANEL_WIDTH + SISTER_GAP + sisterScaleOffset
+      : (basePanelLeft ?? 0) - SISTER_WIDTH - SISTER_GAP - sisterScaleOffset
+  // Bound the sister to the game window the same way the main panel is, minus the
+  // SISTER_NAV_OFFSET it already sits below. Scale divides out so the post-scale
+  // visual height fits within the game bounds.
+  const sisterMaxHeight = gameBounds
+    ? (gameBounds.gameHeight - PANEL_TOP * 2 - 23 - SISTER_NAV_OFFSET) / (settings?.overlayScale ?? 1)
+    : undefined
+
+  // Compute baseTypes for the tier sister on the filter page. Uses the shared
+  // getActiveMatch so the sister's items match whatever tier FilterPanel is showing.
+  const tierSisterData = ((): {
+    baseTypes: string[]
+    itemClass: string
+    tier: string
+    uniqueTier: boolean
+  } | null => {
+    if (!overlayData) return null
+    const { match } = getActiveMatch(overlayData, selectedBpIndex, selectedQualityBpIndex, selectedStrandBpIndex)
+    if (!match) return null
+    const baseTypes = match.block.conditions.filter((c) => c.type === 'BaseType').flatMap((c) => c.values)
+    const uniqueTier = match.block.conditions.some((c) => c.type === 'Rarity' && c.values.some((v) => v === 'Unique'))
+    return {
+      baseTypes,
+      itemClass: overlayData.item.itemClass,
+      tier: match.block.tierTag?.tier ?? '',
+      uniqueTier,
+    }
+  })()
 
   return (
     <>
+      {view === 'item' && tierSisterOpen && tierSisterData && tierSisterData.baseTypes.length > 0 && !isHidden && (
+        <TierItemsSister
+          ref={tierSisterRef}
+          baseTypes={tierSisterData.baseTypes}
+          itemClass={tierSisterData.itemClass}
+          currentBaseType={overlayData?.item.baseType}
+          league={settings?.league ?? ''}
+          uniqueTier={tierSisterData.uniqueTier}
+          left={sisterLeft}
+          top={PANEL_TOP + SISTER_NAV_OFFSET}
+          width={SISTER_WIDTH}
+          dragOffset={dragOffset}
+          scale={settings?.overlayScale}
+          scaleOrigin={cursorSide === 'left' ? 'top right' : 'top left'}
+          maxHeight={sisterMaxHeight}
+          animKey={tierSisterData.tier}
+        />
+      )}
+      {view === 'pricecheck' && priceCheckData && !isHidden && (
+        <SisterOverlay
+          ref={sisterRef}
+          itemName={priceCheckData.item.name}
+          league={priceCheckData.league}
+          chaosPerDivine={priceCheckData.chaosPerDivine}
+          left={sisterLeft}
+          top={PANEL_TOP + SISTER_NAV_OFFSET}
+          width={SISTER_WIDTH}
+          dragOffset={dragOffset}
+          scale={settings?.overlayScale}
+          scaleOrigin={cursorSide === 'left' ? 'top right' : 'top left'}
+          maxHeight={sisterMaxHeight}
+        />
+      )}
       <SnapGhosts
         leftMountX={leftMountX}
         rightMountX={rightMountX}
@@ -435,6 +598,7 @@ export default function App(): JSX.Element {
               view={view}
               overlayData={overlayData}
               poeVersion={poeVersion}
+              hasPriceCheckData={!!priceCheckData}
               onSetView={setView}
               onClose={close}
               onSetAuditBlockIndex={setAuditBlockIndex}
@@ -447,6 +611,7 @@ export default function App(): JSX.Element {
               updateReady={updateReady}
               justUpdated={justUpdated}
               needsElevation={needsElevation}
+              brickedRelease={brickedRelease}
               view={view}
               overlayData={overlayData}
               priceCheckData={priceCheckData}
@@ -489,17 +654,20 @@ export default function App(): JSX.Element {
             {/* Content */}
             <div
               ref={contentRef}
-              className={isFullHeightView ? 'flex flex-col flex-1 overflow-hidden' : 'flex-1 overflow-y-auto p-3'}
+              className={
+                (isFullHeightView ? 'flex flex-col flex-1 overflow-hidden' : 'flex-1 overflow-y-auto p-3') + ' relative'
+              }
             >
-              {view === 'history' && (
-                <HistoryPanel item={overlayData?.item} onDone={() => setView(overlayData ? 'item' : 'idle')} />
-              )}
+              {/* Settings error banner (hotkey collisions etc) */}
+              <ErrorBanner message={settingsError} tone={settingsErrorTone} />
               {view === 'setup' && settings && (
                 <SettingsPanel
                   settings={settings}
                   onSettingsChange={(s) => setSettings(s)}
                   mode="overlay"
                   onDone={() => setView('idle')}
+                  currentItem={overlayData?.item}
+                  onError={showSettingsError}
                   onOnlineFilterUpdated={(name) =>
                     setUpdatedOnlineFilters((prev) => {
                       const next = new Set(prev)
@@ -513,11 +681,16 @@ export default function App(): JSX.Element {
                 <Notice icon="⚠" title="No filter loaded" body="Click ⚙ to select your .filter file." />
               )}
               {view === 'no-item' && (
-                <Notice
-                  icon="📋"
-                  title="No item in clipboard"
-                  body={`Hover an item in PoE and press ${settings?.hotkey ?? 'Ctrl+Shift+F'}.`}
-                />
+                <>
+                  <Notice
+                    icon={<Clipboard size={32} {...IP} />}
+                    title="No item in clipboard"
+                    body={`Hover an item in PoE and press ${prettyHotkey(settings?.hotkey) || 'Ctrl+Shift+F'}.`}
+                  />
+                  <div className="px-6 pb-6">
+                    <ItemSearchCombobox />
+                  </div>
+                </>
               )}
               {view === 'item' && overlayData && (
                 <FilterPanel
@@ -537,23 +710,29 @@ export default function App(): JSX.Element {
                   onOpenTools={() => setView('tools')}
                   onOpenDustExplore={() => setView('dust')}
                   onOpenDivExplore={() => setView('divcards')}
+                  tierSisterOpen={tierSisterOpen}
+                  onToggleTierSister={() => setTierSisterOpen((v) => !v)}
+                  tierSisterSide={cursorSide === 'left' ? 'right' : 'left'}
                 />
               )}
               {view === 'tools' && overlayData && (
                 <SocketRecolor item={overlayData.item} priceInfo={overlayData.priceInfo} />
               )}
-              {view === 'pricecheck' && priceCheckData && (
-                <PriceCheck
-                  key={(priceCheckData as Record<string, unknown>)._key as number}
-                  item={priceCheckData.item}
-                  priceInfo={priceCheckData.priceInfo}
-                  statFilters={priceCheckData.statFilters}
-                  league={priceCheckData.league}
-                  chaosPerDivine={priceCheckData.chaosPerDivine}
-                  unidCandidates={priceCheckData.unidCandidates}
-                  onClose={close}
-                />
-              )}
+              {view === 'pricecheck' &&
+                (priceCheckData ? (
+                  <PriceCheck
+                    key={(priceCheckData as Record<string, unknown>)._key as number}
+                    item={priceCheckData.item}
+                    priceInfo={priceCheckData.priceInfo}
+                    statFilters={priceCheckData.statFilters}
+                    league={priceCheckData.league}
+                    chaosPerDivine={priceCheckData.chaosPerDivine}
+                    unidCandidates={priceCheckData.unidCandidates}
+                    onClose={close}
+                  />
+                ) : (
+                  <PriceCheckSkeleton />
+                ))}
               <div className="flex-col flex-1 min-h-0" style={{ display: view === 'dust' ? 'flex' : 'none' }}>
                 <DustExplorer onSelectItem={() => setView('item')} />
               </div>

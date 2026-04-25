@@ -1,7 +1,7 @@
 import type { FilterBlock } from '../../../shared/types'
 
 /** Extract PoE loot label colors and font size from a filter block's actions */
-export function extractLabelStyle(block: FilterBlock): {
+export function extractLabelStyle(block: Pick<FilterBlock, 'actions'>): {
   textColor: string
   bgColor: string
   borderColor: string
@@ -39,7 +39,7 @@ export function LootLabel({
   label,
   showStack,
 }: {
-  block: FilterBlock
+  block: Pick<FilterBlock, 'actions'>
   label: string
   showStack?: { min: number }
 }): JSX.Element {

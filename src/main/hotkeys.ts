@@ -1,7 +1,8 @@
 import { uIOhook, UiohookKey } from 'uiohook-napi'
 import { clipboard, globalShortcut } from 'electron'
+import { snapshotClipboard } from './clipboard-preserve'
 import { OverlayController } from 'electron-overlay-window'
-import { focusGameWindow } from './overlay'
+import { focusGameWindow, getOverlayWindow } from './overlay'
 
 // ─── Accelerator → uiohook keycode mapping ────────────────────────────────────
 
@@ -50,8 +51,8 @@ let currentAccelerator: string | null = null
 let priceCheckAccelerator: string | null = null
 let chatCommandHotkeys: Array<{ accelerator: string; command: string; autoSubmit: boolean }> = []
 let appMacroAccelerators: string[] = []
-let lastAppMacros: Array<{ action: string; hotkey: string }> = []
-let onAppMacro: ((action: string) => void) | null = null
+let lastAppMacros: Array<{ action: string; hotkey: string; tag?: string }> = []
+let onAppMacro: ((action: string, tag?: string) => void) | null = null
 let onTrigger: (() => void) | null = null
 let onPriceCheck: (() => void) | null = null
 let onEscape: (() => void) | null = null
@@ -69,8 +70,13 @@ export function startHotkeyListener(handler: () => void): void {
   initModifierTracking()
   uIOhook.on('keydown', (e) => {
     if (injecting) return
+    // Only respond to Escape when PoE or the overlay itself has focus -- otherwise
+    // pressing Esc in another app (browser, Discord, etc.) would silently hide the
+    // overlay here in the background.
     if (e.keycode === UiohookKey.Escape && onEscape) {
-      onEscape()
+      const overlayWin = getOverlayWindow()
+      const overlayFocused = !!overlayWin && !overlayWin.isDestroyed() && overlayWin.isFocused()
+      if (OverlayController.targetHasFocus || overlayFocused) onEscape()
     }
   })
 
@@ -173,11 +179,11 @@ export function setChatCommands(commands: Array<{ hotkey: string; command: strin
   }
 }
 
-export function setAppMacroHandler(handler: (action: string) => void): void {
+export function setAppMacroHandler(handler: (action: string, tag?: string) => void): void {
   onAppMacro = handler
 }
 
-export function setAppMacros(macros: Array<{ action: string; hotkey: string }>): void {
+export function setAppMacros(macros: Array<{ action: string; hotkey: string; tag?: string }>): void {
   lastAppMacros = macros
   for (const acc of appMacroAccelerators) {
     try {
@@ -186,11 +192,11 @@ export function setAppMacros(macros: Array<{ action: string; hotkey: string }>):
   }
   appMacroAccelerators = []
 
-  for (const { action, hotkey } of macros) {
+  for (const { action, hotkey, tag } of macros) {
     if (!hotkey || !action) continue
     try {
       globalShortcut.register(hotkey, () => {
-        if (!injecting && onAppMacro) onAppMacro(action)
+        if (!injecting && onAppMacro) onAppMacro(action, tag)
       })
       appMacroAccelerators.push(hotkey)
     } catch (e) {
@@ -208,7 +214,7 @@ function pasteToPoEChat(text: string, submit: boolean): Promise<void> {
   if (chatLocked) return Promise.resolve()
   chatLocked = true
 
-  const prevClip = clipboard.readText()
+  const restoreClip = snapshotClipboard()
   clipboard.writeText(text)
   injecting = true
 
@@ -229,7 +235,7 @@ function pasteToPoEChat(text: string, submit: boolean): Promise<void> {
   // Restore clipboard and re-register hotkeys after paste completes
   return new Promise((resolve) =>
     setTimeout(() => {
-      clipboard.writeText(prevClip)
+      restoreClip()
       chatLocked = false
       injecting = false
       resolve()

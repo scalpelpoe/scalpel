@@ -782,15 +782,57 @@ describe('matchItemMods', () => {
       expect(areaLevel).toBeUndefined()
     })
 
-    it('generates wings revealed/total chips for heist blueprints', () => {
-      const filters = matchItemMods([], [], undefined, makeItemInfo({ sockets: '', wingsRevealed: 3, wingsTotal: 4 }))
-      const wingsRevealed = filters.find((f) => f.id === 'heist.wings_revealed')
+    it('generates wings revealed/total chips for heist blueprints with correct trade keys', () => {
+      const filters = matchItemMods(
+        [],
+        [],
+        undefined,
+        makeItemInfo({ itemClass: 'Blueprints', wingsRevealed: 3, wingsTotal: 4 }),
+      )
+      // The id strips to the trade API filter key: "heist.heist_wings" -> "heist_wings"
+      const wingsRevealed = filters.find((f) => f.id === 'heist.heist_wings')
       expect(wingsRevealed).toBeDefined()
       expect(wingsRevealed!.value).toBe(3)
+      expect(wingsRevealed!.min).toBe(3)
+      expect(wingsRevealed!.enabled).toBe(true)
 
-      const wingsTotal = filters.find((f) => f.id === 'heist.max_wings')
+      // Total wings uses min (not max) per trade site behavior
+      const wingsTotal = filters.find((f) => f.id === 'heist.heist_max_wings')
       expect(wingsTotal).toBeDefined()
       expect(wingsTotal!.value).toBe(4)
+      expect(wingsTotal!.min).toBe(4)
+      expect(wingsTotal!.enabled).toBe(true)
+    })
+
+    it('generates heist job filter for contracts (min: 1)', () => {
+      const filters = matchItemMods(
+        [],
+        [],
+        undefined,
+        makeItemInfo({ itemClass: 'Contracts', heistJob: { skill: 'Engineering', level: 3 } }),
+      )
+      // The id strips to the trade API filter key: "heist.heist_engineering"
+      const jobFilter = filters.find((f) => f.id === 'heist.heist_engineering')
+      expect(jobFilter).toBeDefined()
+      expect(jobFilter!.min).toBe(1)
+      expect(jobFilter!.enabled).toBe(true)
+    })
+
+    it('does NOT generate heist job filter for blueprints', () => {
+      const filters = matchItemMods(
+        [],
+        [],
+        undefined,
+        makeItemInfo({ itemClass: 'Blueprints', heistJob: { skill: 'Engineering', level: 3 } }),
+      )
+      const jobFilter = filters.find(
+        (f) =>
+          f.type === 'heist' &&
+          f.id.startsWith('heist.heist_') &&
+          f.id !== 'heist.heist_wings' &&
+          f.id !== 'heist.heist_max_wings',
+      )
+      expect(jobFilter).toBeUndefined()
     })
   })
 

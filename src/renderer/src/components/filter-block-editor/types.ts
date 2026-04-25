@@ -14,4 +14,12 @@ export interface FilterBlockEditorProps {
   tierGroup?: import('../../../../shared/types').TierGroup
   league?: string
   onOpenAudit?: () => void
+  /** Whether the filter-page "Items in this Tier" sister overlay is visible. */
+  tierSisterOpen?: boolean
+  /** Toggle callback for the sister overlay; the button in the "Items in this Tier"
+   *  panel flips this state. */
+  onToggleTierSister?: () => void
+  /** Which side of the main panel the sister mounts on. The expand/collapse icon
+   *  flips horizontally when the sister is on the left so its arrow points toward it. */
+  tierSisterSide?: 'left' | 'right'
 }

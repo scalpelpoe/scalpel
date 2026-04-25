@@ -102,6 +102,7 @@ export interface PoeItem {
   synthesised: boolean
   fractured: boolean
   transfigured: boolean
+  vaalGem?: boolean
   blighted: boolean
   uberBlighted: boolean
   scourged: boolean
@@ -131,6 +132,7 @@ export interface PoeItem {
   eleDamageAvg?: number
   chaosDamageAvg?: number
   attacksPerSecond?: number
+  critChance?: number
   width?: number
   height?: number
   heistJob?: { skill: string; level: number }
@@ -232,6 +234,15 @@ export interface InstallManifest {
   unpackedSha512?: string
   unpackedSize?: number
   nativeModules: Record<string, string>
+  /**
+   * Version rules that are known-bricked (stuck, unable to auto-update, etc.). Each entry
+   * is either a bare version (exact match) or comparator-prefixed (`<`, `<=`, `>`, `>=`,
+   * `=`). When the running version matches, the app surfaces a banner asking the user to
+   * reinstall manually. Parsed by `versionMatches` in `shared/version-match.ts`.
+   */
+  brickedReleases?: string[]
+  /** Optional message shown on the bricked-release banner. Falls back to a generic one. */
+  brickedMessage?: string
 }
 
 export interface RegexPresetTag {
@@ -251,6 +262,8 @@ export interface RegexPreset {
   qualifiers: Record<string, number>
   nightmare: boolean
   customRegex?: string
+  /** Computed regex string (stored so main process can paste without rebuilding) */
+  regex?: string
 }
 
 export interface AppSettings {
@@ -260,15 +273,39 @@ export interface AppSettings {
   priceCheckHotkey: string
   overlayOpacity: number
   overlayScale: number
+  /** Which side the overlay mounts on when a new item is scanned. 'both' = based on
+   *  cursor X (default); 'right'/'left' = always that side regardless of cursor. Drag
+   *  behavior is unaffected; this only picks the mount side at scan time. */
+  openSide: 'both' | 'right' | 'left'
   closeOnClickOutside: boolean
   league: string
   reloadOnSave: boolean
   updateChannel: 'stable' | 'beta'
-  tradeStatus: 'available' | 'securable'
-  tradePriceOption: 'chaos_divine' | 'chaos_equivalent'
+  tradeStatus: 'securable' | 'online' | 'any'
+  // NOTE: 'available' was a legacy value from earlier releases; it's migrated to 'any' on
+  // launch (see main/index.ts). Typed here as its current set, not the legacy union.
+  tradePriceOption: 'chaos_divine' | 'chaos_equivalent' | 'chaos' | 'divine'
+  /** Default "Listed" time for price-check searches. Empty string = any time. */
+  tradeDefaultListedTime?:
+    | ''
+    | '1hour'
+    | '3hours'
+    | '12hours'
+    | '1day'
+    | '3days'
+    | '1week'
+    | '2weeks'
+    | '1month'
+    | '2months'
+  /** How price-check trade results render. Default = one-at-a-time expandable rows;
+   *  Open All = every row pre-expanded; Shrinkydink = compact rows (no icon, inline meta). */
+  tradeResultsView?: 'default' | 'open-all' | 'shrinkydink'
   priceCheckDefaultPercent: number
+  tradeDefaultToBase: boolean
+  tradeKeepUncheckedVisible?: boolean
+  tradeNeverAutoSearch?: boolean
   chatCommands: Array<{ hotkey: string; command: string; autoSubmit?: boolean }>
-  appMacros: Array<{ action: string; hotkey: string }>
+  appMacros: Array<{ action: string; hotkey: string; tag?: string }>
   stashScrollEnabled: boolean
   poeVersion: 1 | 2
   regexPresets: RegexPreset[]
@@ -287,6 +324,28 @@ export interface PriceInfo {
   chaosValue: number
   divineValue?: number
   dustValue?: number
+}
+
+// ─── Item Search ────────────────────────────────────────────────────────────
+
+/** A row surfaced in the item-search combobox. The main process assembles these from
+ *  the active filter + live price data; the renderer decorates each row with an
+ *  `iconUrl` after fetching. */
+export interface SearchableItem {
+  name: string
+  baseType: string
+  itemClass: string
+  rarity: 'Unique' | 'Currency' | 'Gem'
+  /** Minimal filter-block info the renderer reuses for `<LootLabel />` styling. */
+  block: { visibility: 'Show' | 'Hide'; actions: FilterAction[] } | null
+  /** Div-card reward text -- searchable and shown inline when the match came via reward. */
+  reward?: string
+  /** Explicit icon-map key when the display name doesn't match the iconMap key (e.g.
+   *  Originator Map rows share the Map display name but render with a Zana Map icon). */
+  iconKey?: string
+  /** Extra flags that vary between rows sharing the same baseType (e.g. Originator
+   *  Map rows set zanaMemory=true; regular Map rows at the same tier leave it unset). */
+  flags?: { zanaMemory?: boolean }
 }
 
 // ─── Edit History ────────────────────────────────────────────────────────────

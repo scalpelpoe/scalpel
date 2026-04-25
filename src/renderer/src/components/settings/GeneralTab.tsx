@@ -1,12 +1,22 @@
+import { useState } from 'react'
 import type { AppSettings } from '../../../../shared/types'
 import { Toggle } from '../Toggle'
+import { ScrubInput } from '../regex-tool/ScrubInput'
 
 interface Props {
   settings: AppSettings
   update: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
 }
 
+const SCALE_PRESETS = [0.75, 1, 1.25, 1.5, 2] as const
+
 export function GeneralTab({ settings, update }: Props): JSX.Element {
+  // Custom scale mode is auto-enabled when the saved scale isn't one of the presets,
+  // and toggled by the Custom/preset buttons otherwise.
+  const [customScale, setCustomScale] = useState<boolean>(
+    !(SCALE_PRESETS as readonly number[]).includes(settings.overlayScale),
+  )
+
   return (
     <>
       {/* League */}
@@ -63,16 +73,61 @@ export function GeneralTab({ settings, update }: Props): JSX.Element {
       {/* Overlay scale */}
       <section>
         <label>Overlay scale</label>
-        <div className="flex gap-1.5 mt-[6px]">
-          {[0.75, 1, 1.25, 1.5, 2].map((scale) => (
+        <div className="flex items-center gap-1.5 mt-[6px]">
+          {SCALE_PRESETS.map((scale) => (
             <button
               key={scale}
-              onClick={() => update('overlayScale', scale)}
+              onClick={() => {
+                setCustomScale(false)
+                update('overlayScale', scale)
+              }}
               className={`text-[11px] px-3 py-1.5 ${
-                settings.overlayScale === scale ? 'bg-accent text-bg-solid' : 'text-text-dim'
+                !customScale && settings.overlayScale === scale ? 'bg-accent text-bg-solid' : 'text-text-dim'
               }`}
             >
               {Math.round(scale * 100)}%
+            </button>
+          ))}
+          <button
+            onClick={() => setCustomScale(true)}
+            className={`text-[11px] px-3 py-1.5 ${customScale ? 'bg-accent text-bg-solid' : 'text-text-dim'}`}
+          >
+            Custom
+          </button>
+          {customScale && (
+            <ScrubInput
+              value={Math.round(settings.overlayScale * 100)}
+              onChange={(v) => {
+                if (v != null) update('overlayScale', v / 100)
+              }}
+              min={50}
+              max={300}
+              step={5}
+              suffix="%"
+            />
+          )}
+        </div>
+      </section>
+
+      {/* Open side (mount side at scan time; doesn't affect dragging) */}
+      <section>
+        <label>Open Scalpel on:</label>
+        <div className="flex gap-1.5 mt-[6px]">
+          {(
+            [
+              ['both', 'Both sides'],
+              ['right', 'Only right'],
+              ['left', 'Only left'],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => update('openSide', value)}
+              className={`text-[11px] px-3 py-1.5 ${
+                (settings.openSide ?? 'both') === value ? 'bg-accent text-bg-solid' : 'text-text-dim'
+              }`}
+            >
+              {label}
             </button>
           ))}
         </div>

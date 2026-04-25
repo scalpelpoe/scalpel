@@ -1,0 +1,4121 @@
+[
+  {
+    "query": [
+      {
+        "name": "Contract: Heart of Glory",
+        "baseType": "Familial Contract",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Fledgling",
+        "baseType": "Lacquered Helmet",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Coward's Chains",
+        "baseType": "Chain Belt",
+        "category": "unique"
+      },
+      {
+        "name": "Vial of Consequence",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Coward's Legacy",
+        "baseType": "Chain Belt",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Mortal Ignorance",
+        "category": "base"
+      },
+      {
+        "name": "Mortal Rage",
+        "category": "base"
+      },
+      {
+        "name": "Mortal Hope",
+        "category": "base"
+      },
+      {
+        "name": "Mortal Grief",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Beauty",
+        "baseType": "Vaal Aspect",
+        "category": "unique"
+      },
+      {
+        "name": "Atziri's Acuity",
+        "baseType": "Vaal Gauntlets",
+        "category": "unique"
+      },
+      {
+        "name": "Atziri's Splendour",
+        "baseType": "ES, Sacrificial Garb",
+        "category": "unique"
+      },
+      {
+        "name": "Atziri's Disfavour",
+        "baseType": "Vaal Axe",
+        "category": "unique"
+      },
+      {
+        "name": "The Vertex",
+        "baseType": "Vaal Mask",
+        "category": "unique"
+      },
+      {
+        "name": "Alluring Bounty",
+        "category": "divination"
+      },
+      {
+        "name": "Atziri's Splendour",
+        "baseType": "Evasion/ES/Life, Sacrificial Garb",
+        "category": "unique"
+      },
+      {
+        "name": "House of Mirrors",
+        "category": "divination"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Shrieking Essence of Anguish",
+        "category": "base"
+      },
+      {
+        "name": "Deafening Essence of Anguish",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Anguish",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "First Piece of the Arcane",
+        "baseType": "Legion Sword Piece",
+        "category": "unique"
+      },
+      {
+        "name": "Second Piece of the Arcane",
+        "baseType": "Legion Sword Piece",
+        "category": "unique"
+      },
+      {
+        "name": "Third Piece of the Arcane",
+        "baseType": "Legion Sword Piece",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Rippling Thoughts",
+        "baseType": "Legion Sword",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Shrieking Essence of Woe",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Woe",
+        "category": "base"
+      },
+      {
+        "name": "Deafening Essence of Woe",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Fragment of the Chimera",
+        "category": "base"
+      },
+      {
+        "name": "Fragment of the Phoenix",
+        "category": "base"
+      },
+      {
+        "name": "Fragment of the Minotaur",
+        "category": "base"
+      },
+      {
+        "name": "Fragment of the Hydra",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Voidwalker",
+        "baseType": "Murder Boots",
+        "category": "unique"
+      },
+      {
+        "name": "Fragment of Shape",
+        "category": "base"
+      },
+      {
+        "name": "Solstice Vigil",
+        "baseType": "Onyx Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Fragment of Knowledge",
+        "category": "base"
+      },
+      {
+        "name": "Dying Sun",
+        "category": "unique"
+      },
+      {
+        "name": "Shaper's Touch",
+        "baseType": "Crusader Gloves",
+        "category": "unique"
+      },
+      {
+        "name": "Shaper's Exalted Orb",
+        "category": "base"
+      },
+      {
+        "name": "Orb of Dominance",
+        "category": "base"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "The Snowblind Grace",
+        "baseType": "Coronal Leather",
+        "category": "unique"
+      },
+      {
+        "name": "Tulborn",
+        "baseType": "Opal Wand",
+        "category": "unique"
+      },
+      {
+        "name": "The Halcyon",
+        "baseType": "Jade Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Blessing of Tul",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Tulfall",
+        "baseType": "Opal Wand",
+        "category": "unique"
+      },
+      {
+        "name": "The Pandemonius",
+        "baseType": "Jade Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "The Perfect Form",
+        "baseType": "Zodiac Leather",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Writhing Invitation",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Eternal Struggle",
+        "baseType": "Onyx Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Black Zenith",
+        "baseType": "Fingerless Silk Gloves",
+        "category": "unique"
+      },
+      {
+        "name": "Ceaseless Feast",
+        "baseType": "Spiked Gloves",
+        "category": "unique"
+      },
+      {
+        "name": "Choking Guilt",
+        "category": "divination"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Xoph's Inception",
+        "baseType": "Bone Bow",
+        "category": "unique"
+      },
+      {
+        "name": "The Formless Flame",
+        "baseType": "Siege Helmet",
+        "category": "unique"
+      },
+      {
+        "name": "Blessing of Xoph",
+        "category": "base"
+      },
+      {
+        "name": "Xoph's Heart",
+        "baseType": "Amber Amulet",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Xoph's Blood",
+        "baseType": "Amber Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "The Formless Inferno",
+        "baseType": "Royal Burgonet",
+        "category": "unique"
+      },
+      {
+        "name": "Xoph's Nurture",
+        "baseType": "Citadel Bow",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Esh's Mirror",
+        "baseType": "Thorium Spirit Shield",
+        "category": "unique"
+      },
+      {
+        "name": "Blessing of Esh",
+        "category": "base"
+      },
+      {
+        "name": "Hand of Thought and Motion",
+        "baseType": "Blinder",
+        "category": "unique"
+      },
+      {
+        "name": "Voice of the Storm",
+        "baseType": "Lapis Amulet",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Esh's Visage",
+        "baseType": "Vaal Spirit Shield",
+        "category": "unique"
+      },
+      {
+        "name": "Choir of the Storm",
+        "baseType": "Lapis Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Hand of Wisdom and Action",
+        "baseType": "Imperial Claw",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Sacred Blossom",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Sacred Crystallised Lifeforce",
+        "category": "base"
+      },
+      {
+        "name": "Witchhunter's Judgment",
+        "baseType": "Highborn Staff",
+        "category": "unique"
+      },
+      {
+        "name": "The Bitter Blossom",
+        "category": "divination"
+      },
+      {
+        "name": "Forbidden Shako",
+        "baseType": "Great Crown",
+        "category": "unique"
+      },
+      {
+        "name": "Law of the Wilds",
+        "baseType": "Hellion's Paw",
+        "category": "unique"
+      },
+      {
+        "name": "Abhorrent Interrogation",
+        "baseType": "Ambush Mitts",
+        "category": "unique"
+      },
+      {
+        "name": "The Aspirant",
+        "category": "divination"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Expedition Logbook",
+        "category": "base"
+      },
+      {
+        "name": "Faithguard",
+        "baseType": "Runic Helm",
+        "category": "unique"
+      },
+      {
+        "name": "Olroth's Charge",
+        "baseType": "Runic Sollerets",
+        "category": "unique"
+      },
+      {
+        "name": "Heroic Tragedy",
+        "baseType": "Timeless Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Medved's Challenge",
+        "baseType": "Runic Gauntlets",
+        "category": "unique"
+      },
+      {
+        "name": "Nightgrip",
+        "baseType": "Runic Gages",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Vorana's March",
+        "baseType": "Runic Sabatons",
+        "category": "unique"
+      },
+      {
+        "name": "Cadigan's Crown",
+        "baseType": "Runic Crown",
+        "category": "unique"
+      },
+      {
+        "name": "Olroth's Resolve",
+        "category": "unique"
+      },
+      {
+        "name": "Starlight Chalice",
+        "category": "unique"
+      },
+      {
+        "name": "Elixir of the Unbroken Circle",
+        "category": "unique"
+      },
+      {
+        "name": "Vorana's Preparation",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Lonely Fragment",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Haunting Memories",
+        "baseType": "Turquoise Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Lonely Reliquary Key",
+        "category": "base"
+      },
+      {
+        "name": "Refuge in Isolation",
+        "baseType": "Paladin Crown",
+        "category": "unique"
+      },
+      {
+        "name": "Festering Resentment",
+        "baseType": "Demon Dagger",
+        "category": "unique"
+      },
+      {
+        "name": "Bitter Instinct",
+        "baseType": "Spiny Round Shield",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Cortex",
+        "baseType": "T11",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Bottled Faith",
+        "category": "unique"
+      },
+      {
+        "name": "Offering to the Serpent",
+        "baseType": "Legion Gloves",
+        "category": "unique"
+      },
+      {
+        "name": "Perepiteia",
+        "baseType": "Ezomyte Spiked Shield",
+        "category": "unique"
+      },
+      {
+        "name": "Imperfect Memories",
+        "category": "divination"
+      },
+      {
+        "name": "Garb of the Ephemeral",
+        "baseType": "Savant's Robe",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Apep's Slumber",
+        "baseType": "Vaal Spirit Shield",
+        "category": "unique"
+      },
+      {
+        "name": "Vial of Awakening",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Apep's Supremacy",
+        "baseType": "Vaal Spirit Shield",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Decaying Fragment",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Decaying Reliquary Key",
+        "category": "base"
+      },
+      {
+        "name": "Curio of Decay",
+        "baseType": "Primordial Fragment",
+        "category": "unique"
+      },
+      {
+        "name": "Sublime Vision",
+        "baseType": "Prismatic Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "The Devourer of Minds",
+        "baseType": "Pig-Faced Bascinet",
+        "category": "unique"
+      },
+      {
+        "name": "Call of the Void",
+        "baseType": "Sapphire Ring",
+        "category": "unique"
+      },
+      {
+        "name": "The Eternity Shroud",
+        "baseType": "Blood Raiment",
+        "category": "unique"
+      },
+      {
+        "name": "Soul Ascension",
+        "baseType": "Carnal Mitts",
+        "category": "unique"
+      },
+      {
+        "name": "Voidforge",
+        "baseType": "Infernal Sword",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "The Tempest's Binding",
+        "baseType": "Callous Mask",
+        "category": "unique"
+      },
+      {
+        "name": "Deregulation Scroll",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Tempest's Liberation",
+        "baseType": "Callous Mask",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Sadima's Touch",
+        "baseType": "Wool Gloves",
+        "category": "unique"
+      },
+      {
+        "name": "Sentari's Answer",
+        "baseType": "Brass Spirit Shield",
+        "category": "unique"
+      },
+      {
+        "name": "Divination Distillate",
+        "category": "unique"
+      },
+      {
+        "name": "Greed's Embrace",
+        "baseType": "Golden Plate",
+        "category": "unique"
+      },
+      {
+        "name": "Bisco's Leash",
+        "baseType": "Heavy Belt",
+        "category": "unique"
+      },
+      {
+        "name": "The Ascetic",
+        "baseType": "Gold Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Goldwyrm",
+        "baseType": "Nubuck Boots",
+        "category": "unique"
+      },
+      {
+        "name": "Ventor's Gamble",
+        "baseType": "Gold Ring",
+        "category": "unique"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Vial of the Ghost",
+        "category": "base"
+      },
+      {
+        "name": "Soul Catcher",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Soul Ripper",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Fleshrender",
+        "baseType": "Exquisite Blade",
+        "category": "unique"
+      },
+      {
+        "name": "Khatal's Weeping",
+        "baseType": "Lapis Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "The Desecrated Chalice",
+        "baseType": "Coronal Maul",
+        "category": "unique"
+      },
+      {
+        "name": "Coin of Restoration",
+        "category": "base"
+      },
+      {
+        "name": "Saresh's Darkness",
+        "baseType": "Chain Belt",
+        "category": "unique"
+      },
+      {
+        "name": "The Bane of Hope",
+        "baseType": "Maraketh Bow",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Flame of Hope",
+        "baseType": "Maraketh Bow",
+        "category": "unique"
+      },
+      {
+        "name": "The Sacred Chalice",
+        "baseType": "Coronal Maul",
+        "category": "unique"
+      },
+      {
+        "name": "Skysunder",
+        "baseType": "Exquisite Blade",
+        "category": "unique"
+      },
+      {
+        "name": "Solerai's Radiance",
+        "baseType": "Chain Belt",
+        "category": "unique"
+      },
+      {
+        "name": "Khatal's Geyser",
+        "baseType": "Lapis Amulet",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Reality Fragment",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Grace of the Goddess",
+        "baseType": "Prophecy Wand",
+        "category": "unique"
+      },
+      {
+        "name": "Shiny Reliquary Key",
+        "category": "base"
+      },
+      {
+        "name": "Curio of Potential",
+        "baseType": "Primordial Fragment",
+        "category": "unique"
+      },
+      {
+        "name": "Impossible Escape",
+        "baseType": "Viridian Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Viridi's Veil",
+        "baseType": "Praetor Crown",
+        "category": "unique"
+      },
+      {
+        "name": "Progenesis",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Deafening Essence of Anger",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Anger",
+        "category": "base"
+      },
+      {
+        "name": "Shrieking Essence of Anger",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Hivebrain Gland",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Will of Xoph",
+        "baseType": "Enthalpic Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Hand of the Lords",
+        "baseType": "Carnal Mitts",
+        "category": "unique"
+      },
+      {
+        "name": "Uul-Netol's Vow",
+        "baseType": "Unset Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "The Will of Uul-Netol",
+        "baseType": "Organic Ring",
+        "category": "unique"
+      },
+      {
+        "name": "The Will of Tul",
+        "baseType": "Cryonic Ring",
+        "category": "unique"
+      },
+      {
+        "name": "The Sundered Will",
+        "baseType": "Fugitive Ring",
+        "category": "unique"
+      },
+      {
+        "name": "The Grey Wind",
+        "baseType": "Spectral Axe",
+        "category": "unique"
+      },
+      {
+        "name": "The Will of Esh",
+        "baseType": "Synaptic Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Flesh of Xesht",
+        "category": "base"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Saqawal's Talons",
+        "baseType": "Hydrascale Boots",
+        "category": "unique"
+      },
+      {
+        "name": "Saqawal's Nest",
+        "baseType": "Blood Raiment",
+        "category": "unique"
+      },
+      {
+        "name": "Saqawal's Flock",
+        "baseType": "Silken Hood",
+        "category": "unique"
+      },
+      {
+        "name": "Saqawal's Winds",
+        "baseType": "Soldier Gloves",
+        "category": "unique"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Chayula's Breachstone",
+        "category": "base"
+      },
+      {
+        "name": "Splinter of Chayula",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Blessing of Chayula",
+        "category": "base"
+      },
+      {
+        "name": "The Red Dream",
+        "baseType": "Crimson Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Severed in Sleep",
+        "baseType": "Cutlass",
+        "category": "unique"
+      },
+      {
+        "name": "The Blue Dream",
+        "baseType": "Cobalt Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Chayula's Flawless Breachstone",
+        "category": "base"
+      },
+      {
+        "name": "The Green Dream",
+        "baseType": "Viridian Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Skin of the Loyal",
+        "baseType": "Simple Robe, 6L",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Bestiary Scarab of the Shadowed Crow",
+        "category": "base"
+      },
+      {
+        "name": "Orb of Fusing",
+        "category": "base"
+      },
+      {
+        "name": "Craicic Sand Spitter",
+        "category": "beast"
+      },
+      {
+        "name": "Omen of Connections",
+        "category": "base"
+      },
+      {
+        "name": "Black Mórrigan",
+        "category": "beast"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Faminebind",
+        "baseType": "Rustic Sash",
+        "category": "unique"
+      },
+      {
+        "name": "Feastbind",
+        "baseType": "Rustic Sash",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Retch",
+        "baseType": "Rustic Sash",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Tul's Breachstone",
+        "category": "base"
+      },
+      {
+        "name": "Splinter of Tul",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Halcyon",
+        "baseType": "Jade Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "The Snowblind Grace",
+        "baseType": "Coronal Leather",
+        "category": "unique"
+      },
+      {
+        "name": "Tulborn",
+        "baseType": "Opal Wand",
+        "category": "unique"
+      },
+      {
+        "name": "The Escape",
+        "category": "divination"
+      },
+      {
+        "name": "Blessing of Tul",
+        "category": "base"
+      },
+      {
+        "name": "Tul's Flawless Breachstone",
+        "category": "base"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Shrieking Essence of Sorrow",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Sorrow",
+        "category": "base"
+      },
+      {
+        "name": "Deafening Essence of Sorrow",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Splinter of Esh",
+        "category": "base"
+      },
+      {
+        "name": "Esh's Breachstone",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Esh's Flawless Breachstone",
+        "category": "base"
+      },
+      {
+        "name": "Blessing of Esh",
+        "category": "base"
+      },
+      {
+        "name": "Voice of the Storm",
+        "baseType": "Lapis Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Esh's Mirror",
+        "baseType": "Thorium Spirit Shield",
+        "category": "unique"
+      },
+      {
+        "name": "Hand of Thought and Motion",
+        "baseType": "Blinder",
+        "category": "unique"
+      },
+      {
+        "name": "The Escape",
+        "category": "divination"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Echo of Reverence",
+        "category": "base"
+      },
+      {
+        "name": "Memory of Reverence",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Seven Teachings",
+        "baseType": "Waxed Garb",
+        "category": "unique"
+      },
+      {
+        "name": "Orb of Unravelling",
+        "category": "base"
+      },
+      {
+        "name": "Bound By Destiny",
+        "baseType": "Prismatic Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Whispers of Infinity",
+        "baseType": "Seaglass Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Wine of the Prophet",
+        "category": "unique"
+      },
+      {
+        "name": "The Dark Monarch",
+        "baseType": "Lich's Circlet",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Syndicate Medallion",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Spinehail",
+        "baseType": "Vile Arrow Quiver",
+        "category": "unique"
+      },
+      {
+        "name": "Cinderswallow Urn",
+        "category": "unique"
+      },
+      {
+        "name": "Veiled Exalted Orb",
+        "category": "base"
+      },
+      {
+        "name": "The Devouring Diadem",
+        "baseType": "Necromancer Circlet",
+        "category": "unique"
+      },
+      {
+        "name": "The Queen's Hunger",
+        "baseType": "Vaal Regalia",
+        "category": "unique"
+      },
+      {
+        "name": "Bitterbind Point",
+        "baseType": "Titanium Spirit Shield",
+        "category": "unique"
+      },
+      {
+        "name": "Cane of Kulemak",
+        "baseType": "Serpentine Staff",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Curio of Decay",
+        "baseType": "Primordial Fragment",
+        "category": "unique"
+      },
+      {
+        "name": "Curio of Consumption",
+        "baseType": "Primordial Fragment",
+        "category": "unique"
+      },
+      {
+        "name": "Curio of Potential",
+        "baseType": "Primordial Fragment",
+        "category": "unique"
+      },
+      {
+        "name": "Curio of Absorption",
+        "baseType": "Primordial Fragment",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Utmost",
+        "baseType": "Gold Amulet",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Synthesising Fragment",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Circle of Ambition",
+        "baseType": "Prismatic Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Nebulis",
+        "baseType": "Void Sceptre",
+        "category": "unique"
+      },
+      {
+        "name": "Mask of the Tribunal",
+        "baseType": "Magistrate Crown",
+        "category": "unique"
+      },
+      {
+        "name": "Forgotten Reliquary Key",
+        "category": "base"
+      },
+      {
+        "name": "The Apostate",
+        "baseType": "Cabalist Regalia",
+        "category": "unique"
+      },
+      {
+        "name": "Rational Doctrine",
+        "baseType": "Cobalt Jewel",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Polaric Invitation",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Polaric Devastation",
+        "baseType": "Opal Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Sudden Dawn",
+        "baseType": "Steel Circlet",
+        "category": "unique"
+      },
+      {
+        "name": "The Eternal Struggle",
+        "baseType": "Onyx Amulet",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Skysunder",
+        "baseType": "Exquisite Blade",
+        "category": "unique"
+      },
+      {
+        "name": "Solerai's Radiance",
+        "baseType": "Chain Belt",
+        "category": "unique"
+      },
+      {
+        "name": "Khatal's Geyser",
+        "baseType": "Lapis Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Coin of Desecration",
+        "category": "base"
+      },
+      {
+        "name": "The Flame of Hope",
+        "baseType": "Maraketh Bow",
+        "category": "unique"
+      },
+      {
+        "name": "The Sacred Chalice",
+        "baseType": "Coronal Maul",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Saresh's Darkness",
+        "baseType": "Chain Belt",
+        "category": "unique"
+      },
+      {
+        "name": "Khatal's Weeping",
+        "baseType": "Lapis Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "The Bane of Hope",
+        "baseType": "Maraketh Bow",
+        "category": "unique"
+      },
+      {
+        "name": "The Desecrated Chalice",
+        "baseType": "Coronal Maul",
+        "category": "unique"
+      },
+      {
+        "name": "Fleshrender",
+        "baseType": "Exquisite Blade",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Contract: Death to Darnaw",
+        "baseType": "Naval Contract",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Admiral",
+        "baseType": "Varnished Coat",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Second Piece of Brutality",
+        "baseType": "Imperial Staff Piece",
+        "category": "unique"
+      },
+      {
+        "name": "Third Piece of Brutality",
+        "baseType": "Imperial Staff Piece",
+        "category": "unique"
+      },
+      {
+        "name": "First Piece of Brutality",
+        "baseType": "Imperial Staff Piece",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Enmity Divine",
+        "baseType": "Imperial Staff",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "The Goddess Bound",
+        "baseType": "Whalebone Rapier",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Goddess Scorned",
+        "baseType": "Elegant Sword",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Drox's Crest",
+        "category": "base"
+      },
+      {
+        "name": "Al-Hezmin's Crest",
+        "category": "base"
+      },
+      {
+        "name": "Veritania's Crest",
+        "category": "base"
+      },
+      {
+        "name": "Baran's Crest",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Thread of Hope",
+        "baseType": "Crimson Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Crown of the Inward Eye",
+        "baseType": "Prophet Crown",
+        "category": "unique"
+      },
+      {
+        "name": "Hands of the High Templar",
+        "baseType": "Crusader Gloves",
+        "category": "unique"
+      },
+      {
+        "name": "Awakener's Orb",
+        "category": "base"
+      },
+      {
+        "name": "The Burden of Truth",
+        "baseType": "Crystal Belt",
+        "category": "unique"
+      },
+      {
+        "name": "Orb of Dominance",
+        "category": "base"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Hall of Grandmasters",
+        "baseType": "T6",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Immortal",
+        "category": "divination"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Shrieking Essence of Scorn",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Scorn",
+        "category": "base"
+      },
+      {
+        "name": "Deafening Essence of Scorn",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Haemocombustion Scroll",
+        "category": "base"
+      },
+      {
+        "name": "The Enmity Divine",
+        "baseType": "Imperial Staff",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Yielding Mortality",
+        "baseType": "Imperial Staff",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Blazing Fragment",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Curio of Absorption",
+        "baseType": "Primordial Fragment",
+        "category": "unique"
+      },
+      {
+        "name": "Annihilation's Approach",
+        "baseType": "Dragonscale Boots",
+        "category": "unique"
+      },
+      {
+        "name": "Crystallised Omniscience",
+        "baseType": "Onyx Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "The Annihilating Light",
+        "baseType": "Quarterstaff",
+        "category": "unique"
+      },
+      {
+        "name": "Archive Reliquary Key",
+        "category": "base"
+      },
+      {
+        "name": "The Celestial Brace",
+        "baseType": "Goliath Gauntlets",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "First Piece of Storms",
+        "baseType": "Callous Mask Piece",
+        "category": "unique"
+      },
+      {
+        "name": "Second Piece of Storms",
+        "baseType": "Callous Mask Piece",
+        "category": "unique"
+      },
+      {
+        "name": "Third Piece of Storms",
+        "baseType": "Callous Mask Piece",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Tempest's Binding",
+        "baseType": "Callous Mask",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Incandescent Invitation",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Dissolution of the Flesh",
+        "baseType": "Crimson Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Dawnbreaker",
+        "baseType": "Colossal Tower Shield",
+        "category": "unique"
+      },
+      {
+        "name": "Exceptional Eldritch Ember",
+        "category": "base"
+      },
+      {
+        "name": "Forbidden Flame",
+        "baseType": "Crimson Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Dawnstrider",
+        "baseType": "Vaal Greaves",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Beltimber Blade",
+        "baseType": "Eternal Sword",
+        "category": "unique"
+      },
+      {
+        "name": "Grelwood Shank",
+        "baseType": "Eternal Sword",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Arborix",
+        "baseType": "Assassin Bow",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Screaming Essence of Hatred",
+        "category": "base"
+      },
+      {
+        "name": "Deafening Essence of Hatred",
+        "category": "base"
+      },
+      {
+        "name": "Shrieking Essence of Hatred",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Deafening Essence of Greed",
+        "category": "base"
+      },
+      {
+        "name": "Shrieking Essence of Greed",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Greed",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Eldritch Orb of Annulment",
+        "category": "base"
+      },
+      {
+        "name": "Exalted Orb",
+        "category": "base"
+      },
+      {
+        "name": "Farric Wolf Alpha",
+        "category": "beast"
+      },
+      {
+        "name": "Eldritch Exalted Orb",
+        "category": "base"
+      },
+      {
+        "name": "Eldritch Chaos Orb",
+        "category": "base"
+      },
+      {
+        "name": "Orb of Annulment",
+        "category": "base"
+      },
+      {
+        "name": "Farric Lynx Alpha",
+        "category": "beast"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "The Black Barya",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Broken Elegy",
+        "baseType": "Foul Staff",
+        "category": "unique"
+      },
+      {
+        "name": "Screams of the Desiccated",
+        "baseType": "Leather Belt",
+        "category": "unique"
+      },
+      {
+        "name": "The Sands of Time",
+        "baseType": "Tyrant's Sekhem",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Indigo Oil",
+        "category": "base"
+      },
+      {
+        "name": "Crimson Oil",
+        "category": "base"
+      },
+      {
+        "name": "Violet Oil",
+        "category": "base"
+      },
+      {
+        "name": "Opalescent Oil",
+        "category": "base"
+      },
+      {
+        "name": "Black Oil",
+        "category": "base"
+      },
+      {
+        "name": "Clear Oil",
+        "category": "base"
+      },
+      {
+        "name": "Teal Oil",
+        "category": "base"
+      },
+      {
+        "name": "Sepia Oil",
+        "category": "base"
+      },
+      {
+        "name": "Amber Oil",
+        "category": "base"
+      },
+      {
+        "name": "Golden Oil",
+        "category": "base"
+      },
+      {
+        "name": "Azure Oil",
+        "category": "base"
+      },
+      {
+        "name": "Silver Oil",
+        "category": "base"
+      },
+      {
+        "name": "Verdant Oil",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Prismatic Oil",
+        "category": "base"
+      },
+      {
+        "name": "Reflective Oil",
+        "category": "base"
+      },
+      {
+        "name": "Tainted Oil",
+        "category": "base"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Simulacrum",
+        "category": "base"
+      },
+      {
+        "name": "Simulacrum Splinter",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Voices",
+        "baseType": "7 passives, Large Cluster Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Voices",
+        "baseType": "5 passives, Large Cluster Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Megalomaniac",
+        "baseType": "Medium Cluster Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Split Personality",
+        "baseType": "Crimson Jewel",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Sacrifice at Dusk",
+        "category": "base"
+      },
+      {
+        "name": "Sacrifice at Midnight",
+        "category": "base"
+      },
+      {
+        "name": "Sacrifice at Dawn",
+        "category": "base"
+      },
+      {
+        "name": "Sacrifice at Noon",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Doryani's Catalyst",
+        "baseType": "Vaal Sceptre",
+        "category": "unique"
+      },
+      {
+        "name": "Mortal Ignorance",
+        "category": "base"
+      },
+      {
+        "name": "Atziri's Promise",
+        "category": "unique"
+      },
+      {
+        "name": "Mortal Rage",
+        "category": "base"
+      },
+      {
+        "name": "Alluring Bounty",
+        "category": "divination"
+      },
+      {
+        "name": "Mortal Grief",
+        "category": "base"
+      },
+      {
+        "name": "Mortal Hope",
+        "category": "base"
+      },
+      {
+        "name": "The Ethereal",
+        "category": "divination"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Second Piece of Directions",
+        "baseType": "Blunt Arrow Quiver Piece",
+        "category": "unique"
+      },
+      {
+        "name": "First Piece of Directions",
+        "baseType": "Blunt Arrow Quiver Piece",
+        "category": "unique"
+      },
+      {
+        "name": "Third Piece of Directions",
+        "baseType": "Blunt Arrow Quiver Piece",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Fracturing Spinner",
+        "baseType": "Blunt Arrow Quiver",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Craiceann's Pincers",
+        "baseType": "Titan Gauntlets",
+        "category": "unique"
+      },
+      {
+        "name": "Craiceann's Carapace",
+        "baseType": "Golden Plate",
+        "category": "unique"
+      },
+      {
+        "name": "Craiceann's Tracks",
+        "baseType": "Goliath Greaves",
+        "category": "unique"
+      },
+      {
+        "name": "Craiceann's Chitin",
+        "baseType": "Magistrate Crown",
+        "category": "unique"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Second Piece of Focus",
+        "baseType": "Archon Kite Shield Piece",
+        "category": "unique"
+      },
+      {
+        "name": "Third Piece of Focus",
+        "baseType": "Archon Kite Shield Piece",
+        "category": "unique"
+      },
+      {
+        "name": "Fourth Piece of Focus",
+        "baseType": "Archon Kite Shield Piece",
+        "category": "unique"
+      },
+      {
+        "name": "First Piece of Focus",
+        "baseType": "Archon Kite Shield Piece",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Unshattered Will",
+        "baseType": "Archon Kite Shield",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Fertile Catalyst",
+        "category": "base"
+      },
+      {
+        "name": "Noxious Catalyst",
+        "category": "base"
+      },
+      {
+        "name": "Turbulent Catalyst",
+        "category": "base"
+      },
+      {
+        "name": "Accelerating Catalyst",
+        "category": "base"
+      },
+      {
+        "name": "Tempering Catalyst",
+        "category": "base"
+      },
+      {
+        "name": "Imbued Catalyst",
+        "category": "base"
+      },
+      {
+        "name": "Prismatic Catalyst",
+        "category": "base"
+      },
+      {
+        "name": "Unstable Catalyst",
+        "category": "base"
+      },
+      {
+        "name": "Intrinsic Catalyst",
+        "category": "base"
+      },
+      {
+        "name": "Abrasive Catalyst",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Tempered Mind",
+        "baseType": "Cobalt Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Tempered Spirit",
+        "baseType": "Viridian Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Tempered Flesh",
+        "baseType": "Crimson Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Vial of Transcendence",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Transcendent Mind",
+        "baseType": "Cobalt Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Transcendent Flesh",
+        "baseType": "Crimson Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Transcendent Spirit",
+        "baseType": "Viridian Jewel",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Screaming Essence of Wrath",
+        "category": "base"
+      },
+      {
+        "name": "Shrieking Essence of Wrath",
+        "category": "base"
+      },
+      {
+        "name": "Deafening Essence of Wrath",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Deafening Essence of Rage",
+        "category": "base"
+      },
+      {
+        "name": "Shrieking Essence of Rage",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Rage",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Deafening Essence of Misery",
+        "category": "base"
+      },
+      {
+        "name": "Shrieking Essence of Misery",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Misery",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Shrieking Essence of Dread",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Dread",
+        "category": "base"
+      },
+      {
+        "name": "Deafening Essence of Dread",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Architect's Hand",
+        "baseType": "Ambush Mitts",
+        "category": "unique"
+      },
+      {
+        "name": "Vial of Dominance",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Slavedriver's Hand",
+        "baseType": "Ambush Mitts",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Voidborn Reliquary Key",
+        "category": "base"
+      },
+      {
+        "name": "Astragali",
+        "category": "base"
+      },
+      {
+        "name": "Ancient Orb",
+        "category": "base"
+      },
+      {
+        "name": "Valdo's Puzzle Box",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Headhunter",
+        "baseType": "Leather Belt",
+        "category": "unique"
+      },
+      {
+        "name": "The Squire",
+        "baseType": "Elegant Round Shield",
+        "category": "unique"
+      },
+      {
+        "name": "Mageblood",
+        "baseType": "Heavy Belt",
+        "category": "unique"
+      },
+      {
+        "name": "Defiance of Destiny",
+        "baseType": "Paua Amulet",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Light of Lunaris",
+        "baseType": "Jingling Spirit Shield",
+        "category": "unique"
+      },
+      {
+        "name": "Shade of Solaris",
+        "baseType": "Sage Wand",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Duskdawn",
+        "baseType": "Maelström Staff",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Time-light Scroll",
+        "category": "base"
+      },
+      {
+        "name": "The Flow Untethered",
+        "baseType": "Cloth Belt",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Torrent's Reclamation",
+        "baseType": "Cloth Belt",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Vial of the Ritual",
+        "category": "base"
+      },
+      {
+        "name": "Dance of the Offered",
+        "baseType": "Carnal Boots",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Omeyocan",
+        "baseType": "Carnal Boots",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Echo of Loneliness",
+        "category": "base"
+      },
+      {
+        "name": "Memory of Loneliness",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Venarius' Astrolabe",
+        "baseType": "Astrolabe Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Orb of Remembrance",
+        "category": "base"
+      },
+      {
+        "name": "The Arkhon's Tools",
+        "baseType": "Cloth Belt",
+        "category": "unique"
+      },
+      {
+        "name": "Bound By Destiny",
+        "baseType": "Prismatic Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Legacy of the Rose",
+        "baseType": "Judgement Staff",
+        "category": "unique"
+      },
+      {
+        "name": "Betrayal's Sting",
+        "baseType": "Steel Ring",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Offering to the Goddess",
+        "category": "base"
+      },
+      {
+        "name": "Gift to the Goddess",
+        "category": "base"
+      },
+      {
+        "name": "Dedication to the Goddess",
+        "category": "base"
+      },
+      {
+        "name": "Tribute to the Goddess",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Tainted Divine Teardrop",
+        "category": "base"
+      },
+      {
+        "name": "Tainted Mythic Orb",
+        "category": "base"
+      },
+      {
+        "name": "Tainted Exalted Orb",
+        "category": "base"
+      },
+      {
+        "name": "Tainted Jeweller's Orb",
+        "category": "base"
+      },
+      {
+        "name": "Tainted Chaos Orb",
+        "category": "base"
+      },
+      {
+        "name": "Tainted Orb of Fusing",
+        "category": "base"
+      },
+      {
+        "name": "Tainted Chromatic Orb",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Wild Hellion Alpha",
+        "category": "beast"
+      },
+      {
+        "name": "Watcher's Eye",
+        "baseType": "Prismatic Jewel",
+        "category": "unique"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "The Fracturing Spinner",
+        "baseType": "Blunt Arrow Quiver",
+        "category": "unique"
+      },
+      {
+        "name": "Fragmentation Scroll",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Shattered Divinity",
+        "baseType": "Blunt Arrow Quiver",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Cast on Death Support",
+        "category": "gem"
+      },
+      {
+        "name": "Karui Ward",
+        "baseType": "Jade Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Lochtonial Caress",
+        "baseType": "Iron Gauntlets",
+        "category": "unique"
+      },
+      {
+        "name": "Wanderlust",
+        "baseType": "Wool Shoes",
+        "category": "unique"
+      },
+      {
+        "name": "Lifesprig",
+        "baseType": "Driftwood Wand",
+        "category": "unique"
+      },
+      {
+        "name": "Goldrim",
+        "baseType": "Leather Cap",
+        "category": "unique"
+      },
+      {
+        "name": "Tabula Rasa",
+        "baseType": "Simple Robe, 6L",
+        "category": "unique"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Electroshock Scroll",
+        "category": "base"
+      },
+      {
+        "name": "The Rippling Thoughts",
+        "baseType": "Legion Sword",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Surging Thoughts",
+        "baseType": "Legion Sword",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Screaming Invitation",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Forbidden Flesh",
+        "baseType": "Cobalt Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Melding of the Flesh",
+        "baseType": "Cobalt Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Exceptional Eldritch Ichor",
+        "category": "base"
+      },
+      {
+        "name": "Inextricable Fate",
+        "baseType": "Fugitive Boots",
+        "category": "unique"
+      },
+      {
+        "name": "The Gluttonous Tide",
+        "baseType": "Citadel Bow",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Vaal Temple Map // T0, Atlas",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Beauty Through Death",
+        "category": "divination"
+      },
+      {
+        "name": "Cooperation",
+        "baseType": "Vaal Aspect",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Contract: The Twins",
+        "baseType": "Vengeful Contract",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Leadership's Price",
+        "baseType": "Onyx Amulet",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Uul-Netol's Breachstone",
+        "category": "base"
+      },
+      {
+        "name": "Splinter of Uul-Netol",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Infinite Pursuit",
+        "baseType": "Goliath Greaves",
+        "category": "unique"
+      },
+      {
+        "name": "Uul-Netol's Kiss",
+        "baseType": "Labrys",
+        "category": "unique"
+      },
+      {
+        "name": "Blessing of Uul-Netol",
+        "category": "base"
+      },
+      {
+        "name": "Uul-Netol's Flawless Breachstone",
+        "category": "base"
+      },
+      {
+        "name": "The Anticipation",
+        "baseType": "Ezomyte Tower Shield",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Primordial Eminence",
+        "baseType": "Viridian Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Primordial Harmony",
+        "baseType": "Cobalt Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Primordial Might",
+        "baseType": "Crimson Jewel",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Anima Stone",
+        "baseType": "Prismatic Jewel",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Essence of Insanity",
+        "category": "base"
+      },
+      {
+        "name": "Essence of Horror",
+        "category": "base"
+      },
+      {
+        "name": "Essence of Delirium",
+        "category": "base"
+      },
+      {
+        "name": "Essence of Hysteria",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Primal Crystallised Lifeforce",
+        "category": "base"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Shaper Guardian Map // T0, Atlas",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Fragment of the Minotaur",
+        "category": "base"
+      },
+      {
+        "name": "Fragment of the Chimera",
+        "category": "base"
+      },
+      {
+        "name": "Fragment of the Hydra",
+        "category": "base"
+      },
+      {
+        "name": "Fragment of the Phoenix",
+        "category": "base"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Traumatic Fragment",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Wing of the Wyvern",
+        "baseType": "Imperial Bow",
+        "category": "unique"
+      },
+      {
+        "name": "The Caged Mammoth",
+        "baseType": "Antique Gauntlets",
+        "category": "unique"
+      },
+      {
+        "name": "Coiling Whisper",
+        "baseType": "Amethyst Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Traumatic Reliquary Key",
+        "category": "base"
+      },
+      {
+        "name": "Woespike",
+        "baseType": "Steel Ring",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "The Tower of Ordeals",
+        "baseType": "T16",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Temptation Step",
+        "baseType": "Shagreen Boots",
+        "category": "unique"
+      },
+      {
+        "name": "Relic of the Pact",
+        "baseType": "Sage Wand",
+        "category": "unique"
+      },
+      {
+        "name": "Yaomac's Accord",
+        "baseType": "Vaal Sceptre",
+        "category": "unique"
+      },
+      {
+        "name": "Hateforge",
+        "baseType": "Ancient Gauntlets",
+        "category": "unique"
+      },
+      {
+        "name": "Glimpse of Chaos",
+        "baseType": "Vaal Mask",
+        "category": "unique"
+      },
+      {
+        "name": "Mahuxotl's Machination",
+        "baseType": "Steel Kite Shield",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Fenumus' Shroud",
+        "baseType": "Widowsilk Robe",
+        "category": "unique"
+      },
+      {
+        "name": "Fenumus' Weave",
+        "baseType": "Carnal Mitts",
+        "category": "unique"
+      },
+      {
+        "name": "Fenumus' Toxins",
+        "baseType": "Necromancer Circlet",
+        "category": "unique"
+      },
+      {
+        "name": "Fenumus' Spinnerets",
+        "baseType": "Assassin's Boots",
+        "category": "unique"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Sacred Crystallised Lifeforce",
+        "category": "base"
+      },
+      {
+        "name": "Wild Crystallised Lifeforce",
+        "category": "base"
+      },
+      {
+        "name": "Vivid Crystallised Lifeforce",
+        "category": "base"
+      },
+      {
+        "name": "Primal Crystallised Lifeforce",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Faceted Fossil",
+        "category": "base"
+      },
+      {
+        "name": "Golden Oil",
+        "category": "base"
+      },
+      {
+        "name": "Diviner's Delirium Orb",
+        "category": "base"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Fragment of Terror",
+        "category": "base"
+      },
+      {
+        "name": "Fragment of Emptiness",
+        "category": "base"
+      },
+      {
+        "name": "Fragment of Shape",
+        "category": "base"
+      },
+      {
+        "name": "Fragment of Knowledge",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Watcher's Eye",
+        "baseType": "Prismatic Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Disintegrator",
+        "baseType": "Maelström Staff",
+        "category": "unique"
+      },
+      {
+        "name": "Indigon",
+        "baseType": "Hubris Circlet",
+        "category": "unique"
+      },
+      {
+        "name": "Mark of the Elder",
+        "baseType": "Steel Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Elder's Exalted Orb",
+        "category": "base"
+      },
+      {
+        "name": "Voidfletcher",
+        "baseType": "Primal Arrow Quiver",
+        "category": "unique"
+      },
+      {
+        "name": "Shaper's Exalted Orb",
+        "category": "base"
+      },
+      {
+        "name": "Orb of Dominance",
+        "category": "base"
+      },
+      {
+        "name": "Mark of the Shaper",
+        "baseType": "Opal Ring",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "The Doctor",
+        "category": "divination"
+      },
+      {
+        "name": "The Patient",
+        "category": "divination"
+      },
+      {
+        "name": "The Nurse",
+        "category": "divination"
+      }
+    ],
+    "items": [
+      {
+        "name": "Headhunter",
+        "baseType": "Leather Belt",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Shrieking Essence of Doubt",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Doubt",
+        "category": "base"
+      },
+      {
+        "name": "Deafening Essence of Doubt",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Nightmare Map // T0, Atlas",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Malachai's Mark",
+        "baseType": "Murder Mitts",
+        "category": "unique"
+      },
+      {
+        "name": "Yoke of Suffering",
+        "baseType": "Onyx Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Manastorm",
+        "baseType": "Lacewood Spirit Shield",
+        "category": "unique"
+      },
+      {
+        "name": "Wraithlord",
+        "baseType": "Bone Circlet",
+        "category": "unique"
+      },
+      {
+        "name": "The Dark Seer",
+        "baseType": "Shadow Sceptre",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Berek's Respite",
+        "baseType": "Two-Stone Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Berek's Pass",
+        "baseType": "Two-Stone Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Berek's Grip",
+        "baseType": "Two-Stone Ring",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Taming",
+        "baseType": "Prismatic Ring",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Mask of the Spirit Drinker",
+        "baseType": "Magistrate Crown",
+        "category": "unique"
+      },
+      {
+        "name": "Vial of Summoning",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Mask of the Stitched Demon",
+        "baseType": "Magistrate Crown",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Deafening Essence of Fear",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Fear",
+        "category": "base"
+      },
+      {
+        "name": "Shrieking Essence of Fear",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Deafening Essence of Zeal",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Zeal",
+        "category": "base"
+      },
+      {
+        "name": "Shrieking Essence of Zeal",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Redeemer's Exalted Orb",
+        "category": "base"
+      },
+      {
+        "name": "Orb of Dominance",
+        "category": "base"
+      },
+      {
+        "name": "Warlord's Exalted Orb",
+        "category": "base"
+      },
+      {
+        "name": "Crusader's Exalted Orb",
+        "category": "base"
+      },
+      {
+        "name": "Awakener's Orb",
+        "category": "base"
+      },
+      {
+        "name": "Hunter's Exalted Orb",
+        "category": "base"
+      },
+      {
+        "name": "Elder's Exalted Orb",
+        "category": "base"
+      },
+      {
+        "name": "Shaper's Exalted Orb",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Grand Eldritch Ichor",
+        "category": "base"
+      },
+      {
+        "name": "Lesser Eldritch Ichor",
+        "category": "base"
+      },
+      {
+        "name": "Greater Eldritch Ichor",
+        "category": "base"
+      },
+      {
+        "name": "Exceptional Eldritch Ichor",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Grand Eldritch Ember",
+        "category": "base"
+      },
+      {
+        "name": "Greater Eldritch Ember",
+        "category": "base"
+      },
+      {
+        "name": "Lesser Eldritch Ember",
+        "category": "base"
+      },
+      {
+        "name": "Orb of Conflict",
+        "category": "base"
+      },
+      {
+        "name": "Exceptional Eldritch Ember",
+        "category": "base"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Contract: Breaking the Unbreakable",
+        "baseType": "Preventative Contract",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Nadir Mode",
+        "baseType": "Cobalt Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Apex Mode",
+        "baseType": "Cobalt Jewel",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "First Piece of Time",
+        "baseType": "Cloth Belt Piece",
+        "category": "unique"
+      },
+      {
+        "name": "Second Piece of Time",
+        "baseType": "Cloth Belt Piece",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Flow Untethered",
+        "baseType": "Cloth Belt",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Exceptional Eldritch Ember",
+        "category": "base"
+      },
+      {
+        "name": "Grand Eldritch Ember",
+        "category": "base"
+      },
+      {
+        "name": "Lesser Eldritch Ember",
+        "category": "base"
+      },
+      {
+        "name": "Greater Eldritch Ember",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Exceptional Eldritch Ichor",
+        "category": "base"
+      },
+      {
+        "name": "Grand Eldritch Ichor",
+        "category": "base"
+      },
+      {
+        "name": "Orb of Conflict",
+        "category": "base"
+      },
+      {
+        "name": "Lesser Eldritch Ichor",
+        "category": "base"
+      },
+      {
+        "name": "Greater Eldritch Ichor",
+        "category": "base"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Deafening Essence of Contempt",
+        "category": "base"
+      },
+      {
+        "name": "Shrieking Essence of Contempt",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Contempt",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Contract: The Slaver King",
+        "baseType": "Vigilante Contract",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Chains of Emancipation",
+        "baseType": "Chain Belt",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Devouring Fragment",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Curio of Consumption",
+        "baseType": "Primordial Fragment",
+        "category": "unique"
+      },
+      {
+        "name": "Visceral Reliquary Key",
+        "category": "base"
+      },
+      {
+        "name": "Ashes of the Stars",
+        "baseType": "Onyx Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Nimis",
+        "baseType": "Topaz Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Ravenous Passion",
+        "baseType": "Zealot Helmet",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Fragment of Eradication",
+        "category": "base"
+      },
+      {
+        "name": "Fragment of Enslavement",
+        "category": "base"
+      },
+      {
+        "name": "Fragment of Constriction",
+        "category": "base"
+      },
+      {
+        "name": "Fragment of Purification",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Hopeshredder",
+        "baseType": "Ranger Bow",
+        "category": "unique"
+      },
+      {
+        "name": "Watcher's Eye",
+        "baseType": "Prismatic Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Fragment of Terror",
+        "category": "base"
+      },
+      {
+        "name": "Cyclopean Coil",
+        "baseType": "Leather Belt",
+        "category": "unique"
+      },
+      {
+        "name": "Shimmeron",
+        "baseType": "Tornado Wand",
+        "category": "unique"
+      },
+      {
+        "name": "Fragment of Emptiness",
+        "category": "base"
+      },
+      {
+        "name": "Orb of Dominance",
+        "category": "base"
+      },
+      {
+        "name": "Impresence",
+        "baseType": "Chaos, Onyx Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Nebuloch",
+        "baseType": "Nightmare Mace",
+        "category": "unique"
+      },
+      {
+        "name": "Elder's Exalted Orb",
+        "category": "base"
+      },
+      {
+        "name": "Blasphemer's Grasp",
+        "baseType": "Assassin's Mitts",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Heartbreaker",
+        "baseType": "Royal Skean",
+        "category": "unique"
+      },
+      {
+        "name": "Soul Taker",
+        "baseType": "Siege Axe",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Kingmaker",
+        "baseType": "Despot Axe",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Crescent Splinter",
+        "category": "base"
+      },
+      {
+        "name": "The Maven's Writ",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Arn's Anguish",
+        "baseType": "Cloth Belt",
+        "category": "unique"
+      },
+      {
+        "name": "Echoforge",
+        "baseType": "Infernal Sword",
+        "category": "unique"
+      },
+      {
+        "name": "Legacy of Fury",
+        "baseType": "Wyrmscale Boots",
+        "category": "unique"
+      },
+      {
+        "name": "Olesya's Delight",
+        "baseType": "Cloth Belt",
+        "category": "unique"
+      },
+      {
+        "name": "Graven's Secret",
+        "baseType": "Cloth Belt",
+        "category": "unique"
+      },
+      {
+        "name": "Doppelgänger Guise",
+        "baseType": "Sadist Garb",
+        "category": "unique"
+      },
+      {
+        "name": "Orb of Conflict",
+        "category": "base"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Shrieking Essence of Suffering",
+        "category": "base"
+      },
+      {
+        "name": "Deafening Essence of Suffering",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Suffering",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "House of Mirrors",
+        "category": "divination"
+      },
+      {
+        "name": "Seven Years Bad Luck",
+        "category": "divination"
+      }
+    ],
+    "items": [
+      {
+        "name": "Mirror Shard",
+        "category": "base"
+      },
+      {
+        "name": "Mirror of Kalandra",
+        "category": "base"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "An Audience With The King",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Untouched Soul",
+        "baseType": "Gold Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "Pragmatism",
+        "baseType": "Colosseum Plate",
+        "category": "unique"
+      },
+      {
+        "name": "Perfect Forest Tiger",
+        "category": "base"
+      },
+      {
+        "name": "The Burden of Shadows",
+        "baseType": "Primordial Staff",
+        "category": "unique"
+      },
+      {
+        "name": "The Light of Meaning",
+        "baseType": "Prismatic Jewel",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Screaming Essence of Torment",
+        "category": "base"
+      },
+      {
+        "name": "Deafening Essence of Torment",
+        "category": "base"
+      },
+      {
+        "name": "Shrieking Essence of Torment",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Splinter of Xoph",
+        "category": "base"
+      },
+      {
+        "name": "Xoph's Breachstone",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Blessing of Xoph",
+        "category": "base"
+      },
+      {
+        "name": "Xoph's Inception",
+        "baseType": "Bone Bow",
+        "category": "unique"
+      },
+      {
+        "name": "Xoph's Heart",
+        "baseType": "Amber Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "The Formless Flame",
+        "baseType": "Siege Helmet",
+        "category": "unique"
+      },
+      {
+        "name": "Xoph's Flawless Breachstone",
+        "category": "base"
+      },
+      {
+        "name": "The Escape",
+        "category": "divination"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "The Beachhead",
+        "baseType": "T15",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Infused Beachhead",
+        "baseType": "T16",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Cosmic Fragment",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Entropic Devastation",
+        "baseType": "Assassin's Mitts",
+        "category": "unique"
+      },
+      {
+        "name": "Echoes of Creation",
+        "baseType": "Royal Burgonet",
+        "category": "unique"
+      },
+      {
+        "name": "Starforge",
+        "baseType": "Infernal Sword",
+        "category": "unique"
+      },
+      {
+        "name": "Sublime Vision",
+        "baseType": "Prismatic Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Cosmic Reliquary Key",
+        "category": "base"
+      },
+      {
+        "name": "The Tides of Time",
+        "baseType": "Vanguard Belt",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Shrieking Essence of Envy",
+        "category": "base"
+      },
+      {
+        "name": "Deafening Essence of Envy",
+        "category": "base"
+      },
+      {
+        "name": "Screaming Essence of Envy",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Rewritten Distant Memory",
+        "baseType": "T11",
+        "category": "unique"
+      },
+      {
+        "name": "Altered Distant Memory",
+        "baseType": "T11",
+        "category": "unique"
+      },
+      {
+        "name": "Augmented Distant Memory",
+        "baseType": "T11",
+        "category": "unique"
+      },
+      {
+        "name": "Twisted Distant Memory",
+        "baseType": "T11",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Circle of Guilt",
+        "baseType": "Iron Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Cortex",
+        "baseType": "T11",
+        "category": "unique"
+      },
+      {
+        "name": "Circle of Fear",
+        "baseType": "Sapphire Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Circle of Regret",
+        "baseType": "Topaz Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Circle of Nostalgia",
+        "baseType": "Amethyst Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Circle of Anguish",
+        "baseType": "Ruby Ring",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Ambition",
+        "baseType": "Vaal Aspect",
+        "category": "unique"
+      },
+      {
+        "name": "Curiosity",
+        "baseType": "Vaal Aspect",
+        "category": "unique"
+      },
+      {
+        "name": "Cooperation",
+        "baseType": "Vaal Aspect",
+        "category": "unique"
+      },
+      {
+        "name": "Beauty",
+        "baseType": "Vaal Aspect",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Adorned",
+        "baseType": "Crimson Jewel",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Screaming Essence of Spite",
+        "category": "base"
+      },
+      {
+        "name": "Shrieking Essence of Spite",
+        "category": "base"
+      },
+      {
+        "name": "Deafening Essence of Spite",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Memory of Trauma",
+        "category": "base"
+      },
+      {
+        "name": "Echo of Trauma",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Enmity's Embrace",
+        "baseType": "Vermillion Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Servant of Decay",
+        "baseType": "Torturer Garb",
+        "category": "unique"
+      },
+      {
+        "name": "Orb of Intention",
+        "category": "base"
+      },
+      {
+        "name": "Coiling Whisper",
+        "baseType": "Amethyst Ring",
+        "category": "unique"
+      },
+      {
+        "name": "Bound By Destiny",
+        "baseType": "Prismatic Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Starcaller",
+        "baseType": "Abyssal Axe",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Reverent Fragment",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Hallowed Monarch",
+        "baseType": "Faithful Helmet",
+        "category": "unique"
+      },
+      {
+        "name": "The Golden Charlatan",
+        "baseType": "Lion Sword",
+        "category": "unique"
+      },
+      {
+        "name": "Reverent Reliquary Key",
+        "category": "base"
+      },
+      {
+        "name": "Wellwater Phylactery",
+        "category": "unique"
+      },
+      {
+        "name": "Whispers of Infinity",
+        "baseType": "Seaglass Amulet",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Uul-Netol's Kiss",
+        "baseType": "Labrys",
+        "category": "unique"
+      },
+      {
+        "name": "The Infinite Pursuit",
+        "baseType": "Goliath Greaves",
+        "category": "unique"
+      },
+      {
+        "name": "Blessing of Uul-Netol",
+        "category": "base"
+      },
+      {
+        "name": "The Anticipation",
+        "baseType": "Ezomyte Tower Shield",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Surrender",
+        "baseType": "Ezomyte Tower Shield",
+        "category": "unique"
+      },
+      {
+        "name": "Uul-Netol's Embrace",
+        "baseType": "Vaal Axe",
+        "category": "unique"
+      },
+      {
+        "name": "The Red Trail",
+        "baseType": "Titan Greaves",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Powerful Chaotic Resonator",
+        "category": "base"
+      },
+      {
+        "name": "Potent Chaotic Resonator",
+        "category": "base"
+      },
+      {
+        "name": "Primitive Chaotic Resonator",
+        "category": "base"
+      },
+      {
+        "name": "Prime Chaotic Resonator",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Farrul's Bite",
+        "baseType": "Harlequin Mask",
+        "category": "unique"
+      },
+      {
+        "name": "Farrul's Fur",
+        "baseType": "Triumphant Lamellar",
+        "category": "unique"
+      },
+      {
+        "name": "Farrul's Pounce",
+        "baseType": "Hydrascale Gauntlets",
+        "category": "unique"
+      },
+      {
+        "name": "Farrul's Chase",
+        "baseType": "Slink Boots",
+        "category": "unique"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Screaming Essence of Loathing",
+        "category": "base"
+      },
+      {
+        "name": "Deafening Essence of Loathing",
+        "category": "base"
+      },
+      {
+        "name": "Shrieking Essence of Loathing",
+        "category": "base"
+      }
+    ],
+    "items": []
+  },
+  {
+    "query": [
+      {
+        "name": "Timeless Karui Splinter",
+        "category": "base"
+      },
+      {
+        "name": "Timeless Templar Splinter",
+        "category": "base"
+      },
+      {
+        "name": "Timeless Maraketh Splinter",
+        "category": "base"
+      },
+      {
+        "name": "Timeless Vaal Splinter",
+        "category": "base"
+      },
+      {
+        "name": "Timeless Eternal Empire Splinter",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Timeless Templar Emblem",
+        "category": "base"
+      },
+      {
+        "name": "Timeless Maraketh Emblem",
+        "category": "base"
+      },
+      {
+        "name": "Timeless Vaal Emblem",
+        "category": "base"
+      },
+      {
+        "name": "Timeless Eternal Emblem",
+        "category": "base"
+      },
+      {
+        "name": "Timeless Karui Emblem",
+        "category": "base"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Specularity Scroll",
+        "category": "base"
+      },
+      {
+        "name": "The Unshattered Will",
+        "baseType": "Archon Kite Shield",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Immortal Will",
+        "baseType": "Archon Kite Shield",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Eye of Chayula",
+        "baseType": "Onyx Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "The Green Dream",
+        "baseType": "Viridian Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "The Red Dream",
+        "baseType": "Crimson Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Skin of the Loyal",
+        "baseType": "Simple Robe, 6L",
+        "category": "unique"
+      },
+      {
+        "name": "Blessing of Chayula",
+        "category": "base"
+      },
+      {
+        "name": "Severed in Sleep",
+        "baseType": "Cutlass",
+        "category": "unique"
+      },
+      {
+        "name": "The Blue Dream",
+        "baseType": "Cobalt Jewel",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Blue Nightmare",
+        "baseType": "Cobalt Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Presence of Chayula",
+        "baseType": "Onyx Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "The Green Nightmare",
+        "baseType": "Viridian Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "The Red Nightmare",
+        "baseType": "Crimson Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "United in Dream",
+        "baseType": "Cutlass",
+        "category": "unique"
+      },
+      {
+        "name": "Skin of the Lords",
+        "baseType": "Simple Robe",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Vial of Sacrifice",
+        "category": "base"
+      },
+      {
+        "name": "Sacrificial Heart",
+        "baseType": "Paua Amulet",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Zerphi's Heart",
+        "baseType": "Paua Amulet",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Forbidden Tome",
+        "category": "base"
+      },
+      {
+        "name": "The Power and the Promise",
+        "baseType": "Relic",
+        "category": "unique"
+      },
+      {
+        "name": "The Second Sacrament",
+        "baseType": "Relic",
+        "category": "unique"
+      },
+      {
+        "name": "The Chains of Castigation",
+        "baseType": "Relic",
+        "category": "unique"
+      },
+      {
+        "name": "The Original Scripture",
+        "baseType": "Relic",
+        "category": "unique"
+      },
+      {
+        "name": "The Blood of Innocence",
+        "baseType": "Relic",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Eternal Damnation",
+        "baseType": "Agate Amulet",
+        "category": "unique"
+      },
+      {
+        "name": "The Broken Censer",
+        "baseType": "Relic",
+        "category": "unique"
+      },
+      {
+        "name": "Sandstorm Visage",
+        "baseType": "Necromancer Circlet",
+        "category": "unique"
+      },
+      {
+        "name": "The First Crest",
+        "baseType": "Relics, Relic",
+        "category": "unique"
+      },
+      {
+        "name": "The Gilded Chalice",
+        "baseType": "Relic",
+        "category": "unique"
+      },
+      {
+        "name": "The Winds of Fate",
+        "baseType": "Foul Staff",
+        "category": "unique"
+      },
+      {
+        "name": "The Night Lamp",
+        "baseType": "Relic",
+        "category": "unique"
+      },
+      {
+        "name": "The Hour of Divinity",
+        "baseType": "Relic",
+        "category": "unique"
+      },
+      {
+        "name": "The Balance of Terror",
+        "baseType": "Cobalt Jewel",
+        "category": "unique"
+      },
+      {
+        "name": "Original Sin",
+        "baseType": "Amethyst Ring",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Story of the Vaal",
+        "baseType": "Gemstone Sword",
+        "category": "unique"
+      },
+      {
+        "name": "Vial of Fate",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "Fate of the Vaal",
+        "baseType": "Gemstone Sword",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Invictus Solaris",
+        "baseType": "Archon Kite Shield",
+        "category": "unique"
+      },
+      {
+        "name": "Vix Lunaris",
+        "baseType": "Cardinal Round Shield",
+        "category": "unique"
+      }
+    ],
+    "items": [
+      {
+        "name": "Magna Eclipsis",
+        "baseType": "Pinnacle Tower Shield",
+        "category": "unique"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Awakening Fragment",
+        "category": "base"
+      }
+    ],
+    "items": [
+      {
+        "name": "The Tempest Rising",
+        "baseType": "Goliath Greaves",
+        "category": "unique"
+      },
+      {
+        "name": "Oriath's End",
+        "category": "unique"
+      },
+      {
+        "name": "The Saviour",
+        "baseType": "Legion Sword",
+        "category": "unique"
+      },
+      {
+        "name": "Oubliette Reliquary Key",
+        "category": "base"
+      }
+    ]
+  },
+  {
+    "query": [
+      {
+        "name": "Timeless Karui Emblem",
+        "category": "base"
+      },
+      {
+        "name": "Timeless Eternal Emblem",
+        "category": "base"
+      },
+      {
+        "name": "Timeless Maraketh Emblem",
+        "category": "base"
+      },
+      {
+        "name": "Timeless Templar Emblem",
+        "category": "base"
+      },
+      {
+        "name": "Timeless Vaal Emblem",
+        "category": "base"
+      }
+    ],
+    "items": []
+  }
+]

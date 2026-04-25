@@ -541,7 +541,7 @@ export const regexMapModsCHINESE: Regex<MapModsTokenOption> = {
       id: 670500310,
       regex: '暈',
       rawText: '怪物不會被暈眩|怪物的行動速度不能被調整至低於基礎值|怪物的移動速度不能被調整至低於基礎值',
-      generalizedText: '^怪物不會被暈眩$|^怪物的行動速度不能被調整至低於基礎值$|^怪物的移動速度不能被調整至低於基礎值$',
+      generalizedText: '^怪物不會��暈眩$|^怪物的行動速度不能被調整至低於基礎值$|^怪物的移動速度不能被調整至低於基礎值$',
       options: { scary: 1001, nm: true },
     },
     {
@@ -785,14 +785,14 @@ export const regexMapModsCHINESE: Regex<MapModsTokenOption> = {
     {
       id: 1743546402,
       regex: '礙',
-      rawText: '怪物法術擊中時造成阻礙',
+      rawText: '怪物法術擊中時��成阻礙',
       generalizedText: '^怪物法術擊中時造成阻礙$',
       options: { scary: 50, nm: false },
     },
     {
       id: 1756122717,
       regex: '干',
-      rawText: '釋���干擾玩家',
+      rawText: '釋界干擾玩家',
       generalizedText: '^釋界干擾玩家$',
       options: { scary: 1001, nm: true },
     },
@@ -1178,7 +1178,7 @@ export const regexMapModsCHINESE: Regex<MapModsTokenOption> = {
     },
     '-1616686189:-477049138:646965355:1205583947': {
       ids: [-1616686189, -477049138, 646965355, 1205583947],
-      regex: '��',
+      regex: '最',
       weight: 1,
       count: 4,
     },

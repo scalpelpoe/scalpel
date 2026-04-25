@@ -12,6 +12,7 @@ import {
 import { getOverlayWindow, showOverlay } from './overlay'
 import { sendCtrlCToPoE } from './hotkeys'
 import { focusGameWindow } from './overlay'
+import { snapshotClipboard } from './clipboard-preserve'
 import { refreshPrices, lookupPrice, lookupBestUniquePrice, getUniquesByBase } from './trade/prices'
 import { ensureStatsLoaded, matchItemMods } from './trade/trade'
 import type {
@@ -92,6 +93,12 @@ export function getLastCursorX(): number | null {
   return lastCursorX
 }
 
+let openSide: AppSettings['openSide'] = 'both'
+
+export function setOpenSide(side: AppSettings['openSide']): void {
+  openSide = side
+}
+
 export function evaluateAndSend(item: PoeItem): void {
   const currentFilter = getCurrentFilter()
   if (!currentFilter) return
@@ -145,10 +152,15 @@ export function evaluateAndSend(item: PoeItem): void {
   }
   const win = getOverlayWindow()
   if (win) {
-    win.webContents.send(
-      'cursor-side',
-      lastCursorX != null && lastCursorX < screen.getPrimaryDisplay().workAreaSize.width / 2 ? 'left' : 'right',
-    )
+    const side: 'left' | 'right' =
+      openSide === 'left'
+        ? 'left'
+        : openSide === 'right'
+          ? 'right'
+          : lastCursorX != null && lastCursorX < screen.getPrimaryDisplay().workAreaSize.width / 2
+            ? 'left'
+            : 'right'
+    win.webContents.send('cursor-side', side)
     win.webContents.send('overlay-data', payload)
   }
 }
@@ -222,6 +234,7 @@ export async function preloadPriceCheck(item: PoeItem, store: Store<AppSettings>
       eleDamageAvg: item.eleDamageAvg,
       chaosDamageAvg: item.chaosDamageAvg,
       attacksPerSecond: item.attacksPerSecond,
+      critChance: item.critChance,
       heistJob: item.heistJob,
       monsterLevel: item.monsterLevel,
       wingsRevealed: item.wingsRevealed,
@@ -259,8 +272,14 @@ let consecutiveClipboardFailures = 0
 /**
  * Capture an item from PoE's clipboard. Sends Ctrl+Alt+C, polls for content,
  * falls back to windowed mode if needed. Returns the parsed item or null.
+ *
+ * The user's prior clipboard contents are stashed on entry and restored on exit
+ * so price-checking an item doesn't stomp whatever they had copied. Explicit
+ * "Copy to clipboard" actions (trade whispers, regex copy buttons) bypass this.
  */
 async function captureItemFromClipboard(isElevated: () => boolean): Promise<PoeItem | null> {
+  const restoreClip = snapshotClipboard()
+
   clipboard.clear()
   await sendCtrlCToPoE()
 
@@ -284,6 +303,8 @@ async function captureItemFromClipboard(isElevated: () => boolean): Promise<PoeI
       await new Promise((r) => setTimeout(r, 50))
     }
   }
+
+  restoreClip()
 
   if (!item) {
     consecutiveClipboardFailures++
@@ -317,9 +338,10 @@ export function createHotkeyHandler(store: Store<AppSettings>, isElevated: () =>
       const item = await captureItemFromClipboard(isElevated)
       if (!item) return
 
-      const side =
-        lastCursorX != null && lastCursorX < screen.getPrimaryDisplay().workAreaSize.width / 2 ? 'left' : 'right'
-
+      // Flag the next overlay-data as "came from the filter hotkey" so the renderer
+      // forces the item view, even when the user was on pricecheck/audit with the
+      // same item already loaded (cache hit -> no view change without this).
+      getOverlayWindow()?.webContents.send('filter-hotkey-open')
       evaluateAndSend(item)
       preloadPriceCheck(item, store)
       showOverlay()
@@ -331,6 +353,15 @@ export function createHotkeyHandler(store: Store<AppSettings>, isElevated: () =>
   }
 }
 
+/** Switch the overlay into price-check view and populate it with `item`. Shared by the
+ *  clipboard hotkey path and UI-triggered lookups (e.g. clicking a sister overlay row). */
+export async function runPriceCheck(item: PoeItem, store: Store<AppSettings>): Promise<void> {
+  getOverlayWindow()?.webContents.send('price-check-open')
+  await preloadPriceCheck(item, store)
+  showOverlay()
+  if (getCurrentFilter()) evaluateAndSend(item)
+}
+
 export function createPriceCheckHandler(store: Store<AppSettings>, isElevated: () => boolean): () => Promise<void> {
   return async function onPriceCheckFired(): Promise<void> {
     if (hotkeyProcessing) return
@@ -338,15 +369,11 @@ export function createPriceCheckHandler(store: Store<AppSettings>, isElevated: (
 
     try {
       lastCursorX = screen.getCursorScreenPoint().x
-      const side = lastCursorX < screen.getPrimaryDisplay().workAreaSize.width / 2 ? 'left' : 'right'
 
       const item = await captureItemFromClipboard(isElevated)
       if (!item) return
 
-      getOverlayWindow()?.webContents.send('price-check-open')
-      await preloadPriceCheck(item, store)
-      showOverlay()
-      if (getCurrentFilter()) evaluateAndSend(item)
+      await runPriceCheck(item, store)
     } catch (err) {
       console.error('[hotkey] Error during price check processing:', err)
     } finally {

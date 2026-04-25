@@ -147,6 +147,20 @@ asar.createPackageWithOptions(tempAppDir, asarPath, {
 
   // Write manifest
   const electronVersion = require('../node_modules/electron/package.json').version
+  // Bricked-release advisories: list of version rules surfaced as a banner to users stuck
+  // on a broken version. Sourced from bricked-releases.json at repo root so the list can
+  // be edited without touching this script.
+  let brickedReleases
+  let brickedMessage
+  try {
+    const bricked = require('../bricked-releases.json')
+    if (Array.isArray(bricked.brickedReleases) && bricked.brickedReleases.length > 0) {
+      brickedReleases = bricked.brickedReleases
+    }
+    if (typeof bricked.brickedMessage === 'string' && bricked.brickedMessage) {
+      brickedMessage = bricked.brickedMessage
+    }
+  } catch { /* no advisories file; field stays undefined */ }
   const manifest = {
     version,
     electronVersion,
@@ -159,7 +173,9 @@ asar.createPackageWithOptions(tempAppDir, asarPath, {
     nativeModules: {
       'electron-overlay-window': require('../node_modules/electron-overlay-window/package.json').version,
       'uiohook-napi': require('../node_modules/uiohook-napi/package.json').version
-    }
+    },
+    brickedReleases,
+    brickedMessage
   }
 
   const manifestPath = path.join(versionDir, 'manifest.json')

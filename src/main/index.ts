@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, screen } from 'electron'
+import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, powerMonitor, screen } from 'electron'
 
 // Prevent unhandled JS exceptions from crashing the native overlay thread
 // electron-overlay-window's tsfn_to_js_proxy calls napi_fatal_error if napi_call_function
@@ -37,13 +37,14 @@ import {
   resumeHotkeys,
   setStashScrollEnabled,
 } from './hotkeys'
-import { refreshPrices } from './trade/prices'
+import { refreshPrices, invalidatePriceCache } from './trade/prices'
 import { onRateLimitUpdate } from './trade/trade'
 import { startOnlineSync, stopOnlineSync } from './online-sync'
 import { initUpdater } from './update/updater'
 import { applyPendingUpdate } from './update/update-swap'
 import { loadFilter } from './filter-state'
-import { createHotkeyHandler, createPriceCheckHandler } from './evaluation'
+import { createHotkeyHandler, createPriceCheckHandler, setOpenSide } from './evaluation'
+import { snapshotClipboard } from './clipboard-preserve'
 import * as tradeHandlers from './handlers/trade'
 import * as settingsHandlers from './handlers/settings'
 import * as filesHandlers from './handlers/files'
@@ -74,13 +75,15 @@ const store = new Store<AppSettings>({
     priceCheckHotkey: 'CommandOrControl+Shift+A',
     overlayOpacity: 0.95,
     overlayScale: 1,
+    openSide: 'both',
     closeOnClickOutside: false,
     league: 'Mirage',
     reloadOnSave: true,
     updateChannel: 'stable',
-    tradeStatus: 'available',
+    tradeStatus: 'any',
     tradePriceOption: 'chaos_divine',
     priceCheckDefaultPercent: 90,
+    tradeDefaultToBase: false,
     chatCommands: [],
     appMacros: [],
     stashScrollEnabled: false,
@@ -92,6 +95,9 @@ const store = new Store<AppSettings>({
 // Backfill defaults for keys added after initial release
 if (store.get('reloadOnSave') === undefined) store.set('reloadOnSave', true)
 if (store.get('stashScrollEnabled') === undefined) store.set('stashScrollEnabled', false)
+if (store.get('openSide') === undefined) store.set('openSide', 'both')
+// Migrate legacy tradeStatus 'available' -> 'any' (renamed to match chip-row options)
+if ((store.get('tradeStatus') as string) === 'available') store.set('tradeStatus', 'any')
 // Force poeVersion to 1 -- previous test builds defaulted to 2
 store.set('poeVersion', 1)
 
@@ -212,16 +218,37 @@ app.whenReady().then(() => {
     openDivCards: 'divcards',
     openRegex: 'regex',
   }
-  setAppMacroHandler((action) => {
+  const pasteRegexToSearch = (regex: string): void => {
+    const { clipboard } = require('electron') as typeof import('electron')
+    const restoreClip = snapshotClipboard()
+    clipboard.writeText(regex)
+    const { uIOhook, UiohookKey } = require('uiohook-napi') as typeof import('uiohook-napi')
+    // Open search box first (Ctrl+F)
+    uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
+    uIOhook.keyTap(UiohookKey.F)
+    uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
+    // Paste the regex
+    uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
+    uIOhook.keyTap(UiohookKey.V)
+    uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
+    // Restore the user's previous clipboard after PoE consumes the paste
+    setTimeout(restoreClip, 100)
+  }
+
+  setAppMacroHandler((action, tag) => {
     if (action === 'pasteRegex') {
-      if (currentRegex) {
-        const { clipboard } = require('electron') as typeof import('electron')
-        clipboard.writeText(currentRegex)
-        const { uIOhook, UiohookKey } = require('uiohook-napi') as typeof import('uiohook-napi')
-        uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-        uIOhook.keyTap(UiohookKey.V)
-        uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
-      }
+      if (currentRegex) pasteRegexToSearch(currentRegex)
+      return
+    }
+    if (action === 'useSavedRegex') {
+      if (!tag) return
+      const presets = (store.get('regexPresets') as import('../shared/types').RegexPreset[] | undefined) ?? []
+      const preset = presets.find((p) => p.tags?.some((t) => t.text === tag && (!t.source || t.source === 'custom')))
+      if (preset?.regex) pasteRegexToSearch(preset.regex)
+      return
+    }
+    if (action === 'closeOverlay') {
+      hideOverlay()
       return
     }
     const overlayWin = getOverlayWindow()
@@ -237,6 +264,7 @@ app.whenReady().then(() => {
   })
   setAppMacros(store.get('appMacros') ?? [])
   setStashScrollEnabled(store.get('stashScrollEnabled') ?? false)
+  setOpenSide(store.get('openSide') ?? 'both')
 
   // Suspend/resume hotkeys while the hotkey recorder is active
   ipcMain.on('suspend-hotkeys', () => suspendHotkeys())
@@ -257,10 +285,18 @@ app.whenReady().then(() => {
   refreshPrices(store.get('league'))
   setInterval(() => refreshPrices(store.get('league')), 10 * 60 * 1000)
 
+  // After the OS wakes from sleep, Electron's network stack often bails on pending
+  // requests with ERR_NETWORK_IO_SUSPENDED. Invalidate the price cache and re-fetch so
+  // we don't sit on stale/empty prices for up to 10 minutes.
+  powerMonitor.on('resume', () => {
+    invalidatePriceCache()
+    refreshPrices(store.get('league'))
+  })
+
   // Auto-update check (skip in dev mode to avoid overwriting source with packaged ASAR)
   const overlayWin = getOverlayWindow()
   if (overlayWin && !process.env['ELECTRON_RENDERER_URL'])
-    initUpdater(overlayWin, installDir, store.get('updateChannel'), () => showOverlay())
+    initUpdater([getOverlayWindow, getAppWindow], installDir, store.get('updateChannel'), () => showOverlay())
 
   if (process.env.NODE_ENV === 'development') {
     const ow = getOverlayWindow()

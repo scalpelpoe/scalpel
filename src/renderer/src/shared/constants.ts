@@ -6,6 +6,8 @@ export const RARITY_COLORS: Record<string, string> = {
   Magic: '#8888ff',
   Rare: '#ffff77',
   Unique: '#af6025',
+  Gem: '#1ba29b',
+  Divination: '#016a8b',
 }
 
 export const IP = {

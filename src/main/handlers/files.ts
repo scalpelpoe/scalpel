@@ -1,6 +1,6 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import { readFileSync, existsSync, readdirSync } from 'fs'
-import { join, basename } from 'path'
+import { join, basename, dirname } from 'path'
 import Store from 'electron-store'
 import { loadFilter } from '../filter-state'
 import { setCloseOnClickOutside, showOverlay } from '../overlay'
@@ -64,7 +64,10 @@ export function register(store: Store<AppSettings>): void {
       return null
     }
 
-    const dir = result.filePaths[0]
+    // Users sometimes pick the "OnlineFilters" subfolder instead of the Path of Exile
+    // folder that contains it. Walk back up so we scan the parent regardless.
+    let dir = result.filePaths[0]
+    if (basename(dir).toLowerCase() === 'onlinefilters') dir = dirname(dir)
     store.set('filterDir', dir)
     updateOnlineSyncDir(dir)
     if (isOverlay) showOverlay()

@@ -6,12 +6,11 @@ Scalpel includes the following third-party software and data:
 
 ## Data Sources
 
-### Maps of Exile (deathbeam/maps-of-exile)
+### poe.re (veiset/poe-vendor-string)
 
-- Source: https://github.com/deathbeam/maps-of-exile
-- License: MIT
-- Used for: Divination card drop locations, map data, and economy metadata
-- Files: `src/shared/data/economy/div-cards.json`, `div-maps.json`, `div-globals.json`
+- Source: https://github.com/veiset/poe-vendor-string
+- Used for: Regex string generator tokens powering the regex tab.
+- Data synced into `src/shared/data/regex/vendor/`
 
 ### poe.ninja
 
@@ -23,7 +22,23 @@ Scalpel includes the following third-party software and data:
 
 - Trade API: https://www.pathofexile.com/api/trade
 - Item artwork: https://web.poecdn.com
-- Used for: Trade search, item stat definitions, item/card artwork
+- Used for: Trade search, item/card artwork
+
+---
+
+## Other Data
+
+### Maps of Exile (deathbeam/maps-of-exile)
+
+- Source: https://github.com/deathbeam/maps-of-exile
+- License: MIT
+- Files: `src/shared/data/economy/div-cards.json`, `div-maps.json`, `div-globals.json`
+
+### Awakened PoE Trade (SnosMe/awakened-poe-trade)
+
+- Source: https://github.com/SnosMe/awakened-poe-trade
+- License: MIT
+- Files: `src/shared/data/items/related-items.json`
 
 ---
 

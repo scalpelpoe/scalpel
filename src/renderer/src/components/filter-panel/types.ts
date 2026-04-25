@@ -13,6 +13,13 @@ export interface FilterPanelProps {
   onOpenTools?: () => void
   onOpenDustExplore?: () => void
   onOpenDivExplore?: () => void
+  /** True when the filter-page sister overlay (tier base-types list) is visible. */
+  tierSisterOpen?: boolean
+  /** Flip tierSisterOpen -- button handler. */
+  onToggleTierSister?: () => void
+  /** Which side of the main panel the sister overlay mounts on. Used so toggle icons
+   *  can point toward wherever the sister slides out from. */
+  tierSisterSide?: 'left' | 'right'
 }
 
 export type PendingThreshold = {

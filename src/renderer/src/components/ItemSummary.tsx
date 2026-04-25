@@ -114,7 +114,7 @@ export function ItemSummary({
 
   return (
     <div
-      className="bg-bg-solid border-b border-border flex gap-[10px] items-center overflow-hidden px-3 py-[10px]"
+      className="bg-bg-card border-b border-border flex gap-[10px] items-center overflow-hidden px-3 py-[10px]"
       style={{
         margin: flush ? 0 : '-12px -12px 0 -12px',
       }}

@@ -17,3 +17,6 @@ export const GITHUB_RELEASES_API = 'https://api.github.com/repos/scalpelpoe/scal
 
 /** GitHub for Electron binary downloads (only during full version upgrades) */
 export const ELECTRON_RELEASES = 'https://github.com/electron/electron/releases/download'
+
+/** GitHub releases page (user-facing, for manual download links in banners) */
+export const GITHUB_RELEASES_PAGE = 'https://github.com/scalpelpoe/scalpel/releases/latest'

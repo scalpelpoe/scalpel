@@ -22,9 +22,16 @@ export function setCloseOnClickOutside(enabled: boolean): void {
 const POE_SIDEBAR_RATIO = 370 / 600
 
 // Panel bounds in physical screen coordinates (for uiohook mouse hit testing).
-// Updated by the renderer reporting its actual CSS bounding rect, which we convert
-// to physical pixels. Single source of truth -- no duplicate position math.
-let panelRect = { left: 0, top: 0, right: 0, bottom: 0 }
+// Updated by the renderer reporting its actual CSS bounding rects, which we convert
+// to physical pixels. A list (not a union) so the empty space under a shorter adjacent
+// panel -- e.g. the related-items sister overlay -- stays click-through to PoE.
+interface PhysRect {
+  left: number
+  top: number
+  right: number
+  bottom: number
+}
+let panelRects: PhysRect[] = []
 
 function getScaleFactor(): number {
   // Use the display the game is actually on, not the primary display.
@@ -36,22 +43,26 @@ function getScaleFactor(): number {
   return screen.getPrimaryDisplay().scaleFactor
 }
 
-function updatePanelRectFromCss(cssRect: { left: number; top: number; width: number; height: number }): void {
+function updatePanelRectsFromCss(cssRects: Array<{ left: number; top: number; width: number; height: number }>): void {
   const tb = OverlayController.targetBounds
   if (!tb || !tb.width) return
   const sf = getScaleFactor()
-  const physLeft = tb.x + cssRect.left * sf
-  const physTop = tb.y + cssRect.top * sf
-  panelRect = {
-    left: physLeft,
-    top: physTop,
-    right: physLeft + cssRect.width * sf,
-    bottom: cssRect.height > 0 ? physTop + cssRect.height * sf : physTop,
-  }
+  panelRects = cssRects
+    .filter((r) => r.width > 0 && r.height > 0)
+    .map((r) => ({
+      left: tb.x + r.left * sf,
+      top: tb.y + r.top * sf,
+      right: tb.x + (r.left + r.width) * sf,
+      bottom: tb.y + (r.top + r.height) * sf,
+    }))
 }
 
-ipcMain.on('report-panel-rect', (_event, rect: { left: number; top: number; width: number; height: number }) => {
-  updatePanelRectFromCss(rect)
+ipcMain.on('report-panel-rect', (_event, payload: unknown) => {
+  // Accept either a single rect (legacy) or an array of rects (main + sister etc.).
+  const rects = Array.isArray(payload)
+    ? (payload as Array<{ left: number; top: number; width: number; height: number }>)
+    : [payload as { left: number; top: number; width: number; height: number }]
+  updatePanelRectsFromCss(rects)
 })
 
 // Allow renderer to pull initial state on mount (attach events may fire before renderer loads)
@@ -84,7 +95,10 @@ ipcMain.on('unlock-interactive', () => {
 })
 
 function isInsidePanel(x: number, y: number): boolean {
-  return x >= panelRect.left && x <= panelRect.right && y >= panelRect.top && y <= panelRect.bottom
+  for (const r of panelRects) {
+    if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return true
+  }
+  return false
 }
 
 function setInteractive(interactive: boolean): void {
@@ -102,8 +116,8 @@ let exitTimer: ReturnType<typeof setTimeout> | null = null
 
 uIOhook.on('mousemove', (e) => {
   if (!overlayVisible) return
-  // If panelRect has no area, renderer hasn't reported yet -- skip hit testing
-  if (panelRect.right <= panelRect.left || panelRect.bottom <= panelRect.top) return
+  // If no rects reported yet, renderer hasn't mounted -- skip hit testing
+  if (panelRects.length === 0) return
   const inside = isInsidePanel(e.x, e.y)
   if (inside) {
     if (exitTimer) {
@@ -128,7 +142,13 @@ uIOhook.on('mousemove', (e) => {
 // before PoE grabs focus and causes a flash.
 uIOhook.on('mousedown', (e) => {
   if (!overlayVisible) return
+  // Only process clicks if the overlay window is actually visible on screen
+  if (!overlayWindow || overlayWindow.isDestroyed() || !overlayWindow.isVisible()) return
   if (!isInsidePanel(e.x, e.y)) {
+    // A native <select> dropdown is open -- its option list lives outside our reported
+    // panel rect, so every click on it looks like a click "outside". Bail so we don't
+    // disable interactivity (click-through to PoE) or close the overlay.
+    if (interactiveLocked) return
     // Ensure click-through is enabled so the click reaches the game
     if (mouseOverPanel) {
       mouseOverPanel = false
@@ -174,35 +194,30 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
   // electron-overlay-window calls hide()/showInactive() on focus changes, which
   // triggers the OS zoom animation. We intercept to use opacity instead.
   const origShowInactive = overlayWindow.showInactive.bind(overlayWindow)
-  let windowShown = false
-
   let opacityHidden = false
 
   overlayWindow.hide = () => {
-    if (windowShown) {
-      if (Date.now() - lastShowTime < 500) return
-      overlayWindow!.setOpacity(0)
-      overlayWindow!.setIgnoreMouseEvents(true)
-      // Drop to a lower z-level so the taskbar can appear above us when alt-tabbing.
-      // We restore to screen-saver level in showInactive when PoE regains focus.
-      overlayWindow!.setAlwaysOnTop(true, 'floating')
-      opacityHidden = true
-      if (onGameBlur) setImmediate(onGameBlur)
-    }
+    if (Date.now() - lastShowTime < 100) return
+
+    // Make it invisible and click-through - don't actually hide from OS to avoid animation
+    overlayWindow!.setOpacity(0)
+    overlayWindow!.setIgnoreMouseEvents(true)
+
+    opacityHidden = true
+    if (onGameBlur) setImmediate(onGameBlur)
   }
+
   overlayWindow.showInactive = () => {
-    if (!windowShown) {
-      origShowInactive()
-      windowShown = true
-    }
-    // Toggle alwaysOnTop off/on to force Windows to re-stack the window.
-    // Going from one topmost level to another ('floating' -> 'screen-saver')
-    // doesn't always trigger a re-stack, especially with sibling Electron windows.
-    overlayWindow!.setAlwaysOnTop(false)
-    overlayWindow!.setAlwaysOnTop(true, 'screen-saver')
-    overlayWindow!.moveTop()
+    // Only show the overlay if POE actually has focus (alt-tab fix)
+    if (!OverlayController.targetHasFocus) return
+
+    // Restore opacity before showing so it's visible immediately
     overlayWindow!.setOpacity(1)
     opacityHidden = false
+
+    overlayWindow!.setSkipTaskbar(true)
+    origShowInactive()
+
     if (onGameFocus) setImmediate(onGameFocus)
   }
 
@@ -232,12 +247,11 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
   })
   OverlayController.events.on('focus', () => {
     if (!overlayWindow || overlayWindow.isDestroyed()) return
-    // Always restore z-level when PoE regains focus, even if overlay is hidden.
-    // Without this, returning from another app (e.g. alt-tab to Spotify and back)
-    // leaves the overlay at 'floating' level, stuck behind the game.
-    overlayWindow.setAlwaysOnTop(true, 'screen-saver')
-    overlayWindow.moveTop()
-    // Resync game bounds so panelRect is accurate for click-through hit testing
+
+    // Only show the overlay if POE actually has focus (not another window)
+    // This prevents the overlay from appearing on top of other windows during rapid alt-tab
+    if (!OverlayController.targetHasFocus) return
+
     const tb = OverlayController.targetBounds
     if (tb && tb.width) sendGameBounds(tb.width, tb.height)
     if (overlayVisible) {

@@ -3,7 +3,7 @@ import type { AppSettings } from '../../../shared/types'
 import poeFilterSettingImg from '../assets/other/poe-filter-setting.png'
 import { FilterPicker } from '../components/FilterPicker'
 import { Toggle } from '../components/Toggle'
-import { keyEventToAccelerator } from '../components/settings'
+import { keyEventToAccelerator, prettyHotkey } from '../components/settings'
 import appIcon from '../../../../resources/icon.png'
 import { IconGlow } from '../shared/IconGlow'
 import { TOTAL_ONBOARDING_STEPS } from './constants'
@@ -181,7 +181,7 @@ export function HotkeyStep({
       <div ref={recRef}>
         <div className="setting-box" onClick={() => setRecording(true)}>
           <span className={`value ${recording ? 'recording' : ''}`}>
-            {recording ? 'Press your desired key combo...' : settings.hotkey || '(none set)'}
+            {recording ? 'Press your desired key combo...' : prettyHotkey(settings.hotkey) || '(none set)'}
           </span>
           {!recording && (
             <button
@@ -249,7 +249,7 @@ export function PriceCheckHotkeyStep({
       <div ref={recRef}>
         <div className="setting-box" onClick={() => setRecording(true)}>
           <span className={`value ${recording ? 'recording' : ''}`}>
-            {recording ? 'Press your desired key combo...' : settings.priceCheckHotkey || '(none set)'}
+            {recording ? 'Press your desired key combo...' : prettyHotkey(settings.priceCheckHotkey) || '(none set)'}
           </span>
           {!recording && (
             <button

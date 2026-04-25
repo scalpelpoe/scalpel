@@ -119,15 +119,14 @@ export function parseItemText(text: string): PoeItem | null {
       itemClass,
     )
 
-  // Detect Vaal gems: the gem tags line contains "Vaal" and a section starts with "Vaal <name>"
   const isGemClass = ['Gems', 'Support Gems', 'Skill Gems', 'Active Skill Gems', 'Support Skill Gems'].includes(
     itemClass,
   )
-  const gemTagsLine = sections[1]?.split('\n')[0]?.trim() ?? ''
   const isVaalGem =
     isGemClass &&
     rarity === 'Gem' &&
-    (gemTagsLine.includes('Vaal') || sections.some((s) => s.trim().startsWith(`Vaal ${name}`)))
+    !name.startsWith('Vaal ') &&
+    sections.some((s) => s.trim().startsWith(`Vaal ${name}`))
 
   // Collect all text across sections for parsing
   const allText = sections.join('\n')
@@ -138,9 +137,9 @@ export function parseItemText(text: string): PoeItem | null {
 
   // Extract map/waystone tier from header line like "Map (Tier 12)" or "Waystone (Tier 5)"
   const tierMatch = name.match(/\(Tier (\d+)\)/) ?? baseType.match(/\(Tier (\d+)\)/)
-  // Heist job skill requirement: "Requires Engineering (Level 3)"
-  const heistJobLine = allLines.find((l) => /^Requires \w+.*\(Level \d+\)/.test(l))
-  const heistJobMatch = heistJobLine?.match(/^Requires (\w[\w ]*?)\s*\(Level (\d+)\)/)
+  // Heist job skill requirement: "Requires Engineering (Level 3)" or "(Level 3 (unmet))"
+  const heistJobLine = allLines.find((l) => /^Requires \w+.*\(Level \d+/.test(l))
+  const heistJobMatch = heistJobLine?.match(/^Requires (\w[\w -]*?)\s*\(Level (\d+)/)
   const heistJob = heistJobMatch ? { skill: heistJobMatch[1].trim(), level: parseInt(heistJobMatch[2]) } : undefined
 
   // Monster level (maps) or Area Level (heist contracts/blueprints)
@@ -221,13 +220,8 @@ export function parseItemText(text: string): PoeItem | null {
     if (m) chaosDamageAvg = (parseInt(m[1]) + parseInt(m[2])) / 2
   }
 
-  // Attacks per second
-  const apsLine = allLines.find((l) => l.startsWith('Attacks per Second:'))
-  let attacksPerSecond: number | undefined
-  if (apsLine) {
-    const m = apsLine.match(/(\d+(?:\.\d+)?)/)
-    if (m) attacksPerSecond = parseFloat(m[1])
-  }
+  const attacksPerSecond = extractFloat(allLines, 'Attacks per Second:')
+  const critChance = extractFloat(allLines, 'Critical Strike Chance:')
 
   const reqStr = extractNum(allLines, 'Str:') ?? 0
   const reqDex = extractNum(allLines, 'Dex:') ?? 0
@@ -249,6 +243,7 @@ export function parseItemText(text: string): PoeItem | null {
   const blighted =
     uberBlighted || allLines.some((l) => l.toLowerCase().includes('blighted map')) || /^Blighted /i.test(rawBaseType)
   const transfigured = isGemClass && allLines.some((l) => l === 'Transfigured')
+  const vaalGem = isGemClass && rarity === 'Gem' && allLines.some((l) => l.startsWith('Souls Per Use:'))
   const scourged = allLines.some((l) => l.includes('Scourge'))
   const zanaMemory = allLines.some((l) => l.toLowerCase().includes("originator's memories"))
   const implicitCount = allLines.filter((l) => l.endsWith('(implicit)')).length
@@ -409,6 +404,7 @@ export function parseItemText(text: string): PoeItem | null {
     synthesised,
     fractured,
     transfigured,
+    ...(vaalGem ? { vaalGem: true } : {}),
     blighted,
     uberBlighted,
     scourged,
@@ -436,6 +432,7 @@ export function parseItemText(text: string): PoeItem | null {
     ...(eleDamageAvg != null ? { eleDamageAvg } : {}),
     ...(chaosDamageAvg != null ? { chaosDamageAvg } : {}),
     ...(attacksPerSecond != null ? { attacksPerSecond } : {}),
+    ...(critChance != null ? { critChance } : {}),
     ...(ITEM_SIZES[itemClass] ? { width: ITEM_SIZES[itemClass][0], height: ITEM_SIZES[itemClass][1] } : {}),
     ...(heistJob ? { heistJob } : {}),
     ...(monsterLevel != null ? { monsterLevel } : {}),
@@ -457,6 +454,15 @@ function extractNum(lines: string[], prefix: string): number | null {
   if (!line) return null
   const match = line.replace(prefix, '').match(/\d+/)
   return match ? parseInt(match[0]) : null
+}
+
+/** Like `extractNum` but keeps decimal precision -- for lines like "Attacks per
+ *  Second: 1.45" or "Critical Strike Chance: 6.30%". */
+function extractFloat(lines: string[], prefix: string): number | undefined {
+  const line = lines.find((l) => l.startsWith(prefix))
+  if (!line) return undefined
+  const match = line.match(/(\d+(?:\.\d+)?)/)
+  return match ? parseFloat(match[1]) : undefined
 }
 
 function computeLinkedSockets(sockets: string): number {

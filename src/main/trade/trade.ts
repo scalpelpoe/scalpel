@@ -51,6 +51,7 @@ export interface TradeResult {
   total: number
   listings: TradeListing[]
   queryId: string
+  remainingIds: string[]
 }
 
 export interface BulkExchangeListing {
@@ -82,6 +83,8 @@ export interface StatFilter {
   option?: number | string // for option-based stats like "Map contains #'s Citadel" or reward names
   timelessLeaders?: string[] // all leader stat IDs for timeless count group
   foulborn?: boolean
+  modTier?: number // mod tier if known (from advanced mod data)
+  modRange?: { min: number; max: number } // possible roll range for this mod
 }
 
 // ─── Rate Limiter ─────────────────────────────────────────────────────────────
@@ -92,6 +95,9 @@ export interface RateLimitTier {
   max: number
   window: number
   penalty: number
+  /** Epoch ms when this tier was last refreshed from a response header. Used by the
+   *  renderer to decay the `used` value over time between responses. */
+  lastUpdate?: number
 }
 export interface RateLimitState {
   tiers: RateLimitTier[]
@@ -102,25 +108,34 @@ export function onRateLimitUpdate(cb: (state: RateLimitState) => void): void {
   rateLimitCallback = cb
 }
 
+// Cumulative rate-limit state across every policy we've seen. PoE returns different tiers
+// per endpoint (search vs fetch etc); if we just broadcast the latest response's tiers
+// the meter flickers between policies. Keyed by window size since each tier has a unique
+// window within a policy, and windows don't collide across policies we care about.
+const knownTiers = new Map<number, RateLimitTier & { lastUpdate: number }>()
+
 function parseAndBroadcastRateLimit(state: string, rules: string): void {
   // Format: "used:window:penalty,used:window:penalty,..."
   // Rules:  "max:window:timeout,max:window:timeout,..."
   const stateParts = state.split(',')
   const ruleParts = rules.split(',')
-  const tiers: RateLimitTier[] = []
+  const now = Date.now()
   for (let i = 0; i < Math.min(stateParts.length, ruleParts.length); i++) {
     const s = stateParts[i].split(':')
     const r = ruleParts[i].split(':')
-    if (s.length >= 3 && r.length >= 2) {
-      tiers.push({
-        used: parseInt(s[0]),
-        max: parseInt(r[0]),
-        window: parseInt(r[1]),
-        penalty: parseInt(s[2]),
-      })
-    }
+    if (s.length < 3 || r.length < 2) continue
+    const window = parseInt(r[1])
+    knownTiers.set(window, {
+      used: parseInt(s[0]),
+      max: parseInt(r[0]),
+      window,
+      penalty: parseInt(s[2]),
+      lastUpdate: now,
+    })
   }
-  if (tiers.length > 0 && rateLimitCallback) rateLimitCallback({ tiers })
+  if (knownTiers.size > 0 && rateLimitCallback) {
+    rateLimitCallback({ tiers: [...knownTiers.values()].sort((a, b) => a.window - b.window) })
+  }
 }
 
 let lastRequestTime = 0
@@ -200,8 +215,6 @@ async function fetchJson(url: string, options?: { method?: string; body?: string
 import { ITEM_CLASS_TO_CATEGORY as _ITEM_CLASS_TO_CATEGORY } from './stat-matcher'
 import { ensureStatsLoaded as _ensureStatsLoaded, matchModToStat } from './stat-matcher'
 
-let lastTradeStatus: 'available' | 'securable' = 'available'
-
 export async function searchTrade(
   league: string,
   item: {
@@ -214,12 +227,13 @@ export async function searchTrade(
     energyShield?: number
     ward?: number
     block?: number
+    vaalGem?: boolean
   },
   statFilters: StatFilter[],
-  tradeStatus: 'available' | 'securable' = 'available',
-  tradePriceOption: 'chaos_divine' | 'chaos_equivalent' = 'chaos_divine',
+  tradeStatus: string = 'any',
+  tradePriceOption: string = 'chaos_divine',
+  listedTime?: string,
 ): Promise<TradeResult> {
-  lastTradeStatus = tradeStatus
   await _ensureStatsLoaded()
   await throttle()
 
@@ -262,14 +276,7 @@ export async function searchTrade(
     item.itemClass === 'Active Skill Gems' ||
     item.itemClass === 'Support Skill Gems'
   ) {
-    // Transfigured gems: use base gem name + discriminator from data file
-    const disc = TRANSFIGURED_GEM_DISC[item.baseType]
-    if (disc) {
-      const baseGem = item.baseType.slice(0, item.baseType.indexOf(' of '))
-      query.type = { option: baseGem, discriminator: disc }
-    } else {
-      query.type = item.baseType
-    }
+    query.type = buildGemTypeField(item.baseType, item.vaalGem)
   } else {
     // Non-uniques: search by item class, not base type. The implicit covers the base.
     const classCategory = _ITEM_CLASS_TO_CATEGORY[item.itemClass]
@@ -316,6 +323,8 @@ export async function searchTrade(
       'weapon.edps': 'edps',
       'weapon.cdps': 'cdps',
       'weapon.dps': 'dps',
+      'weapon.aps': 'aps',
+      'weapon.crit': 'crit',
     }
     for (const f of weaponDpsFilters) {
       const key = idMap[f.id]
@@ -360,10 +369,16 @@ export async function searchTrade(
     query.filters = { ...existing, heist_filters: { disabled: false, filters: heistQuery } }
   }
 
-  // Add base type filter if enabled
+  // Add base type filter if enabled. For maps, the generic "Map" base isn't valid as a
+  // plain string on the trade API -- it needs the discriminator form. Specific map names
+  // (e.g. "Strand Map", "Nightmare Map") work as plain strings.
   const baseTypeFilter = statFilters.find((f) => f.id === 'misc.basetype' && f.enabled)
   if (baseTypeFilter) {
-    query.type = baseTypeFilter.text
+    if (item.itemClass === 'Maps' && baseTypeFilter.text === 'Map') {
+      query.type = { option: 'Map', discriminator: 'map' }
+    } else {
+      query.type = baseTypeFilter.text
+    }
   }
 
   // Add misc filters (quality, ilvl, corrupted, mirrored)
@@ -540,17 +555,21 @@ export async function searchTrade(
 
   query.stats = statGroups.length > 0 ? statGroups : [{ type: 'and', filters: [] }]
 
-  // Add trade filters: collapse by account, price in chaos/divine
+  // Add trade filters: collapse by account, price currency option, optional listed-time.
+  // "chaos_equivalent" isn't a valid API value for trade_filters.price.option -- sending it
+  // causes the server to drop the whole filter block and return broken results. APT's
+  // working query for the same mode omits the price filter entirely, so we do the same.
   const existing = (query.filters as Record<string, unknown>) ?? {}
+  const tradeFiltersInner: Record<string, unknown> = {
+    collapse: { option: 'true' },
+  }
+  if (tradePriceOption && tradePriceOption !== 'chaos_equivalent') {
+    tradeFiltersInner.price = { min: null, max: null, option: tradePriceOption }
+  }
+  if (listedTime) tradeFiltersInner.indexed = { option: listedTime }
   query.filters = {
     ...existing,
-    trade_filters: {
-      disabled: false,
-      filters: {
-        collapse: { option: 'true' },
-        ...(tradePriceOption === 'chaos_divine' ? { price: { min: null, max: null, option: tradePriceOption } } : {}),
-      },
-    },
+    trade_filters: { disabled: false, filters: tradeFiltersInner },
   }
 
   const body = JSON.stringify({
@@ -564,7 +583,7 @@ export async function searchTrade(
   })) as TradeSearchResult
 
   if (!searchResult.result || searchResult.result.length === 0) {
-    return { total: searchResult.total ?? 0, listings: [], queryId: searchResult.id ?? '' }
+    return { total: searchResult.total ?? 0, listings: [], queryId: searchResult.id ?? '', remainingIds: [] }
   }
 
   // Fetch first 10 results
@@ -579,6 +598,7 @@ export async function searchTrade(
         indexed?: string
         whisper?: string
         method?: string
+        fee?: number
         offers?: unknown[]
       }
       item?: {
@@ -628,9 +648,10 @@ export async function searchTrade(
     characterName: r.listing.account.lastCharacterName,
     online: r.listing.account.online?.status === 'online',
     whisper: r.listing.whisper,
-    instantBuyout:
-      lastTradeStatus === 'securable' ||
-      !!(r.listing.offers || r.listing.method === 'instant' || (!r.listing.whisper && r.listing.price)),
+    // `fee` is the PoE market fee charged on instant-buy-eligible listings. Present =
+    // supports Travel to Hideout; absent = whisper-only. More reliable than `method` (always
+    // 'psapi') or `whisper` (can be present as fallback on instant listings).
+    instantBuyout: !!r.listing.fee,
     icon: r.item?.icon,
     indexed: r.listing.indexed,
     itemData: r.item
@@ -757,7 +778,7 @@ export async function searchTrade(
       : undefined,
   }))
 
-  return { total: searchResult.total, listings, queryId: searchResult.id }
+  return { total: searchResult.total, listings, queryId: searchResult.id, remainingIds: searchResult.result.slice(10) }
 }
 
 // ─── Bulk Exchange ──────────────────────────────────────────────────────────
@@ -765,6 +786,22 @@ export async function searchTrade(
 import bulkExchangeIds from '../../shared/data/trade/bulk-exchange-ids.json'
 
 const bulkIdMap = bulkExchangeIds as Record<string, string>
+
+/** Build the `type` field of a gem trade query. Returns the discriminator shape for
+ *  transfigured gems (with "Vaal " prepended to the base when the gem has a Vaal alt),
+ *  a plain string for non-transfigured gems. */
+export function buildGemTypeField(
+  baseType: string,
+  vaalGem: boolean | undefined,
+): string | { option: string; discriminator: string } {
+  const disc = TRANSFIGURED_GEM_DISC[baseType]
+  if (disc) {
+    const baseGem = baseType.slice(0, baseType.indexOf(' of '))
+    return { option: vaalGem ? `Vaal ${baseGem}` : baseGem, discriminator: disc }
+  }
+  if (vaalGem && !baseType.startsWith('Vaal ')) return `Vaal ${baseType}`
+  return baseType
+}
 
 /** Look up the bulk exchange ID for an item by its name or base type */
 export function getBulkExchangeId(name: string, baseType: string): string | null {
@@ -883,6 +920,70 @@ export async function searchBulkExchange(
   return { total: result.total ?? 0, listings, queryId: result.id ?? '' }
 }
 
+// ─── Shared listing fetch helper ─────────────────────────────────────────────
+
+async function fetchAndMapListings(ids: string[], queryId: string): Promise<TradeListing[]> {
+  await throttle()
+  const fetchResult = (await fetchJson(`${POE_TRADE_API}/fetch/${ids.join(',')}?query=${queryId}`)) as {
+    result: Array<{
+      id: string
+      listing: {
+        price?: { amount: number; currency: string }
+        account: { name: string; lastCharacterName?: string; online?: { status?: string } }
+        indexed?: string
+        whisper?: string
+        method?: string
+        fee?: number
+        offers?: unknown[]
+      }
+      item?: {
+        name?: string
+        baseType?: string
+        typeLine?: string
+        frameType?: number
+        icon?: string
+        ilvl?: number
+        implicitMods?: string[]
+        explicitMods?: string[]
+        properties?: Array<{ name: string; values: Array<[string, number]> }>
+        corrupted?: boolean
+        duplicated?: boolean
+        identified?: boolean
+      }
+    }>
+  }
+
+  return (fetchResult.result ?? []).map((r) => ({
+    id: r.id,
+    price: r.listing.price ? { amount: r.listing.price.amount, currency: r.listing.price.currency } : null,
+    account: r.listing.account.name,
+    characterName: r.listing.account.lastCharacterName,
+    online: !!r.listing.account.online,
+    instantBuyout: !!r.listing.fee,
+    icon: r.item?.icon,
+    indexed: r.listing.indexed,
+    itemData: r.item
+      ? {
+          name: r.item.name,
+          baseType: r.item.baseType ?? r.item.typeLine,
+          rarity: ['Normal', 'Magic', 'Rare', 'Unique'][r.item.frameType ?? 0] ?? 'Normal',
+          explicitMods: r.item.explicitMods ?? [],
+          implicitMods: r.item.implicitMods,
+          ilvl: r.item.ilvl,
+          // ExpandedListing surfaces these flags as status chips (Corrupted, Mirrored,
+          // Unidentified); the regular trade path includes them, so map-regex listings
+          // should too or corrupted maps silently appear as if they weren't.
+          corrupted: r.item.corrupted,
+          mirrored: r.item.duplicated,
+          identified: r.item.identified,
+          mapProperties: r.item.properties
+            ?.filter((p) => p.values?.[0]?.[0] != null)
+            .map((p) => ({ name: p.name, value: p.values[0][0] })),
+        }
+      : undefined,
+  }))
+}
+
 // ─── Map Regex Trade Search ─────────────────────────────────────────────────
 
 export async function searchMapsByRegex(
@@ -893,17 +994,38 @@ export async function searchMapsByRegex(
   wantMode: 'any' | 'all',
   qualifiers: Record<string, number>,
   nightmare: boolean,
+  originator: boolean,
+  corrupted8mod: boolean,
   tradeStatus: string,
   tradePriceOption: string,
 ): Promise<TradeResult> {
   await _ensureStatsLoaded()
   await throttle()
 
+  // poe.re text -> trade API text overrides for mods with different wording
+  const modTextOverrides: Record<string, string> = {
+    'Monsters inflict # Grasping Vines on Hit': 'Monsters inflict # Grasping Vine on Hit',
+    'Players are targeted by a Meteor when they use a Flask':
+      'Players have #% chance to be targeted by a Meteor when they use a Flask',
+    'Rare Monsters have Volatile Cores': 'Rare Monsters have #% chance to have a Volatile Core',
+  }
+
   // Match mod texts to trade stat IDs
+  // Compound mods use | separators - try each part individually
   const matchMod = (text: string) => {
-    // Strip the number/percent formatting that formatModText adds
-    const cleaned = text.replace(/#%?/g, '').trim()
-    return matchModToStat(cleaned, false, 'explicit') ?? matchModToStat(text, false, 'explicit')
+    const parts = text.split('|')
+    for (const part of parts) {
+      const p = part.trim()
+      const overridden = modTextOverrides[p]
+      if (overridden) {
+        const result = matchModToStat(overridden, false, 'explicit')
+        if (result) return result
+      }
+      const cleaned = p.replace(/#%?/g, '').trim()
+      const result = matchModToStat(cleaned, false, 'explicit') ?? matchModToStat(p, false, 'explicit')
+      if (result) return result
+    }
+    return null
   }
 
   const avoidFilters = avoidTexts
@@ -959,6 +1081,22 @@ export async function searchMapsByRegex(
     statGroups.push({ type: 'and', filters: pseudoFilters })
   }
 
+  // 8-mod corrupted: add pseudo affix count filter
+  if (corrupted8mod) {
+    statGroups.push({ type: 'and', filters: [{ id: 'pseudo.pseudo_number_of_affix_mods', value: { min: 8 } }] })
+  }
+
+  // Originator: implicit stat "Area is Influenced by the Originator's Memories"
+  if (originator && !nightmare) {
+    const originatorStat = matchModToStat("Area is Influenced by the Originator's Memories", false, 'implicit')
+    if (originatorStat) {
+      statGroups.push({ type: 'and', filters: [{ id: originatorStat.statId, value: {} }] })
+    }
+  }
+
+  const miscFilters: Record<string, unknown> = {}
+  if (corrupted8mod) miscFilters.corrupted = { option: 'true' }
+
   const query: Record<string, unknown> = {
     status: { option: tradeStatus },
     type: nightmare ? 'Nightmare Map' : { option: 'Map', discriminator: 'map' },
@@ -966,6 +1104,7 @@ export async function searchMapsByRegex(
     filters: {
       type_filters: { disabled: false, filters: { rarity: { option: 'nonunique' } } },
       map_filters: { disabled: false, filters: mapFilterObj },
+      ...(Object.keys(miscFilters).length > 0 ? { misc_filters: { disabled: false, filters: miscFilters } } : {}),
       trade_filters: {
         disabled: false,
         filters: {
@@ -987,56 +1126,22 @@ export async function searchMapsByRegex(
     return { total: searchResult.total ?? 0, listings: [], queryId: searchResult.id ?? '' }
   }
 
-  await throttle()
-  const ids = searchResult.result.slice(0, 10).join(',')
-  const fetchResult = (await fetchJson(`${POE_TRADE_API}/fetch/${ids}?query=${searchResult.id}`)) as {
-    result: Array<{
-      id: string
-      listing: {
-        price?: { amount: number; currency: string }
-        account: { name: string; lastCharacterName?: string; online?: { status?: string } }
-        indexed?: string
-        whisper?: string
-        method?: string
-      }
-      item?: {
-        name?: string
-        baseType?: string
-        typeLine?: string
-        frameType?: number
-        icon?: string
-        ilvl?: number
-        implicitMods?: string[]
-        explicitMods?: string[]
-        properties?: Array<{ name: string; values: Array<[string, number]> }>
-      }
-    }>
+  const listings = await fetchAndMapListings(searchResult.result.slice(0, 10), searchResult.id)
+
+  return {
+    total: searchResult.total ?? 0,
+    listings,
+    queryId: searchResult.id ?? '',
+    remainingIds: searchResult.result.slice(10),
   }
+}
 
-  const listings: TradeListing[] = (fetchResult.result ?? []).map((r) => ({
-    id: r.id,
-    price: r.listing.price ? { amount: r.listing.price.amount, currency: r.listing.price.currency } : null,
-    account: r.listing.account.name,
-    characterName: r.listing.account.lastCharacterName,
-    online: !!r.listing.account.online,
-    instantBuyout:
-      tradeStatus === 'securable' || !!(r.listing.method === 'instant' || (!r.listing.whisper && r.listing.price)),
-    icon: r.item?.icon,
-    indexed: r.listing.indexed,
-    itemData: r.item
-      ? {
-          name: r.item.name,
-          baseType: r.item.baseType ?? r.item.typeLine,
-          rarity: ['Normal', 'Magic', 'Rare', 'Unique'][r.item.frameType ?? 0] ?? 'Normal',
-          explicitMods: r.item.explicitMods ?? [],
-          implicitMods: r.item.implicitMods,
-          ilvl: r.item.ilvl,
-          mapProperties: r.item.properties
-            ?.filter((p) => p.values?.[0]?.[0] != null)
-            .map((p) => ({ name: p.name, value: p.values[0][0] })),
-        }
-      : undefined,
-  }))
-
-  return { total: searchResult.total ?? 0, listings, queryId: searchResult.id ?? '' }
+export async function fetchMoreListings(
+  queryId: string,
+  ids: string[],
+): Promise<{ listings: TradeListing[]; remainingIds: string[] }> {
+  await throttle()
+  const batch = ids.slice(0, 10)
+  const listings = await fetchAndMapListings(batch, queryId)
+  return { listings, remainingIds: ids.slice(10) }
 }

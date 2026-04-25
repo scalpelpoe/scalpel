@@ -4,6 +4,12 @@ import { invalidateColorFreqCache } from './color-freq-cache'
 import { ConditionRow } from './ConditionRow'
 import { ColorActionEditor } from './ColorActionEditor'
 import { EffectsGroup, ActionBox, ActionEditor } from './EffectsGroup'
+import { formatTierLabel } from '../price-audit/constants'
+import { SettingConfig, MenuUnfold, MenuFold, ChartHistogram } from '@icon-park/react'
+import { IP } from '../../shared/constants'
+import { InfoChip } from '../../shared/PriceChip'
+import { TierActionCard } from './TierActionCard'
+import { TierIconStrip } from './TierIconStrip'
 import type { FilterBlockEditorProps } from './types'
 
 export function FilterBlockEditor({
@@ -15,6 +21,9 @@ export function FilterBlockEditor({
   tierGroup: _tierGroup,
   league: _league,
   onOpenAudit,
+  tierSisterOpen,
+  onToggleTierSister,
+  tierSisterSide,
 }: FilterBlockEditorProps): JSX.Element {
   const { block, blockIndex } = match
   const [editing, setEditing] = useState<FilterBlock>(structuredClone(block))
@@ -68,8 +77,29 @@ export function FilterBlockEditor({
     return newIndex
   }
 
+  const rawTierHeading = block.tierTag ? formatTierLabel(block.tierTag.tier) : `Block #${blockIndex + 1}`
+  const tierHeading = rawTierHeading.replace(/\b\w/g, (c) => c.toUpperCase())
+  const typePathLabel = block.tierTag?.typePath?.replace(/->/g, ' > ')
+
   return (
     <div>
+      {/* Tier title -- scopes the whole block section so Show/Hide + conditions read as
+       *  "settings for THIS tier", separate from the item-scoped Switch Tier control above. */}
+      <div className="px-3 pt-3 pb-2 flex items-center gap-2 flex-wrap">
+        <SettingConfig size={14} {...IP} className="text-accent" />
+        <span className="section-title">Tier: {tierHeading}</span>
+        {itemClass && (
+          <InfoChip size="sm" className="ml-auto">
+            <span className="text-text-dim">{itemClass}</span>
+          </InfoChip>
+        )}
+        {typePathLabel && (
+          <InfoChip size="sm" className={itemClass ? undefined : 'ml-auto'}>
+            <span className="text-text-dim">{typePathLabel}</span>
+          </InfoChip>
+        )}
+      </div>
+
       {/* Show / Hide toggle */}
       <div className="flex gap-1 px-3 py-2 border-b border-border">
         {(['Show', 'Hide'] as const).map((v) => {
@@ -98,41 +128,78 @@ export function FilterBlockEditor({
       </div>
 
       <div className="p-3">
-        {/* Conditions */}
+        {/* Conditions are split into two panels so the reader can see at a glance which
+         *  items are caught by the tier ("Items in this Tier") vs the other constraints
+         *  the tier imposes ("Additional Tier Details"). Class is always omitted -- the
+         *  header chip covers it. */}
         {(() => {
-          const hasClass = editing.conditions.some((c) => c.type === 'Class')
-          const showClassRow = !hasClass && itemClass
-          if (editing.conditions.length === 0 && !showClassRow) return null
+          const baseTypeConds = editing.conditions.filter((c) => c.type === 'BaseType')
+          const otherConds = editing.conditions.filter((c) => c.type !== 'Class' && c.type !== 'BaseType')
+          const isExTier =
+            block.tierTag &&
+            (/^(ex\d*|exhide|exshow|2x\d*)$/.test(block.tierTag.tier) || block.tierTag.tier.startsWith('exotic'))
+          const showAuditButton = !!onOpenAudit && baseTypeConds.some((c) => c.values.length > 0) && !isExTier
+          const hasItemsPanel = baseTypeConds.length > 0 || showAuditButton
+
+          const baseTypeCount = baseTypeConds.reduce((sum, c) => sum + c.values.length, 0)
+
           return (
-            <div className="font-mono text-[11px] bg-black/20 rounded p-[6px_8px] mb-3 flex flex-col gap-[2px]">
-              <div className="flex gap-[6px] flex-wrap">
-                <span className="min-w-[130px]" style={{ color: '#7ec8e3' }}>
-                  Tier
-                </span>
-                <span style={{ color: '#f0c27f' }}>
-                  {block.tierTag ? block.tierTag.tier : `Block #${blockIndex + 1}`}
-                </span>
-              </div>
-              {showClassRow && (
-                <ConditionRow cond={{ type: 'Class', operator: '=', values: [itemClass] }} itemClass={itemClass} />
-              )}
-              {editing.conditions.map((cond, i) => (
-                <ConditionRow key={i} cond={cond} itemClass={itemClass} />
-              ))}
-              {onOpenAudit &&
-                editing.conditions.some((c) => c.type === 'BaseType' && c.values.length > 0) &&
-                !(
-                  block.tierTag &&
-                  (/^(ex\d*|exhide|exshow|2x\d*)$/.test(block.tierTag.tier) || block.tierTag.tier.startsWith('exotic'))
-                ) && (
-                  <div className="bg-black/20 rounded p-[6px_8px] mt-[6px] flex items-center gap-2">
-                    <button onClick={onOpenAudit} className="primary px-3 py-1 text-[11px] shrink-0 mr-1">
-                      Run Economy Audit on Tier
-                    </button>
-                    <span className="text-[10px] text-text-dim">Make bulk changes based on the current economy</span>
+            <>
+              {hasItemsPanel && (
+                <div className="bg-black/20 rounded p-[6px_8px] mb-3 flex flex-col gap-[8px]">
+                  <div className="text-[10px] font-bold text-text-dim uppercase tracking-[0.5px]">
+                    Items in this Tier
                   </div>
-                )}
-            </div>
+                  <div className="flex gap-2 items-stretch">
+                    {baseTypeCount > 0 && onToggleTierSister && (
+                      <TierActionCard
+                        buttonLabel={tierSisterOpen ? 'Collapse' : 'Expand'}
+                        leadingIcon={
+                          // Default icon arrow points right (sister opens to the right);
+                          // flip horizontally when the sister is on the left.
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              transform: tierSisterSide === 'left' ? 'scaleX(-1)' : undefined,
+                            }}
+                          >
+                            {tierSisterOpen ? <MenuFold size={18} {...IP} /> : <MenuUnfold size={18} {...IP} />}
+                          </span>
+                        }
+                        onClick={onToggleTierSister}
+                      >
+                        <TierIconStrip names={baseTypeConds.flatMap((c) => c.values)} />
+                      </TierActionCard>
+                    )}
+                    {showAuditButton && (
+                      <TierActionCard
+                        buttonLabel="Run Economy Audit"
+                        leadingIcon={<ChartHistogram size={18} {...IP} />}
+                        onClick={onOpenAudit}
+                        primary
+                      >
+                        <div className="text-[10px] text-text-dim leading-[1.3]">
+                          Make bulk changes to this tier based on the current economy.
+                        </div>
+                      </TierActionCard>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {otherConds.length > 0 && (
+                <div className="bg-black/20 rounded p-[6px_8px] mb-3 flex flex-col gap-[6px]">
+                  <div className="text-[10px] font-bold text-text-dim uppercase tracking-[0.5px]">
+                    Additional Tier Details
+                  </div>
+                  <div className="font-mono text-[11px] flex flex-col gap-[2px]">
+                    {otherConds.map((cond, i) => (
+                      <ConditionRow key={i} cond={cond} itemClass={itemClass} />
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )
         })()}
 
@@ -199,6 +266,9 @@ export function FilterBlockEditor({
               {/* Appearance: label preview + colors + font size */}
               {(colorActions.length > 0 || fontSizeAction) && (
                 <div className="bg-black/25 rounded overflow-hidden">
+                  <div className="text-[10px] font-bold text-text-dim uppercase tracking-[0.5px] px-3 pt-[8px] pb-[2px]">
+                    Tier Label
+                  </div>
                   {/* Label preview header */}
                   <div className="flex items-center px-3 py-[10px] h-[42px]">
                     <div className="flex-1 flex items-center justify-center">

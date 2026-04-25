@@ -1,7 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
-import { keyEventToAccelerator } from './utils'
+import { keyEventToAccelerator, prettyHotkey } from './utils'
 
-export function HotkeyRecorder({ value, onChange }: { value: string; onChange: (v: string) => void }): JSX.Element {
+export function HotkeyRecorder({
+  value,
+  onChange,
+  className = 'w-[200px] shrink-0',
+}: {
+  value: string
+  onChange: (v: string) => void
+  className?: string
+}): JSX.Element {
   const [listening, setListening] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -31,11 +39,11 @@ export function HotkeyRecorder({ value, onChange }: { value: string; onChange: (
   return (
     <div
       ref={ref}
-      className="setting-box w-[200px] shrink-0 cursor-pointer h-[34px] box-border"
+      className={`setting-box ${className} cursor-pointer h-[34px] box-border`}
       onClick={() => setListening(true)}
     >
       <span className={`value ${listening ? 'recording' : ''}`}>
-        {listening ? 'Press your key combo...' : value || '(none set)'}
+        {listening ? 'Press your key combo...' : prettyHotkey(value) || '(none set)'}
       </span>
     </div>
   )

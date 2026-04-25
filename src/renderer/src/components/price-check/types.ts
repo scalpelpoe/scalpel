@@ -9,6 +9,8 @@ export interface StatFilter {
   enabled: boolean
   type: string
   foulborn?: boolean
+  modTier?: number
+  modRange?: { min: number; max: number }
 }
 
 export interface Listing {

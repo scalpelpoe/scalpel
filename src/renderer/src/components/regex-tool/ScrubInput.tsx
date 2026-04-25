@@ -8,6 +8,16 @@ interface ScrubInputProps {
   min?: number
   max?: number
   step?: number
+  /** Value to prefill when clicking into an empty input */
+  defaultValue?: number | null
+  /** Override text color (e.g. to tint when the value is invalid) */
+  color?: string
+  /** Decorative suffix shown next to the value in display mode (not during edit). */
+  suffix?: string
+  /** How many decimal places the input accepts and renders. 0 (default) keeps the
+   *  legacy integer-only behavior; 2 is typical for APS / crit %. When > 0 the
+   *  default step auto-shrinks to that precision unless you also pass `step`. */
+  decimals?: number
 }
 
 export function ScrubInput({
@@ -15,9 +25,23 @@ export function ScrubInput({
   onChange,
   placeholder = '0',
   min = 0,
-  max = 999,
-  step = 1,
+  max = 99999,
+  step,
+  defaultValue,
+  color,
+  suffix,
+  decimals = 0,
 }: ScrubInputProps): JSX.Element {
+  // Default step follows the precision so a decimals=2 input scrubs in 0.01 increments.
+  const effectiveStep = step ?? (decimals > 0 ? 1 / 10 ** decimals : 1)
+  const formatValue = (v: number): string => (decimals > 0 ? v.toFixed(decimals) : String(v))
+  const parseValue = (s: string): number => (decimals > 0 ? parseFloat(s) : parseInt(s))
+  // Snap to the configured precision so floating-point scrub math doesn't emit
+  // 1.4500000001-style junk.
+  const snapToPrecision = (v: number): number => {
+    const factor = 10 ** decimals
+    return Math.round(v * factor) / factor
+  }
   const [editing, setEditing] = useState(false)
   const [editText, setEditText] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
@@ -32,9 +56,9 @@ export function ScrubInput({
 
   const commitEdit = () => {
     setEditing(false)
-    const parsed = parseInt(editText)
-    if (isNaN(parsed) || parsed <= 0) onChange(null)
-    else onChange(Math.min(max, Math.max(min, parsed)))
+    const parsed = parseValue(editText)
+    if (isNaN(parsed) || parsed === 0) onChange(null)
+    else onChange(snapToPrecision(Math.min(max, Math.max(min, parsed))))
   }
 
   const startScrub = (e: React.MouseEvent) => {
@@ -44,12 +68,19 @@ export function ScrubInput({
     document.body.style.cursor = 'ew-resize'
     document.body.classList.add('scrubbing')
 
+    let lastX = e.clientX
+    let accumulator = value ?? 0
+
     const onMove = (me: MouseEvent) => {
       if (!scrubRef.current) return
-      const dx = me.clientX - scrubRef.current.startX
-      const delta = Math.round(dx / 3) * step
-      const newVal = Math.min(max, Math.max(min, scrubRef.current.startVal + delta))
-      onChange(newVal > 0 ? newVal : null)
+      const dx = me.clientX - lastX
+      lastX = me.clientX
+      const magnitude = Math.abs(accumulator)
+      const speed = magnitude >= 1000 ? 5 : magnitude >= 100 ? 2 : magnitude >= 10 ? 1 : 0.5
+      accumulator += (dx * speed * effectiveStep) / 3
+      const clamped = Math.min(max, Math.max(min, accumulator))
+      const snapped = snapToPrecision(Math.round(clamped / effectiveStep) * effectiveStep)
+      onChange(snapped !== 0 ? snapped : null)
     }
 
     const onUp = () => {
@@ -65,9 +96,13 @@ export function ScrubInput({
   }
 
   const handleClick = (e: React.MouseEvent) => {
-    // Only enter edit mode if we didn't drag
     if (!scrubRef.current) {
-      setEditText(value != null ? String(value) : '')
+      if (value == null && defaultValue != null) {
+        onChange(defaultValue)
+        setEditText(formatValue(defaultValue))
+      } else {
+        setEditText(value != null ? formatValue(value) : '')
+      }
       setEditing(true)
     }
   }
@@ -80,7 +115,7 @@ export function ScrubInput({
       style={{
         background: 'rgba(0,0,0,0.3)',
         cursor: editing ? 'text' : 'ew-resize',
-        color: value != null && value > 0 ? 'var(--text)' : 'var(--text-dim)',
+        color: color ?? (value != null ? 'var(--text)' : 'var(--text-dim)'),
         border: editing ? '1px solid rgba(0,0,0,0.2)' : '1px solid transparent',
       }}
     >
@@ -101,7 +136,10 @@ export function ScrubInput({
           max={max}
         />
       ) : (
-        <span>{value ?? 0}</span>
+        <span style={value == null ? { opacity: 0.4 } : undefined}>
+          {value != null ? formatValue(value) : placeholder}
+          {suffix}
+        </span>
       )}
       <SortFour size={11} theme="outline" fill="currentColor" style={{ transform: 'rotate(90deg)', opacity: 0.35 }} />
     </div>

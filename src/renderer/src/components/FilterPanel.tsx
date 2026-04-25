@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import type { MatchResult } from '../../../shared/types'
+import { getActiveMatch } from '../shared/activeMatch'
 import { ItemSummary } from './ItemSummary'
 import { FilterBlockEditor, type SaveState } from './filter-block-editor'
 import { TierNavigator } from './TierNavigator'
@@ -22,8 +22,11 @@ export function FilterPanel({
   onOpenTools,
   onOpenDustExplore,
   onOpenDivExplore,
+  tierSisterOpen,
+  onToggleTierSister,
+  tierSisterSide,
 }: FilterPanelProps): JSX.Element {
-  const { item, matches, stackBreakpoints, qualityBreakpoints, strandBreakpoints, tierGroup } = data
+  const { item, stackBreakpoints, qualityBreakpoints, strandBreakpoints } = data
   const hasBreakpoints = stackBreakpoints && stackBreakpoints.length > 1
   const hasQualityBreakpoints = qualityBreakpoints && qualityBreakpoints.length > 1
   const hasStrandBreakpoints = strandBreakpoints && strandBreakpoints.length > 1
@@ -85,35 +88,30 @@ export function FilterPanel({
     }
   }, [hasStrandBreakpoints])
 
-  // Determine which match and tier group to display
-  let displayMatch: MatchResult | null = null
-  let displayLabel: string | null = null
-  let activeTierGroup = tierGroup ?? undefined
+  const { match: displayMatch, tierGroup: activeTierGroup } = getActiveMatch(
+    data,
+    selectedBpIndex,
+    selectedQualityBpIndex,
+    selectedStrandBpIndex,
+  )
 
+  // Label text reserved for future tooltip/aria -- kept inline since it's UI copy,
+  // not domain logic. See getActiveMatch for the match/tierGroup itself.
+  let displayLabel: string | null = null
   if (hasStrandBreakpoints && selectedStrandBpIndex !== null) {
     const bp = strandBreakpoints[selectedStrandBpIndex]
-    displayMatch = bp.activeMatch
-    activeTierGroup = bp.tierGroup
     const rangeLabel = bp.max === Infinity ? `${bp.min}+` : bp.min === bp.max ? `${bp.min}` : `${bp.min}\u2013${bp.max}`
     displayLabel = `strands ${rangeLabel}`
   } else if (hasQualityBreakpoints && selectedQualityBpIndex !== null) {
     const bp = qualityBreakpoints[selectedQualityBpIndex]
-    displayMatch = bp.activeMatch
-    activeTierGroup = bp.tierGroup
     const rangeLabel =
       bp.max === Infinity ? `${bp.min}%+` : bp.min === bp.max ? `${bp.min}%` : `${bp.min}\u2013${bp.max}%`
     displayLabel = `quality ${rangeLabel}`
   } else if (hasBreakpoints && selectedBpIndex !== null) {
     const bp = stackBreakpoints[selectedBpIndex]
-    displayMatch = bp.activeMatch
-    activeTierGroup = bp.tierGroup
     const rangeLabel = bp.max === Infinity ? `${bp.min}+` : bp.min === bp.max ? `${bp.min}` : `${bp.min}\u2013${bp.max}`
     displayLabel = `stack ${rangeLabel}`
-  } else {
-    displayMatch = matches.find((m) => m.isFirstMatch) ?? null
   }
-
-  // suppress unused variable warning for displayLabel (used for future tooltip/aria)
   void displayLabel
 
   const iconUrl = getItemIconUrl(item)
@@ -239,6 +237,9 @@ export function FilterPanel({
                 onSaveStateChange={handleSaveStateChange}
                 tierGroup={activeTierGroup}
                 onOpenAudit={onOpenAudit}
+                tierSisterOpen={tierSisterOpen}
+                onToggleTierSister={onToggleTierSister}
+                tierSisterSide={tierSisterSide}
               />
             </div>
           ) : (

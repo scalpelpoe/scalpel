@@ -3,16 +3,29 @@ import { createHash } from 'crypto'
 import { createWriteStream, existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, rmSync } from 'fs'
 import { join, dirname } from 'path'
 import type { InstallManifest } from '../../shared/types'
+import { findBrickedMatch } from '../../shared/version-match'
 
 import { GITHUB_RELEASES_API, ELECTRON_RELEASES } from '../../shared/endpoints'
 const CHECK_DELAY = 5000
 const CHECK_INTERVAL = 60_000
 const MAX_RETRIES = 3
 
-let mainWindow: BrowserWindow | null = null
+let targetWindows: (() => BrowserWindow | null)[] = []
 let installDir: string = ''
 let checking = false
 let pendingRemote: InstallManifest | null = null
+// Cached state so the app window can pull current status on mount (events fired before
+// the window opened would otherwise be missed).
+let updateAvailableVersion: string | null = null
+let updateReady = false
+let brickedReleaseInfo: { version: string; message: string | null } | null = null
+
+function broadcast(channel: string, ...args: unknown[]): void {
+  for (const getWin of targetWindows) {
+    const win = getWin()
+    if (win && !win.isDestroyed()) win.webContents.send(channel, ...args)
+  }
+}
 
 /** User-writable directory for staging downloads before applying */
 function getStagingDir(): string {
@@ -132,6 +145,14 @@ async function checkForUpdates(channel: string): Promise<void> {
     const pkg = require('../../package.json')
     const runningVersion = pkg.version as string
 
+    // Advisory: if the running version matches a bricked rule, surface a banner asking the
+    // user to reinstall. Separate from the update flow -- they see this even if auto-update
+    // never resolves for them.
+    if (findBrickedMatch(remote.brickedReleases, runningVersion)) {
+      brickedReleaseInfo = { version: runningVersion, message: remote.brickedMessage ?? null }
+      broadcast('bricked-release', brickedReleaseInfo)
+    }
+
     // If no local manifest, write one from current running versions
     if (!local) {
       const baseline: InstallManifest = {
@@ -173,12 +194,14 @@ async function checkForUpdates(channel: string): Promise<void> {
 }
 
 async function handleAsarUpdate(remote: InstallManifest, channel: string): Promise<void> {
-  mainWindow?.webContents.send('update-available', remote.version)
+  updateAvailableVersion = remote.version
+  broadcast('update-available', remote.version)
   pendingRemote = remote
 }
 
 async function handleFullUpgrade(remote: InstallManifest, channel: string): Promise<void> {
-  mainWindow?.webContents.send('update-available', remote.version)
+  updateAvailableVersion = remote.version
+  broadcast('update-available', remote.version)
   pendingRemote = remote
 }
 
@@ -199,7 +222,7 @@ async function downloadAsarUpdate(): Promise<void> {
   for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
       await downloadFile(asarUrl, asarNewPath, remote.asarSize, (percent) => {
-        mainWindow?.webContents.send('update-download-progress', percent)
+        broadcast('update-download-progress', percent)
       })
 
       const hash = computeSha512(asarNewPath)
@@ -227,7 +250,8 @@ async function downloadAsarUpdate(): Promise<void> {
       // Write pending manifest to staging
       writeFileSync(join(stagingDir, 'manifest.pending.json'), JSON.stringify(remote, null, 2))
 
-      mainWindow?.webContents.send('update-downloaded')
+      updateReady = true
+      broadcast('update-downloaded')
       pendingRemote = null
       return
     } catch (err) {
@@ -263,16 +287,13 @@ async function downloadFullUpgrade(): Promise<void> {
 
     await downloadFile(electronZipUrl, zipPath, 80_000_000, (percent) => {
       const totalReceived = (percent / 100) * 80_000_000
-      mainWindow?.webContents.send('update-download-progress', Math.round((totalReceived / totalSize) * 100))
+      broadcast('update-download-progress', Math.round((totalReceived / totalSize) * 100))
     })
 
     const asarPath = join(stagingDir, 'app.asar.staged')
     await downloadFile(asarUrl, asarPath, remote.asarSize, (percent) => {
       const asarReceived = (percent / 100) * remote.asarSize
-      mainWindow?.webContents.send(
-        'update-download-progress',
-        Math.round(((80_000_000 + asarReceived) / totalSize) * 100),
-      )
+      broadcast('update-download-progress', Math.round(((80_000_000 + asarReceived) / totalSize) * 100))
     })
 
     const hash = computeSha512(asarPath)
@@ -284,7 +305,8 @@ async function downloadFullUpgrade(): Promise<void> {
     writeFileSync(join(stagingDir, '.electron-version'), remote.electronVersion)
     writeFileSync(join(stagingDir, 'manifest.pending.json'), JSON.stringify(remote, null, 2))
 
-    mainWindow?.webContents.send('update-downloaded')
+    updateReady = true
+    broadcast('update-downloaded')
     pendingRemote = null
   } catch (err) {
     console.error('[Updater] Full upgrade download failed:', (err as Error).message)
@@ -292,8 +314,13 @@ async function downloadFullUpgrade(): Promise<void> {
   }
 }
 
-export function initUpdater(win: BrowserWindow, dir: string, channel: string, onUpdateApplied?: () => void): void {
-  mainWindow = win
+export function initUpdater(
+  windows: Array<() => BrowserWindow | null>,
+  dir: string,
+  channel: string,
+  onUpdateApplied?: () => void,
+): void {
+  targetWindows = windows
   installDir = dir
 
   // Check if we just updated and notify renderer
@@ -316,7 +343,7 @@ export function initUpdater(win: BrowserWindow, dir: string, channel: string, on
 
       // Send after a delay so the renderer is fully ready
       setTimeout(() => {
-        mainWindow?.webContents.send('update-applied', version, savedState)
+        broadcast('update-applied', version, savedState)
         onUpdateApplied?.()
       }, 3000)
     } catch {
@@ -334,6 +361,12 @@ export function initUpdater(win: BrowserWindow, dir: string, channel: string, on
   setTimeout(check, CHECK_DELAY)
   setInterval(check, CHECK_INTERVAL)
 }
+
+ipcMain.handle('get-update-state', () => ({
+  updateVersion: updateAvailableVersion,
+  updateReady,
+  brickedRelease: brickedReleaseInfo,
+}))
 
 ipcMain.handle('download-update', async () => {
   if (!pendingRemote) return

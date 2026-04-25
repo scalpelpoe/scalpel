@@ -2,6 +2,7 @@ import { BrowserWindow, ipcMain, session } from 'electron'
 import Store from 'electron-store'
 import {
   searchTrade,
+  fetchMoreListings,
   isBulkExchangeItem,
   getBulkExchangeId,
   searchBulkExchange,
@@ -135,17 +136,17 @@ export function register(store: Store<AppSettings>): void {
         energyShield?: number
         ward?: number
         block?: number
+        vaalGem?: boolean
       },
       statFilters: StatFilter[],
+      searchOptions?: { listedTime?: string; priceOption?: string; statusOption?: string },
     ): Promise<TradeResult> => {
       const league = store.get('league')
-      return searchTrade(
-        league,
-        item,
-        statFilters,
-        store.get('tradeStatus') ?? 'available',
-        store.get('tradePriceOption') ?? 'chaos_divine',
-      )
+      // Per-search overrides from the price-check Settings chip take priority over the
+      // persisted global settings.
+      const status = searchOptions?.statusOption ?? store.get('tradeStatus') ?? 'any'
+      const price = searchOptions?.priceOption ?? store.get('tradePriceOption') ?? 'chaos_divine'
+      return searchTrade(league, item, statFilters, status, price, searchOptions?.listedTime)
     },
   )
 
@@ -175,15 +176,24 @@ export function register(store: Store<AppSettings>): void {
   })
 
   ipcMain.handle('poe-login', () => {
+    const LOGIN_TITLE = 'Login'
     const loginWindow = new BrowserWindow({
       width: 800,
       height: 700,
-      title: 'Login to pathofexile.com',
+      title: LOGIN_TITLE,
       autoHideMenuBar: true,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
       },
+    })
+    // The PoE login page sets document.title to "Path of Exile", which our overlay
+    // matches by-title and would incorrectly attach to this login popup. Suppress the
+    // OS title update and re-assert our own title in case preventDefault alone isn't
+    // enough on some Windows setups.
+    loginWindow.webContents.on('page-title-updated', (event) => {
+      event.preventDefault()
+      loginWindow.setTitle(LOGIN_TITLE)
     })
     loginWindow.loadURL(`${POE_WEBSITE}/login`)
 
@@ -223,10 +233,12 @@ export function register(store: Store<AppSettings>): void {
         wantMode: 'any' | 'all'
         qualifiers: Record<string, number>
         nightmare: boolean
+        originator: boolean
+        corrupted8mod: boolean
       },
     ) => {
       const league = store.get('league')
-      const tradeStatus = store.get('tradeStatus') ?? 'available'
+      const tradeStatus = store.get('tradeStatus') ?? 'any'
       const tradePriceOption = store.get('tradePriceOption') ?? 'chaos_divine'
       const result = await searchMapsByRegex(
         league,
@@ -236,10 +248,16 @@ export function register(store: Store<AppSettings>): void {
         params.wantMode,
         params.qualifiers,
         params.nightmare,
+        params.originator,
+        params.corrupted8mod,
         tradeStatus,
         tradePriceOption,
       )
       return { ...result, league }
     },
   )
+
+  ipcMain.handle('fetch-more-listings', async (_event, queryId: string, ids: string[]) => {
+    return fetchMoreListings(queryId, ids)
+  })
 }

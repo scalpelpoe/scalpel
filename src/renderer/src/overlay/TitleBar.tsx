@@ -1,4 +1,4 @@
-import { History, Setting, CloseSmall, ChartHistogram, Flask, Buy } from '@icon-park/react'
+import { Setting, CloseSmall, ChartHistogram, Flask, Buy } from '@icon-park/react'
 import type { OverlayData } from '../../../shared/types'
 import { chaosIcon } from '../shared/icons'
 import { divCardArtMap, iconMap, IP } from '../shared/constants'
@@ -12,7 +12,6 @@ type View =
   | 'no-filter'
   | 'no-item'
   | 'setup'
-  | 'history'
   | 'audit'
   | 'tools'
   | 'dust'
@@ -24,6 +23,7 @@ interface TitleBarProps {
   view: View
   overlayData: OverlayData | null
   poeVersion: 1 | 2 | null
+  hasPriceCheckData: boolean
   onSetView: (view: View | ((prev: View) => View)) => void
   onClose: () => void
   onSetAuditBlockIndex: (v: number | null) => void
@@ -34,6 +34,7 @@ export function TitleBar({
   view,
   overlayData,
   poeVersion,
+  hasPriceCheckData,
   onSetView,
   onClose,
   onSetAuditBlockIndex,
@@ -101,12 +102,14 @@ export function TitleBar({
           })()}
         </button>
         <button
-          onClick={() => onSetView('pricecheck')}
-          title="Price Checker"
-          className="w-[30px] h-[30px] flex items-center justify-center"
+          onClick={() => hasPriceCheckData && onSetView('pricecheck')}
+          disabled={!hasPriceCheckData}
+          title={hasPriceCheckData ? 'Price Checker' : 'Price Checker (no item checked yet)'}
+          className="w-[30px] h-[30px] flex items-center justify-center disabled:cursor-default"
           style={{
             background: view === 'pricecheck' ? 'var(--accent)' : undefined,
             color: view === 'pricecheck' ? '#171821' : undefined,
+            opacity: hasPriceCheckData ? 1 : 0.35,
           }}
         >
           <Buy size={16} {...IP} />
@@ -177,17 +180,6 @@ export function TitleBar({
             className="w-[18px] h-[18px] object-contain"
             style={{ filter: view === 'regex' ? 'brightness(0.1)' : 'none' }}
           />
-        </button>
-        <button
-          onClick={() => onSetView((v) => (v === 'history' ? 'idle' : 'history'))}
-          title="Edit history"
-          className="w-[30px] h-[30px] flex items-center justify-center"
-          style={{
-            background: view === 'history' ? 'var(--accent)' : undefined,
-            color: view === 'history' ? '#171821' : undefined,
-          }}
-        >
-          <History size={16} {...IP} />
         </button>
         <button
           onClick={() => onSetView('setup')}

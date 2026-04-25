@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { AppSettings } from '../../../../shared/types'
 import { Toggle } from '../Toggle'
 import { FilterPicker } from '../FilterPicker'
-import { keyEventToAccelerator } from './utils'
+import { keyEventToAccelerator, prettyHotkey } from './utils'
 
 interface Props {
   settings: AppSettings
@@ -11,6 +11,7 @@ interface Props {
   onOnlineFilterUpdated?: (name: string) => void
   onOnlineImport?: (name: string) => void
   onSettingsChange: (s: AppSettings) => void
+  tryHotkey: (hotkey: string, slot: { kind: 'filter' }) => boolean
 }
 
 export function FilterTab({
@@ -20,6 +21,7 @@ export function FilterTab({
   onOnlineFilterUpdated,
   onOnlineImport,
   onSettingsChange,
+  tryHotkey,
 }: Props): JSX.Element {
   const [recording, setRecording] = useState(false)
   const recRef = useRef<HTMLDivElement>(null)
@@ -32,6 +34,10 @@ export function FilterTab({
       e.stopPropagation()
       const acc = keyEventToAccelerator(e)
       if (!acc) return
+      if (!tryHotkey(acc, { kind: 'filter' })) {
+        setRecording(false)
+        return
+      }
       update('hotkey', acc)
       setRecording(false)
     }
@@ -45,7 +51,7 @@ export function FilterTab({
       window.removeEventListener('mousedown', onClick)
       window.api.resumeHotkeys()
     }
-  }, [recording, update])
+  }, [recording, update, tryHotkey])
 
   return (
     <>
@@ -74,7 +80,7 @@ export function FilterTab({
         <div ref={recRef} className="mt-[6px]">
           <div className="setting-box" onClick={() => setRecording(true)}>
             <span className={`value ${recording ? 'recording' : ''}`}>
-              {recording ? 'Press your desired key combo...' : settings.hotkey || '(none set)'}
+              {recording ? 'Press your desired key combo...' : prettyHotkey(settings.hotkey) || '(none set)'}
             </span>
             {!recording && (
               <button

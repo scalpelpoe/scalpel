@@ -99,7 +99,7 @@ export function HistoryPanel({ item, onDone: _onDone }: Props): JSX.Element {
   return (
     <div className="flex flex-col gap-3">
       {/* Session undo history */}
-      <div className="bg-bg-card rounded p-4">
+      <div>
         <div className="section-title mb-3">Session Edits</div>
 
         {error && <div className="text-[11px] text-danger mb-2 px-0.5">{error}</div>}
@@ -184,7 +184,7 @@ export function HistoryPanel({ item, onDone: _onDone }: Props): JSX.Element {
       </div>
 
       {/* Filter versions */}
-      <div className="bg-bg-card rounded p-4">
+      <div>
         <div className="flex items-center justify-between mb-3">
           <div className="section-title">Filter Versions</div>
           {showCheckpointInput ? (

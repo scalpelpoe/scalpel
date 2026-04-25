@@ -41,8 +41,15 @@ export const api = {
     itemJson?: string,
   ): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('save-block-edit', blockIndex, block, itemJson),
   reloadFilter: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('reload-filter'),
-  lookupBaseType: (baseType: string, itemClass: string, rarity?: string, uniqueName?: string): Promise<void> =>
-    ipcRenderer.invoke('lookup-base-type', baseType, itemClass, rarity, uniqueName),
+  lookupBaseType: (
+    baseType: string,
+    itemClass: string,
+    rarity?: string,
+    uniqueName?: string,
+    flags?: { zanaMemory?: boolean },
+  ): Promise<void> => ipcRenderer.invoke('lookup-base-type', baseType, itemClass, rarity, uniqueName, flags),
+  getSearchableItems: (): Promise<import('../shared/types').SearchableItem[]> =>
+    ipcRenderer.invoke('get-searchable-items'),
   getDivCardTiers: (): Promise<{
     tierStyles: Record<string, { border: string; bg: string; text: string }>
     cardTiers: Record<string, string>
@@ -59,6 +66,16 @@ export const api = {
     uniqueTier?: boolean,
   ): Promise<Record<string, { chaosValue: number; divineValue?: number } | null>> =>
     ipcRenderer.invoke('batch-lookup-prices', baseTypes, league, uniqueTier),
+  batchLookupRefPrices: (
+    refs: Array<{ name: string; baseType?: string }>,
+    league: string,
+  ): Promise<Record<string, { chaosValue: number; divineValue?: number } | null>> =>
+    ipcRenderer.invoke('batch-lookup-ref-prices', refs, league),
+  sisterOpenPriceCheck: (ref: {
+    name: string
+    baseType?: string
+    category: 'base' | 'unique' | 'divination' | 'gem' | 'beast'
+  }): Promise<void> => ipcRenderer.invoke('sister-open-price-check', ref),
   moveItemTier: (
     baseType: string,
     fromBlockIndex: number,
@@ -118,8 +135,11 @@ export const api = {
     poeVersion: 1 | 2
     gameBounds: { gameWidth: number; gameHeight: number; sidebarWidth: number } | null
   }> => ipcRenderer.invoke('get-overlay-state'),
-  reportPanelRect: (rect: { left: number; top: number; width: number; height: number }): void =>
-    ipcRenderer.send('report-panel-rect', rect),
+  reportPanelRect: (
+    rects:
+      | { left: number; top: number; width: number; height: number }
+      | Array<{ left: number; top: number; width: number; height: number }>,
+  ): void => ipcRenderer.send('report-panel-rect', rects),
   lockInteractive: (): void => ipcRenderer.send('lock-interactive'),
   unlockInteractive: (): void => ipcRenderer.send('unlock-interactive'),
   suspendHotkeys: (): void => ipcRenderer.send('suspend-hotkeys'),
@@ -202,6 +222,11 @@ export const api = {
     ipcRenderer.on('price-check-open', handler)
     return () => ipcRenderer.removeListener('price-check-open', handler)
   },
+  onFilterHotkeyOpen: (cb: () => void): (() => void) => {
+    const handler = (): void => cb()
+    ipcRenderer.on('filter-hotkey-open', handler)
+    return () => ipcRenderer.removeListener('filter-hotkey-open', handler)
+  },
   onPriceCheck: (
     cb: (data: {
       item: import('../shared/types').PoeItem
@@ -235,6 +260,7 @@ export const api = {
       energyShield?: number
       ward?: number
       block?: number
+      vaalGem?: boolean
     },
     statFilters: Array<{
       id: string
@@ -245,6 +271,7 @@ export const api = {
       enabled: boolean
       type: string
     }>,
+    searchOptions?: { listedTime?: string; priceOption?: string; statusOption?: string },
   ): Promise<{
     total: number
     listings: Array<{
@@ -259,7 +286,8 @@ export const api = {
       itemData?: { name?: string; baseType?: string; explicitMods?: string[]; implicitMods?: string[]; ilvl?: number }
     }>
     queryId: string
-  }> => ipcRenderer.invoke('trade-search', item, statFilters),
+    remainingIds: string[]
+  }> => ipcRenderer.invoke('trade-search', item, statFilters, searchOptions),
   bulkExchange: (
     itemName: string,
     baseType: string,
@@ -288,6 +316,8 @@ export const api = {
     wantMode: 'any' | 'all'
     qualifiers: Record<string, number>
     nightmare: boolean
+    originator: boolean
+    corrupted8mod: boolean
   }): Promise<{
     total: number
     listings: Array<{
@@ -311,7 +341,33 @@ export const api = {
     }>
     queryId: string
     league: string
+    remainingIds: string[]
   }> => ipcRenderer.invoke('map-regex-trade', params),
+  fetchMoreListings: (
+    queryId: string,
+    ids: string[],
+  ): Promise<{
+    listings: Array<{
+      id: string
+      price: { amount: number; currency: string } | null
+      account: string
+      characterName?: string
+      online: boolean
+      instantBuyout: boolean
+      icon?: string
+      indexed?: string
+      itemData?: {
+        name?: string
+        baseType?: string
+        rarity?: string
+        explicitMods?: string[]
+        implicitMods?: string[]
+        ilvl?: number
+        mapProperties?: Array<{ name: string; value: string }>
+      }
+    }>
+    remainingIds: string[]
+  }> => ipcRenderer.invoke('fetch-more-listings', queryId, ids),
   visitHideout: (queryId: string, listingId: string, league: string): Promise<void> =>
     ipcRenderer.invoke('visit-hideout', queryId, listingId, league),
   whisperSeller: (queryId: string, listingId: string, league: string): Promise<void> =>
@@ -389,6 +445,11 @@ export const api = {
   // Auto-update
   downloadUpdate: (): Promise<void> => ipcRenderer.invoke('download-update'),
   installUpdate: (): Promise<void> => ipcRenderer.invoke('install-update'),
+  getUpdateState: (): Promise<{
+    updateVersion: string | null
+    updateReady: boolean
+    brickedRelease: { version: string; message: string | null } | null
+  }> => ipcRenderer.invoke('get-update-state'),
   saveOverlayState: (state: Record<string, unknown>): void => ipcRenderer.send('save-overlay-state', state),
   onUpdateAvailable: (cb: (version: string) => void): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, version: string): void => cb(version)
@@ -410,6 +471,11 @@ export const api = {
       cb(version, state)
     ipcRenderer.on('update-applied', handler)
     return () => ipcRenderer.removeListener('update-applied', handler)
+  },
+  onBrickedRelease: (cb: (info: { version: string; message: string | null }) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, info: { version: string; message: string | null }): void => cb(info)
+    ipcRenderer.on('bricked-release', handler)
+    return () => ipcRenderer.removeListener('bricked-release', handler)
   },
 }
 

@@ -30,6 +30,12 @@ export function keyEventToAccelerator(e: KeyboardEvent): string | null {
   return parts.join('+')
 }
 
+/** Format an accelerator string for display (CommandOrControl -> Ctrl on Windows). */
+export function prettyHotkey(accelerator: string | undefined | null): string {
+  if (!accelerator) return ''
+  return accelerator.replace(/CommandOrControl/g, 'Ctrl')
+}
+
 export const APP_MACRO_DEFS = [
   { id: 'openSettings', label: 'Open Settings' },
   { id: 'openAudit', label: 'Open Audit' },
@@ -37,4 +43,6 @@ export const APP_MACRO_DEFS = [
   { id: 'openDivCards', label: 'Open Div Card Explorer' },
   { id: 'openRegex', label: 'Open Regex Tool' },
   { id: 'pasteRegex', label: 'Paste Current Regex' },
+  { id: 'useSavedRegex', label: 'Use Saved Regex' },
+  { id: 'closeOverlay', label: 'Close Overlay' },
 ] as const
