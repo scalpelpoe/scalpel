@@ -1,0 +1,33 @@
+/* Scalpel design tokens. Plugin authors `import '@filterscalpel/plugin-sdk/tokens.css'`
+   in their own build pipeline (Storybook, isolated component tests, etc.) to get
+   the same CSS variables Scalpel sets on :root at runtime.
+
+   Plugins running INSIDE Scalpel don't need this file - they inherit the variables
+   from Scalpel's own styles.css through the renderer DOM tree. */
+
+:root {
+  --font-poe: 'Fontin SmallCaps', serif;
+  --bg: rgba(23, 24, 33, 0.99);
+  --bg-solid: #171821;
+  --bg-card: #23232e;
+  --bg-hover: #2c2c3a;
+  --bg-solid-translucent: rgba(23, 24, 33, 0.95);
+  --bg-card-translucent: rgba(35, 35, 46, 0.95);
+  --border: rgba(80, 80, 110, 0.5);
+  --accent: #c8a96e;
+  --accent-dim: rgba(200, 169, 110, 0.3);
+  --match: #4caf50;
+  --match-dim: rgba(76, 175, 80, 0.2);
+  --secondary-match: #7e57c2;
+  --secondary-match-dim: rgba(126, 87, 194, 0.2);
+  --text: #e0d8cc;
+  --text-dim: #9e9480;
+  --danger: #ef5350;
+  --warn: #e67e22;
+  --danger-bg: #b71c1c;
+  --hide-color: #ef5350;
+  --show-color: #4caf50;
+  --minimal-color: #7e57c2;
+  --radius: 10px;
+  --font-mono: 'Consolas', 'Cascadia Code', monospace;
+}

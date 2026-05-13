@@ -14,6 +14,7 @@ import { getAppWindow } from './app-window'
 import { applyCheatSheetHotkeys, getCheatSheetsOverlay } from './cheat-sheets'
 import { applyPinnedZoneEnabled, getPinnedZoneOverlay } from './pinned-zone'
 import { setHotkey, setPriceCheckHotkey, setChatCommands, setAppMacros, setStashScrollEnabled } from './hotkeys'
+import { withPluginHotkeys } from './app-macros'
 import { setOpenSide, reEvaluateLastItem } from './evaluation'
 import { refreshPrices } from './trade/prices'
 import { setUpdateChannel } from './update/updater'
@@ -65,7 +66,7 @@ export function applySetting<K extends keyof AppSettings>(
   if (key === 'closeOnClickOutside') setCloseOnClickOutside(value as boolean)
   if (key === 'league') refreshPrices(value as string)
   if (key === 'chatCommands') setChatCommands(value as AppSettings['chatCommands'])
-  if (key === 'appMacros') setAppMacros(value as AppSettings['appMacros'])
+  if (key === 'appMacros') setAppMacros(withPluginHotkeys(value as AppSettings['appMacros']))
   if (key === 'stashScrollEnabled') setStashScrollEnabled(value as boolean)
   if (key === 'openSide') setOpenSide(value as AppSettings['openSide'])
   if (key === 'updateChannel') setUpdateChannel(value as string)

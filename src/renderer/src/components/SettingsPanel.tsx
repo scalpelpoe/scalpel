@@ -10,6 +10,8 @@ import {
   CheatSheetsTab,
   prettyHotkey,
 } from './settings'
+import { DeveloperSection } from './settings/DeveloperSection'
+import { PluginsSection } from './settings/PluginsSection'
 import { HistoryPanel } from './HistoryPanel'
 import { ErrorBanner } from './ErrorBanner'
 import { findHotkeyCollision, type HotkeySlot } from './settings/hotkey-collisions'
@@ -36,7 +38,18 @@ interface Props {
 /** Hotkeys PoE itself uses - warn (don't block) when the user binds one of these. */
 const POE_PROTECTED_HOTKEYS = new Set(['CommandOrControl+F', 'CommandOrControl+Alt+C'])
 
-const TAB_KEYS = ['general', 'view', 'macros', 'cheatsheets', 'filter', 'pricecheck', 'history', 'faq'] as const
+const TAB_KEYS = [
+  'general',
+  'view',
+  'macros',
+  'cheatsheets',
+  'filter',
+  'pricecheck',
+  'history',
+  'plugins',
+  'faq',
+  'developer',
+] as const
 type TabKey = (typeof TAB_KEYS)[number]
 const TAB_LABELS: Record<TabKey, string> = {
   general: 'General',
@@ -46,7 +59,9 @@ const TAB_LABELS: Record<TabKey, string> = {
   filter: 'Filter',
   pricecheck: 'Trade',
   history: 'History',
+  plugins: 'Plugins',
   faq: 'FAQ',
+  developer: 'Developer',
 }
 
 export function SettingsPanel({
@@ -124,15 +139,17 @@ export function SettingsPanel({
           <span className="text-[9px] text-accent opacity-60">Beta {__APP_VERSION__}</span>
         </div>
         <div className="flex flex-wrap gap-[6px]">
-          {TAB_KEYS.map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`text-[11px] px-3 py-1.5 ${tab === t ? 'bg-accent text-bg-solid' : 'text-text-dim'}`}
-            >
-              {TAB_LABELS[t]}
-            </button>
-          ))}
+          {(TAB_KEYS as readonly TabKey[])
+            .filter((t) => t !== 'developer' || settings.developerMode)
+            .map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`text-[11px] px-3 py-1.5 ${tab === t ? 'bg-accent text-bg-solid' : 'text-text-dim'}`}
+              >
+                {TAB_LABELS[t]}
+              </button>
+            ))}
           {!isOverlay && onShowOnboarding && (
             <button onClick={onShowOnboarding} className="text-[11px] text-text-dim px-3 py-1.5">
               Setup Wizard
@@ -160,7 +177,9 @@ export function SettingsPanel({
       )}
       {tab === 'pricecheck' && <PriceCheckTab settings={settings} update={update} tryHotkey={tryHotkey} />}
       {tab === 'history' && <HistoryPanel item={currentItem} onDone={() => setTab('general')} />}
+      {tab === 'plugins' && <PluginsSection onError={showError} />}
       {tab === 'faq' && <FaqTab />}
+      {tab === 'developer' && <DeveloperSection settings={settings} update={update} onError={showError} />}
     </div>
   )
 }

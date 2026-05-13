@@ -1,0 +1,9 @@
+{
+  "manifestVersion": 1,
+  "id": "hello-world",
+  "version": "1.0.0",
+  "name": "Hello World",
+  "description": "Reference plugin demonstrating the Scalpel plugin API.",
+  "author": "filterscalpel",
+  "scalpelMinVersion": ">=0.0.0"
+}

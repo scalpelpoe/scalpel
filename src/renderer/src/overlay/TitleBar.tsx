@@ -6,19 +6,7 @@ import { DIV_CARD_ICON_URL, divCardArtMap, iconMap, IP } from '../shared/constan
 import dustIconAsset from '../assets/currency/thaumaturgic-dust.png'
 import appIcon from '../../../../resources/icon.png'
 import poereIcon from '../assets/other/poere-logo.svg'
-
-type View =
-  | 'idle'
-  | 'item'
-  | 'no-filter'
-  | 'no-item'
-  | 'setup'
-  | 'audit'
-  | 'tools'
-  | 'dust'
-  | 'divcards'
-  | 'pricecheck'
-  | 'regex'
+import type { View } from './view'
 
 interface TitleBarProps {
   view: View
@@ -27,6 +15,7 @@ interface TitleBarProps {
   features: GameFeatures
   hasPriceCheckData: boolean
   hiddenTabs: Set<HideableTabKey>
+  pluginTabs: Array<{ pluginId: string; label: string; icon: string }>
   onSetView: (view: View | ((prev: View) => View)) => void
   onClose: () => void
   onMouseDown: (e: React.MouseEvent) => void
@@ -39,6 +28,7 @@ export function TitleBar({
   features,
   hasPriceCheckData,
   hiddenTabs,
+  pluginTabs,
   onSetView,
   onClose,
   onMouseDown,
@@ -175,6 +165,19 @@ export function TitleBar({
             />
           </button>
         )}
+        {pluginTabs.map((t) => (
+          <button
+            key={t.pluginId}
+            onClick={() => onSetView(`plugin:${t.pluginId}`)}
+            title={t.label}
+            className={
+              view === `plugin:${t.pluginId}`
+                ? 'btn-bounce w-[30px] h-[30px] flex items-center justify-center bg-accent text-[#171821]'
+                : 'btn-bounce w-[30px] h-[30px] flex items-center justify-center'
+            }
+            dangerouslySetInnerHTML={{ __html: t.icon }}
+          />
+        ))}
         <button
           onClick={() => onSetView('setup')}
           className="btn-bounce w-[30px] h-[30px] flex items-center justify-center"

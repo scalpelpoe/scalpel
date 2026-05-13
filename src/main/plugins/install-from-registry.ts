@@ -1,0 +1,78 @@
+import { net, app } from 'electron'
+import { mkdirSync, writeFileSync } from 'fs'
+import { join } from 'path'
+import { pluginDir } from './paths'
+import { validateManifest } from './manifest-validator'
+import { versionMatches } from '../../shared/version-match'
+import { pluginReleaseAssetUrl } from '../../shared/endpoints'
+import { addInstalledId } from './installed-list'
+import type { InstallResult } from './install-types'
+import type { RegistryEntry } from '../../shared/plugin-registry-types'
+
+function currentScalpelVersion(): string {
+  return app.getVersion()
+}
+
+export async function installFromRegistry(entry: RegistryEntry): Promise<InstallResult> {
+  // 1. Version check
+  if (!versionMatches(entry.scalpelMinVersion, currentScalpelVersion())) {
+    return {
+      ok: false,
+      error: `requires Scalpel version ${entry.scalpelMinVersion} (running ${currentScalpelVersion()})`,
+    }
+  }
+
+  // 2. Fetch plugin.js
+  let pluginBytes: Uint8Array
+  try {
+    const resp = await net.fetch(pluginReleaseAssetUrl(entry.repo, entry.latestVersion, 'plugin.js'))
+    if (resp.status !== 200) {
+      return { ok: false, error: `plugin.js download returned ${resp.status}` }
+    }
+    pluginBytes = new Uint8Array(await resp.arrayBuffer())
+  } catch (e) {
+    return { ok: false, error: `plugin.js download failed: ${(e as Error).message}` }
+  }
+
+  // 3. Fetch manifest.json
+  let manifestText: string
+  try {
+    const resp = await net.fetch(pluginReleaseAssetUrl(entry.repo, entry.latestVersion, 'manifest.json'))
+    if (resp.status !== 200) {
+      return { ok: false, error: `manifest.json download returned ${resp.status}` }
+    }
+    manifestText = await resp.text()
+  } catch (e) {
+    return { ok: false, error: `manifest.json download failed: ${(e as Error).message}` }
+  }
+
+  // 4. Validate manifest
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(manifestText)
+  } catch {
+    return { ok: false, error: 'downloaded manifest.json is not valid JSON' }
+  }
+  const v = validateManifest(parsed)
+  if (!v.ok) return { ok: false, error: `manifest validation failed: ${v.error}` }
+  if (v.manifest.id !== entry.id) {
+    return { ok: false, error: `manifest id "${v.manifest.id}" does not match registry id "${entry.id}"` }
+  }
+  if (v.manifest.version !== entry.latestVersion) {
+    return {
+      ok: false,
+      error: `manifest version "${v.manifest.version}" does not match registry latestVersion "${entry.latestVersion}"`,
+    }
+  }
+
+  // 5. Write to userData
+  const destDir = pluginDir(entry.id)
+  mkdirSync(destDir, { recursive: true })
+  writeFileSync(join(destDir, 'plugin.js'), pluginBytes)
+  writeFileSync(join(destDir, 'manifest.json'), manifestText)
+
+  // 6. Append to installed.json
+  addInstalledId(entry.id)
+
+  return { ok: true, id: entry.id }
+}

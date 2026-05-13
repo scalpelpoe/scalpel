@@ -441,6 +441,12 @@ export interface AppSettings {
   /** Title-bar tab keys the user has hidden. Toggleable from View settings.
    *  'settings' and 'close' are never hidden. */
   hiddenTabs?: HideableTabKey[]
+  /** When true, enables developer tooling (e.g. Load unpacked plugin button). */
+  developerMode?: boolean
+  /** Optional override for the plugin registry URL. Defaults to the
+   *  filterscalpel/scalpel-plugins-registry repo when undefined. Set to a
+   *  file:// URL or a personal-repo raw URL for local plugin testing. */
+  pluginRegistryUrl?: string
 }
 
 /** Title-bar tab keys the user is allowed to hide via View settings. Settings + Close

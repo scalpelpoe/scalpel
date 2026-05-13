@@ -3,6 +3,12 @@ export const CHANGELOG: { version: string; notes: string[] }[] = [
     version: 'Unreleased',
     notes: [
       'Added optional "Use Current Zone" toggle in the FilterPanel hero. Reads zone level from Path of Exile log file and applies to the displayed item when enabled. Hidden in towns and hideouts.',
+      'Added plugin system foundation. Third-party plugins can be installed manually by dropping their files into userData/plugins/<id>/. Each plugin renders as a tab in the overlay and can react to current-item events. Store-based browse and install flow coming in a later release.',
+      'Plugin runtime: plugins can now persist their own settings via ctx.storage, register hotkeys that appear alongside other app macros, and surface crash banners when they fail. Developer mode in Settings adds a "Load unpacked plugin..." button for plugin authors testing locally.',
+      'Plugin SDK: pure utility helpers are now forwarded through @filterscalpel/plugin-sdk. Plugins can call isClusterJewel, isSkillGem, externalLinkUrl, ninjaLinkUrl, formatPrice, formatDust, compareVersions, versionMatches, getGameFeatures, getTrendDirection, isTownOrHideout, and defaultPoeItem without reimplementing them. Components, stateful hooks, and design tokens come in a later release.',
+      'Plugin SDK: added getDustInfo, findRelated, RARITY_COLORS, and the useCurrentZone React hook. Plugin trees that import useCurrentZone subscribe to the same zone-change events Scalpel uses internally.',
+      'Plugins tab in Settings: browse and install third-party plugins from the curated registry, uninstall installed ones. Both actions take effect after a Scalpel restart. Plugin authors who want a different registry source (a personal repo, a local file, etc.) can set AppSettings.pluginRegistryUrl in the config.',
+      'Plugin SDK: forwarded stateless React components (Toggle, Notice, ErrorBanner) and added tokens.css + a Tailwind preset for plugin author dev environments.',
     ],
   },
   {

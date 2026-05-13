@@ -11,8 +11,9 @@
   },
   "main": "out/main/index.js",
   "scripts": {
-    "dev": "node scripts/sync-regex-data.js & electron-vite dev",
-    "build": "electron-vite build",
+    "dev": "npm run build:internal-assets && node scripts/sync-regex-data.js & electron-vite dev",
+    "build": "npm run build:internal-assets && electron-vite build",
+    "build:internal-assets": "node scripts/build-internal-assets.mjs",
     "sync-regex": "node scripts/sync-regex-data.js",
     "sync-prefabs": "node scripts/sync-prefabs.js",
     "dist:win": "npm run build && electron-builder --win --x64",
@@ -107,6 +108,11 @@
       {
         "from": "resources/icon.ico",
         "to": "icon.ico"
+      },
+      {
+        "from": "out/scalpel-internal",
+        "to": "scalpel-internal",
+        "filter": ["**/*.js"]
       }
     ],
     "asar": true,

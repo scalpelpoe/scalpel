@@ -5,14 +5,7 @@ import uniqueInfoPoe1 from '../../../shared/data/items/unique-info.json'
 import uniqueInfoPoe2 from '../../../shared/data/items/unique-info-poe2.json'
 import { getItemClasses } from '../../../shared/data/items/item-classes'
 
-export const RARITY_COLORS: Record<string, string> = {
-  Normal: '#c8c8c8',
-  Magic: '#8888ff',
-  Rare: '#ffff77',
-  Unique: '#af6025',
-  Gem: '#1ba29b',
-  Divination: '#00BAFE',
-}
+export { RARITY_COLORS } from '../../../shared/rarity-colors'
 
 export const IP = {
   theme: 'two-tone' as const,

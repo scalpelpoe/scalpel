@@ -38,6 +38,10 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
   useEffect(() => {
     window.api.getRegexPresets().then(setPresets)
   }, [])
+  const [pluginHotkeys, setPluginHotkeys] = useState<Array<{ id: string; label: string }>>([])
+  useEffect(() => {
+    void window.api.pluginListRegisteredHotkeys().then(setPluginHotkeys)
+  }, [])
   const macroTags = getMacroTags(presets)
   const currentGame = usePoeVersion()
 
@@ -51,6 +55,14 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
   const visibleAppMacros = (settings.appMacros ?? [])
     .map((macro, i) => ({ macro, i }))
     .filter(({ macro }) => scopeAppliesTo(appMacroEffectiveScope(macro), currentGame))
+
+  const findPluginBinding = (id: string): { hotkey: string; index: number } | null => {
+    const macros = settings.appMacros ?? []
+    const action = `plugin:${id}`
+    const idx = macros.findIndex((m) => m.action === action)
+    if (idx < 0) return null
+    return { hotkey: macros[idx].hotkey ?? '', index: idx }
+  }
 
   return (
     <>
@@ -204,6 +216,35 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
               </div>
             )
           })}
+          {pluginHotkeys.length > 0 && (
+            <>
+              <div className="settings-section-title mt-2 text-[11px]">Plugin Hotkeys</div>
+              {pluginHotkeys.map((ph) => {
+                const existing = findPluginBinding(ph.id)
+                const action = `plugin:${ph.id}`
+                const setHotkey = (hotkey: string): void => {
+                  if (!tryHotkey(hotkey, { kind: 'appmacro', index: existing?.index ?? -1 })) return
+                  const macros = [...(settings.appMacros ?? [])]
+                  if (existing) {
+                    macros[existing.index] = { ...macros[existing.index], hotkey }
+                  } else {
+                    macros.push({ action, hotkey })
+                  }
+                  update('appMacros', macros)
+                }
+                return (
+                  <div key={ph.id} className="flex gap-[6px] items-center bg-black/15 rounded p-[5px]">
+                    <HotkeyRecorder
+                      value={existing?.hotkey ?? ''}
+                      onChange={setHotkey}
+                      className="w-[200px] shrink-0"
+                    />
+                    <span className="text-[11px] text-text-dim truncate">{ph.label}</span>
+                  </div>
+                )
+              })}
+            </>
+          )}
           <button
             onClick={() => {
               const used = new Set((settings.appMacros ?? []).map((m) => m.action))

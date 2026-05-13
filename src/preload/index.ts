@@ -633,8 +633,46 @@ export const api = {
      *  missed the original push. */
     requestShownState: (): void => ipcRenderer.send('whiteboard:request-shown-state'),
   },
+  // Plugins
+  listInstalledPlugins: (): Promise<
+    Array<{
+      manifest: import('../plugin-sdk/src/types').PluginManifest
+      entryUrl: string
+    }>
+  > => ipcRenderer.invoke('plugins:list-installed'),
+  pluginStorageGet: (pluginId: string, key: string): Promise<unknown> =>
+    ipcRenderer.invoke('plugins:storage-get', pluginId, key),
+  pluginStorageSet: (pluginId: string, key: string, value: unknown): Promise<void> =>
+    ipcRenderer.invoke('plugins:storage-set', pluginId, key, value),
+  pluginStorageDelete: (pluginId: string, key: string): Promise<void> =>
+    ipcRenderer.invoke('plugins:storage-delete', pluginId, key),
+  pluginStorageKeys: (pluginId: string): Promise<string[]> => ipcRenderer.invoke('plugins:storage-keys', pluginId),
+  pluginRegisterHotkey: (pluginId: string, label: string): Promise<void> =>
+    ipcRenderer.invoke('plugins:register-hotkey', pluginId, label),
+  pluginListRegisteredHotkeys: (): Promise<Array<{ id: string; label: string }>> =>
+    ipcRenderer.invoke('plugins:list-registered-hotkeys'),
+  pluginInstallUnpacked: (): Promise<{ ok: true; id: string } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('plugins:install-unpacked'),
+  pluginFetchRegistry: (): Promise<
+    { ok: true; snapshot: import('../shared/plugin-registry-types').RegistrySnapshot } | { ok: false; error: string }
+  > => ipcRenderer.invoke('plugins:fetch-registry'),
+  pluginInstallFromRegistry: (
+    entry: import('../shared/plugin-registry-types').RegistryEntry,
+  ): Promise<{ ok: true; id: string } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('plugins:install-from-registry', entry),
+  pluginUninstall: (pluginId: string): Promise<{ ok: true } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('plugins:uninstall', pluginId),
+  onPluginMacro: (handler: (action: string) => void): (() => void) => {
+    const listener = (_: Electron.IpcRendererEvent, action: string): void => handler(action)
+    ipcRenderer.on('plugin-macro', listener)
+    return () => ipcRenderer.removeListener('plugin-macro', listener)
+  },
 }
 
 contextBridge.exposeInMainWorld('api', api)
+
+// Forward SCALPEL_DEBUG_LOG to the renderer as a boolean global so plugin
+// ctx.log() and other renderer-side gated logging can read it without IPC.
+contextBridge.exposeInMainWorld('__SCALPEL_DEBUG_LOG', Boolean(process.env.SCALPEL_DEBUG_LOG))
 
 export type Api = typeof api

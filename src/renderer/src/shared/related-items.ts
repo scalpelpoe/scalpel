@@ -8,7 +8,7 @@ export interface RelatedRef {
   category: 'base' | 'unique' | 'divination' | 'gem' | 'beast'
 }
 
-interface RelatedEntry {
+export interface RelatedEntry {
   query: RelatedRef[]
   items: RelatedRef[]
 }

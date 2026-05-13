@@ -1,4 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { PluginHost } from '../plugins/PluginHost'
+import { PluginTabHost } from '../plugins/PluginTabHost'
+import type { RegisteredTab } from '../plugins/PluginHost'
 import type { AppSettings, OverlayData, PoeItem, PriceInfo } from '../../../shared/types'
 import { isHideableTabKey } from '../../../shared/types'
 import type { ExternalLinkTarget } from '../../../shared/external-link'
@@ -30,19 +33,9 @@ import { Clipboard } from '@icon-park/react'
 import { IP, initIconMap, initItemClassMaps, initUniquesByBase, mergeIconCache } from '../shared/constants'
 import { initManifest, getManifest } from '../shared/manifest'
 import { prettyHotkey } from '../components/settings'
-
-type View =
-  | 'idle'
-  | 'item'
-  | 'no-filter'
-  | 'no-item'
-  | 'setup'
-  | 'audit'
-  | 'tools'
-  | 'dust'
-  | 'divcards'
-  | 'pricecheck'
-  | 'regex'
+import { PluginErrorBanner } from '../plugins/PluginErrorBanner'
+import type { BrokenPlugin } from '../plugins/PluginErrorBanner'
+import type { View } from './view'
 
 const PANEL_WIDTH = 540
 const PANEL_TOP = 8
@@ -183,6 +176,44 @@ export default function App(): JSX.Element {
   const [mergeMessage, setMergeMessage] = useState<string | null>(null)
 
   const currentZone = useCurrentZone()
+
+  const [pluginTabs, setPluginTabs] = useState<RegisteredTab[]>([])
+
+  const onSubscribeCurrentItem = useCallback(
+    (h: (i: PoeItem) => void): (() => void) => window.api.onOverlayData((d) => h(d.item)),
+    [],
+  )
+  const onSubscribeCurrentZone = useCallback(
+    (h: (z: import('../../../shared/types').Zone) => void): (() => void) =>
+      window.api.onZoneChanged((z) => {
+        if (z !== null) h(z)
+      }),
+    [],
+  )
+  const onSubscribeLeagueChange = useCallback(
+    (h: (l: string) => void): (() => void) =>
+      window.api.onSettingUpdated((k, v) => {
+        if (k === 'league' && typeof v === 'string') h(v)
+      }),
+    [],
+  )
+
+  const [brokenPlugins, setBrokenPlugins] = useState<BrokenPlugin[]>([])
+
+  const handlePluginError = useCallback((id: string, err: Error): void => {
+    setBrokenPlugins((prev) => {
+      if (prev.find((p) => p.id === id)) return prev
+      return [...prev, { id, message: err.message }]
+    })
+    const dbg = (globalThis as unknown as { __SCALPEL_DEBUG_LOG?: boolean }).__SCALPEL_DEBUG_LOG
+    if (dbg) {
+      console.warn('[plugin error]', id, err)
+    }
+  }, [])
+
+  const dismissBrokenPlugin = useCallback((id: string): void => {
+    setBrokenPlugins((prev) => prev.filter((p) => p.id !== id))
+  }, [])
 
   const handleToggleZoneAreaLevel = useCallback((next: boolean) => {
     setSettings((prev) => (prev ? { ...prev, useCurrentZoneAreaLevel: next } : prev))
@@ -589,7 +620,8 @@ export default function App(): JSX.Element {
     view === 'pricecheck' ||
     view === 'item' ||
     view === 'regex' ||
-    view === 'audit'
+    view === 'audit' ||
+    view.startsWith('plugin:')
 
   // Sister overlay pinned immediately adjacent to the main panel on the opposite side
   // of where the main panel is mounted.
@@ -778,6 +810,7 @@ export default function App(): JSX.Element {
               features={features}
               hasPriceCheckData={!!priceCheckData}
               hiddenTabs={new Set((settings?.hiddenTabs ?? []).filter(isHideableTabKey))}
+              pluginTabs={pluginTabs.map((t) => ({ pluginId: t.pluginId, label: t.label, icon: t.icon }))}
               onSetView={setView}
               onClose={close}
               onMouseDown={handleTitleBarMouseDown}
@@ -836,6 +869,7 @@ export default function App(): JSX.Element {
                 (isFullHeightView ? 'flex flex-col flex-1 overflow-hidden' : 'flex-1 overflow-y-auto p-3') + ' relative'
               }
             >
+              <PluginErrorBanner broken={brokenPlugins} onDismiss={dismissBrokenPlugin} />
               {/* Settings error banner (hotkey collisions etc) */}
               <ErrorBanner message={settingsError} tone={settingsErrorTone} />
               {view === 'setup' && settings && (
@@ -952,10 +986,30 @@ export default function App(): JSX.Element {
                   onSelectItem={() => setView('item')}
                 />
               )}
+              {view.startsWith('plugin:') && (
+                <PluginTabHost
+                  pluginTabs={pluginTabs}
+                  activeId={view.slice('plugin:'.length)}
+                  onPluginError={handlePluginError}
+                />
+              )}
             </div>
           </div>
         </div>
       </div>
+      <PluginHost
+        ready={poeVersion !== null}
+        poeVersion={poeVersion ?? 1}
+        league={settings?.league ?? ''}
+        currentItem={overlayData?.item ?? null}
+        currentZone={currentZone}
+        onSubscribeCurrentItem={onSubscribeCurrentItem}
+        onSubscribeCurrentZone={onSubscribeCurrentZone}
+        onSubscribeLeagueChange={onSubscribeLeagueChange}
+        onOpenExternal={(url) => window.api.openExternal(url)}
+        onTabsChange={setPluginTabs}
+        onPluginError={handlePluginError}
+      />
     </PoeVersionProvider>
   )
 }
