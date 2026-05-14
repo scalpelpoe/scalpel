@@ -9,7 +9,7 @@ import {
   searchMapsByRegex,
 } from '../trade/trade'
 import type { StatFilter, TradeResult, BulkExchangeResult } from '../trade/trade'
-import type { AppSettings } from '../../shared/types'
+import type { AppSettings, AuthResult } from '../../shared/types'
 import { POE_WEBSITE, getTradeUrls } from '../../shared/endpoints'
 import { getPoeVersion } from '../game-state'
 
@@ -122,6 +122,65 @@ async function clickTradeButton(
   return clicked
 }
 
+function fetchPoeProfile(): Promise<AuthResult> {
+  return new Promise<AuthResult>((resolve) => {
+    const request = net.request({
+      url: `${POE_WEBSITE}/api/profile`,
+      method: 'GET',
+      useSessionCookies: true,
+    })
+    request.setHeader('Accept', 'application/json')
+    request.setHeader('User-Agent', app.userAgentFallback)
+
+    let settled = false
+    const timeout = setTimeout(() => {
+      if (settled) return
+      settled = true
+      request.abort()
+      console.error('[auth] profile check timed out')
+      resolve({ loggedIn: false })
+    }, 5000)
+
+    let data = ''
+    request.on('response', (response) => {
+      if (response.statusCode !== 200) {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        resolve({ loggedIn: false })
+        return
+      }
+      response.on('data', (chunk: Buffer) => {
+        data += chunk.toString()
+      })
+      response.on('end', () => {
+        if (settled) return
+        settled = true
+        clearTimeout(timeout)
+        try {
+          const profile = JSON.parse(data) as { name?: string }
+          if (profile?.name) {
+            resolve({ loggedIn: true, accountName: profile.name })
+          } else {
+            console.warn('[auth] profile response has no name field, raw:', data)
+            resolve({ loggedIn: false })
+          }
+        } catch (e) {
+          console.error('[auth] profile JSON parse failed:', e, 'raw:', data)
+          resolve({ loggedIn: false })
+        }
+      })
+    })
+    request.on('error', () => {
+      if (settled) return
+      settled = true
+      clearTimeout(timeout)
+      resolve({ loggedIn: false })
+    })
+    request.end()
+  })
+}
+
 export function register(store: Store<AppSettings>): void {
   ipcMain.handle(
     'trade-search',
@@ -212,56 +271,11 @@ export function register(store: Store<AppSettings>): void {
     })
   })
 
-  ipcMain.handle('poe-check-auth', async (): Promise<{ loggedIn: boolean; accountName?: string }> => {
+  ipcMain.handle('poe-check-auth', async (): Promise<AuthResult> => {
     try {
       const cookies = await session.defaultSession.cookies.get({ domain: 'pathofexile.com', name: 'POESESSID' })
       if (cookies.length === 0) return { loggedIn: false }
-
-      return await new Promise<{ loggedIn: boolean; accountName?: string }>((resolve) => {
-        const request = net.request({
-          url: `${POE_WEBSITE}/api/profile`,
-          method: 'GET',
-          useSessionCookies: true,
-        })
-        request.setHeader('Accept', 'application/json')
-        request.setHeader('User-Agent', app.userAgentFallback)
-
-        const timeout = setTimeout(() => {
-          try {
-            request.abort()
-          } catch {
-            /* already done */
-          }
-          console.error('[auth] profile check timed out')
-          resolve({ loggedIn: false })
-        }, 5000)
-
-        let data = ''
-        request.on('response', (response) => {
-          if (response.statusCode !== 200) {
-            clearTimeout(timeout)
-            resolve({ loggedIn: false })
-            return
-          }
-          response.on('data', (chunk: Buffer) => {
-            data += chunk.toString()
-          })
-          response.on('end', () => {
-            clearTimeout(timeout)
-            try {
-              const profile = JSON.parse(data) as { name?: string }
-              resolve(profile?.name ? { loggedIn: true, accountName: profile.name } : { loggedIn: false })
-            } catch {
-              resolve({ loggedIn: false })
-            }
-          })
-        })
-        request.on('error', () => {
-          clearTimeout(timeout)
-          resolve({ loggedIn: false })
-        })
-        request.end()
-      })
+      return await fetchPoeProfile()
     } catch {
       return { loggedIn: false }
     }

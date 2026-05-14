@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type {
   AppSettings,
+  AuthResult,
   FilterBlock,
   FilterListEntry,
   FilterVersion,
@@ -468,7 +469,7 @@ export const api = {
   whisperSeller: (queryId: string, listingId: string, league: string): Promise<void> =>
     ipcRenderer.invoke('whisper-seller', queryId, listingId, league),
   poeLogin: (): Promise<void> => ipcRenderer.invoke('poe-login'),
-  poeCheckAuth: (): Promise<{ loggedIn: boolean; accountName?: string }> => ipcRenderer.invoke('poe-check-auth'),
+  poeCheckAuth: (): Promise<AuthResult> => ipcRenderer.invoke('poe-check-auth'),
   poeLogout: (): Promise<void> => ipcRenderer.invoke('poe-logout'),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('open-external', url),
   onGameBounds: (

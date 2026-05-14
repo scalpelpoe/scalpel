@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-
-type AuthState = { loggedIn: boolean; accountName?: string }
+import type { AuthResult } from '../../../../shared/types'
 
 export function PoeLoginButton(): JSX.Element {
-  const [auth, setAuth] = useState<AuthState | null>(null)
+  const [auth, setAuth] = useState<AuthResult | null>(null)
 
   const checkAuth = (): void => {
     window.api.poeCheckAuth().then(setAuth)

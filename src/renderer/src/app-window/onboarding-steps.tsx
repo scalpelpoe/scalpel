@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AppSettings } from '../../../shared/types'
+import type { AppSettings, AuthResult } from '../../../shared/types'
 import { getGameFeatures } from '../../../shared/game-features'
 import poeFilterSettingImg from '../assets/other/poe-filter-setting.png'
 import poe1Logo from '../assets/other/poe1-logo.png'
@@ -291,7 +291,7 @@ export function TradeLoginStep({
   stepNum: number
   totalSteps: number
 }): JSX.Element {
-  const [auth, setAuth] = useState<{ loggedIn: boolean; accountName?: string } | null>(null)
+  const [auth, setAuth] = useState<AuthResult | null>(null)
 
   useEffect(() => {
     window.api.poeCheckAuth().then(setAuth)

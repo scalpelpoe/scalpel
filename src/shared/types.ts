@@ -540,3 +540,5 @@ export interface Manifest {
    *  Used to build correct deep-links from tagged price entries. */
   poe2NinjaCategories: Record<string, string>
 }
+
+export type AuthResult = { loggedIn: true; accountName: string } | { loggedIn: false }
