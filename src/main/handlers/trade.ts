@@ -1,4 +1,4 @@
-import { BrowserWindow, ipcMain, session } from 'electron'
+import { app, BrowserWindow, ipcMain, net, session } from 'electron'
 import Store from 'electron-store'
 import {
   searchTrade,
@@ -178,39 +178,90 @@ export function register(store: Store<AppSettings>): void {
   })
 
   ipcMain.handle('poe-login', () => {
-    const LOGIN_TITLE = 'Login'
-    const loginWindow = new BrowserWindow({
-      width: 800,
-      height: 700,
-      title: LOGIN_TITLE,
-      autoHideMenuBar: true,
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-      },
-    })
-    // The PoE login page sets document.title to "Path of Exile", which our overlay
-    // matches by-title and would incorrectly attach to this login popup. Suppress the
-    // OS title update and re-assert our own title in case preventDefault alone isn't
-    // enough on some Windows setups.
-    loginWindow.webContents.on('page-title-updated', (event) => {
-      event.preventDefault()
-      loginWindow.setTitle(LOGIN_TITLE)
-    })
-    loginWindow.loadURL(`${POE_WEBSITE}/login`)
+    return new Promise<void>((resolve) => {
+      const LOGIN_TITLE = 'Login'
+      const loginWindow = new BrowserWindow({
+        width: 800,
+        height: 700,
+        title: LOGIN_TITLE,
+        autoHideMenuBar: true,
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true,
+        },
+      })
+      // The PoE login page sets document.title to "Path of Exile", which our overlay
+      // matches by-title and would incorrectly attach to this login popup. Suppress the
+      // OS title update and re-assert our own title in case preventDefault alone isn't
+      // enough on some Windows setups.
+      loginWindow.webContents.on('page-title-updated', (event) => {
+        event.preventDefault()
+        loginWindow.setTitle(LOGIN_TITLE)
+      })
+      loginWindow.loadURL(`${POE_WEBSITE}/login`)
 
-    // Close window when user navigates to the account page (login complete)
-    loginWindow.webContents.on('did-navigate', (_event, url) => {
-      if (url.includes('pathofexile.com/my-account') || url === `${POE_WEBSITE}/`) {
-        loginWindow.close()
-      }
+      // Close window when user navigates to the account page (login complete)
+      loginWindow.webContents.on('did-navigate', (_event, url) => {
+        if (url.includes('pathofexile.com/my-account') || url === `${POE_WEBSITE}/`) {
+          loginWindow.close()
+        }
+      })
+
+      // Resolve after the window closes (user logged in or closed without logging in)
+      loginWindow.on('closed', () => resolve())
     })
   })
 
   ipcMain.handle('poe-check-auth', async (): Promise<{ loggedIn: boolean; accountName?: string }> => {
     try {
       const cookies = await session.defaultSession.cookies.get({ domain: 'pathofexile.com', name: 'POESESSID' })
-      return { loggedIn: cookies.length > 0 }
+      if (cookies.length === 0) return { loggedIn: false }
+
+      return await new Promise<{ loggedIn: boolean; accountName?: string }>((resolve) => {
+        const request = net.request({
+          url: `${POE_WEBSITE}/api/profile`,
+          method: 'GET',
+          useSessionCookies: true,
+        })
+        request.setHeader('Accept', 'application/json')
+        request.setHeader('User-Agent', app.userAgentFallback)
+
+        const timeout = setTimeout(() => {
+          try {
+            request.abort()
+          } catch {
+            /* already done */
+          }
+          console.error('[auth] profile check timed out')
+          resolve({ loggedIn: false })
+        }, 5000)
+
+        let data = ''
+        request.on('response', (response) => {
+          if (response.statusCode !== 200) {
+            clearTimeout(timeout)
+            resolve({ loggedIn: false })
+            return
+          }
+          response.on('data', (chunk: Buffer) => {
+            data += chunk.toString()
+          })
+          response.on('end', () => {
+            clearTimeout(timeout)
+            try {
+              const profile = JSON.parse(data) as { name?: string }
+              resolve(profile?.name ? { loggedIn: true, accountName: profile.name } : { loggedIn: false })
+            } catch {
+              resolve({ loggedIn: false })
+            }
+          })
+        })
+        request.on('error', () => {
+          clearTimeout(timeout)
+          resolve({ loggedIn: false })
+        })
+        request.end()
+      })
     } catch {
       return { loggedIn: false }
     }
