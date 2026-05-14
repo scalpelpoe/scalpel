@@ -1,26 +1,28 @@
 import { useEffect, useState } from 'react'
 
+type AuthState = { loggedIn: boolean; accountName?: string }
+
 export function PoeLoginButton(): JSX.Element {
-  const [loggedIn, setLoggedIn] = useState<boolean | null>(null)
+  const [auth, setAuth] = useState<AuthState | null>(null)
 
   const checkAuth = (): void => {
-    window.api.poeCheckAuth().then((r) => setLoggedIn(r.loggedIn))
+    window.api.poeCheckAuth().then(setAuth)
   }
 
   useEffect(() => {
     checkAuth()
   }, [])
 
-  if (loggedIn === null) return <span className="text-[11px] text-text-dim">Checking...</span>
+  if (auth === null) return <span className="text-[11px] text-text-dim">Checking...</span>
 
-  if (loggedIn) {
+  if (auth.loggedIn) {
     return (
       <div className="setting-box">
-        <span className="value text-accent">Logged in</span>
+        <span className="value text-accent">Logged in as {auth.accountName}</span>
         <button
-          className="primary"
+          className="text-[11px] text-text-dim shrink-0 ml-2 px-3 py-[5px]"
           onClick={() => {
-            window.api.poeLogout().then(() => setLoggedIn(false))
+            window.api.poeLogout().then(() => setAuth({ loggedIn: false }))
           }}
         >
           Logout
@@ -35,9 +37,7 @@ export function PoeLoginButton(): JSX.Element {
       <button
         className="primary"
         onClick={() => {
-          window.api.poeLogin().then(() => {
-            setTimeout(checkAuth, 2000)
-          })
+          window.api.poeLogin().then(() => checkAuth())
         }}
       >
         Login
