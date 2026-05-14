@@ -381,6 +381,30 @@ async function ensureCorrectGameForHotkey(store: Store<AppSettings>): Promise<bo
   return false
 }
 
+/**
+ * Core copy-and-evaluate flow shared by the main hotkey and the plugin IPC handler.
+ * Captures an item from the clipboard, dispatches it to the filter/price-check pipeline,
+ * shows the overlay, and returns the parsed item (or null when nothing recognisable is
+ * on the clipboard). Callers that want a specific overlay view should send the appropriate
+ * IPC message before or after calling this.
+ */
+export async function runMainHotkeyFlow(store: Store<AppSettings>, isElevated: () => boolean): Promise<PoeItem | null> {
+  const currentFilter = getCurrentFilter()
+  if (!currentFilter) {
+    getOverlayWindow()?.webContents.send('no-filter-loaded')
+    showOverlay()
+    return null
+  }
+
+  const item = await captureItemFromClipboard(isElevated)
+  if (!item) return null
+
+  evaluateAndSend(item)
+  preloadPriceCheck(item, store)
+  showOverlay()
+  return item
+}
+
 export function createHotkeyHandler(store: Store<AppSettings>, isElevated: () => boolean): () => Promise<void> {
   return async function onHotkeyFired(): Promise<void> {
     if (hotkeyProcessing) return
@@ -390,23 +414,11 @@ export function createHotkeyHandler(store: Store<AppSettings>, isElevated: () =>
       if (!(await ensureCorrectGameForHotkey(store))) return
       lastCursorX = screen.getCursorScreenPoint().x
 
-      const currentFilter = getCurrentFilter()
-      if (!currentFilter) {
-        getOverlayWindow()?.webContents.send('no-filter-loaded')
-        showOverlay()
-        return
-      }
-
-      const item = await captureItemFromClipboard(isElevated)
-      if (!item) return
-
       // Flag the next overlay-data as "came from the filter hotkey" so the renderer
       // forces the item view, even when the user was on pricecheck/audit with the
       // same item already loaded (cache hit -> no view change without this).
       getOverlayWindow()?.webContents.send('filter-hotkey-open')
-      evaluateAndSend(item)
-      preloadPriceCheck(item, store)
-      showOverlay()
+      await runMainHotkeyFlow(store, isElevated)
     } catch (err) {
       console.error('[hotkey] Error during hotkey processing:', err)
     } finally {

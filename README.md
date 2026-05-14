@@ -16,8 +16,12 @@ Path of Exile's first ever fourth-party tool. An overlay to edit your filter, pr
 - **Macros** - Create chat macros for hideout etc.
 - **Cheat Sheets** - Use prefabs (PoE1 Leagues, PoE2 Leveling Guide) or add your own. Or just add pictures of Greg.
 - **View in Wiki/PoEDB/Ninja** - Don't like what Scalpel has to say about an item? Try the other sites.
-- **Plugins (beta)** - Third-party plugins show up as overlay tabs. Browse and install from Settings → Plugins, or build your own. See [PLUGINS.md](PLUGINS.md) for the authoring guide.
+- **Plugins (beta)** - Browse and install from Settings → Plugins, or build your own. 
 - **And more** - Scrollable stash tabs, filter checkpoints etc.
+
+## Plugins
+
+See [PLUGINS.md](PLUGINS.md) for information on how to build a plugin. Please join Discord if you do - I need input on how to help you make better plugins.
 
 ## Requirements
 

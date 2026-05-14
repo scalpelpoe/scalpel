@@ -1,4 +1,4 @@
-/* Scalpel design tokens. Plugin authors `import '@filterscalpel/plugin-sdk/tokens.css'`
+/* Scalpel design tokens. Plugin authors `import '@scalpelpoe/plugin-sdk/tokens.css'`
    in their own build pipeline (Storybook, isolated component tests, etc.) to get
    the same CSS variables Scalpel sets on :root at runtime.
 

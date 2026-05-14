@@ -42,6 +42,15 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
   useEffect(() => {
     void window.api.pluginListRegisteredHotkeys().then(setPluginHotkeys)
   }, [])
+  // Installed plugin manifests, used to render the plugin's display name in the
+  // hotkey dropdown rather than the hotkey-action label.
+  const [installedPlugins, setInstalledPlugins] = useState<Array<{ id: string; name: string }>>([])
+  useEffect(() => {
+    void window.api
+      .listInstalledPlugins()
+      .then((list) => setInstalledPlugins(list.map((p) => ({ id: p.manifest.id, name: p.manifest.name }))))
+  }, [])
+  const getPluginName = (id: string): string => installedPlugins.find((p) => p.id === id)?.name ?? id
   const macroTags = getMacroTags(presets)
   const currentGame = usePoeVersion()
 
@@ -52,17 +61,19 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
     .filter(({ cmd }) => scopeAppliesTo(chatCommandEffectiveScope(cmd), currentGame))
 
   // Build filtered app macro entries, retaining original indices for callbacks.
+  // Plugin-prefixed actions are surfaced in their own Plugin Hotkeys section
+  // below; the Scalpel Macros section only renders built-in app macros.
   const visibleAppMacros = (settings.appMacros ?? [])
     .map((macro, i) => ({ macro, i }))
+    .filter(({ macro }) => !macro.action.startsWith('plugin:'))
     .filter(({ macro }) => scopeAppliesTo(appMacroEffectiveScope(macro), currentGame))
 
-  const findPluginBinding = (id: string): { hotkey: string; index: number } | null => {
-    const macros = settings.appMacros ?? []
-    const action = `plugin:${id}`
-    const idx = macros.findIndex((m) => m.action === action)
-    if (idx < 0) return null
-    return { hotkey: macros[idx].hotkey ?? '', index: idx }
-  }
+  // Plugin-hotkey rows: entries in appMacros whose action begins with 'plugin:'.
+  const visiblePluginMacros = (settings.appMacros ?? [])
+    .map((macro, i) => ({ macro, i }))
+    .filter(({ macro }) => macro.action.startsWith('plugin:'))
+  const pluginIdsInUse = new Set(visiblePluginMacros.map(({ macro }) => macro.action.slice('plugin:'.length)))
+  const availablePluginsForNewRow = pluginHotkeys.filter((p) => !pluginIdsInUse.has(p.id))
 
   return (
     <>
@@ -124,16 +135,83 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
         </div>
       </section>
 
-      {/* Other Macros */}
-      <div className="settings-section-title mt-3">Other Macros</div>
-      <SettingToggleBox
-        label="Stash tab scrolling (Ctrl + Scroll Wheel)"
-        checked={settings.stashScrollEnabled ?? false}
-        onChange={(val) => update('stashScrollEnabled', val)}
-      />
+      {/* Plugin Hotkeys: user-managed bindings to plugin-registered hotkey
+       *  actions. Each row picks a plugin from the dropdown and records its
+       *  key chord. The Scalpel Macros UI pattern (dropdown + remove + add
+       *  button) keeps the surface consistent with the section above. */}
+      {(visiblePluginMacros.length > 0 || availablePluginsForNewRow.length > 0) && (
+        <>
+          <div className="settings-section-title mt-3">Plugin Hotkeys</div>
+          <section>
+            <div className="flex flex-col gap-2">
+              {visiblePluginMacros.map(({ macro, i }) => {
+                const pluginId = macro.action.slice('plugin:'.length)
+                const usedElsewhere = new Set(
+                  visiblePluginMacros
+                    .filter(({ i: j }) => j !== i)
+                    .map(({ macro: m }) => m.action.slice('plugin:'.length)),
+                )
+                const optionsForThisRow = pluginHotkeys.filter((p) => p.id === pluginId || !usedElsewhere.has(p.id))
+                const orphan = !pluginHotkeys.some((p) => p.id === pluginId)
+                return (
+                  <div key={i} className="flex gap-[6px] items-center bg-black/15 rounded p-[5px] min-w-0">
+                    <HotkeyRecorder
+                      value={macro.hotkey}
+                      onChange={(hotkey) => {
+                        if (!tryHotkey(hotkey, { kind: 'appmacro', index: i })) return
+                        const macros = [...(settings.appMacros ?? [])]
+                        macros[i] = { ...macros[i], hotkey }
+                        update('appMacros', macros)
+                      }}
+                      className="w-[200px] shrink-0"
+                    />
+                    <select
+                      value={macro.action}
+                      onChange={(e) => {
+                        const macros = [...(settings.appMacros ?? [])]
+                        macros[i] = { ...macros[i], action: e.target.value }
+                        update('appMacros', macros)
+                      }}
+                      className="text-[11px] flex-1 min-w-0 rounded h-[34px] box-border"
+                      style={{ padding: '4px 24px 4px 8px' }}
+                    >
+                      {orphan && <option value={macro.action}>{`${getPluginName(pluginId)} (not loaded)`}</option>}
+                      {optionsForThisRow.map((p) => (
+                        <option key={p.id} value={`plugin:${p.id}`}>
+                          {getPluginName(p.id)}
+                        </option>
+                      ))}
+                    </select>
+                    <RemoveButton
+                      onClick={() =>
+                        update(
+                          'appMacros',
+                          (settings.appMacros ?? []).filter((_, j) => j !== i),
+                        )
+                      }
+                    />
+                  </div>
+                )
+              })}
+              {availablePluginsForNewRow.length > 0 && (
+                <button
+                  onClick={() => {
+                    const next = availablePluginsForNewRow[0]
+                    if (!next) return
+                    update('appMacros', [...(settings.appMacros ?? []), { action: `plugin:${next.id}`, hotkey: '' }])
+                  }}
+                  className="text-[11px] text-text-dim self-start px-3 py-1.5"
+                >
+                  + Add Plugin Hotkey
+                </button>
+              )}
+            </div>
+          </section>
+        </>
+      )}
 
-      {/* App Macros */}
-      <div className="settings-section-title mt-3">App Macros</div>
+      {/* Scalpel Macros */}
+      <div className="settings-section-title mt-3">Scalpel Macros</div>
       <section>
         <div className="flex flex-col gap-2">
           {visibleAppMacros.map(({ macro, i }) => {
@@ -216,35 +294,6 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
               </div>
             )
           })}
-          {pluginHotkeys.length > 0 && (
-            <>
-              <div className="settings-section-title mt-2 text-[11px]">Plugin Hotkeys</div>
-              {pluginHotkeys.map((ph) => {
-                const existing = findPluginBinding(ph.id)
-                const action = `plugin:${ph.id}`
-                const setHotkey = (hotkey: string): void => {
-                  if (!tryHotkey(hotkey, { kind: 'appmacro', index: existing?.index ?? -1 })) return
-                  const macros = [...(settings.appMacros ?? [])]
-                  if (existing) {
-                    macros[existing.index] = { ...macros[existing.index], hotkey }
-                  } else {
-                    macros.push({ action, hotkey })
-                  }
-                  update('appMacros', macros)
-                }
-                return (
-                  <div key={ph.id} className="flex gap-[6px] items-center bg-black/15 rounded p-[5px]">
-                    <HotkeyRecorder
-                      value={existing?.hotkey ?? ''}
-                      onChange={setHotkey}
-                      className="w-[200px] shrink-0"
-                    />
-                    <span className="text-[11px] text-text-dim truncate">{ph.label}</span>
-                  </div>
-                )
-              })}
-            </>
-          )}
           <button
             onClick={() => {
               const used = new Set((settings.appMacros ?? []).map((m) => m.action))
@@ -259,10 +308,18 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
             }}
             className="text-[11px] text-text-dim self-start px-3 py-1.5"
           >
-            + Add App Macro
+            + Add Scalpel Macro
           </button>
         </div>
       </section>
+
+      {/* Other Macros */}
+      <div className="settings-section-title mt-3">Other Macros</div>
+      <SettingToggleBox
+        label="Stash tab scrolling (Ctrl + Scroll Wheel)"
+        checked={settings.stashScrollEnabled ?? false}
+        onChange={(val) => update('stashScrollEnabled', val)}
+      />
     </>
   )
 }

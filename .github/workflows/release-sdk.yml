@@ -1,0 +1,52 @@
+name: Release SDK
+
+# Publishes @scalpelpoe/plugin-sdk to npm when a tag like `sdk-v0.2.0` is pushed.
+# The SDK is types-only: dist/index.d.ts (bundled declarations) + dist/index.js
+# (runtime stub). The actual SDK runtime lives in Scalpel and is served via the
+# scalpel-internal://sdk.js custom protocol; this published package is just the
+# author-facing types contract.
+
+on:
+  push:
+    tags:
+      - 'sdk-v*'
+
+permissions:
+  contents: read
+  id-token: write # required for npm provenance
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: src/plugin-sdk
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Verify tag matches package.json version
+        shell: bash
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION="${GITHUB_REF_NAME#sdk-v}"
+          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME implies version $TAG_VERSION but package.json has $PKG_VERSION" >&2
+            exit 1
+          fi
+          echo "Publishing @scalpelpoe/plugin-sdk@$PKG_VERSION"
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Build
+        run: npm run build
+
+      - name: Publish to npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --provenance --access public

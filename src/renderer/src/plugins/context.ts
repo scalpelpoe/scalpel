@@ -44,6 +44,8 @@ export function createPluginContext(deps: PluginContextFactoryDeps): ScalpelPlug
       keys: (): Promise<string[]> => deps.storage.keys(),
     },
     openExternal: deps.openExternal,
+    openTab: () => deps.openTab(deps.pluginId),
+    copyAndEvaluateItem: () => deps.copyAndEvaluateItem(),
     log: (...args: unknown[]) => {
       if (DEBUG()) {
         // eslint-disable-next-line no-console

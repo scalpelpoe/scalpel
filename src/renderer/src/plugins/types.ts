@@ -26,4 +26,6 @@ export type PluginContextFactoryDeps = {
     },
   ) => void
   registerHotkey: (pluginId: string, opts: { label: string }, handler: () => void) => void
+  openTab: (pluginId: string) => void
+  copyAndEvaluateItem: () => Promise<import('../../../shared/types').PoeItem | null>
 }

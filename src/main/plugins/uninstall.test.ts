@@ -76,4 +76,29 @@ describe('uninstallPlugin', () => {
     const r = uninstallPlugin('../../etc/passwd')
     expect(r.ok).toBe(false)
   })
+
+  it('evicts the storage cache so a reinstall does not flush stale data', async () => {
+    const storageFile = join(TEST_USER_DATA, 'plugins', 'hello-world', 'storage.json')
+    mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'installed.json'), JSON.stringify(['hello-world']))
+    mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'hello-world', 'plugin.js'), 'X')
+    mockFs.files.set(storageFile, JSON.stringify({ key: 'value' }))
+
+    const { getValue, setValue } = await import('./storage')
+    const { uninstallPlugin } = await import('./uninstall')
+
+    // Warm the in-memory cache.
+    expect(getValue('hello-world', 'key')).toBe('value')
+
+    // Write a new value to mark the plugin dirty.
+    setValue('hello-world', 'key', 'stale')
+
+    // Uninstall should clear the cache and drop the pending flush.
+    uninstallPlugin('hello-world')
+
+    // Delete the on-disk file to confirm the dirty flush does not restore it.
+    mockFs.files.delete(storageFile)
+
+    // A fresh getValue should return null (no cache, no disk file).
+    expect(getValue('hello-world', 'key')).toBeNull()
+  })
 })

@@ -30,12 +30,27 @@ import { TierItemsSister } from './TierItemsSister'
 import { getActiveMatch } from '../shared/activeMatch'
 import { ItemSearchCombobox } from '../components/ItemSearchCombobox'
 import { Clipboard } from '@icon-park/react'
-import { IP, initIconMap, initItemClassMaps, initUniquesByBase, mergeIconCache } from '../shared/constants'
+import {
+  IP,
+  iconMap,
+  divCardArtMap,
+  initIconMap,
+  initItemClassMaps,
+  initUniquesByBase,
+  mergeIconCache,
+} from '../shared/constants'
 import { initManifest, getManifest } from '../shared/manifest'
 import { prettyHotkey } from '../components/settings'
 import { PluginErrorBanner } from '../plugins/PluginErrorBanner'
 import type { BrokenPlugin } from '../plugins/PluginErrorBanner'
 import type { View } from './view'
+
+/** Shape published to globalThis.__scalpel so the plugin SDK can read live
+ *  icon maps without importing renderer-internal modules directly. */
+interface ScalpelGlobal {
+  iconMap: Record<string, string>
+  divCardArtMap: Map<string, string>
+}
 
 const PANEL_WIDTH = 540
 const PANEL_TOP = 8
@@ -118,6 +133,14 @@ export default function App(): JSX.Element {
     initItemClassMaps(poeVersion)
     window.api.getIconCache().then(mergeIconCache)
     window.api.getManifest().then(initManifest)
+    // Publish iconMap and divCardArtMap to globalThis so the plugin SDK's
+    // forked ItemChip and getItemIcon can read the same live maps without
+    // importing renderer-internal modules. The maps are mutated in place by
+    // mergeIconCache, so this reference stays valid across cache updates.
+    ;(globalThis as unknown as { __scalpel?: ScalpelGlobal }).__scalpel = {
+      iconMap,
+      divCardArtMap,
+    }
   }, [poeVersion])
 
   // Live-merge newly-harvested icons as trade-fetch responses arrive so the
@@ -1008,7 +1031,15 @@ export default function App(): JSX.Element {
         onSubscribeLeagueChange={onSubscribeLeagueChange}
         onOpenExternal={(url) => window.api.openExternal(url)}
         onTabsChange={setPluginTabs}
+        onOpenPluginTab={(pluginId) => {
+          setView(`plugin:${pluginId}` as View)
+          void window.api.pluginShowOverlay()
+        }}
+        onCopyAndEvaluateItem={() => window.api.pluginTriggerMainHotkey()}
         onPluginError={handlePluginError}
+        onPluginUnloaded={(pluginId) => {
+          if (view === `plugin:${pluginId}`) setView('idle')
+        }}
       />
     </PoeVersionProvider>
   )

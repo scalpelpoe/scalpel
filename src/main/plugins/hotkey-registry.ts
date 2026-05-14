@@ -11,6 +11,10 @@ export function getRegisteredPluginHotkeys(): ReadonlyMap<string, { label: strin
   return registeredPluginHotkeys
 }
 
+export function removePluginHotkey(pluginId: string): void {
+  registeredPluginHotkeys.delete(pluginId)
+}
+
 /** Test-only: clear all in-memory registrations. */
 export function _resetForTests(): void {
   registeredPluginHotkeys.clear()

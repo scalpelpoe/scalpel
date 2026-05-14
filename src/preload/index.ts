@@ -662,11 +662,31 @@ export const api = {
     ipcRenderer.invoke('plugins:install-from-registry', entry),
   pluginUninstall: (pluginId: string): Promise<{ ok: true } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:uninstall', pluginId),
+  pluginUnregisterHotkey: (pluginId: string): Promise<void> =>
+    ipcRenderer.invoke('plugins:unregister-hotkey', pluginId),
   onPluginMacro: (handler: (action: string) => void): (() => void) => {
     const listener = (_: Electron.IpcRendererEvent, action: string): void => handler(action)
     ipcRenderer.on('plugin-macro', listener)
     return () => ipcRenderer.removeListener('plugin-macro', listener)
   },
+  onPluginInstalled: (
+    handler: (entry: { manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string }) => void,
+  ): (() => void) => {
+    const listener = (
+      _: Electron.IpcRendererEvent,
+      entry: { manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string },
+    ): void => handler(entry)
+    ipcRenderer.on('plugin-installed', listener)
+    return () => ipcRenderer.off('plugin-installed', listener)
+  },
+  onPluginUninstalled: (handler: (pluginId: string) => void): (() => void) => {
+    const listener = (_: Electron.IpcRendererEvent, pluginId: string): void => handler(pluginId)
+    ipcRenderer.on('plugin-uninstalled', listener)
+    return () => ipcRenderer.off('plugin-uninstalled', listener)
+  },
+  pluginTriggerMainHotkey: (): Promise<import('../shared/types').PoeItem | null> =>
+    ipcRenderer.invoke('plugins:trigger-main-hotkey'),
+  pluginShowOverlay: (): Promise<void> => ipcRenderer.invoke('plugins:show-overlay'),
 }
 
 contextBridge.exposeInMainWorld('api', api)

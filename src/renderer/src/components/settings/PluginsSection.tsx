@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { RegistryEntry, RegistrySnapshot } from '../../../../shared/plugin-registry-types'
 import type { PluginManifest } from '../../../../plugin-sdk/src/types'
+import { Button } from '../primitives/Button'
 
 interface Props {
   onError: (msg: string, tone?: 'error' | 'warn') => void
@@ -47,7 +48,7 @@ export function PluginsSection({ onError }: Props): JSX.Element {
       onError(`Install failed: ${r.error}`)
       return
     }
-    onError(`Installed "${entry.name}". Restart Scalpel to load it.`, 'warn')
+    onError(`Installed "${entry.name}".`, 'warn')
     void refreshInstalled()
   }
 
@@ -59,7 +60,7 @@ export function PluginsSection({ onError }: Props): JSX.Element {
       onError(`Uninstall failed: ${r.error}`)
       return
     }
-    onError(`Uninstalled "${name}". Restart Scalpel to remove the tab.`, 'warn')
+    onError(`Uninstalled "${name}".`, 'warn')
     void refreshInstalled()
   }
 
@@ -86,13 +87,14 @@ export function PluginsSection({ onError }: Props): JSX.Element {
                   </div>
                   <div className="text-[10px] text-zinc-500 truncate">by {manifest.author}</div>
                 </div>
-                <button
+                <Button
+                  variant="secondary"
+                  size="sm"
                   disabled={busyId === manifest.id}
                   onClick={() => void uninstall(manifest.id, manifest.name)}
-                  className="btn-bounce text-[11px] px-3 py-1 bg-zinc-700 hover:bg-zinc-600 rounded disabled:opacity-50"
                 >
                   Uninstall
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -123,13 +125,16 @@ export function PluginsSection({ onError }: Props): JSX.Element {
                   <div className="text-[10px] text-zinc-500">by {entry.author}</div>
                   <div className="text-[11px] mt-1">{entry.description}</div>
                 </div>
-                <button
-                  disabled={busyId === entry.id}
-                  onClick={() => void install(entry)}
-                  className="btn-bounce text-[11px] px-3 py-1 bg-accent text-[#171821] rounded disabled:opacity-50 self-start"
-                >
-                  {busyId === entry.id ? 'Installing...' : 'Install'}
-                </button>
+                <div className="self-start">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    disabled={busyId === entry.id}
+                    onClick={() => void install(entry)}
+                  >
+                    {busyId === entry.id ? 'Installing...' : 'Install'}
+                  </Button>
+                </div>
               </div>
             ))}
           </div>

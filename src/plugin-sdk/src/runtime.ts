@@ -1,5 +1,5 @@
 // Runtime entry for the SDK. Served at scalpel-internal://sdk.js when plugins
-// import '@filterscalpel/plugin-sdk'. Forwards Scalpel's pure utility helpers
+// import '@scalpelpoe/plugin-sdk'. Forwards Scalpel's pure utility helpers
 // so plugins don't reimplement them.
 //
 // Only PURE functions live here. State-bound helpers (iconMap, IPC-backed
@@ -41,3 +41,23 @@ export { useCurrentZone } from '../../renderer/src/shared/use-current-zone'
 export { Toggle } from '../../renderer/src/components/Toggle'
 export { Notice } from '../../renderer/src/overlay/Notice'
 export { ErrorBanner } from '../../renderer/src/components/ErrorBanner'
+
+export { Button } from '../../renderer/src/components/primitives/Button'
+export { TextInput } from '../../renderer/src/components/primitives/TextInput'
+export { Textarea } from '../../renderer/src/components/primitives/Textarea'
+export { Slider } from '../../renderer/src/components/primitives/Slider'
+export { Label } from '../../renderer/src/components/primitives/Label'
+
+export { RemoveButton } from '../../renderer/src/components/RemoveButton'
+export { ExternalLinkButton } from '../../renderer/src/shared/ExternalLinkButton'
+export { LeagueDropdown } from '../../renderer/src/components/LeagueDropdown'
+export { SettingSelectBox } from '../../renderer/src/components/settings/SettingSelectBox'
+export { SettingToggleBox } from '../../renderer/src/components/settings/SettingToggleBox'
+export { StepInput } from '../../renderer/src/components/price-check/StepInput'
+
+export { HotkeyRecorder } from '../../renderer/src/components/settings/HotkeyRecorder'
+export { HotkeyField } from '../../renderer/src/components/settings/HotkeyField'
+export { keyEventToAccelerator, prettyHotkey } from '../../renderer/src/components/settings/utils'
+
+export { ItemChip } from './components/ItemChip'
+export { getItemIcon } from './runtime-helpers/get-item-icon'

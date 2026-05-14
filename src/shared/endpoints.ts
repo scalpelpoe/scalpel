@@ -82,7 +82,7 @@ export const POE2_RE_URL = 'https://poe2.re'
 /** URL of the curated plugin registry JSON (raw GitHub). Can be overridden
  *  via the pluginRegistryUrl setting for self-hosted registries. */
 export const PLUGIN_REGISTRY_URL =
-  'https://raw.githubusercontent.com/filterscalpel/scalpel-plugins-registry/main/registry.json'
+  'https://raw.githubusercontent.com/scalpelpoe/scalpel-plugins-registry/main/registry.json'
 
 /** Construct the download URL for a plugin release asset on GitHub. */
 export function pluginReleaseAssetUrl(repo: string, version: string, file: string): string {

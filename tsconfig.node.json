@@ -9,5 +9,6 @@
     "esModuleInterop": true,
     "resolveJsonModule": true
   },
-  "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*", "src/plugin-sdk/**/*", "electron.vite.config.ts"]
+  "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*", "src/plugin-sdk/**/*", "electron.vite.config.ts"],
+  "exclude": ["src/plugin-sdk/dist/**", "src/plugin-sdk/node_modules/**"]
 }

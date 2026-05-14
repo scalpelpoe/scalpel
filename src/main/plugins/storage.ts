@@ -93,6 +93,18 @@ export function flushAll(): void {
   for (const id of ids) flushOne(id)
 }
 
+/** Drop a single plugin's in-memory state. Called on uninstall so a later
+ *  reinstall with the same id doesn't get stale data flushed back to disk. */
+export function clearCache(pluginId: string): void {
+  const t = timers.get(pluginId)
+  if (t) {
+    clearTimeout(t)
+    timers.delete(pluginId)
+  }
+  cache.delete(pluginId)
+  dirty.delete(pluginId)
+}
+
 /** Reset all in-memory state. Test-only. */
 export function _resetForTests(): void {
   for (const t of timers.values()) clearTimeout(t)

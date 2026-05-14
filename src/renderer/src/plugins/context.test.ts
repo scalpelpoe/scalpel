@@ -17,6 +17,8 @@ const baseDeps = () => ({
   openExternal: vi.fn(),
   registerTab: vi.fn(),
   registerHotkey: vi.fn(),
+  openTab: vi.fn(),
+  copyAndEvaluateItem: vi.fn(async () => null),
   storage: {
     get: vi.fn(async () => null),
     set: vi.fn(async () => undefined),
@@ -113,5 +115,21 @@ describe('createPluginContext storage', () => {
     expect(deps.storage.delete).toHaveBeenCalledWith('k')
     await ctx.storage.keys()
     expect(deps.storage.keys).toHaveBeenCalled()
+  })
+})
+
+describe('createPluginContext openTab + copyAndEvaluateItem', () => {
+  it('routes openTab through deps with the plugin id', () => {
+    const deps = baseDeps()
+    const ctx = createPluginContext(deps)
+    ctx.openTab()
+    expect(deps.openTab).toHaveBeenCalledWith('test')
+  })
+
+  it('routes copyAndEvaluateItem through deps', async () => {
+    const deps = baseDeps()
+    const ctx = createPluginContext(deps)
+    await ctx.copyAndEvaluateItem()
+    expect(deps.copyAndEvaluateItem).toHaveBeenCalled()
   })
 })

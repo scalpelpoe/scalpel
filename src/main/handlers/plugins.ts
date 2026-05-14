@@ -1,14 +1,16 @@
 import { ipcMain, dialog, BrowserWindow } from 'electron'
-import { pathToFileURL } from 'url'
 import { getInstalledPlugins } from '../plugins/manager'
+import { pluginEntryUrl } from '../plugins/plugin-protocol'
 import { getValue, setValue, deleteValue, listKeys } from '../plugins/storage'
 import { refreshAppMacros } from '../app-macros'
-import { setPluginHotkey, getRegisteredPluginHotkeys } from '../plugins/hotkey-registry'
+import { setPluginHotkey, getRegisteredPluginHotkeys, removePluginHotkey } from '../plugins/hotkey-registry'
 import { PLUGIN_ID_PATTERN } from '../plugins/manifest-validator'
 import { installUnpacked } from '../plugins/install-unpacked'
 import { fetchRegistry } from '../plugins/registry'
 import { installFromRegistry } from '../plugins/install-from-registry'
 import { uninstallPlugin } from '../plugins/uninstall'
+import { runMainHotkeyFlow } from '../evaluation'
+import { getOverlayWindow, showOverlay } from '../overlay'
 import type { PluginManifest } from '../../plugin-sdk/src/types'
 import type { AppSettings } from '../../shared/types'
 import type Store from 'electron-store'
@@ -18,11 +20,11 @@ export interface InstalledPluginIpc {
   entryUrl: string
 }
 
-export function register(store: Store<AppSettings>): void {
+export function register(store: Store<AppSettings>, isElevated: () => boolean = () => false): void {
   ipcMain.handle('plugins:list-installed', (): InstalledPluginIpc[] => {
     return getInstalledPlugins().map((p) => ({
       manifest: p.manifest,
-      entryUrl: pathToFileURL(p.entryPath).toString(),
+      entryUrl: pluginEntryUrl(p.manifest.id),
     }))
   })
 
@@ -70,7 +72,17 @@ export function register(store: Store<AppSettings>): void {
     if (result.canceled || result.filePaths.length === 0) {
       return { ok: false as const, error: 'cancelled' }
     }
-    return installUnpacked(result.filePaths[0])
+    const installResult = installUnpacked(result.filePaths[0])
+    if (installResult.ok) {
+      const installed = getInstalledPlugins().find((p) => p.manifest.id === installResult.id)
+      if (installed) {
+        getOverlayWindow()?.webContents.send('plugin-installed', {
+          manifest: installed.manifest,
+          entryUrl: pluginEntryUrl(installed.manifest.id) + `?v=${installed.manifest.version}`,
+        })
+      }
+    }
+    return installResult
   })
 
   ipcMain.handle('plugins:fetch-registry', async () => {
@@ -85,10 +97,44 @@ export function register(store: Store<AppSettings>): void {
     if (!entry || typeof entry !== 'object') {
       return { ok: false as const, error: 'invalid registry entry' }
     }
-    return installFromRegistry(entry as import('../../shared/plugin-registry-types').RegistryEntry)
+    const registryResult = await installFromRegistry(
+      entry as import('../../shared/plugin-registry-types').RegistryEntry,
+    )
+    if (registryResult.ok) {
+      const installed = getInstalledPlugins().find((p) => p.manifest.id === registryResult.id)
+      if (installed) {
+        getOverlayWindow()?.webContents.send('plugin-installed', {
+          manifest: installed.manifest,
+          entryUrl: pluginEntryUrl(installed.manifest.id) + `?v=${installed.manifest.version}`,
+        })
+      }
+    }
+    return registryResult
   })
 
   ipcMain.handle('plugins:uninstall', async (_evt, pluginId: string) => {
-    return uninstallPlugin(pluginId)
+    const uninstallResult = uninstallPlugin(pluginId)
+    if (uninstallResult.ok) {
+      getOverlayWindow()?.webContents.send('plugin-uninstalled', pluginId)
+    }
+    return uninstallResult
+  })
+
+  ipcMain.handle('plugins:unregister-hotkey', (_evt, pluginId: string) => {
+    if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
+    removePluginHotkey(pluginId)
+    refreshAppMacros()
+  })
+
+  ipcMain.handle('plugins:trigger-main-hotkey', async (): Promise<import('../../shared/types').PoeItem | null> => {
+    return runMainHotkeyFlow(store, isElevated)
+  })
+
+  // Show the overlay BrowserWindow. Called from ctx.openTab() so plugins that
+  // bind a hotkey can open the overlay even when no item is being inspected
+  // (the standard main-hotkey flow only shows the window after a successful
+  // clipboard capture).
+  ipcMain.handle('plugins:show-overlay', () => {
+    showOverlay()
   })
 }

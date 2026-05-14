@@ -165,19 +165,25 @@ export function TitleBar({
             />
           </button>
         )}
-        {pluginTabs.map((t) => (
-          <button
-            key={t.pluginId}
-            onClick={() => onSetView(`plugin:${t.pluginId}`)}
-            title={t.label}
-            className={
-              view === `plugin:${t.pluginId}`
-                ? 'btn-bounce w-[30px] h-[30px] flex items-center justify-center bg-accent text-[#171821]'
-                : 'btn-bounce w-[30px] h-[30px] flex items-center justify-center'
-            }
-            dangerouslySetInnerHTML={{ __html: t.icon }}
-          />
-        ))}
+        {pluginTabs.map((t) => {
+          // Clamp every plugin-supplied SVG to the canonical 16x16 title-bar
+          // size. The descendant selector picks up SVGs wrapped in any depth of
+          // host element from the plugin's markup (iconpark output wraps its
+          // svg in an outer span, for example). CSS wins over the SVG's
+          // width/height attrs, so plugin authors don't need to set sizing.
+          const base =
+            'btn-bounce w-[30px] h-[30px] flex items-center justify-center [&_svg]:w-4 [&_svg]:h-4 [&_svg]:block'
+          const className = view === `plugin:${t.pluginId}` ? `${base} bg-accent text-[#171821]` : base
+          return (
+            <button
+              key={t.pluginId}
+              onClick={() => onSetView(`plugin:${t.pluginId}`)}
+              title={t.label}
+              className={className}
+              dangerouslySetInnerHTML={{ __html: t.icon }}
+            />
+          )
+        })}
         <button
           onClick={() => onSetView('setup')}
           className="btn-bounce w-[30px] h-[30px] flex items-center justify-center"

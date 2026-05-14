@@ -5,7 +5,7 @@
 // how they look inside Scalpel.
 //
 // Usage in plugin author's tailwind.config.js:
-//   const scalpelPreset = require('@filterscalpel/plugin-sdk/tailwind-preset.cjs')
+//   const scalpelPreset = require('@scalpelpoe/plugin-sdk/tailwind-preset.cjs')
 //   module.exports = {
 //     presets: [scalpelPreset],
 //     content: ['./src/**/*.{ts,tsx}'],

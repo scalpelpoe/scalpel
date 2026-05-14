@@ -7,9 +7,11 @@ import {
   useCurrentZone,
   Toggle,
   Notice,
+  Button,
+  TextInput,
   type ScalpelPluginContext,
   type PoeItem,
-} from '@filterscalpel/plugin-sdk'
+} from '@scalpelpoe/plugin-sdk'
 
 const ICON_SVG = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>`
 
@@ -27,6 +29,7 @@ function HelloPanel({
   const [item, setItem] = useState<PoeItem | null>(ctx.getCurrentItem() as PoeItem | null)
   const [count, setCount] = useState(initialCount)
   const [showDebug, setShowDebug] = useState(false)
+  const [note, setNote] = useState('')
   const zone = useCurrentZone()
 
   useEffect(() => ctx.onCurrentItem((i) => setItem(i as PoeItem | null)), [ctx])
@@ -87,21 +90,19 @@ function HelloPanel({
         <div>
           Presses: <strong>{count}</strong>
         </div>
-        <button
-          onClick={reset}
-          style={{
-            marginTop: 8,
-            padding: '4px 8px',
-            fontSize: 11,
-            background: 'rgba(255,255,255,0.1)',
-            border: '1px solid rgba(255,255,255,0.2)',
-            borderRadius: 3,
-            color: 'inherit',
-            cursor: 'pointer',
-          }}
-        >
-          Reset
-        </button>
+        <div style={{ marginTop: 8, display: 'flex', gap: 6, alignItems: 'center' }}>
+          <Button variant="secondary" size="sm" onClick={reset}>
+            Reset
+          </Button>
+        </div>
+        <div style={{ marginTop: 12 }}>
+          <TextInput
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Optional note..."
+            fullWidth
+          />
+        </div>
       </div>
     </div>
   )
@@ -118,10 +119,16 @@ export default async function activate(ctx: ScalpelPluginContext): Promise<void>
   let count = ((await ctx.storage.get<number>(COUNT_KEY)) ?? 0) as number
   let pushToUI: ((n: number) => void) | null = null
 
-  ctx.registerHotkey({ label: 'Increment counter' }, () => {
+  ctx.registerHotkey({ label: 'Increment counter' }, async () => {
     count += 1
     void ctx.storage.set(COUNT_KEY, count)
     pushToUI?.(count)
+    // Open the plugin's tab unconditionally so the user sees feedback even
+    // when no item is hovered; fire copy in parallel so an item, when present,
+    // populates the tab via onCurrentItem and also flows into Scalpel's other
+    // views (filter, price check) via the standard main-hotkey pipeline.
+    ctx.openTab()
+    void ctx.copyAndEvaluateItem()
   })
 
   ctx.registerTab({

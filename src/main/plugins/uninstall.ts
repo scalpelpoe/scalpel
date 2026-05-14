@@ -2,6 +2,7 @@ import { existsSync, rmSync } from 'fs'
 import { pluginDir } from './paths'
 import { PLUGIN_ID_PATTERN } from './manifest-validator'
 import { removeInstalledId } from './installed-list'
+import { clearCache } from './storage'
 
 export type UninstallResult = { ok: true } | { ok: false; error: string }
 
@@ -18,6 +19,7 @@ export function uninstallPlugin(pluginId: string): UninstallResult {
 
   // Update installed.json.
   removeInstalledId(pluginId)
+  clearCache(pluginId)
 
   return { ok: true }
 }

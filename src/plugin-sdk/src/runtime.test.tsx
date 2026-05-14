@@ -92,4 +92,58 @@ describe('SDK runtime exports', () => {
     rerender(<SDK.ErrorBanner message="boom" tone="error" />)
     expect(container.textContent).toContain('boom')
   })
+
+  it('renders Button and fires onClick', () => {
+    const onClick = vi.fn()
+    const { getByText } = render(<SDK.Button onClick={onClick}>Hello</SDK.Button>)
+    fireEvent.click(getByText('Hello'))
+    expect(onClick).toHaveBeenCalled()
+  })
+
+  it('renders TextInput with current value', () => {
+    const { getByPlaceholderText } = render(<SDK.TextInput value="abc" onChange={() => {}} placeholder="ph" />)
+    expect((getByPlaceholderText('ph') as HTMLInputElement).value).toBe('abc')
+  })
+
+  it('renders Label with children', () => {
+    const { getByText } = render(<SDK.Label>My label</SDK.Label>)
+    expect(getByText('My label')).toBeTruthy()
+  })
+
+  it('exposes Slider, Textarea, StepInput, RemoveButton, ExternalLinkButton', () => {
+    expect(typeof SDK.Slider).toBe('function')
+    expect(typeof SDK.Textarea).toBe('function')
+    expect(typeof SDK.StepInput).toBe('function')
+    expect(typeof SDK.RemoveButton).toBe('function')
+    expect(typeof SDK.ExternalLinkButton).toBe('function')
+  })
+
+  it('exposes LeagueDropdown, SettingSelectBox, SettingToggleBox', () => {
+    expect(typeof SDK.LeagueDropdown).toBe('function')
+    expect(typeof SDK.SettingSelectBox).toBe('function')
+    expect(typeof SDK.SettingToggleBox).toBe('function')
+  })
+
+  it('exposes HotkeyRecorder, HotkeyField, keyEventToAccelerator, prettyHotkey', () => {
+    expect(typeof SDK.HotkeyRecorder).toBe('function')
+    expect(typeof SDK.HotkeyField).toBe('function')
+    expect(typeof SDK.keyEventToAccelerator).toBe('function')
+    expect(typeof SDK.prettyHotkey).toBe('function')
+  })
+
+  it('exposes ItemChip and getItemIcon', () => {
+    expect(typeof SDK.ItemChip).toBe('function')
+    expect(typeof SDK.getItemIcon).toBe('function')
+  })
+
+  it('getItemIcon returns null when globalThis.__scalpel is not set', () => {
+    // No globalThis setup in jsdom; getItemIcon falls back to {} iconMap.
+    const item = {
+      name: 'NonExistent',
+      baseType: 'NonExistent',
+      itemClass: 'Maps',
+      rarity: 'Normal',
+    } as Parameters<typeof SDK.getItemIcon>[0]
+    expect(SDK.getItemIcon(item)).toBeNull()
+  })
 })

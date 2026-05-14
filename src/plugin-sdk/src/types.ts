@@ -18,7 +18,13 @@ export type PluginActivate = (ctx: ScalpelPluginContext) => void | Promise<void>
 export interface RegisterTabOptions {
   /** Shown as the title-bar tooltip and in any "manage plugins" UI. */
   label: string
-  /** Inline SVG markup or a data URL. Rendered in the title-bar tab button. */
+  /**
+   * Inline SVG markup or a data URL. The host clamps the rendered icon to the
+   * canonical 16x16 title-bar size and forces `display: flex` on any
+   * descendant SVG, so plugin authors don't need to set width / height /
+   * `display`. For a Scalpel-matched look, render an iconpark component to a
+   * string at activation time (see PLUGINS.md "Tab icons").
+   */
   icon: string
   /**
    * Called once when the tab is first shown. Plugin owns the container's
@@ -63,6 +69,21 @@ export interface ScalpelPluginContext {
    * in v1; calling registerHotkey a second time throws.
    */
   registerHotkey(opts: RegisterHotkeyOptions, handler: () => void): void
+
+  /**
+   * Trigger the same flow Scalpel's main hotkey runs: send Ctrl+C to PoE,
+   * read the clipboard, parse the item, fire onCurrentItem for everyone
+   * (other plugins + Scalpel's filter/price-check views), and resolve to
+   * the parsed item. Returns null when the clipboard doesn't contain a
+   * recognisable PoE item.
+   */
+  copyAndEvaluateItem(): Promise<PoeItem | null>
+
+  /**
+   * Switch the overlay to this plugin's tab. No-op if the tab isn't
+   * registered yet.
+   */
+  openTab(): void
 
   fetch: typeof fetch
   storage: PluginStorage

@@ -1,11 +1,46 @@
 {
-  "name": "@filterscalpel/plugin-sdk",
+  "name": "@scalpelpoe/plugin-sdk",
   "version": "0.1.0",
-  "description": "TypeScript SDK for building Scalpel plugins.",
+  "description": "TypeScript SDK for building Scalpel plugins. Types only; the runtime is served by Scalpel at scalpel-internal://sdk.js via importmap.",
   "type": "module",
-  "main": "./src/index.ts",
-  "types": "./src/index.ts",
-  "files": ["src", "README.md", "tokens.css", "tailwind-preset.cjs"],
-  "license": "MIT",
-  "private": true
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./tokens.css": "./dist/tokens.css",
+    "./tailwind-preset.cjs": "./dist/tailwind-preset.cjs",
+    "./package.json": "./package.json"
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "node build.mjs",
+    "prepublishOnly": "node build.mjs"
+  },
+  "peerDependencies": {
+    "react": "^18",
+    "react-dom": "^18"
+  },
+  "peerDependenciesMeta": {
+    "react": { "optional": false },
+    "react-dom": { "optional": false }
+  },
+  "devDependencies": {
+    "dts-bundle-generator": "^9.5.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/scalpelpoe/scalpel.git",
+    "directory": "src/plugin-sdk"
+  },
+  "homepage": "https://github.com/scalpelpoe/scalpel/blob/main/PLUGINS.md",
+  "keywords": ["scalpel", "path-of-exile", "poe", "plugin-sdk", "electron"],
+  "license": "MIT"
 }

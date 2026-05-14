@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PoeItem, Zone } from '../../../shared/types'
 import type { PluginActivate, PluginManifest } from '../../../plugin-sdk/src/types'
 import { createPluginContext } from './context'
@@ -21,7 +21,10 @@ export interface PluginHostProps {
   onSubscribeLeagueChange: (h: (l: string) => void) => () => void
   onOpenExternal: (url: string) => void
   onTabsChange: (tabs: RegisteredTab[]) => void
+  onOpenPluginTab: (pluginId: string) => void
+  onCopyAndEvaluateItem: () => Promise<PoeItem | null>
   onPluginError?: (id: string, error: Error) => void
+  onPluginUnloaded?: (pluginId: string) => void
 }
 
 // Allow tests to swap in a fake importer. The default uses native dynamic import.
@@ -51,10 +54,77 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
   currentItemRef.current = props.currentItem
   currentZoneRef.current = props.currentZone
 
+  // Keep stable refs to callbacks so event-handler effects don't close over stale props.
+  const onPluginErrorRef = useRef(props.onPluginError)
+  const onPluginUnloadedRef = useRef(props.onPluginUnloaded)
+  onPluginErrorRef.current = props.onPluginError
+  onPluginUnloadedRef.current = props.onPluginUnloaded
+
+  const onSubscribeCurrentItemRef = useRef(props.onSubscribeCurrentItem)
+  const onSubscribeCurrentZoneRef = useRef(props.onSubscribeCurrentZone)
+  const onSubscribeLeagueChangeRef = useRef(props.onSubscribeLeagueChange)
+  const onOpenExternalRef = useRef(props.onOpenExternal)
+  const onOpenPluginTabRef = useRef(props.onOpenPluginTab)
+  const onCopyAndEvaluateItemRef = useRef(props.onCopyAndEvaluateItem)
+  onSubscribeCurrentItemRef.current = props.onSubscribeCurrentItem
+  onSubscribeCurrentZoneRef.current = props.onSubscribeCurrentZone
+  onSubscribeLeagueChangeRef.current = props.onSubscribeLeagueChange
+  onOpenExternalRef.current = props.onOpenExternal
+  onOpenPluginTabRef.current = props.onOpenPluginTab
+  onCopyAndEvaluateItemRef.current = props.onCopyAndEvaluateItem
+
   // Push every tab list change up to the parent
   useEffect(() => {
     props.onTabsChange(tabs)
   }, [tabs, props.onTabsChange])
+
+  // Extracted per-plugin load logic used by both the initial-load loop and the
+  // hot-install event handler. Wrapped in useCallback([]) so identity is stable
+  // across renders; all prop callbacks are read through refs.
+  const loadPlugin = useCallback(async (entry: { manifest: PluginManifest; entryUrl: string }): Promise<void> => {
+    const m = entry.manifest
+    if (m.poeVersions && !m.poeVersions.includes(poeVersionRef.current)) return
+    try {
+      const mod = (await importPluginModule(entry.entryUrl)) as { default: PluginActivate }
+      if (typeof mod.default !== 'function') {
+        throw new Error('plugin module has no default export function')
+      }
+      const ctx = createPluginContext({
+        pluginId: m.id,
+        pluginVersion: m.version,
+        getPoeVersion: () => poeVersionRef.current,
+        getLeague: () => leagueRef.current,
+        getCurrentItem: () => currentItemRef.current,
+        getCurrentZone: () => currentZoneRef.current,
+        subscribeCurrentItem: (h) => onSubscribeCurrentItemRef.current(h),
+        subscribeCurrentZone: (h) => onSubscribeCurrentZoneRef.current(h),
+        subscribeLeagueChange: (h) => onSubscribeLeagueChangeRef.current(h),
+        openExternal: (url) => onOpenExternalRef.current(url),
+        storage: {
+          get: (key) => window.api.pluginStorageGet(m.id, key),
+          set: (key, value) => window.api.pluginStorageSet(m.id, key, value),
+          delete: (key) => window.api.pluginStorageDelete(m.id, key),
+          keys: () => window.api.pluginStorageKeys(m.id),
+        },
+        registerTab: (pluginId, opts) => {
+          setTabs((prev) => {
+            if (prev.find((t) => t.pluginId === pluginId)) return prev
+            return [...prev, { pluginId, ...opts }]
+          })
+        },
+        registerHotkey: (pluginId, opts, handler) => {
+          pluginHotkeyHandlersRef.current.set(pluginId, handler)
+          void window.api.pluginRegisterHotkey(pluginId, opts.label)
+        },
+        openTab: (pluginId) => onOpenPluginTabRef.current(pluginId),
+        copyAndEvaluateItem: () => onCopyAndEvaluateItemRef.current(),
+      })
+      // PluginActivate may be async; await the result so any rejection lands in catch.
+      await mod.default(ctx)
+    } catch (err) {
+      onPluginErrorRef.current?.(m.id, err instanceof Error ? err : new Error(String(err)))
+    }
+  }, [])
 
   useEffect(() => {
     if (!props.ready || loadedRef.current) return
@@ -65,47 +135,8 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       const installed = await window.api.listInstalledPlugins()
       if (cancelled) return
       for (const entry of installed) {
-        const m = entry.manifest as PluginManifest
-        if (m.poeVersions && !m.poeVersions.includes(props.poeVersion)) continue
-        try {
-          const mod = (await importPluginModule(entry.entryUrl)) as { default: PluginActivate }
-          if (cancelled) return
-          if (typeof mod.default !== 'function') {
-            throw new Error('plugin module has no default export function')
-          }
-          const ctx = createPluginContext({
-            pluginId: m.id,
-            pluginVersion: m.version,
-            getPoeVersion: () => poeVersionRef.current,
-            getLeague: () => leagueRef.current,
-            getCurrentItem: () => currentItemRef.current,
-            getCurrentZone: () => currentZoneRef.current,
-            subscribeCurrentItem: props.onSubscribeCurrentItem,
-            subscribeCurrentZone: props.onSubscribeCurrentZone,
-            subscribeLeagueChange: props.onSubscribeLeagueChange,
-            openExternal: props.onOpenExternal,
-            storage: {
-              get: (key) => window.api.pluginStorageGet(m.id, key),
-              set: (key, value) => window.api.pluginStorageSet(m.id, key, value),
-              delete: (key) => window.api.pluginStorageDelete(m.id, key),
-              keys: () => window.api.pluginStorageKeys(m.id),
-            },
-            registerTab: (pluginId, opts) => {
-              setTabs((prev) => {
-                if (prev.find((t) => t.pluginId === pluginId)) return prev
-                return [...prev, { pluginId, ...opts }]
-              })
-            },
-            registerHotkey: (pluginId, opts, handler) => {
-              pluginHotkeyHandlersRef.current.set(pluginId, handler)
-              void window.api.pluginRegisterHotkey(pluginId, opts.label)
-            },
-          })
-          // PluginActivate may be async; await the result so any rejection lands in catch.
-          await mod.default(ctx)
-        } catch (err) {
-          props.onPluginError?.(m.id, err instanceof Error ? err : new Error(String(err)))
-        }
+        if (cancelled) return
+        await loadPlugin(entry)
       }
     })()
 
@@ -113,6 +144,23 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       cancelled = true
     }
   }, [props.ready])
+
+  // Hot-install: load a newly installed plugin without restart.
+  useEffect(() => {
+    return window.api.onPluginInstalled(async (entry) => {
+      await loadPlugin(entry)
+    })
+  }, [])
+
+  // Hot-uninstall: remove an uninstalled plugin's tab and hotkey handler.
+  useEffect(() => {
+    return window.api.onPluginUninstalled((pluginId) => {
+      setTabs((prev) => prev.filter((t) => t.pluginId !== pluginId))
+      pluginHotkeyHandlersRef.current.delete(pluginId)
+      void window.api.pluginUnregisterHotkey(pluginId)
+      onPluginUnloadedRef.current?.(pluginId)
+    })
+  }, [])
 
   useEffect(() => {
     return window.api.onPluginMacro((action: string) => {
@@ -124,10 +172,10 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       try {
         handler()
       } catch (err) {
-        props.onPluginError?.(pluginId, err instanceof Error ? err : new Error(String(err)))
+        onPluginErrorRef.current?.(pluginId, err instanceof Error ? err : new Error(String(err)))
       }
     })
-  }, [props.onPluginError])
+  }, [])
 
   return null
 }

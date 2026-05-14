@@ -63,6 +63,7 @@ import { register as registerPlugins } from './handlers/plugins'
 import { flushAll as flushPluginStorage } from './plugins/storage'
 import { refreshManifest } from './manifest'
 import { registerScalpelInternalProtocol, registerScalpelInternalSchemePrivileges } from './plugins/protocol'
+import { registerScalpelPluginProtocol, registerScalpelPluginSchemePrivileges } from './plugins/plugin-protocol'
 import {
   categoryDir,
   ensureThumb,
@@ -226,7 +227,7 @@ registerCheatSheets()
 registerWhiteboard()
 registerClipboard()
 registerManifest()
-registerPlugins(store)
+registerPlugins(store, isElevated)
 
 ipcMain.on('close-overlay', () => hideOverlay())
 ipcMain.on('open-devtools', (event) => {
@@ -285,6 +286,7 @@ function createTray(): void {
 
 // Must run before app is ready -- registers scheme privileges with Chromium
 registerScalpelInternalSchemePrivileges()
+registerScalpelPluginSchemePrivileges()
 
 // ---- App lifecycle ---------------------------------------------------------
 
@@ -315,6 +317,11 @@ app.whenReady().then(() => {
   // Serve plugin-facing built-in modules (React, SDK) via a custom scheme so
   // plugins can import them without bundling their own copies.
   registerScalpelInternalProtocol()
+
+  // Serve installed plugin entry files via a custom scheme. Required so the
+  // overlay renderer can dynamic-import() them in dev (where the renderer
+  // lives on http://localhost and Chromium blocks file:// resource loads).
+  registerScalpelPluginProtocol()
 
   // Serve cheat sheet images via a custom protocol so the renderer can load local files.
   // Append ?thumb=1 to get a 360px-max JPEG thumbnail (lazily generated + cached

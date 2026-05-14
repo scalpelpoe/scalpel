@@ -3,6 +3,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, waitFor, act } from '@testing-library/react'
 import type { PluginManifest } from '../../../plugin-sdk/src/types'
+import type { ScalpelPluginContext } from '../../../plugin-sdk/src/types'
 
 const manifest: PluginManifest = {
   manifestVersion: 1,
@@ -29,12 +30,16 @@ beforeEach(() => {
     pluginStorageDelete: vi.fn(async () => undefined),
     pluginStorageKeys: vi.fn(async () => []),
     pluginRegisterHotkey: vi.fn(async () => undefined),
+    pluginUnregisterHotkey: vi.fn(async () => undefined),
+    pluginTriggerMainHotkey: vi.fn(async () => null),
     onPluginMacro: vi.fn((h: (action: string) => void) => {
       pluginMacroListener = h
       return () => {
         pluginMacroListener = null
       }
     }),
+    onPluginInstalled: vi.fn(() => () => {}),
+    onPluginUninstalled: vi.fn(() => () => {}),
   }
   // mock the dynamic import that the host will perform
   ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn()
@@ -56,6 +61,8 @@ describe('PluginHost', () => {
         onSubscribeLeagueChange={() => () => {}}
         onOpenExternal={() => {}}
         onTabsChange={onTabsChange}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
       />,
     )
     await waitFor(() => expect(onTabsChange).toHaveBeenCalled())
@@ -64,7 +71,7 @@ describe('PluginHost', () => {
 
   it('calls activate(ctx) on each installed plugin and surfaces the registered tab', async () => {
     installedList.push({ manifest, entryUrl: 'file:///fake/plugin.js' })
-    const activate = vi.fn((ctx: import('../../../plugin-sdk/src/types').ScalpelPluginContext) => {
+    const activate = vi.fn((ctx: ScalpelPluginContext) => {
       ctx.registerTab({ label: 'Hello', icon: '<svg/>', render: () => {} })
     })
     ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn(async () => ({
@@ -84,6 +91,8 @@ describe('PluginHost', () => {
         onSubscribeLeagueChange={() => () => {}}
         onOpenExternal={() => {}}
         onTabsChange={onTabsChange}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
       />,
     )
     await waitFor(() => expect(activate).toHaveBeenCalled())
@@ -114,6 +123,8 @@ describe('PluginHost', () => {
         onSubscribeLeagueChange={() => () => {}}
         onOpenExternal={() => {}}
         onTabsChange={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
       />,
     )
     await act(async () => {
@@ -143,6 +154,8 @@ describe('PluginHost', () => {
         onSubscribeLeagueChange={() => () => {}}
         onOpenExternal={() => {}}
         onTabsChange={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
         onPluginError={onError}
       />,
     )
@@ -171,6 +184,8 @@ describe('PluginHost', () => {
         onSubscribeLeagueChange={() => () => {}}
         onOpenExternal={() => {}}
         onTabsChange={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
       />,
     )
     await act(async () => {
@@ -183,7 +198,7 @@ describe('PluginHost', () => {
     installedList.push({ manifest, entryUrl: 'file:///fake/plugin.js' })
     const hotkeyHandler = vi.fn()
     ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn(async () => ({
-      default: (ctx: import('../../../plugin-sdk/src/types').ScalpelPluginContext) => {
+      default: (ctx: ScalpelPluginContext) => {
         ctx.registerHotkey({ label: 'X' }, hotkeyHandler)
       },
     }))
@@ -200,6 +215,8 @@ describe('PluginHost', () => {
         onSubscribeLeagueChange={() => () => {}}
         onOpenExternal={() => {}}
         onTabsChange={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
       />,
     )
     await waitFor(() => expect(window.api.pluginRegisterHotkey).toHaveBeenCalled())
@@ -212,7 +229,7 @@ describe('PluginHost', () => {
     installedList.push({ manifest, entryUrl: 'file:///fake/plugin.js' })
     const hotkeyHandler = vi.fn()
     ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn(async () => ({
-      default: (ctx: import('../../../plugin-sdk/src/types').ScalpelPluginContext) => {
+      default: (ctx: ScalpelPluginContext) => {
         ctx.registerHotkey({ label: 'X' }, hotkeyHandler)
       },
     }))
@@ -229,10 +246,152 @@ describe('PluginHost', () => {
         onSubscribeLeagueChange={() => () => {}}
         onOpenExternal={() => {}}
         onTabsChange={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
       />,
     )
     await waitFor(() => expect(window.api.pluginRegisterHotkey).toHaveBeenCalled())
     pluginMacroListener!('plugin:nonexistent')
     expect(hotkeyHandler).not.toHaveBeenCalled()
+  })
+
+  it('loads a newly installed plugin without restart', async () => {
+    const activate = vi.fn((ctx: ScalpelPluginContext) => {
+      ctx.registerTab({ label: 'Late', icon: '<svg/>', render: () => {} })
+    })
+    let installedListener: ((entry: unknown) => void) | null = null
+    ;(window as unknown as { api: unknown }).api = {
+      listInstalledPlugins: vi.fn(async () => []),
+      pluginStorageGet: vi.fn(async () => null),
+      pluginStorageSet: vi.fn(async () => undefined),
+      pluginStorageDelete: vi.fn(async () => undefined),
+      pluginStorageKeys: vi.fn(async () => []),
+      pluginRegisterHotkey: vi.fn(async () => undefined),
+      pluginUnregisterHotkey: vi.fn(async () => undefined),
+      onPluginMacro: vi.fn(() => () => {}),
+      onPluginInstalled: vi.fn((h: (entry: unknown) => void) => {
+        installedListener = h
+        return () => {
+          installedListener = null
+        }
+      }),
+      onPluginUninstalled: vi.fn(() => () => {}),
+      pluginTriggerMainHotkey: vi.fn(async () => null),
+      pluginShowOverlay: vi.fn(async () => undefined),
+    }
+    ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn(async () => ({
+      default: activate,
+    }))
+
+    const { PluginHost } = await import('./PluginHost')
+    const onTabsChange = vi.fn()
+    render(
+      <PluginHost
+        ready
+        poeVersion={1}
+        league="Mirage"
+        currentItem={null}
+        currentZone={null}
+        onSubscribeCurrentItem={() => () => {}}
+        onSubscribeCurrentZone={() => () => {}}
+        onSubscribeLeagueChange={() => () => {}}
+        onOpenExternal={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
+        onTabsChange={onTabsChange}
+      />,
+    )
+
+    // Initial state: no tabs.
+    await waitFor(() => expect(onTabsChange.mock.calls.at(-1)?.[0]).toEqual([]))
+
+    // Fire the install event.
+    ;(installedListener as ((entry: unknown) => void) | null)?.({
+      manifest: {
+        manifestVersion: 1,
+        id: 'late',
+        version: '1.0.0',
+        name: 'Late',
+        description: 'd',
+        author: 'a',
+        scalpelMinVersion: '>=0.0.0',
+      },
+      entryUrl: 'file:///fake/late.js?v=1.0.0',
+    })
+
+    await waitFor(() => expect(activate).toHaveBeenCalled())
+    await waitFor(() => {
+      const last = onTabsChange.mock.calls.at(-1)?.[0]
+      expect(last).toHaveLength(1)
+      expect(last[0].pluginId).toBe('late')
+    })
+  })
+
+  it('unloads an uninstalled plugin without restart', async () => {
+    const activate = vi.fn((ctx: ScalpelPluginContext) => {
+      ctx.registerTab({ label: 'Hello', icon: '<svg/>', render: () => {} })
+    })
+    let uninstalledListener: ((pluginId: string) => void) | null = null
+    ;(window as unknown as { api: unknown }).api = {
+      listInstalledPlugins: vi.fn(async () => [{ manifest, entryUrl: 'file:///fake/plugin.js' }]),
+      pluginStorageGet: vi.fn(async () => null),
+      pluginStorageSet: vi.fn(async () => undefined),
+      pluginStorageDelete: vi.fn(async () => undefined),
+      pluginStorageKeys: vi.fn(async () => []),
+      pluginRegisterHotkey: vi.fn(async () => undefined),
+      pluginUnregisterHotkey: vi.fn(async () => undefined),
+      onPluginMacro: vi.fn(() => () => {}),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn((h: (pluginId: string) => void) => {
+        uninstalledListener = h
+        return () => {
+          uninstalledListener = null
+        }
+      }),
+      pluginTriggerMainHotkey: vi.fn(async () => null),
+      pluginShowOverlay: vi.fn(async () => undefined),
+    }
+    ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn(async () => ({
+      default: activate,
+    }))
+
+    const { PluginHost } = await import('./PluginHost')
+    const onTabsChange = vi.fn()
+    const onPluginUnloaded = vi.fn()
+    render(
+      <PluginHost
+        ready
+        poeVersion={1}
+        league="Mirage"
+        currentItem={null}
+        currentZone={null}
+        onSubscribeCurrentItem={() => () => {}}
+        onSubscribeCurrentZone={() => () => {}}
+        onSubscribeLeagueChange={() => () => {}}
+        onOpenExternal={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
+        onTabsChange={onTabsChange}
+        onPluginUnloaded={onPluginUnloaded}
+      />,
+    )
+
+    // Wait for the initial plugin to load.
+    await waitFor(() => expect(activate).toHaveBeenCalled())
+    await waitFor(() => {
+      const last = onTabsChange.mock.calls.at(-1)?.[0]
+      expect(last).toHaveLength(1)
+      expect(last[0].pluginId).toBe('hello')
+    })
+
+    // Fire the uninstall event.
+    ;(uninstalledListener as ((pluginId: string) => void) | null)?.('hello')
+
+    await waitFor(() => {
+      const last = onTabsChange.mock.calls.at(-1)?.[0]
+      expect(last).toHaveLength(0)
+    })
+    expect(onPluginUnloaded).toHaveBeenCalledWith('hello')
+    expect(window.api.pluginUnregisterHotkey).toHaveBeenCalledWith('hello')
   })
 })
