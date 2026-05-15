@@ -32,8 +32,3 @@ scripts/local/
 .vs/
 .vscode/
 *.log
-
-# Plugin example build outputs (sources committed, builds gitignored)
-examples/scalpel-plugins/*/dist/
-examples/scalpel-plugins/*/node_modules/
-examples/scalpel-plugins/*/package-lock.json

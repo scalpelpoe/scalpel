@@ -2,7 +2,7 @@
 
 Scalpel supports third-party plugins that show up as new tabs in the overlay. A plugin is a single bundled JavaScript file you author against a typed SDK, distributed via your own GitHub repository, and discovered through a curated registry. This document is for plugin authors.
 
-The reference plugin lives at [`examples/scalpel-plugins/hello-world`](examples/scalpel-plugins/hello-world). Read it alongside this doc.
+A complete reference plugin that exercises every SDK component lives at [`scalpelpoe/scalpel-plugin-examples`](https://github.com/scalpelpoe/scalpel-plugin-examples). Read it alongside this doc.
 
 ## What you can build
 
@@ -23,20 +23,17 @@ A plugin can NOT:
 
 ## Quickstart
 
-The fastest path is to fork the reference plugin:
+The fastest path is to start from the reference plugin:
 
 ```bash
-# Clone Scalpel
-git clone https://github.com/scalpelpoe/scalpel.git
-cd scalpel/examples/scalpel-plugins/hello-world
-
-# Or copy hello-world/ into your own repo as a starting point
-cp -r examples/scalpel-plugins/hello-world ~/my-scalpel-plugin
-cd ~/my-scalpel-plugin
+git clone https://github.com/scalpelpoe/scalpel-plugin-examples.git
+cd scalpel-plugin-examples
 
 npm install
 npm run build
 ```
+
+Then either iterate in that clone or copy its files into your own repo as a starting point.
 
 Then load it into Scalpel for testing (see [Local testing](#local-testing) below).
 
@@ -470,7 +467,7 @@ Scalpel relaunches the process on PoE version switch, so plugin state doesn't su
 
 ## Getting help
 
-- Read the reference plugin: [`examples/scalpel-plugins/hello-world`](examples/scalpel-plugins/hello-world)
+- Read the reference plugin: [`scalpelpoe/scalpel-plugin-examples`](https://github.com/scalpelpoe/scalpel-plugin-examples)
 - Open an issue on [scalpelpoe/scalpel](https://github.com/scalpelpoe/scalpel/issues) for SDK bugs or feature requests
 - Open an issue on `scalpelpoe/scalpel-plugins-registry` if your store listing has a problem
 

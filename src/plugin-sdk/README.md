@@ -20,7 +20,7 @@ Pin `scalpelMinVersion` in your `manifest.json` to whatever Scalpel version firs
 4. `gh release create v1.0.0 dist/plugin.js dist/manifest.json` on your plugin's repo.
 5. Open a PR against [`scalpelpoe/scalpel-plugins-registry`](https://github.com/scalpelpoe/scalpel-plugins-registry) so Scalpel users can install you with one click.
 
-The reference plugin lives at [`examples/scalpel-plugins/hello-world`](https://github.com/scalpelpoe/scalpel/tree/main/examples/scalpel-plugins/hello-world).
+The reference plugin lives at [`scalpelpoe/scalpel-plugin-examples`](https://github.com/scalpelpoe/scalpel-plugin-examples).
 
 ## Plugin entry shape
 
@@ -106,4 +106,4 @@ build: {
 
 If you forget to externalize any of these, two things go wrong: your `plugin.js` balloons by hundreds of KB, and Scalpel's React instance won't match yours (hooks crash with `useContext` returning null). The reference plugin's `vite.config.ts` shows the working shape.
 
-A working starter template lives at `examples/scalpel-plugins/hello-world/`.
+A working starter template lives at [`scalpelpoe/scalpel-plugin-examples`](https://github.com/scalpelpoe/scalpel-plugin-examples).
