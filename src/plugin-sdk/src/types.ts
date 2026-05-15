@@ -11,6 +11,9 @@ export interface PluginManifest {
   homepage?: string
   poeVersions?: (1 | 2)[]
   tabIcon?: string
+  /** Absolute URL of a small icon shown in the Plugins settings store rows.
+   *  PNG or SVG. The same URL the registry entry advertises pre-install. */
+  iconUrl?: string
 }
 
 export type PluginActivate = (ctx: ScalpelPluginContext) => void | Promise<void>

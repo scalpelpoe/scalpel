@@ -19,7 +19,7 @@ export function DeveloperSection({ settings, update, onError }: Props): JSX.Elem
   }
 
   return (
-    <div className="flex flex-col gap-3 p-3">
+    <div className="flex flex-col gap-3">
       <div className="flex items-center justify-between">
         <div className="flex flex-col">
           <span className="text-sm">Developer mode</span>
@@ -40,14 +40,14 @@ export function DeveloperSection({ settings, update, onError }: Props): JSX.Elem
       {enabled && (
         <div className="flex flex-col gap-2 pt-2 border-t border-border">
           <div className="text-xs text-zinc-400">
-            Load an unpacked plugin directory containing <code>manifest.json</code> and <code>plugin.js</code>. Files
-            are copied into Scalpel's plugin folder. You will need to restart Scalpel to load the new plugin.
+            Load an unpacked plugin dist directory containing manifest.json and plugin.js. Files are copied into
+            Scalpel's plugin folder.
           </div>
           <button
             onClick={installPlugin}
             className="btn-bounce self-start px-3 py-1 text-xs bg-zinc-700 hover:bg-zinc-600 rounded"
           >
-            Load unpacked plugin...
+            Load unpacked plugin
           </button>
         </div>
       )}

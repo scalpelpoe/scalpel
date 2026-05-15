@@ -31,8 +31,11 @@ export interface RegistryEntry {
    *  icon shown in the row. PNG or SVG. Plain string; no validation beyond
    *  "looks like a URL" at render time. */
   iconUrl?: string
-  /** Optional homepage shown as a "Repo" link below the description. */
+  /** Optional homepage shown as a "Repo" link in the expanded row. */
   homepage?: string
+  /** Optional absolute image URLs shown in the expand-in-place gallery.
+   *  Bare strings, no captions. Omitted/empty means the row has no gallery. */
+  screenshots?: string[]
 }
 
 export interface RegistrySnapshot {

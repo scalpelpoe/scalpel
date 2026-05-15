@@ -1,6 +1,7 @@
-import type { AppSettings } from '../../../../shared/types'
+import type { AppSettings, PoeItem } from '../../../../shared/types'
 import { getGameFeatures } from '../../../../shared/game-features'
 import { FilterPicker } from '../FilterPicker'
+import { HistoryPanel } from '../HistoryPanel'
 import { HotkeyField } from './HotkeyField'
 import { SettingToggleBox } from './SettingToggleBox'
 
@@ -12,6 +13,7 @@ interface Props {
   onOnlineImport?: (name: string) => void
   onSettingsChange: (s: AppSettings) => void
   tryHotkey: (hotkey: string, slot: { kind: 'filter' }) => boolean
+  currentItem?: PoeItem
 }
 
 export function FilterTab({
@@ -22,6 +24,7 @@ export function FilterTab({
   onOnlineImport,
   onSettingsChange,
   tryHotkey,
+  currentItem,
 }: Props): JSX.Element {
   const features = getGameFeatures(settings.poeVersion)
 
@@ -68,6 +71,8 @@ export function FilterTab({
         checked={settings.reloadOnSave}
         onChange={(val) => update('reloadOnSave', val)}
       />
+
+      <HistoryPanel item={currentItem} />
     </>
   )
 }

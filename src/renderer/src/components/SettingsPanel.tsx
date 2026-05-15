@@ -12,7 +12,6 @@ import {
 } from './settings'
 import { DeveloperSection } from './settings/DeveloperSection'
 import { PluginsSection } from './settings/PluginsSection'
-import { HistoryPanel } from './HistoryPanel'
 import { ErrorBanner } from './ErrorBanner'
 import { findHotkeyCollision, type HotkeySlot } from './settings/hotkey-collisions'
 import { usePoeVersion } from '../shared/poe-version-context'
@@ -45,7 +44,6 @@ const TAB_KEYS = [
   'cheatsheets',
   'filter',
   'pricecheck',
-  'history',
   'plugins',
   'faq',
   'developer',
@@ -58,7 +56,6 @@ const TAB_LABELS: Record<TabKey, string> = {
   cheatsheets: 'Sheets',
   filter: 'Filter',
   pricecheck: 'Trade',
-  history: 'History',
   plugins: 'Plugins',
   faq: 'FAQ',
   developer: 'Developer',
@@ -173,10 +170,10 @@ export function SettingsPanel({
           onOnlineImport={onOnlineImport}
           onSettingsChange={onSettingsChange}
           tryHotkey={tryHotkey}
+          currentItem={currentItem}
         />
       )}
       {tab === 'pricecheck' && <PriceCheckTab settings={settings} update={update} tryHotkey={tryHotkey} />}
-      {tab === 'history' && <HistoryPanel item={currentItem} onDone={() => setTab('general')} />}
       {tab === 'plugins' && <PluginsSection onError={showError} />}
       {tab === 'faq' && <FaqTab />}
       {tab === 'developer' && <DeveloperSection settings={settings} update={update} onError={showError} />}

@@ -64,6 +64,10 @@ function validateSnapshot(raw: unknown): RegistrySnapshot | null {
           : undefined,
       iconUrl: typeof e.iconUrl === 'string' ? e.iconUrl : undefined,
       homepage: typeof e.homepage === 'string' ? e.homepage : undefined,
+      screenshots:
+        Array.isArray(e.screenshots) && e.screenshots.every((s) => typeof s === 'string')
+          ? (e.screenshots as string[])
+          : undefined,
     })
   }
   return { schemaVersion: 1, plugins }

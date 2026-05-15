@@ -5,7 +5,6 @@ import { IP, iconMap } from '../shared/constants'
 
 interface Props {
   item?: PoeItem
-  onDone: () => void
 }
 
 const ACTION_COLORS: Record<HistoryEntry['action'], string> = {
@@ -20,7 +19,7 @@ const ACTION_FALLBACK_ICONS: Record<HistoryEntry['action'], string> = {
   'stack-threshold': '📊',
 }
 
-export function HistoryPanel({ item, onDone: _onDone }: Props): JSX.Element {
+export function HistoryPanel({ item }: Props): JSX.Element {
   const [entries, setEntries] = useState<HistoryEntry[]>([])
   const [versions, setVersions] = useState<FilterVersion[]>([])
   const [undoingId, setUndoingId] = useState<number | null>(null)

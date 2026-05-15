@@ -40,5 +40,8 @@ export function validateManifest(raw: unknown): ValidationResult {
   if (m.tabIcon !== undefined && !isString(m.tabIcon)) {
     return { ok: false, error: 'tabIcon must be a string when present' }
   }
+  if (m.iconUrl !== undefined && !isString(m.iconUrl)) {
+    return { ok: false, error: 'iconUrl must be a string when present' }
+  }
   return { ok: true, manifest: m as unknown as PluginManifest }
 }
