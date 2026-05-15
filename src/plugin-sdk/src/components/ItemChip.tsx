@@ -1,7 +1,7 @@
 import { getScalpelGlobal } from '../runtime-helpers/scalpel-global'
 import { POE_CDN } from '../../../shared/endpoints'
 
-interface Props {
+export interface ItemChipProps {
   name: string
   itemClass?: string
   onClick?: () => void
@@ -23,7 +23,7 @@ function getChipIcon(name: string, itemClass?: string): { url: string; isDivCard
   return null
 }
 
-export function ItemChip({ name, itemClass, onClick, title }: Props): JSX.Element {
+export function ItemChip({ name, itemClass, onClick, title }: ItemChipProps): JSX.Element {
   const icon = getChipIcon(name, itemClass)
   const isDivCard = icon?.isDivCard ?? false
 

@@ -1,4 +1,4 @@
-interface Props {
+export interface ExternalLinkButtonProps {
   label: string
   title: string
   onClick: () => void
@@ -7,7 +7,7 @@ interface Props {
 /** Pill button used inside the "Open in" InfoChip on the item hero -- one
  *  per external-link target (Wiki, PoEDB). Matches the look of the existing
  *  Dust/DivCards Explore buttons for visual consistency. */
-export function ExternalLinkButton({ label, title, onClick }: Props): JSX.Element {
+export function ExternalLinkButton({ label, title, onClick }: ExternalLinkButtonProps): JSX.Element {
   return (
     <button
       onClick={onClick}
