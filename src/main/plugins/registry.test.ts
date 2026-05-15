@@ -46,6 +46,7 @@ const validRegistry = {
       repo: 'filterscalpel/scalpel-plugin-hello-world',
       latestVersion: '1.0.0',
       scalpelMinVersion: '>=0.0.0',
+      sha256: 'a'.repeat(64),
     },
   ],
 }
@@ -143,5 +144,29 @@ describe('fetchRegistry', () => {
     const { fetchRegistry } = await import('./registry')
     await fetchRegistry('file:///some/local/registry.json')
     expect(captured[0]).toBe('file:///some/local/registry.json')
+  })
+
+  it('drops an entry with a malformed sha256', async () => {
+    const bad = {
+      schemaVersion: 1,
+      plugins: [{ ...validRegistry.plugins[0], sha256: 'not-a-hash' }],
+    }
+    mockNetFetch(async () => new Response(JSON.stringify(bad), { status: 200 }))
+    const { fetchRegistry } = await import('./registry')
+    const result = await fetchRegistry()
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.snapshot.plugins).toHaveLength(0)
+  })
+
+  it('drops an entry with a malformed repo', async () => {
+    const bad = {
+      schemaVersion: 1,
+      plugins: [{ ...validRegistry.plugins[0], repo: '../evil' }],
+    }
+    mockNetFetch(async () => new Response(JSON.stringify(bad), { status: 200 }))
+    const { fetchRegistry } = await import('./registry')
+    const result = await fetchRegistry()
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.snapshot.plugins).toHaveLength(0)
   })
 })

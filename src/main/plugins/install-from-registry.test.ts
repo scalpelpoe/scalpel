@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { join } from 'path'
+import { createHash } from 'node:crypto'
+
+const PLUGIN_BYTES = new Uint8Array([1, 2, 3])
+const PLUGIN_SHA = createHash('sha256').update(PLUGIN_BYTES).digest('hex')
 
 const TEST_USER_DATA = '/test/userData'
 
@@ -29,6 +33,7 @@ vi.mock('fs', () => ({
     else mockFs.bufs.set(p, data)
   },
   mkdirSync: () => {},
+  rmSync: () => {},
 }))
 
 beforeEach(() => {
@@ -46,6 +51,7 @@ const validEntry = {
   repo: 'filterscalpel/scalpel-plugin-hello-world',
   latestVersion: '1.0.0',
   scalpelMinVersion: '>=0.0.0',
+  sha256: PLUGIN_SHA,
 }
 
 const matchingManifest = {
@@ -70,7 +76,7 @@ describe('installFromRegistry', () => {
   it('downloads plugin.js + manifest.json and writes them to userData', async () => {
     fetchResponses({
       'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
-        new Uint8Array([1, 2, 3]),
+        PLUGIN_BYTES,
       ),
       'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
         new Response(JSON.stringify(matchingManifest)),
@@ -85,7 +91,7 @@ describe('installFromRegistry', () => {
   it('appends to installed.json on success', async () => {
     fetchResponses({
       'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
-        new Uint8Array([1, 2, 3]),
+        PLUGIN_BYTES,
       ),
       'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
         new Response(JSON.stringify(matchingManifest)),
@@ -100,7 +106,7 @@ describe('installFromRegistry', () => {
     mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'installed.json'), JSON.stringify(['hello-world']))
     fetchResponses({
       'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
-        new Uint8Array([1, 2, 3]),
+        PLUGIN_BYTES,
       ),
       'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
         new Response(JSON.stringify(matchingManifest)),
@@ -114,7 +120,7 @@ describe('installFromRegistry', () => {
   it('rejects when manifest id does not match the registry id', async () => {
     fetchResponses({
       'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
-        new Uint8Array([1, 2, 3]),
+        PLUGIN_BYTES,
       ),
       'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
         new Response(JSON.stringify({ ...matchingManifest, id: 'something-else' })),
@@ -127,7 +133,7 @@ describe('installFromRegistry', () => {
   it('rejects when manifest version does not match the registry latestVersion', async () => {
     fetchResponses({
       'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
-        new Uint8Array([1, 2, 3]),
+        PLUGIN_BYTES,
       ),
       'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
         new Response(JSON.stringify({ ...matchingManifest, version: '0.5.0' })),
@@ -154,5 +160,20 @@ describe('installFromRegistry', () => {
     const r = await installFromRegistry(entry)
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error.toLowerCase()).toContain('version')
+  })
+
+  it('rejects when plugin.js checksum does not match', async () => {
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingManifest)),
+    })
+    const entry = { ...validEntry, sha256: '0'.repeat(64) }
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry(entry)
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error.toLowerCase()).toContain('checksum')
   })
 })

@@ -1,5 +1,6 @@
 import { net, app } from 'electron'
-import { mkdirSync, writeFileSync } from 'fs'
+import { mkdirSync, rmSync, writeFileSync } from 'fs'
+import { createHash } from 'node:crypto'
 import { join } from 'path'
 import { pluginDir } from './paths'
 import { validateManifest } from './manifest-validator'
@@ -65,14 +66,25 @@ export async function installFromRegistry(entry: RegistryEntry): Promise<Install
     }
   }
 
+  // 4.5. Verify plugin.js checksum
+  const actual = createHash('sha256').update(pluginBytes).digest('hex')
+  if (actual !== entry.sha256) {
+    return { ok: false, error: `plugin.js checksum mismatch (expected ${entry.sha256}, got ${actual})` }
+  }
+
   // 5. Write to userData
   const destDir = pluginDir(entry.id)
-  mkdirSync(destDir, { recursive: true })
-  writeFileSync(join(destDir, 'plugin.js'), pluginBytes)
-  writeFileSync(join(destDir, 'manifest.json'), manifestText)
+  try {
+    mkdirSync(destDir, { recursive: true })
+    writeFileSync(join(destDir, 'plugin.js'), pluginBytes)
+    writeFileSync(join(destDir, 'manifest.json'), manifestText)
 
-  // 6. Append to installed.json
-  addInstalledId(entry.id)
+    // 6. Append to installed.json
+    addInstalledId(entry.id)
+  } catch (e) {
+    rmSync(destDir, { recursive: true, force: true })
+    return { ok: false, error: `install write failed: ${(e as Error).message}` }
+  }
 
   return { ok: true, id: entry.id }
 }

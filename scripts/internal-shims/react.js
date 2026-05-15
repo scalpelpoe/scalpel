@@ -1,6 +1,7 @@
-// Single bundle that satisfies 'react', 'react-dom/client', 'react/jsx-runtime',
-// and 'react-dom/server' for plugins. All four importmap entries point at this
-// file so plugins share ONE React instance with createRoot's hook dispatcher.
+// Single bundle that satisfies 'react', 'react-dom', 'react-dom/client',
+// 'react-dom/server', and 'react/jsx-runtime' for plugins. All five importmap
+// entries point at this file so plugins share ONE React instance with createRoot's
+// hook dispatcher.
 //
 // Splitting into separate bundles caused two pitfalls:
 //   - Without `external: ['react']`, esbuild inlines a second copy of React
@@ -8,7 +9,7 @@
 //   - With `external: ['react']`, esbuild's ESM output emits a `__require`
 //     stub that throws "Dynamic require of 'react' is not supported" at the
 //     CJS-style require call sites inside react-dom/client's bundled source.
-// One bundle, one React. Plugin authors externalize all four specifiers in
+// One bundle, one React. Plugin authors externalize all five specifiers in
 // their own build so they never duplicate React themselves.
 //
 // `react-dom/server` is included so plugins can render an iconpark/JSX icon to
@@ -16,6 +17,7 @@
 // a ReactNode would force the host to mount the plugin's component inside its
 // own React tree and the dispatcher mismatch crashes useContext).
 import * as React from 'react'
+import * as ReactDOM from 'react-dom'
 import * as ReactDOMClient from 'react-dom/client'
 import * as ReactDOMServer from 'react-dom/server'
 import * as JsxRuntime from 'react/jsx-runtime'
@@ -53,6 +55,7 @@ const {
   version,
 } = React
 
+const { createPortal, flushSync } = ReactDOM
 const { createRoot, hydrateRoot } = ReactDOMClient
 const { renderToString, renderToStaticMarkup } = ReactDOMServer
 const { jsx, jsxs } = JsxRuntime
@@ -89,6 +92,9 @@ export {
   Component,
   PureComponent,
   version,
+  // react-dom
+  createPortal,
+  flushSync,
   // react-dom/client
   createRoot,
   hydrateRoot,

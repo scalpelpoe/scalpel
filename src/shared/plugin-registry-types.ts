@@ -22,6 +22,10 @@ export interface RegistryEntry {
   /** Latest published plugin version; matched against the installed plugin's
    *  manifest.version. Used as the GitHub release tag in the form "v<version>". */
   latestVersion: string
+  /** Lowercase hex SHA-256 of the released plugin.js. The curated registry is
+   *  the trust root; this pins the exact bytes so a later compromise or swap
+   *  of the GitHub release asset is rejected at install time. */
+  sha256: string
   /** Comparator expression a la versionMatches; install is blocked if the
    *  running Scalpel doesn't satisfy this. */
   scalpelMinVersion: string

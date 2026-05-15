@@ -48,8 +48,10 @@ function validateSnapshot(raw: unknown): RegistrySnapshot | null {
     const e = p as Record<string, unknown>
     if (typeof e.id !== 'string' || !PLUGIN_ID_PATTERN.test(e.id)) continue
     if (typeof e.name !== 'string' || typeof e.author !== 'string') continue
-    if (typeof e.description !== 'string' || typeof e.repo !== 'string') continue
+    if (typeof e.description !== 'string') continue
+    if (typeof e.repo !== 'string' || !/^\w[\w.-]*\/\w[\w.-]*$/.test(e.repo)) continue
     if (typeof e.latestVersion !== 'string' || typeof e.scalpelMinVersion !== 'string') continue
+    if (typeof e.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(e.sha256)) continue
     plugins.push({
       id: e.id,
       name: e.name,
@@ -58,6 +60,7 @@ function validateSnapshot(raw: unknown): RegistrySnapshot | null {
       repo: e.repo,
       latestVersion: e.latestVersion,
       scalpelMinVersion: e.scalpelMinVersion,
+      sha256: e.sha256,
       poeVersions:
         Array.isArray(e.poeVersions) && e.poeVersions.every((x) => x === 1 || x === 2)
           ? (e.poeVersions as (1 | 2)[])

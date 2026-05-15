@@ -32,6 +32,7 @@ vi.mock('fs', () => ({
   mkdirSync: (p: string) => {
     mockFs.dirs.add(p)
   },
+  rmSync: () => {},
   readdirSync: (p: string) =>
     [...mockFs.files.keys()].filter((f) => f.startsWith(p + '/')).map((f) => f.slice(p.length + 1)),
 }))

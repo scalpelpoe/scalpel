@@ -248,7 +248,7 @@ import { Button, TextInput, Textarea, Slider, Label } from '@scalpelpoe/plugin-s
 
 **Number scrubber**
 
-- `<StepInput value onChange placeholder />` - compact number input with mouse-over +/- buttons. Used in Scalpel's price-check stat filters.
+- `<ScrubInput value onChange />` - compact scrub-to-change number input; `value` is `number | null`, `onChange` receives `number | null`. Optional: `min`, `max`, `step`, `decimals`, `placeholder`, `suffix`, `defaultValue`, `color`.
 
 **Item chip**
 
@@ -371,7 +371,7 @@ Every plugin ships a `manifest.json` alongside its `plugin.js`. The schema:
   "description": "Explore jewel pricing and lab-farming math.",
   "author": "your-github-username",
   "homepage": "https://github.com/you/your-plugin",
-  "scalpelMinVersion": ">=0.20.0",
+  "scalpelMinVersion": ">=0.9.8",
   "poeVersions": [1, 2],
   "tabIcon": "icon.svg"
 }
@@ -381,7 +381,7 @@ Field notes:
 
 - `id` must match `^[a-z][a-z0-9-]{2,49}$` and matches the directory name in `userData/plugins/<id>/`.
 - `version` is your plugin's own version, separate from `manifestVersion` (the manifest schema version, currently 1).
-- `scalpelMinVersion` is a comparator expression (`">=0.20.0"`, `">=0.18 <1.0"`). If the running Scalpel doesn't satisfy it, the plugin won't load.
+- `scalpelMinVersion` is a comparator expression (`">=0.9.8"`, `">=0.9.8 <1.0"`). If the running Scalpel doesn't satisfy it, the plugin won't load.
 - `poeVersions` gates which games the plugin appears under. Omit for both.
 - `tabIcon` is optional; you can also pass an inline SVG string via `registerTab({ icon })`.
 
@@ -389,7 +389,7 @@ Field notes:
 
 While developing, skip the registry and install your plugin directly.
 
-**Option 1: "Load unpacked" button** (Scalpel ≥ this version)
+**Option 1: "Load unpacked" button** (Scalpel >= 0.9.8)
 
 1. In Scalpel, open Settings → Developer.
 2. Toggle "Developer mode" on.
@@ -432,16 +432,25 @@ Once your plugin has a working release, open a pull request against [`scalpelpoe
   "description": "Explore jewel pricing and lab-farming math.",
   "repo": "your-github-username/scalpel-plugin-jewel-economy",
   "latestVersion": "1.0.0",
-  "scalpelMinVersion": ">=0.20.0",
+  "sha256": "3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532",
+  "scalpelMinVersion": ">=0.9.8",
   "poeVersions": [1, 2],
   "iconUrl": "https://raw.githubusercontent.com/your-user/your-plugin/main/icon.png",
   "homepage": "https://github.com/your-user/your-plugin"
 }
 ```
 
+The `sha256` field is the lowercase hex SHA-256 of the exact `plugin.js` you attached to the release. Scalpel recomputes it on download and rejects the install if the bytes don't match, so a compromised or swapped release asset can't be silently loaded. Compute it from your built artifact:
+
+```bash
+node -e "console.log(require('crypto').createHash('sha256').update(require('fs').readFileSync('plugin.js')).digest('hex'))"
+```
+
+The value must be lowercase hex (64 chars). `sha256sum plugin.js` and `shasum -a 256 plugin.js` already produce lowercase; PowerShell's `Get-FileHash plugin.js -Algorithm SHA256` works but emits uppercase, so lowercase it (`.Hash.ToLower()`). An uppercase or otherwise malformed value makes the registry entry fail validation and the plugin silently won't appear in Browse.
+
 After the PR merges, Scalpel users see your plugin in Settings → Plugins → Browse with a one-click Install button.
 
-To publish an update: bump `version` in your `manifest.json`, cut a new tag, attach the artifacts to the new release, and update `latestVersion` in `registry.json` via another PR.
+To publish an update: bump `version` in your `manifest.json`, cut a new tag, attach the artifacts to the new release, and update `latestVersion` and `sha256` in `registry.json` via another PR.
 
 ## Versioning policy
 

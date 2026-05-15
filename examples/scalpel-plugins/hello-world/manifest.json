@@ -5,5 +5,5 @@
   "name": "Hello World",
   "description": "Reference plugin demonstrating the Scalpel plugin API.",
   "author": "filterscalpel",
-  "scalpelMinVersion": ">=0.0.0"
+  "scalpelMinVersion": ">=0.9.8"
 }
