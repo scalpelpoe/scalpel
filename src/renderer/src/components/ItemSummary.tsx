@@ -1,6 +1,7 @@
 import type { PoeItem, PriceInfo } from '../../../shared/types'
 import { ArrowRight } from '@icon-park/react'
-import { PriceChip, InfoChip } from '../shared/PriceChip'
+import { PriceChip } from '../shared/PriceChip'
+import { InfoChip } from '../shared/InfoChip'
 import { ExternalLinkButton } from '../shared/ExternalLinkButton'
 import { INFLUENCE_ICONS_BY_NAME } from './price-check/constants'
 import { iconMap, divCardArtMap, RARITY_COLORS, baseToClass, classSizes } from '../shared/constants'

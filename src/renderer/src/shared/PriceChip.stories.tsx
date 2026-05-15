@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { InfoChip, PriceChip } from './PriceChip'
+import { PriceChip } from './PriceChip'
+import { InfoChip } from './InfoChip'
 
 /** InfoChip + PriceChip stories. PriceChip renders a chaos/divine icon based on
  *  the active PoE version (PoE2 swaps chaos for exalted), so flipping the "PoE

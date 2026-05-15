@@ -53,7 +53,8 @@ export { ExternalLinkButton } from '../../renderer/src/shared/ExternalLinkButton
 export { LeagueDropdown } from '../../renderer/src/components/LeagueDropdown'
 export { SettingSelectBox } from '../../renderer/src/components/settings/SettingSelectBox'
 export { SettingToggleBox } from '../../renderer/src/components/settings/SettingToggleBox'
-export { StepInput } from '../../renderer/src/components/price-check/StepInput'
+export { ScrubInput } from '../../renderer/src/components/regex-tool/ScrubInput'
+export { InfoChip } from '../../renderer/src/shared/InfoChip'
 
 export { HotkeyRecorder } from '../../renderer/src/components/settings/HotkeyRecorder'
 export { HotkeyField } from '../../renderer/src/components/settings/HotkeyField'

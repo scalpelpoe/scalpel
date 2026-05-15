@@ -12,7 +12,7 @@ import {
 import { FilterChip } from '../price-check/FilterChip'
 import { ModList } from './ModList'
 import { ScrubInput } from './ScrubInput'
-import { InfoChip } from '../../shared/PriceChip'
+import { InfoChip } from '../../shared/InfoChip'
 import { WAYSTONE_MODS } from '../../../../shared/data/regex/waystone-mods'
 import { buildWaystoneRegex, type WaystoneQualifiers, type WaystoneRarity, type WaystoneTier } from './waystone-engine'
 import { generateWaystonePresetTags } from './waystone-preset-tags'

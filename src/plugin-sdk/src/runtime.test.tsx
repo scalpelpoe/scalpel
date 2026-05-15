@@ -110,12 +110,16 @@ describe('SDK runtime exports', () => {
     expect(getByText('My label')).toBeTruthy()
   })
 
-  it('exposes Slider, Textarea, StepInput, RemoveButton, ExternalLinkButton', () => {
+  it('exposes Slider, Textarea, ScrubInput, RemoveButton, ExternalLinkButton', () => {
     expect(typeof SDK.Slider).toBe('function')
     expect(typeof SDK.Textarea).toBe('function')
-    expect(typeof SDK.StepInput).toBe('function')
+    expect(typeof SDK.ScrubInput).toBe('function')
     expect(typeof SDK.RemoveButton).toBe('function')
     expect(typeof SDK.ExternalLinkButton).toBe('function')
+  })
+
+  it('exposes InfoChip', () => {
+    expect(typeof SDK.InfoChip).toBe('function')
   })
 
   it('exposes LeagueDropdown, SettingSelectBox, SettingToggleBox', () => {

@@ -4,7 +4,7 @@ import type { SearchableItem } from '../../../shared/types'
 import { iconMap } from '../shared/constants'
 import { IconGlow } from '../shared/IconGlow'
 import { LootLabel, HiddenLootLabel } from '../shared/LootLabel'
-import { InfoChip } from '../shared/PriceChip'
+import { InfoChip } from '../shared/InfoChip'
 import { goldIcon } from '../shared/icons'
 
 /** Row payload the combobox holds onto -- base shape from main + the resolved icon URL. */

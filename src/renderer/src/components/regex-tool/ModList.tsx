@@ -1,5 +1,5 @@
 import { Down, Right } from '@icon-park/react'
-import { InfoChip } from '../../shared/PriceChip'
+import { InfoChip } from '../../shared/InfoChip'
 import { formatModText } from './mapmods-helpers'
 
 export interface ModListMod {
