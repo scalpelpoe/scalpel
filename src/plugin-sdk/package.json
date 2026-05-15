@@ -1,6 +1,6 @@
 {
   "name": "@scalpelpoe/plugin-sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "TypeScript SDK for building Scalpel plugins. Types only; the runtime is served by Scalpel at scalpel-internal://sdk.js via importmap.",
   "type": "module",
   "main": "./dist/index.js",
