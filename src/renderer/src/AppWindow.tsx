@@ -7,6 +7,7 @@ import {
   filterFolderStepFor,
   filterStepFor,
   filterStepNum,
+  hasConfiguredProfile,
   nextStepAfterFilter,
   nextStepAfterOnlineSetup,
   onlineSetupStepFor,
@@ -77,7 +78,7 @@ export function AppWindow(): JSX.Element {
   useEffect(() => {
     window.api.getSettings().then((s) => {
       setSettings(s)
-      if (s.filterPath) goTo('settings')
+      if (hasConfiguredProfile(s)) goTo('settings')
     })
     // Re-fetch leagues each time the app window mounts. The cooldown gate in
     // refreshLeagues short-circuits the network call when the launch-time
@@ -97,7 +98,7 @@ export function AppWindow(): JSX.Element {
 
   useEffect(() => {
     const onFocus = (): void => {
-      if (settings?.filterPath && step !== 'settings' && !revisitingOnboarding) goTo('settings')
+      if (settings && hasConfiguredProfile(settings) && step !== 'settings' && !revisitingOnboarding) goTo('settings')
     }
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
@@ -110,6 +111,12 @@ export function AppWindow(): JSX.Element {
   }
 
   if (!settings) return <div />
+
+  const showExit = hasConfiguredProfile(settings)
+  const onExitSetup = (): void => {
+    setRevisitingOnboarding(false)
+    goTo('settings')
+  }
 
   const total = totalOnboardingSteps(selectedGames)
   const sharedBase = sharedStepBase(selectedGames)
@@ -151,6 +158,7 @@ export function AppWindow(): JSX.Element {
                 selectedGames={selectedGames}
                 onSelectedGamesChange={setSelectedGames}
                 onNext={() => startFilterFlowFor(orderedGames[0] ?? 1)}
+                onExitSetup={showExit ? onExitSetup : undefined}
               />
             </SlideIn>
           )}
@@ -179,6 +187,7 @@ export function AppWindow(): JSX.Element {
                       game={showGameLabel ? game : null}
                       stepNum={filterStepNum(selectedGames, game, 'folder')}
                       totalSteps={total}
+                      onExitSetup={showExit ? onExitSetup : undefined}
                     />
                   </SlideIn>
                 )}
@@ -197,6 +206,7 @@ export function AppWindow(): JSX.Element {
                       game={showGameLabel ? game : null}
                       stepNum={filterStepNum(selectedGames, game, 'filter')}
                       totalSteps={total}
+                      onExitSetup={showExit ? onExitSetup : undefined}
                     />
                   </SlideIn>
                 )}
@@ -215,6 +225,7 @@ export function AppWindow(): JSX.Element {
                       }}
                       stepNum={filterStepNum(selectedGames, game, 'filter') + 1}
                       totalSteps={total + 1}
+                      onExitSetup={showExit ? onExitSetup : undefined}
                     />
                   </SlideIn>
                 )}
@@ -231,6 +242,7 @@ export function AppWindow(): JSX.Element {
                 onBack={() => goTo(backStepFromHotkey(selectedGames, importedOnline))}
                 stepNum={sharedBase + 1}
                 totalSteps={total}
+                onExitSetup={showExit ? onExitSetup : undefined}
               />
             </SlideIn>
           )}
@@ -243,6 +255,7 @@ export function AppWindow(): JSX.Element {
                 onBack={() => goTo('hotkey')}
                 stepNum={sharedBase + 2}
                 totalSteps={total}
+                onExitSetup={showExit ? onExitSetup : undefined}
               />
             </SlideIn>
           )}
@@ -253,6 +266,7 @@ export function AppWindow(): JSX.Element {
                 onBack={() => goTo('pricecheck-hotkey')}
                 stepNum={sharedBase + 3}
                 totalSteps={total}
+                onExitSetup={showExit ? onExitSetup : undefined}
               />
             </SlideIn>
           )}
@@ -266,6 +280,7 @@ export function AppWindow(): JSX.Element {
                 onBack={() => goTo('trade-login')}
                 stepNum={sharedBase + 4}
                 totalSteps={total}
+                onExitSetup={showExit ? onExitSetup : undefined}
               />
             </SlideIn>
           )}

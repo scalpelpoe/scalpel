@@ -3,6 +3,7 @@ import {
   backStepFromFilterFolder,
   backStepFromHotkey,
   filterStepNum,
+  hasConfiguredProfile,
   nextStepAfterFilter,
   nextStepAfterOnlineSetup,
   selectedGameOrder,
@@ -99,5 +100,23 @@ describe('backStepFromHotkey', () => {
   })
   it('returns to PoE2 last step in PoE2-only flow', () => {
     expect(backStepFromHotkey(onlyPoe2, noImports)).toBe('filter-poe2')
+  })
+})
+
+describe('hasConfiguredProfile', () => {
+  it('returns false when neither per-game filter path is set', () => {
+    expect(hasConfiguredProfile({ filterPathPoe1: '', filterPathPoe2: '' })).toBe(false)
+  })
+
+  it('returns true when filterPathPoe1 is configured', () => {
+    expect(hasConfiguredProfile({ filterPathPoe1: 'C:/filters/poe1.filter', filterPathPoe2: '' })).toBe(true)
+  })
+
+  it('returns true when filterPathPoe2 is configured', () => {
+    expect(hasConfiguredProfile({ filterPathPoe1: '', filterPathPoe2: 'C:/filters/poe2.filter' })).toBe(true)
+  })
+
+  it('returns true when both are configured', () => {
+    expect(hasConfiguredProfile({ filterPathPoe1: 'C:/poe1.filter', filterPathPoe2: 'C:/poe2.filter' })).toBe(true)
   })
 })

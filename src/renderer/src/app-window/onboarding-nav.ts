@@ -83,3 +83,9 @@ export function backStepFromHotkey(
   const importedKey = lastGame === 1 ? 'poe1' : 'poe2'
   return importedOnline[importedKey] ? onlineSetupStepFor(lastGame) : filterStepFor(lastGame)
 }
+
+/** Returns true when the user already has a configured PoE profile (a stored
+ *  filterPathPoe1 or filterPathPoe2), allowing them to skip onboarding. */
+export function hasConfiguredProfile(settings: { filterPathPoe1: string; filterPathPoe2: string }): boolean {
+  return settings.filterPathPoe1 !== '' || settings.filterPathPoe2 !== ''
+}
