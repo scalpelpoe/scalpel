@@ -7,7 +7,6 @@ import {
   filterFolderStepFor,
   filterStepFor,
   filterStepNum,
-  hasConfiguredProfile,
   nextStepAfterFilter,
   nextStepAfterOnlineSetup,
   onlineSetupStepFor,
@@ -48,27 +47,17 @@ export function AppWindow(): JSX.Element {
     const nextIdx = STEP_ORDER.indexOf(next)
     setDirection(nextIdx >= curIdx ? 'forward' : 'back')
     setStep(next)
+    if (next !== 'settings' && next !== 'done') {
+      window.api.setSetting('onboardingStep', next)
+      window.api.setSetting('onboardingSelectedGames', selectedGames)
+      window.api.setSetting('onboardingImportedOnline', importedOnline)
+    }
   }
 
-  /** Switch the active poeVersion mid-onboarding and rebuild the flat
-   *  filterDir/filterPath/league fields from the target version's mirror keys.
-   *  Without this, FilterPicker on the second game would show the first game's
-   *  values until the user changed them.
-   *
-   *  Order matters: `poeVersion` MUST be written first so the mirror logic in
-   *  applySetting() writes the subsequent filterDir/filterPath/league updates
-   *  into the target version's mirror keys. Writing in the other order would
-   *  overwrite the *outgoing* version's saved values with the incoming game's. */
-  const switchOnboardingGame = (target: 1 | 2): void => {
+  const switchOnboardingGame = async (target: 1 | 2): Promise<void> => {
     if (!settings) return
-    const dir = target === 2 ? settings.filterDirPoe2 : settings.filterDirPoe1
-    const path = target === 2 ? settings.filterPathPoe2 : settings.filterPathPoe1
-    const league = target === 2 ? settings.leaguePoe2 : settings.leaguePoe1
-    window.api.setSetting('poeVersion', target)
-    window.api.setSetting('filterDir', dir)
-    window.api.setSetting('filterPath', path)
-    window.api.setSetting('league', league)
-    setSettings({ ...settings, poeVersion: target, filterDir: dir, filterPath: path, league })
+    await window.api.setSetting('poeVersion', target)
+    setSettings(await window.api.getSettings())
   }
 
   useEffect(() => {
@@ -78,7 +67,13 @@ export function AppWindow(): JSX.Element {
   useEffect(() => {
     window.api.getSettings().then((s) => {
       setSettings(s)
-      if (hasConfiguredProfile(s)) goTo('settings')
+      if (s.onboardingCompleted) {
+        goTo('settings')
+      } else if (s.onboardingStep) {
+        setStep(s.onboardingStep as Step)
+        if (s.onboardingSelectedGames) setSelectedGames(s.onboardingSelectedGames)
+        if (s.onboardingImportedOnline) setImportedOnline(s.onboardingImportedOnline)
+      }
     })
     // Re-fetch leagues each time the app window mounts. The cooldown gate in
     // refreshLeagues short-circuits the network call when the launch-time
@@ -98,7 +93,7 @@ export function AppWindow(): JSX.Element {
 
   useEffect(() => {
     const onFocus = (): void => {
-      if (settings && hasConfiguredProfile(settings) && step !== 'settings' && !revisitingOnboarding) goTo('settings')
+      if (settings?.onboardingCompleted && step !== 'settings' && !revisitingOnboarding) goTo('settings')
     }
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
@@ -112,8 +107,8 @@ export function AppWindow(): JSX.Element {
 
   if (!settings) return <div />
 
-  const showExit = hasConfiguredProfile(settings)
-  const onExitSetup = (): void => {
+  const showBackToSettings = revisitingOnboarding
+  const onBackToSettings = (): void => {
     setRevisitingOnboarding(false)
     goTo('settings')
   }
@@ -123,9 +118,14 @@ export function AppWindow(): JSX.Element {
   const orderedGames = selectedGameOrder(selectedGames)
   const showGameLabel = orderedGames.length === 2
 
-  const startFilterFlowFor = (game: 1 | 2): void => {
-    switchOnboardingGame(game)
+  const startFilterFlowFor = async (game: 1 | 2): Promise<void> => {
+    await switchOnboardingGame(game)
     goTo(filterFolderStepFor(game))
+  }
+
+  const switchGameThenGoTo = async (game: 1 | 2, next: Step): Promise<void> => {
+    await switchOnboardingGame(game)
+    goTo(next)
   }
 
   return (
@@ -157,8 +157,10 @@ export function AppWindow(): JSX.Element {
               <WelcomeStep
                 selectedGames={selectedGames}
                 onSelectedGamesChange={setSelectedGames}
-                onNext={() => startFilterFlowFor(orderedGames[0] ?? 1)}
-                onExitSetup={showExit ? onExitSetup : undefined}
+                onNext={() => {
+                  void startFilterFlowFor(orderedGames[0] ?? 1)
+                }}
+                onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
               />
             </SlideIn>
           )}
@@ -181,13 +183,16 @@ export function AppWindow(): JSX.Element {
                       onNext={() => goTo(filterStep)}
                       onBack={() => {
                         const back = backStepFromFilterFolder(game, selectedGames, importedOnline)
-                        if (game === 2 && selectedGames.poe1) switchOnboardingGame(1)
+                        if (game === 2 && selectedGames.poe1) {
+                          void switchGameThenGoTo(1, back)
+                          return
+                        }
                         goTo(back)
                       }}
                       game={showGameLabel ? game : null}
                       stepNum={filterStepNum(selectedGames, game, 'folder')}
                       totalSteps={total}
-                      onExitSetup={showExit ? onExitSetup : undefined}
+                      onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
                     />
                   </SlideIn>
                 )}
@@ -198,7 +203,10 @@ export function AppWindow(): JSX.Element {
                       onSettingsChange={setSettings}
                       onNext={() => {
                         const next = nextStepAfterFilter(game, selectedGames, importedOnline)
-                        if (next === 'filter-folder-poe2') switchOnboardingGame(2)
+                        if (next === 'filter-folder-poe2') {
+                          void switchGameThenGoTo(2, next)
+                          return
+                        }
                         goTo(next)
                       }}
                       onBack={() => goTo(folderStep)}
@@ -206,7 +214,7 @@ export function AppWindow(): JSX.Element {
                       game={showGameLabel ? game : null}
                       stepNum={filterStepNum(selectedGames, game, 'filter')}
                       totalSteps={total}
-                      onExitSetup={showExit ? onExitSetup : undefined}
+                      onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
                     />
                   </SlideIn>
                 )}
@@ -216,7 +224,10 @@ export function AppWindow(): JSX.Element {
                       filterName={importedName}
                       onNext={() => {
                         const next = nextStepAfterOnlineSetup(game, selectedGames)
-                        if (next === 'filter-folder-poe2') switchOnboardingGame(2)
+                        if (next === 'filter-folder-poe2') {
+                          void switchGameThenGoTo(2, next)
+                          return
+                        }
                         goTo(next)
                       }}
                       onBack={() => {
@@ -225,7 +236,7 @@ export function AppWindow(): JSX.Element {
                       }}
                       stepNum={filterStepNum(selectedGames, game, 'filter') + 1}
                       totalSteps={total + 1}
-                      onExitSetup={showExit ? onExitSetup : undefined}
+                      onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
                     />
                   </SlideIn>
                 )}
@@ -242,7 +253,7 @@ export function AppWindow(): JSX.Element {
                 onBack={() => goTo(backStepFromHotkey(selectedGames, importedOnline))}
                 stepNum={sharedBase + 1}
                 totalSteps={total}
-                onExitSetup={showExit ? onExitSetup : undefined}
+                onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
               />
             </SlideIn>
           )}
@@ -255,7 +266,7 @@ export function AppWindow(): JSX.Element {
                 onBack={() => goTo('hotkey')}
                 stepNum={sharedBase + 2}
                 totalSteps={total}
-                onExitSetup={showExit ? onExitSetup : undefined}
+                onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
               />
             </SlideIn>
           )}
@@ -266,7 +277,7 @@ export function AppWindow(): JSX.Element {
                 onBack={() => goTo('pricecheck-hotkey')}
                 stepNum={sharedBase + 3}
                 totalSteps={total}
-                onExitSetup={showExit ? onExitSetup : undefined}
+                onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
               />
             </SlideIn>
           )}
@@ -280,7 +291,7 @@ export function AppWindow(): JSX.Element {
                 onBack={() => goTo('trade-login')}
                 stepNum={sharedBase + 4}
                 totalSteps={total}
-                onExitSetup={showExit ? onExitSetup : undefined}
+                onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
               />
             </SlideIn>
           )}
@@ -288,7 +299,8 @@ export function AppWindow(): JSX.Element {
             <SlideIn stepKey="done" direction={direction}>
               <DoneStep
                 onFinish={() => {
-                  window.api.finishOnboarding()
+                  window.api.setSetting('onboardingCompleted', true)
+                  window.api.setSetting('onboardingStep', '')
                   setRevisitingOnboarding(false)
                   goTo('settings')
                 }}

@@ -31,7 +31,9 @@ export interface GameFeatures {
   filterFolderHint: string
 }
 
-const FEATURES_BY_VERSION: Record<1 | 2, GameFeatures> = {
+import type { GameVariant } from './types'
+
+const FEATURES_BY_VERSION: Record<GameVariant, GameFeatures> = {
   1: {
     dustExplorer: true,
     divCards: true,
@@ -56,6 +58,6 @@ const FEATURES_BY_VERSION: Record<1 | 2, GameFeatures> = {
 
 /** Pure lookup -- when `version` is null (initial load, detection race) we fall
  *  back to PoE1 since that's the default-attached game. */
-export function getGameFeatures(version: 1 | 2 | null): GameFeatures {
+export function getGameFeatures(version: GameVariant | null): GameFeatures {
   return FEATURES_BY_VERSION[version ?? 1]
 }

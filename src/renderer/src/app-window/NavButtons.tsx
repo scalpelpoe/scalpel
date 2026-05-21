@@ -3,19 +3,19 @@ export function NavButtons({
   onNext,
   nextLabel,
   nextDisabled,
-  onExitSetup,
+  onBackToSettings,
 }: {
   onBack?: () => void
   onNext: () => void
   nextLabel?: string
   nextDisabled?: boolean
-  onExitSetup?: () => void
+  onBackToSettings?: () => void
 }): JSX.Element {
   return (
     <div className="flex gap-[10px] mt-8">
-      {onExitSetup && (
-        <button onClick={onExitSetup} className="px-5 py-[10px] text-[12px] text-text-dim">
-          Exit Setup
+      {onBackToSettings && (
+        <button onClick={onBackToSettings} className="px-5 py-[10px] text-[12px] text-text-dim">
+          Back to Settings
         </button>
       )}
       <div className="flex-1" />

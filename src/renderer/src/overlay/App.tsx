@@ -916,7 +916,18 @@ export default function App(): JSX.Element {
                 />
               )}
               {view === 'no-filter' && (
-                <Notice icon="⚠" title="No filter loaded" body="Click ⚙ to select your .filter file." />
+                <Notice
+                  icon="⚠"
+                  title="No filter loaded"
+                  body="Select your .filter file to get started."
+                  action={{
+                    label: 'Open Filter Settings',
+                    onClick: () => {
+                      setSettingsTabRequest({ tab: 'filter', n: Date.now() })
+                      setView('setup')
+                    },
+                  }}
+                />
               )}
               {view === 'no-item' && (
                 <>

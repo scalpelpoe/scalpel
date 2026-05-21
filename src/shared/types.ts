@@ -3,6 +3,20 @@
 import type { MacroScope } from './macro-scope'
 import type { ThemePalette } from './theme/palette'
 
+export type GameVariant = 1 | 2
+
+export interface PoeProfile {
+  id: string
+  name: string
+  gameVariant: GameVariant
+  filterDir: string
+  filterPath: string
+  league: string
+  tradePriceOption: TradePriceOption
+  cheatSheets: CheatSheetsSettings
+  regexPresets: RegexPreset[]
+}
+
 export type Visibility = 'Show' | 'Hide' | 'Minimal'
 export type ComparisonOperator = '>' | '>=' | '=' | '==' | '<=' | '<'
 
@@ -362,6 +376,15 @@ export interface CheatSheetsSettings {
 /** Adaptive price-check defaults learning engine mode. */
 export type AdaptiveMode = 'eager' | 'conservative' | 'off'
 
+export type TradePriceOption =
+  | 'chaos_divine'
+  | 'chaos_equivalent'
+  | 'chaos'
+  | 'divine'
+  | 'exalted_divine'
+  | 'exalted_equivalent'
+  | 'exalted'
+
 export interface AppSettings {
   /** Active filter path + dir + league. Mirrored to/from the per-version fields
    *  (filterPathPoe1, filterPathPoe2, etc.) based on the current poeVersion at
@@ -407,16 +430,9 @@ export interface AppSettings {
   tradeCollapseListings?: boolean
   /** Volume (0.0-1.0) for the filter sound preview button. */
   previewVolume?: number
-  tradePriceOption:
-    | 'chaos_divine'
-    | 'chaos_equivalent'
-    | 'chaos'
-    | 'divine'
-    | 'exalted_divine'
-    | 'exalted_equivalent'
-    | 'exalted'
-  tradePriceOptionPoe1: AppSettings['tradePriceOption']
-  tradePriceOptionPoe2: AppSettings['tradePriceOption']
+  tradePriceOption: TradePriceOption
+  tradePriceOptionPoe1: TradePriceOption
+  tradePriceOptionPoe2: TradePriceOption
   /** Default "Listed" time for price-check searches. Empty string = any time. */
   tradeDefaultListedTime?:
     | ''
@@ -442,7 +458,7 @@ export interface AppSettings {
   cheatSheetsPoe1: CheatSheetsSettings
   cheatSheetsPoe2: CheatSheetsSettings
   stashScrollEnabled: boolean
-  poeVersion: 1 | 2
+  poeVersion: GameVariant
   /** Regex presets are persisted per game. Each session reads/writes the slot
    *  matching `poeVersion` -- the relaunch-on-switch flow guarantees the active
    *  version is stable for the lifetime of the process. */
@@ -467,6 +483,16 @@ export interface AppSettings {
    *  before changing a default; 'off' stops applying learned defaults but keeps
    *  recording so re-enabling is never cold-start. */
   adaptiveDefaultsMode: AdaptiveMode
+  /** UUID of the active profile (loaded from profiles/ dir). */
+  activeProfileId: string
+  /** True once the user clicks Finish in the onboarding wizard. */
+  onboardingCompleted: boolean
+  /** Onboarding resume: current step key (saved on every step transition). */
+  onboardingStep?: string
+  /** Onboarding resume: which games the user selected on the welcome screen. */
+  onboardingSelectedGames?: { poe1: boolean; poe2: boolean }
+  /** Onboarding resume: name of the online filter imported per game, if any. */
+  onboardingImportedOnline?: { poe1: string | null; poe2: string | null }
 }
 
 /** Title-bar tab keys the user is allowed to hide via View settings. Settings + Close

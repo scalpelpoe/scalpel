@@ -8,12 +8,14 @@
  *  Exposed via a getter (instead of a `let`-export) so consumers can never
  *  cache the value at import time -- every read goes through the function and
  *  reflects the current state, not whatever was set when the module loaded. */
-let _poeVersion: 1 | 2 = 1
+import type { GameVariant } from '../shared/types'
 
-export function getPoeVersion(): 1 | 2 {
+let _poeVersion: GameVariant = 1
+
+export function getPoeVersion(): GameVariant {
   return _poeVersion
 }
 
-export function setPoeVersion(v: 1 | 2): void {
+export function setPoeVersion(v: GameVariant): void {
   _poeVersion = v
 }

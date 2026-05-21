@@ -3,6 +3,7 @@ import type Store from 'electron-store'
 import type { AppSettings, RegexPreset } from '../../shared/types'
 import { getColorFrequencies } from '../filter-state'
 import { applySetting, broadcastSettingUpdate } from '../settings-write'
+import { writeRegexPresetsByGameVariant } from '../profile-settings'
 import { refreshLeagues } from '../trade/leagues'
 import { refreshPrices } from '../trade/prices'
 
@@ -57,7 +58,8 @@ export function register(store: Store<AppSettings>): void {
     } else {
       presets.push(preset)
     }
-    store.set(key, presets)
+    const variant: 1 | 2 = key === 'regexPresetsPoe2' ? 2 : 1
+    writeRegexPresetsByGameVariant(store, variant, presets)
     return presets
   })
 
@@ -65,7 +67,8 @@ export function register(store: Store<AppSettings>): void {
     const key = regexPresetsKey()
     const presets = store.get(key) ?? []
     const filtered = presets.filter((p) => p.id !== id)
-    store.set(key, filtered)
+    const variant: 1 | 2 = key === 'regexPresetsPoe2' ? 2 : 1
+    writeRegexPresetsByGameVariant(store, variant, filtered)
     return filtered
   })
 
@@ -74,7 +77,8 @@ export function register(store: Store<AppSettings>): void {
     const presets = store.get(key) ?? []
     const byId = new Map(presets.map((p) => [p.id, p]))
     const reordered = ids.map((id) => byId.get(id)).filter(Boolean) as RegexPreset[]
-    store.set(key, reordered)
+    const variant: 1 | 2 = key === 'regexPresetsPoe2' ? 2 : 1
+    writeRegexPresetsByGameVariant(store, variant, reordered)
     return reordered
   })
 }

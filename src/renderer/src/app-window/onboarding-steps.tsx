@@ -56,12 +56,12 @@ export function WelcomeStep({
   selectedGames,
   onSelectedGamesChange,
   onNext,
-  onExitSetup,
+  onBackToSettings,
 }: {
   selectedGames: SelectedGames
   onSelectedGamesChange: (g: SelectedGames) => void
   onNext: () => void
-  onExitSetup?: () => void
+  onBackToSettings?: () => void
 }): JSX.Element {
   const anySelected = selectedGames.poe1 || selectedGames.poe2
   return (
@@ -97,7 +97,12 @@ export function WelcomeStep({
           />
         </div>
       </div>
-      <NavButtons onNext={onNext} nextLabel="Continue" nextDisabled={!anySelected} onExitSetup={onExitSetup} />
+      <NavButtons
+        onNext={onNext}
+        nextLabel="Continue"
+        nextDisabled={!anySelected}
+        onBackToSettings={onBackToSettings}
+      />
     </div>
   )
 }
@@ -116,7 +121,7 @@ export function FilterFolderStep({
   game,
   stepNum,
   totalSteps,
-  onExitSetup,
+  onBackToSettings,
 }: {
   settings: AppSettings
   onSettingsChange: (s: AppSettings) => void
@@ -125,7 +130,7 @@ export function FilterFolderStep({
   game: 1 | 2 | null
   stepNum: number
   totalSteps: number
-  onExitSetup?: () => void
+  onBackToSettings?: () => void
 }): JSX.Element {
   const prefix = gameLabel(game)
   const folderHint = getGameFeatures(game ?? 1).filterFolderHint
@@ -138,7 +143,7 @@ export function FilterFolderStep({
         subtitle={`Choose your filter folder, generally ${folderHint}, so Scalpel can find your filters.`}
       />
       <FilterPicker settings={settings} onSettingsChange={onSettingsChange} mode="folder" />
-      <NavButtons onBack={onBack} onNext={onNext} nextDisabled={!settings.filterDir} onExitSetup={onExitSetup} />
+      <NavButtons onBack={onBack} onNext={onNext} onBackToSettings={onBackToSettings} />
     </div>
   )
 }
@@ -152,7 +157,7 @@ export function FilterStep({
   game,
   stepNum,
   totalSteps,
-  onExitSetup,
+  onBackToSettings,
 }: {
   settings: AppSettings
   onSettingsChange: (s: AppSettings) => void
@@ -162,7 +167,7 @@ export function FilterStep({
   game: 1 | 2 | null
   stepNum: number
   totalSteps: number
-  onExitSetup?: () => void
+  onBackToSettings?: () => void
 }): JSX.Element {
   const prefix = gameLabel(game)
   return (
@@ -182,7 +187,7 @@ export function FilterStep({
           maxListHeight={140}
         />
       </div>
-      <NavButtons onBack={onBack} onNext={onNext} nextDisabled={!settings.filterPath} onExitSetup={onExitSetup} />
+      <NavButtons onBack={onBack} onNext={onNext} onBackToSettings={onBackToSettings} />
     </div>
   )
 }
@@ -193,14 +198,14 @@ export function OnlineFilterSetupStep({
   onBack,
   stepNum,
   totalSteps,
-  onExitSetup,
+  onBackToSettings,
 }: {
   filterName: string
   onNext: () => void
   onBack: () => void
   stepNum?: number
   totalSteps?: number
-  onExitSetup?: () => void
+  onBackToSettings?: () => void
 }): JSX.Element {
   return (
     <div>
@@ -226,7 +231,7 @@ export function OnlineFilterSetupStep({
 
       <img src={poeFilterSettingImg} alt="PoE filter dropdown" className="mt-4 rounded border border-border w-full" />
 
-      <NavButtons onNext={onNext} onBack={onBack} nextLabel="Done" onExitSetup={onExitSetup} />
+      <NavButtons onNext={onNext} onBack={onBack} nextLabel="Done" onBackToSettings={onBackToSettings} />
     </div>
   )
 }
@@ -238,7 +243,7 @@ export function HotkeyStep({
   onBack,
   stepNum,
   totalSteps,
-  onExitSetup,
+  onBackToSettings,
 }: {
   settings: AppSettings
   onUpdate: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
@@ -246,7 +251,7 @@ export function HotkeyStep({
   onBack: () => void
   stepNum: number
   totalSteps: number
-  onExitSetup?: () => void
+  onBackToSettings?: () => void
 }): JSX.Element {
   return (
     <div>
@@ -257,7 +262,7 @@ export function HotkeyStep({
         subtitle="This key combo activates the overlay while you're in game. Hover an item and press it to analyze your filter."
       />
       <HotkeyField value={settings.hotkey} onChange={(acc) => onUpdate('hotkey', acc)} />
-      <NavButtons onBack={onBack} onNext={onNext} onExitSetup={onExitSetup} />
+      <NavButtons onBack={onBack} onNext={onNext} onBackToSettings={onBackToSettings} />
     </div>
   )
 }
@@ -269,7 +274,7 @@ export function PriceCheckHotkeyStep({
   onBack,
   stepNum,
   totalSteps,
-  onExitSetup,
+  onBackToSettings,
 }: {
   settings: AppSettings
   onUpdate: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
@@ -277,7 +282,7 @@ export function PriceCheckHotkeyStep({
   onBack: () => void
   stepNum: number
   totalSteps: number
-  onExitSetup?: () => void
+  onBackToSettings?: () => void
 }): JSX.Element {
   return (
     <div>
@@ -288,7 +293,7 @@ export function PriceCheckHotkeyStep({
         subtitle="This key combo is used to... price check items. You should know how to use this one."
       />
       <HotkeyField value={settings.priceCheckHotkey} onChange={(acc) => onUpdate('priceCheckHotkey', acc)} />
-      <NavButtons onBack={onBack} onNext={onNext} onExitSetup={onExitSetup} />
+      <NavButtons onBack={onBack} onNext={onNext} onBackToSettings={onBackToSettings} />
     </div>
   )
 }
@@ -298,13 +303,13 @@ export function TradeLoginStep({
   onBack,
   stepNum,
   totalSteps,
-  onExitSetup,
+  onBackToSettings,
 }: {
   onNext: () => void
   onBack: () => void
   stepNum: number
   totalSteps: number
-  onExitSetup?: () => void
+  onBackToSettings?: () => void
 }): JSX.Element {
   const { auth, login, logout } = useAuth()
 
@@ -349,7 +354,7 @@ export function TradeLoginStep({
         onBack={onBack}
         onNext={onNext}
         nextLabel={auth?.loggedIn ? 'Continue' : 'Skip'}
-        onExitSetup={onExitSetup}
+        onBackToSettings={onBackToSettings}
       />
     </div>
   )
@@ -363,7 +368,7 @@ export function PreferencesStep({
   onBack,
   stepNum,
   totalSteps,
-  onExitSetup,
+  onBackToSettings,
 }: {
   settings: AppSettings
   selectedGames: SelectedGames
@@ -372,7 +377,7 @@ export function PreferencesStep({
   onBack: () => void
   stepNum: number
   totalSteps: number
-  onExitSetup?: () => void
+  onBackToSettings?: () => void
 }): JSX.Element {
   const both = selectedGames.poe1 && selectedGames.poe2
   // Prefer the live-fetched league lists from the trade APIs; fall back to the
@@ -445,7 +450,7 @@ export function PreferencesStep({
           </div>
         </section>
       </div>
-      <NavButtons onBack={onBack} onNext={onNext} nextLabel="Finish" onExitSetup={onExitSetup} />
+      <NavButtons onBack={onBack} onNext={onNext} nextLabel="Finish" onBackToSettings={onBackToSettings} />
     </div>
   )
 }

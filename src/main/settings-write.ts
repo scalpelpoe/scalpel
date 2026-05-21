@@ -8,7 +8,6 @@
 
 import type { WebContents } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings } from '../shared/types'
 import { withPluginHotkeys } from './app-macros'
 import { getAppWindow } from './app-window'
 import { applyCheatSheetHotkeys, getCheatSheetsOverlay } from './cheat-sheets'
@@ -19,18 +18,15 @@ import { getOverlayWindow, setCloseOnClickOutside } from './overlay'
 import { applyPinnedZoneEnabled, getPinnedZoneOverlay } from './pinned-zone'
 import { refreshPrices } from './trade/prices'
 import { setUpdateChannel } from './update/updater'
-
-/** Flat active key -> per-version mirror keys (PoE1, PoE2). When a flat key is
- *  written we also write to the mirror entry matching the current `poeVersion`,
- *  so consumers can keep reading the flat field while the per-version data
- *  stays current for the eventual game switch. */
-const MIRROR_KEYS = {
-  league: ['leaguePoe1', 'leaguePoe2'],
-  filterPath: ['filterPathPoe1', 'filterPathPoe2'],
-  filterDir: ['filterDirPoe1', 'filterDirPoe2'],
-  tradePriceOption: ['tradePriceOptionPoe1', 'tradePriceOptionPoe2'],
-  cheatSheets: ['cheatSheetsPoe1', 'cheatSheetsPoe2'],
-} as const satisfies Partial<Record<keyof AppSettings, readonly [keyof AppSettings, keyof AppSettings]>>
+import type { AppSettings, GameVariant } from '../shared/types'
+import {
+  hydrateActiveProfileSettings,
+  isProfileBackedKey,
+  switchActiveProfileByGameVariant,
+  switchActiveProfileById,
+  writeActiveProfileSetting,
+  type ProfileChangedSetting,
+} from './profile-settings'
 
 /** Send `setting-updated` to every window except the sender. */
 export function broadcastSettingUpdate(sender: WebContents | null, key: keyof AppSettings, value: unknown): void {
@@ -53,24 +49,12 @@ export function broadcastSettingUpdate(sender: WebContents | null, key: keyof Ap
     })
 }
 
-/** Persist a setting + mirror it + dispatch any side effects + broadcast.
- *  Pass `sender` from the IPC event so the originating window doesn't echo
- *  its own write. Pass `null` when the write didn't originate from a window
- *  (e.g. main-side migrations). */
-export function applySetting<K extends keyof AppSettings>(
-  store: Store<AppSettings>,
+function sideEffect<K extends keyof AppSettings>(
   key: K,
   value: AppSettings[K],
-  sender: WebContents | null,
+  prev: AppSettings[K] | undefined,
 ): void {
-  const prev = store.get(key)
-  store.set(key, value)
-  const mirror = MIRROR_KEYS[key as keyof typeof MIRROR_KEYS]
-  if (mirror) {
-    const v = store.get('poeVersion')
-    store.set(mirror[v === 2 ? 1 : 0], value as AppSettings[(typeof mirror)[number]])
-  }
-  if (key === 'filterPath' && value !== prev) loadFilter(value as string, 'Switched Filters')
+  if (key === 'filterPath' && value && value !== prev) loadFilter(value as string, 'Switched Filters')
   if (key === 'hotkey') setHotkey(value as string)
   if (key === 'priceCheckHotkey') setPriceCheckHotkey(value as string)
   if (key === 'closeOnClickOutside') setCloseOnClickOutside(value as boolean)
@@ -89,6 +73,60 @@ export function applySetting<K extends keyof AppSettings>(
       applyPinnedZoneEnabled(next?.pinned === true)
     }
   }
+}
 
-  broadcastSettingUpdate(sender, key, value)
+export function applyProfileHydrationSideEffects(
+  changes: ProfileChangedSetting[],
+  previous: Partial<AppSettings>,
+): void {
+  for (const { key, value } of changes) {
+    sideEffect(key, value, previous[key])
+  }
+}
+
+export function broadcastSettingUpdates(sender: WebContents | null, changes: ProfileChangedSetting[]): void {
+  for (const { key, value } of changes) {
+    broadcastSettingUpdate(sender, key, value)
+  }
+}
+
+function capturePreviousSettings(store: Store<AppSettings>, key: keyof AppSettings): Partial<AppSettings> {
+  return {
+    [key]: store.get(key),
+    filterPath: store.get('filterPath'),
+    league: store.get('league'),
+    cheatSheets: store.get('cheatSheets'),
+  }
+}
+
+/** Persist a setting + mirror it + dispatch any side effects + broadcast.
+ *  Pass `sender` from the IPC event so the originating window doesn't echo
+ *  its own write. Pass `null` when the write didn't originate from a window
+ *  (e.g. main-side migrations). */
+export function applySetting<K extends keyof AppSettings>(
+  store: Store<AppSettings>,
+  key: K,
+  value: AppSettings[K],
+  sender: WebContents | null,
+): void {
+  const previous = capturePreviousSettings(store, key)
+  let changes: ProfileChangedSetting[]
+
+  if (key === 'activeProfileId' && value) {
+    changes = switchActiveProfileById(store, value as string)
+  } else if (key === 'poeVersion') {
+    changes = switchActiveProfileByGameVariant(store, value as GameVariant)
+  } else if (isProfileBackedKey(key)) {
+    changes = writeActiveProfileSetting(store, key, value as AppSettings[typeof key])
+  } else {
+    store.set(key, value)
+    changes = [{ key, value }]
+  }
+
+  if (key === 'activeProfileId' && changes.length === 0) {
+    changes = hydrateActiveProfileSettings(store)
+  }
+
+  applyProfileHydrationSideEffects(changes, previous)
+  broadcastSettingUpdates(sender, changes)
 }

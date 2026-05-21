@@ -8,9 +8,10 @@ import { clearIntents, getIntents } from '../filter/intent-recorder'
 import { replayIntents } from '../filter/intent-replay'
 import { writeFilterSelective } from '../filter/writer'
 import { loadFilter } from '../filter-state'
-import { checkOnlineSyncNow } from '../online-sync'
 import { switchFilterInGame } from '../overlay'
 import { saveVersion } from '../update/versions'
+import { checkOnlineSyncNow } from '../online-sync'
+import { applySetting } from '../settings-write'
 
 /** Look up the online filter name and path for the currently active local filter */
 function findOnlineFilter(
@@ -79,9 +80,8 @@ export function register(store: Store<AppSettings>): void {
         content = content.replace(/^#name:.+$/m, `#name: ${localName}`)
         writeFileSync(targetPath, content, 'utf-8')
         clearIntents()
-        // Set as active filter
-        store.set('filterPath', targetPath)
-        loadFilter(targetPath, 'Online Filter Imported')
+        // Set as active filter (applySetting mirrors + writes to active profile)
+        applySetting(store, 'filterPath', targetPath, null)
         return { ok: true, path: targetPath }
       } catch (err) {
         return { ok: false, error: String(err) }

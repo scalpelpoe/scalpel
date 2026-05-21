@@ -10,6 +10,7 @@
 import { net } from 'electron'
 import type Store from 'electron-store'
 import { getTradeUrls } from '../../shared/endpoints'
+import { writeProfileSettingByGameVariant } from '../profile-settings'
 import { getGameFeatures } from '../../shared/game-features'
 import type { AppSettings } from '../../shared/types'
 
@@ -138,12 +139,9 @@ export async function refreshLeagues(
     const next = migrateLeague(currentLeague, list)
     if (next && next !== currentLeague) {
       console.warn(`[leagues] migrating ${leagueKey}: ${currentLeague} -> ${next}`)
-      store.set(leagueKey, next)
-      changed.push(leagueKey)
-      // Mirror to the flat 'league' if this is the active version
-      if (store.get('poeVersion') === version && store.get('league') === currentLeague) {
-        store.set('league', next)
-        changed.push('league')
+      const profileChanges = writeProfileSettingByGameVariant(store, version, 'league', next)
+      for (const change of profileChanges) {
+        if (!changed.includes(change.key)) changed.push(change.key)
       }
     }
   }
