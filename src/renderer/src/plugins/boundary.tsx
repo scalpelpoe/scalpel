@@ -1,4 +1,5 @@
 import { Component, type ReactNode } from 'react'
+import { reportDiagnosticError } from '../shared/diagnostics'
 
 interface Props {
   pluginId: string
@@ -18,6 +19,7 @@ export class PluginErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error): void {
+    reportDiagnosticError('plugin', 'react-boundary', error, this.props.pluginId)
     this.props.onError?.(this.props.pluginId, error)
   }
 

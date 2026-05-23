@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import type { AppSettings } from '../../../../shared/types'
 import { getGameFeatures } from '../../../../shared/game-features'
+import { reportDiagnosticError } from '../../shared/diagnostics'
 
 interface Props {
   settings: AppSettings
@@ -7,9 +9,29 @@ interface Props {
 }
 
 export function GeneralTab({ settings, update }: Props): JSX.Element {
+  const [reportMessage, setReportMessage] = useState<string | null>(null)
+  const [reporting, setReporting] = useState(false)
+  const [crashPlane, setCrashPlane] = useState(false)
   const features = getGameFeatures(settings.poeVersion)
   const cachedLeagues = settings.poeVersion === 2 ? settings.leaguesPoe2 : settings.leaguesPoe1
   const leagueOptions: readonly string[] = cachedLeagues && cachedLeagues.length > 0 ? cachedLeagues : features.leagues
+
+  const reportBug = async (): Promise<void> => {
+    setReporting(true)
+    setReportMessage(null)
+    try {
+      const result = await window.api.createBugReport()
+      setReportMessage(`Report created: ${result.reportPath}`)
+    } catch (err) {
+      setReportMessage(err instanceof Error ? err.message : 'Failed to create report')
+    } finally {
+      setReporting(false)
+    }
+  }
+
+  if (crashPlane) {
+    throw new Error('Simulated fatal renderer crash from Dev Only Stuff')
+  }
 
   return (
     <>
@@ -134,6 +156,16 @@ export function GeneralTab({ settings, update }: Props): JSX.Element {
         </div>
       </section>
 
+      <section>
+        <label>Bug reports</label>
+        <div className="mt-[6px] flex flex-col gap-2">
+          <button onClick={reportBug} disabled={reporting} className="self-start text-[11px] px-3 py-1.5 text-text-dim">
+            {reporting ? 'Creating report...' : 'Report a bug'}
+          </button>
+          {reportMessage && <div className="text-[10px] text-text-dim break-all">{reportMessage}</div>}
+        </div>
+      </section>
+
       {import.meta.env.DEV && (
         <section>
           <div className="settings-section-title mt-3">Dev Only Stuff</div>
@@ -158,6 +190,27 @@ export function GeneralTab({ settings, update }: Props): JSX.Element {
               title="Inject a fake update-available event so you can test the channel-switch rescind flow"
             >
               Fake update banner
+            </button>
+            <button
+              onClick={() =>
+                reportDiagnosticError(
+                  'renderer',
+                  'action',
+                  new Error('Simulated small renderer error from Dev Only Stuff'),
+                  'Dev Only Stuff: simulate a small error',
+                )
+              }
+              className="text-[11px] px-3 py-1.5 text-text-dim"
+              title="Report a handled diagnostics error without breaking the UI"
+            >
+              Simulate a small error
+            </button>
+            <button
+              onClick={() => setCrashPlane(true)}
+              className="text-[11px] px-3 py-1.5 text-text-dim"
+              title="Throw during render so the diagnostics error boundary catches it"
+            >
+              Crashing this plane with no survivors
             </button>
           </div>
         </section>

@@ -1,89 +1,86 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, powerMonitor, screen, protocol } from 'electron'
+import { app, type BrowserWindow, ipcMain, Menu, nativeImage, powerMonitor, protocol, screen, Tray } from 'electron'
+import {
+  createAndOpenBugReport,
+  installEarlyDiagnostics,
+  recordMainDiagnostic,
+  registerDiagnostics,
+} from './diagnostics'
 
-// Prevent unhandled JS exceptions from crashing the native overlay thread
-// electron-overlay-window's tsfn_to_js_proxy calls napi_fatal_error if napi_call_function
-// returns non-ok, which happens when there's a pending exception on the JS isolate
-process.on('uncaughtException', (err) => {
-  console.error('[UNCAUGHT]', err)
-})
-process.on('unhandledRejection', (err) => {
-  console.error('[UNHANDLED REJECTION]', err)
-})
+installEarlyDiagnostics()
 
-import { existsSync } from 'fs'
-import { join } from 'path'
-import { execSync } from 'child_process'
+import { execSync } from 'node:child_process'
+import { join } from 'node:path'
 import Store from 'electron-store'
+import type { AppSettings, CheatSheetsSettings, RegexPreset } from '../shared/types'
+import { initAppMacrosRefresh, withPluginHotkeys } from './app-macros'
+import { createAppWindow, getAppWindow, showAppWindow } from './app-window'
+import {
+  applyCheatSheetHotkeys,
+  categoryDir,
+  ensureThumb,
+  getCheatSheetsOverlay,
+  registerCheatSheetsOverlay,
+  setCheatSheetsBeforeShow,
+} from './cheat-sheets'
+import { snapshotClipboard } from './clipboard-preserve'
+import { createHotkeyHandler, createPriceCheckHandler, setEvaluationStore, setOpenSide } from './evaluation'
+import { loadFilter } from './filter-state'
+import { requestGameSwitch } from './game-switch'
+import { register as registerCheatSheets } from './handlers/cheat-sheets'
+import { register as registerClipboard } from './handlers/clipboard'
+import * as editingHandlers from './handlers/editing'
+import * as filesHandlers from './handlers/files'
+import { register as registerManifest } from './handlers/manifest'
+import * as onlineSyncHandlers from './handlers/online-sync'
+import { register as registerPlugins } from './handlers/plugins'
+import * as pricesHandlers from './handlers/prices'
+import * as settingsHandlers from './handlers/settings'
+import * as tradeHandlers from './handlers/trade'
+import * as versionsHandlers from './handlers/versions'
+import { register as registerWhiteboard } from './handlers/whiteboard'
+import {
+  resumeHotkeys,
+  setAppMacroHandler,
+  setAppMacros,
+  setChatCommands,
+  setEscapeHandler,
+  setHotkey,
+  setPriceCheckHandler,
+  setPriceCheckHotkey,
+  setStashScrollEnabled,
+  startHotkeyListener,
+  stopHotkeyListener,
+  suspendHotkeys,
+} from './hotkeys'
+import { refreshManifest } from './manifest'
+import { startOnlineSync, stopOnlineSync } from './online-sync'
 import {
   createOverlayWindow,
-  hideOverlay,
-  showOverlay,
   getOverlayWindow,
+  hideOverlay,
   setCloseOnClickOutside,
   setGameFocusHandlers,
   setWindowInputFocused,
+  showOverlay,
 } from './overlay'
-import { createAppWindow, showAppWindow, getAppWindow } from './app-window'
-import {
-  startHotkeyListener,
-  setHotkey,
-  setPriceCheckHotkey,
-  setPriceCheckHandler,
-  setEscapeHandler,
-  stopHotkeyListener,
-  setChatCommands,
-  setAppMacros,
-  setAppMacroHandler,
-  suspendHotkeys,
-  resumeHotkeys,
-  setStashScrollEnabled,
-} from './hotkeys'
-import { refreshPrices, invalidatePriceCache } from './trade/prices'
-import { onRateLimitUpdate } from './trade/trade'
-import { refreshLeagues } from './trade/leagues'
-import { requestGameSwitch } from './game-switch'
-import { startOnlineSync, stopOnlineSync } from './online-sync'
-import { initUpdater } from './update/updater'
-import { applyPendingUpdate } from './update/update-swap'
-import { loadFilter } from './filter-state'
-import { createHotkeyHandler, createPriceCheckHandler, setOpenSide, setEvaluationStore } from './evaluation'
-import { snapshotClipboard } from './clipboard-preserve'
-import * as tradeHandlers from './handlers/trade'
-import * as settingsHandlers from './handlers/settings'
-import * as filesHandlers from './handlers/files'
-import * as editingHandlers from './handlers/editing'
-import * as versionsHandlers from './handlers/versions'
-import * as onlineSyncHandlers from './handlers/online-sync'
-import * as pricesHandlers from './handlers/prices'
-import { register as registerCheatSheets } from './handlers/cheat-sheets'
-import { register as registerWhiteboard } from './handlers/whiteboard'
-import { register as registerClipboard } from './handlers/clipboard'
-import { register as registerManifest } from './handlers/manifest'
-import { register as registerPlugins } from './handlers/plugins'
-import { flushAll as flushPluginStorage } from './plugins/storage'
-import { refreshManifest } from './manifest'
-import { registerScalpelInternalProtocol, registerScalpelInternalSchemePrivileges } from './plugins/protocol'
+import { applyPinnedZoneEnabled, registerPinnedZoneOverlay } from './pinned-zone'
 import { registerScalpelPluginProtocol, registerScalpelPluginSchemePrivileges } from './plugins/plugin-protocol'
-import {
-  categoryDir,
-  ensureThumb,
-  registerCheatSheetsOverlay,
-  applyCheatSheetHotkeys,
-  setCheatSheetsBeforeShow,
-  getCheatSheetsOverlay,
-} from './cheat-sheets'
+import { registerScalpelInternalProtocol, registerScalpelInternalSchemePrivileges } from './plugins/protocol'
+import { flushAll as flushPluginStorage } from './plugins/storage'
+import { refreshLeagues } from './trade/leagues'
+import { invalidatePriceCache, refreshPrices } from './trade/prices'
+import { onRateLimitUpdate } from './trade/trade'
+import { applyPendingUpdate } from './update/update-swap'
+import { initUpdater } from './update/updater'
 import { registerWhiteboardOverlay, toggleWhiteboard } from './whiteboard'
-import { registerPinnedZoneOverlay, applyPinnedZoneEnabled } from './pinned-zone'
 import {
   hideAllOnPoeBlur,
-  restoreAllOnPoeFocus,
   isAnyScalpelWindowFocused,
+  restoreAllOnPoeFocus,
   setMainOverlayGetter,
   setOnLeaveScalpel,
   subscribeToPoeMoves,
 } from './windowing'
-import { initAppMacrosRefresh, withPluginHotkeys } from './app-macros'
-import type { AppSettings, CheatSheetsSettings, RegexPreset } from '../shared/types'
 
 // ---- Elevation detection ---------------------------------------------------
 
@@ -167,7 +164,7 @@ app.whenReady().then(() => {
 
 // Migrate: derive filterDir from existing filterPath for users upgrading
 if (!store.get('filterDir') && store.get('filterPath')) {
-  const { dirname } = require('path')
+  const { dirname } = require('node:path')
   store.set('filterDir', dirname(store.get('filterPath')))
 } else if (!store.get('filterDir')) {
   store.set('filterDir', '')
@@ -232,6 +229,7 @@ registerWhiteboard()
 registerClipboard()
 registerManifest()
 registerPlugins(store, isElevated)
+registerDiagnostics({ store, getAppWindow, showAppWindow })
 
 ipcMain.on('close-overlay', () => hideOverlay())
 ipcMain.on('open-devtools', (event) => {
@@ -279,6 +277,12 @@ function createTray(): void {
     {
       label: 'Settings',
       click: () => showAppWindow(),
+    },
+    {
+      label: 'Report a Bug',
+      click: () => {
+        createAndOpenBugReport().catch((err) => recordMainDiagnostic('bug-report', err))
+      },
     },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() },
@@ -344,7 +348,7 @@ app.whenReady().then(() => {
     } else {
       filePath = join(categoryDir(categoryId), file)
     }
-    return new Response(require('fs').createReadStream(filePath) as unknown as ReadableStream)
+    return new Response(require('node:fs').createReadStream(filePath) as unknown as ReadableStream)
   })
 
   // Broadcast rate limit state to overlay
