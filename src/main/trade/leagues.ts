@@ -10,7 +10,8 @@
 import { net } from 'electron'
 import type Store from 'electron-store'
 import { getTradeUrls } from '../../shared/endpoints'
-import { writeProfileSettingByGameVariant } from '../profile-settings'
+import { getProfileStore } from '../profiles/store'
+import { hydrateProfileSettings, listProfilesByGameVariant, type ProfileChangedSetting } from '../profile-settings'
 import { getGameFeatures } from '../../shared/game-features'
 import type { AppSettings } from '../../shared/types'
 
@@ -100,6 +101,69 @@ export function migrateLeague(current: string, fresh: readonly string[]): string
  *  defaulting to the live trade API. Tests inject a stub. */
 export type LeagueFetcher = (version: 1 | 2) => Promise<string[] | null>
 
+function rememberChange<K extends keyof AppSettings>(
+  store: Store<AppSettings>,
+  changed: ProfileChangedSetting[],
+  key: K,
+  value: AppSettings[K],
+): void {
+  if (store.get(key) === value) return
+  store.set(key, value)
+  changed.push({ key, value })
+}
+
+function migrateProfileLeagues(
+  store: Store<AppSettings>,
+  version: 1 | 2,
+  list: readonly string[],
+): ProfileChangedSetting[] {
+  const changed: ProfileChangedSetting[] = []
+  const mirrorKey = version === 2 ? 'leaguePoe2' : 'leaguePoe1'
+  const activeId = store.get('activeProfileId')
+  const profiles = listProfilesByGameVariant(version)
+
+  if (profiles.length === 0) {
+    const currentLeague = store.get(mirrorKey)
+    const next = migrateLeague(currentLeague, list)
+    if (next && next !== currentLeague) {
+      rememberChange(store, changed, mirrorKey, next)
+      if (store.get('poeVersion') === version) rememberChange(store, changed, 'league', next)
+    }
+    return changed
+  }
+
+  const lastUsedProfile = profiles[0]
+  let lastUsedNext: string | null = null
+  let activeProfileChanged = false
+  const profileStore = getProfileStore()
+
+  for (const profile of profiles) {
+    const next = migrateLeague(profile.league, list)
+    if (!next || next === profile.league) continue
+
+    console.warn(`[leagues] migrating profile ${profile.id}: ${profile.league} -> ${next}`)
+    profile.league = next
+    profile.updatedAt = new Date().toISOString()
+    profileStore.saveProfile(profile)
+
+    if (profile.id === lastUsedProfile.id) lastUsedNext = next
+    if (profile.id === activeId) activeProfileChanged = true
+  }
+
+  if (lastUsedNext) rememberChange(store, changed, mirrorKey, lastUsedNext)
+
+  if (activeProfileChanged && activeId) {
+    const activeProfile = profileStore.getProfile(activeId)
+    if (activeProfile) {
+      for (const change of hydrateProfileSettings(store, activeProfile)) {
+        if (!changed.some((existing) => existing.key === change.key)) changed.push(change)
+      }
+    }
+  }
+
+  return changed
+}
+
 /** Fetch both PoE1 and PoE2 league lists, persist them, and migrate the user's
  *  selected leagues if their challenge league rotated out. Returns the set of
  *  setting keys that were actually changed so callers can broadcast updates.
@@ -125,7 +189,7 @@ export async function refreshLeagues(
   const apply = (
     fetched: string[] | null,
     listKey: 'leaguesPoe1' | 'leaguesPoe2',
-    leagueKey: 'leaguePoe1' | 'leaguePoe2',
+    _leagueKey: 'leaguePoe1' | 'leaguePoe2',
     fallback: readonly string[],
     version: 1 | 2,
   ): void => {
@@ -135,14 +199,9 @@ export async function refreshLeagues(
       store.set(listKey, list)
       changed.push(listKey)
     }
-    const currentLeague = store.get(leagueKey)
-    const next = migrateLeague(currentLeague, list)
-    if (next && next !== currentLeague) {
-      console.warn(`[leagues] migrating ${leagueKey}: ${currentLeague} -> ${next}`)
-      const profileChanges = writeProfileSettingByGameVariant(store, version, 'league', next)
-      for (const change of profileChanges) {
-        if (!changed.includes(change.key)) changed.push(change.key)
-      }
+    const profileChanges = migrateProfileLeagues(store, version, list)
+    for (const change of profileChanges) {
+      if (!changed.includes(change.key)) changed.push(change.key)
     }
   }
 

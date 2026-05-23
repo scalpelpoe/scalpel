@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import type { FilterFile } from '../shared/types'
-import { loadIntents } from './filter/intent-recorder'
+import { loadIntents, resetIntents } from './filter/intent-recorder'
 import { parseFilterFile } from './filter/parser'
-import { registerFilterBaseTypes } from './trade/clipboard'
+import { clearFilterBaseTypes, registerFilterBaseTypes } from './trade/clipboard'
 import { saveVersion } from './update/versions'
 
 // ---- In-memory filter state ------------------------------------------------
@@ -15,6 +15,14 @@ export function getCurrentFilter(): FilterFile | null {
 
 export function setCurrentFilter(filter: FilterFile | null): void {
   currentFilter = filter
+  for (const cb of filterLoadedCallbacks) cb()
+}
+
+export function clearFilterState(): void {
+  currentFilter = null
+  colorFreqCache = null
+  resetIntents()
+  clearFilterBaseTypes()
   for (const cb of filterLoadedCallbacks) cb()
 }
 
@@ -151,9 +159,15 @@ export function getColorFrequencies(): ColorFreqMap {
 // ---- Filter loading --------------------------------------------------------
 
 export function loadFilter(path: string, autoVersionLabel?: string): FilterFile | null {
+  if (!path) {
+    clearFilterState()
+    return null
+  }
+
   try {
     const content = readFileSync(path, 'utf-8')
     currentFilter = parseFilterFile(path, content)
+    colorFreqCache = null
     for (const cb of filterLoadedCallbacks) cb()
     // Load intent log for this filter
     const filterName =
@@ -174,6 +188,7 @@ export function loadFilter(path: string, autoVersionLabel?: string): FilterFile 
     return currentFilter
   } catch (err) {
     console.error('[FilterScalpel] Failed to load filter:', err)
+    clearFilterState()
     return null
   }
 }

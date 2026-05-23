@@ -7,6 +7,9 @@
  *  table and broadcast targets stay in lockstep. */
 
 import type { WebContents } from 'electron'
+import Store from 'electron-store'
+import { clearFilterState, loadFilter } from './filter-state'
+import { getOverlayWindow, setCloseOnClickOutside } from './overlay'
 import type Store from 'electron-store'
 import { withPluginHotkeys } from './app-macros'
 import { getAppWindow } from './app-window'
@@ -54,7 +57,11 @@ function sideEffect<K extends keyof AppSettings>(
   value: AppSettings[K],
   prev: AppSettings[K] | undefined,
 ): void {
-  if (key === 'filterPath' && value && value !== prev) loadFilter(value as string, 'Switched Filters')
+  if (key === 'filterPath' && value !== prev) {
+    const path = value as string
+    if (path) loadFilter(path, 'Switched Filters')
+    else clearFilterState()
+  }
   if (key === 'hotkey') setHotkey(value as string)
   if (key === 'priceCheckHotkey') setPriceCheckHotkey(value as string)
   if (key === 'closeOnClickOutside') setCloseOnClickOutside(value as boolean)

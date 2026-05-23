@@ -68,10 +68,22 @@ export function isProfileBackedKey(key: keyof AppSettings): key is ProfileBacked
 }
 
 export function findProfileByGameVariant(variant: GameVariant): PoeProfile | null {
+  return findLastUsedProfileByGameVariant(variant)
+}
+
+export function findLastUsedProfileByGameVariant(variant: GameVariant): PoeProfile | null {
   return (
     maybeProfileStore()
       ?.listProfiles()
       .find((p) => p.gameVariant === variant) ?? null
+  )
+}
+
+export function listProfilesByGameVariant(variant: GameVariant): PoeProfile[] {
+  return (
+    maybeProfileStore()
+      ?.listProfiles()
+      .filter((profile) => profile.gameVariant === variant) ?? []
   )
 }
 
@@ -132,7 +144,7 @@ export function switchActiveProfileByGameVariant(
   store: Store<AppSettings>,
   variant: GameVariant,
 ): ProfileChangedSetting[] {
-  const profile = findProfileByGameVariant(variant)
+  const profile = findLastUsedProfileByGameVariant(variant)
   if (!profile) {
     const changed: ProfileChangedSetting[] = []
     rememberChange(store, changed, profileVersionKey, variant)
@@ -187,8 +199,8 @@ export function writeActiveProfileSetting<K extends ProfileBackedKey>(
   rememberChange(store, changed, mirrorKey(key, variant), value as AppSettings[keyof AppSettings])
 
   const activeId = store.get('activeProfileId')
-  const profile = activeId ? profileStore().getProfile(activeId) : findProfileByGameVariant(variant)
-  if (profile) {
+  const profile = activeId ? profileStore().getProfile(activeId) : null
+  if (profile && profile.gameVariant === variant) {
     ;(profile as unknown as Record<string, unknown>)[PROFILE_FIELD_BY_KEY[key]] = value
     profile.updatedAt = new Date().toISOString()
     profileStore().saveProfile(profile)
@@ -197,7 +209,7 @@ export function writeActiveProfileSetting<K extends ProfileBackedKey>(
   return changed
 }
 
-export function writeProfileSettingByGameVariant<K extends ProfileBackedKey>(
+export function writeLastUsedProfileSettingByGameVariant<K extends ProfileBackedKey>(
   store: Store<AppSettings>,
   variant: GameVariant,
   key: K,
@@ -206,7 +218,7 @@ export function writeProfileSettingByGameVariant<K extends ProfileBackedKey>(
   const changed: ProfileChangedSetting[] = []
   rememberChange(store, changed, mirrorKey(key, variant), value as AppSettings[keyof AppSettings])
 
-  const profile = findProfileByGameVariant(variant)
+  const profile = findLastUsedProfileByGameVariant(variant)
   if (profile) {
     ;(profile as unknown as Record<string, unknown>)[PROFILE_FIELD_BY_KEY[key]] = value
     profile.updatedAt = new Date().toISOString()
@@ -220,7 +232,7 @@ export function writeProfileSettingByGameVariant<K extends ProfileBackedKey>(
   return changed
 }
 
-export function writeRegexPresetsByGameVariant(
+export function writeActiveRegexPresetsByGameVariant(
   store: Store<AppSettings>,
   variant: GameVariant,
   presets: RegexPreset[],
@@ -228,8 +240,9 @@ export function writeRegexPresetsByGameVariant(
   const changed: ProfileChangedSetting[] = []
   rememberChange(store, changed, regexKey(variant), presets)
 
-  const profile = findProfileByGameVariant(variant)
-  if (profile) {
+  const activeId = store.get('activeProfileId')
+  const profile = activeId ? profileStore().getProfile(activeId) : null
+  if (profile && profile.gameVariant === variant) {
     profile.regexPresets = presets
     profile.updatedAt = new Date().toISOString()
     profileStore().saveProfile(profile)

@@ -8,12 +8,20 @@ import { getPoeVersion } from '../game-state'
 // class sheet -- getPoeVersion() isn't reliable at module load (game-state
 // hasn't been set yet), so we resolve on first access. registerFilterBaseTypes()
 // then adds filter-discovered bases on top.
-let _knownBaseTypes: Set<string> | null = null
-function getKnownBaseTypes(): Set<string> {
-  if (_knownBaseTypes === null) {
-    _knownBaseTypes = new Set(Object.values(getItemClasses(getPoeVersion())).flatMap((c) => c.bases.map((b) => b.name)))
+let _staticBaseTypes: Set<string> | null = null
+let _filterBaseTypes = new Set<string>()
+
+function getStaticBaseTypes(): Set<string> {
+  if (_staticBaseTypes === null) {
+    _staticBaseTypes = new Set(
+      Object.values(getItemClasses(getPoeVersion())).flatMap((c) => c.bases.map((b) => b.name)),
+    )
   }
-  return _knownBaseTypes
+  return _staticBaseTypes
+}
+
+function getKnownBaseTypes(): Set<string> {
+  return new Set([...getStaticBaseTypes(), ..._filterBaseTypes])
 }
 
 let _itemSizes: Record<string, [number, number]> | null = null
@@ -26,8 +34,15 @@ function getItemSizes(): Record<string, [number, number]> {
 
 /** Add base types extracted from the loaded filter */
 export function registerFilterBaseTypes(baseTypes: string[]): void {
-  const set = getKnownBaseTypes()
-  for (const bt of baseTypes) set.add(bt)
+  _filterBaseTypes = new Set(baseTypes)
+}
+
+export function clearFilterBaseTypes(): void {
+  _filterBaseTypes = new Set()
+}
+
+export function __hasKnownBaseTypeForTest(baseType: string): boolean {
+  return getKnownBaseTypes().has(baseType)
 }
 
 /** Try to find a known base type within a magic item name */

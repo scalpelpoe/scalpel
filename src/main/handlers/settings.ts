@@ -10,7 +10,7 @@ import {
   deleteProfileAndChooseFallback,
   listProfileSummaries,
   renameProfile,
-  writeRegexPresetsByGameVariant,
+  writeActiveRegexPresetsByGameVariant,
 } from '../profile-settings'
 import type { AppSettings, GameVariant, RegexPreset } from '../../shared/types'
 import { applySetting, broadcastSettingUpdate } from '../settings-write'
@@ -110,7 +110,7 @@ export function register(store: Store<AppSettings>): void {
       presets.push(preset)
     }
     const variant: 1 | 2 = key === 'regexPresetsPoe2' ? 2 : 1
-    writeRegexPresetsByGameVariant(store, variant, presets)
+    writeActiveRegexPresetsByGameVariant(store, variant, presets)
     return presets
   })
 
@@ -119,7 +119,7 @@ export function register(store: Store<AppSettings>): void {
     const presets = store.get(key) ?? []
     const filtered = presets.filter((p) => p.id !== id)
     const variant: 1 | 2 = key === 'regexPresetsPoe2' ? 2 : 1
-    writeRegexPresetsByGameVariant(store, variant, filtered)
+    writeActiveRegexPresetsByGameVariant(store, variant, filtered)
     return filtered
   })
 
@@ -129,7 +129,7 @@ export function register(store: Store<AppSettings>): void {
     const byId = new Map(presets.map((p) => [p.id, p]))
     const reordered = ids.map((id) => byId.get(id)).filter(Boolean) as RegexPreset[]
     const variant: 1 | 2 = key === 'regexPresetsPoe2' ? 2 : 1
-    writeRegexPresetsByGameVariant(store, variant, reordered)
+    writeActiveRegexPresetsByGameVariant(store, variant, reordered)
     return reordered
   })
 }

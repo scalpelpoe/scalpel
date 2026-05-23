@@ -176,7 +176,7 @@ export function FilterStep({
         stepNum={stepNum}
         totalSteps={totalSteps}
         title={prefix ? `Select your ${prefix} filter` : 'Select your filter'}
-        subtitle="Pick your starting filter. If you select an online filter, it will be resaved locally for fast editing, and you can merge in changes from your online filter whenever there are updates."
+        subtitle="Pick your starting filter, or skip this for now and add one later from settings. If you select an online filter, it will be resaved locally for fast editing."
       />
       <div className="-mt-3">
         <FilterPicker
@@ -187,7 +187,14 @@ export function FilterStep({
           maxListHeight={140}
         />
       </div>
-      <NavButtons onBack={onBack} onNext={onNext} onBackToSettings={onBackToSettings} />
+      <NavButtons
+        onBack={onBack}
+        onNext={onNext}
+        nextDisabled={!settings.filterPath}
+        secondaryLabel="Skip for now"
+        onSecondary={onNext}
+        onBackToSettings={onBackToSettings}
+      />
     </div>
   )
 }

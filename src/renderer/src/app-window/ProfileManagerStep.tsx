@@ -1,9 +1,15 @@
 import { useEffect, useState } from 'react'
 import type { AppSettings, GameVariant, PoeProfileSummary } from '../../../shared/types'
+import { DismissibleTip } from '../shared/DismissibleTip'
 import { StepHeader } from './StepHeader'
 
 function filterName(profile: PoeProfileSummary): string {
   return profile.filterPath ? profile.filterPath.replace(/^.*[\\/]/, '') : 'No filter selected'
+}
+
+function inGameFilterName(profile: PoeProfileSummary): string | null {
+  if (!profile.filterPath) return null
+  return profile.filterPath.replace(/^.*[\\/]/, '').replace(/\.filter$/i, '')
 }
 
 function defaultProfileName(variant: GameVariant): string {
@@ -22,6 +28,7 @@ export function ProfileManagerStep({
   onFinish: () => void
 }): JSX.Element {
   const [profiles, setProfiles] = useState<PoeProfileSummary[]>([])
+  const [switchedFilterName, setSwitchedFilterName] = useState<string | null>(null)
   const [draft, setDraft] = useState<
     | { kind: 'create'; gameVariant: GameVariant; name: string }
     | { kind: 'duplicate'; sourceId: string; name: string }
@@ -40,6 +47,7 @@ export function ProfileManagerStep({
   const activate = async (profile: PoeProfileSummary): Promise<void> => {
     setError(null)
     onSettingsChange(await window.api.setActiveProfile(profile.id))
+    setSwitchedFilterName(inGameFilterName(profile))
     await reloadProfiles()
   }
 
@@ -98,6 +106,13 @@ export function ProfileManagerStep({
       />
 
       <div className="flex flex-col gap-5">
+        {switchedFilterName && (
+          <DismissibleTip id="profile-manager.itemfilter-command">
+            Update Path of Exile after switching profiles: type{' '}
+            <code className="font-mono text-[11px] text-text">/itemfilter {switchedFilterName}</code> in chat.
+          </DismissibleTip>
+        )}
+
         {draft && (
           <section className="rounded border border-border bg-black/20 px-3 py-3 flex flex-col gap-3">
             <label className="text-[11px] text-text-dim">

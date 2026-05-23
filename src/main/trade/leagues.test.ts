@@ -1,6 +1,11 @@
+import { mkdtempSync } from 'fs'
+import { tmpdir } from 'os'
+import { join } from 'path'
+import { describe, it, expect } from 'vitest'
 import type Store from 'electron-store'
 import { describe, expect, it } from 'vitest'
 import type { AppSettings } from '../../shared/types'
+import { initProfileStore } from '../profiles/store'
 import { migrateLeague, refreshLeagues } from './leagues'
 
 describe('migrateLeague', () => {
@@ -213,5 +218,47 @@ describe('refreshLeagues', () => {
     const changed = await refreshLeagues(store, fetcher)
 
     expect(changed).toEqual([])
+  })
+
+  it('migrates every stale profile for a game without rewriting the active profile for another game', async () => {
+    const profiles = initProfileStore(mkdtempSync(join(tmpdir(), 'scalpel-league-profiles-')))
+    const poe1Trade = {
+      ...profiles.createDefault(1),
+      name: 'Trade',
+      league: 'Mirage',
+      updatedAt: '2026-01-02T00:00:00.000Z',
+    }
+    const poe1Hc = {
+      ...profiles.createDefault(1),
+      name: 'HC',
+      league: 'Hardcore Mirage',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    }
+    const poe2Active = { ...profiles.createDefault(2), name: 'PoE2 active', league: 'Fate of the Vaal' }
+    profiles.saveProfile(poe1Trade)
+    profiles.saveProfile(poe1Hc)
+    profiles.saveProfile(poe2Active)
+
+    const store = makeFakeStore({
+      poeVersion: 2,
+      activeProfileId: poe2Active.id,
+      league: 'Fate of the Vaal',
+      leaguePoe1: 'Mirage',
+      leaguePoe2: 'Fate of the Vaal',
+      leaguesPoe1: [],
+      leaguesPoe2: [],
+    })
+    const fresh1 = ['Return of the Settlers', 'Hardcore Return of the Settlers', 'Standard', 'Hardcore']
+    const fresh2 = ['Fate of the Vaal', 'HC Fate of the Vaal', 'Standard', 'Hardcore']
+    const fetcher = async (v: 1 | 2): Promise<string[] | null> => (v === 1 ? fresh1 : fresh2)
+
+    const changed = await refreshLeagues(store, fetcher)
+
+    expect(profiles.getProfile(poe1Trade.id)?.league).toBe('Return of the Settlers')
+    expect(profiles.getProfile(poe1Hc.id)?.league).toBe('Hardcore Return of the Settlers')
+    expect(profiles.getProfile(poe2Active.id)?.league).toBe('Fate of the Vaal')
+    expect(store.get('league')).toBe('Fate of the Vaal')
+    expect(store.get('leaguePoe1')).toBe('Return of the Settlers')
+    expect(changed).not.toContain('league')
   })
 })

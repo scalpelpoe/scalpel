@@ -162,8 +162,8 @@ export function AppWindow(): JSX.Element {
       <div
         className="flex-1 overflow-y-auto overflow-x-hidden flex justify-center"
         style={{
-          alignItems: step !== 'settings' ? 'center' : undefined,
-          marginTop: step !== 'settings' ? -10 : undefined,
+          alignItems: step !== 'settings' && step !== 'profiles' ? 'center' : undefined,
+          marginTop: step !== 'settings' && step !== 'profiles' ? -10 : undefined,
         }}
       >
         <div className={`w-full max-w-[480px] px-6 py-8 ${step !== 'settings' ? 'select-none' : ''}`}>

@@ -3,12 +3,16 @@ export function NavButtons({
   onNext,
   nextLabel,
   nextDisabled,
+  secondaryLabel,
+  onSecondary,
   onBackToSettings,
 }: {
   onBack?: () => void
   onNext: () => void
   nextLabel?: string
   nextDisabled?: boolean
+  secondaryLabel?: string
+  onSecondary?: () => void
   onBackToSettings?: () => void
 }): JSX.Element {
   return (
@@ -22,6 +26,11 @@ export function NavButtons({
       {onBack && (
         <button onClick={onBack} className="px-5 py-[10px] text-[13px]">
           Back
+        </button>
+      )}
+      {onSecondary && (
+        <button onClick={onSecondary} className="px-5 py-[10px] text-[13px]">
+          {secondaryLabel ?? 'Skip'}
         </button>
       )}
       <button

@@ -51,6 +51,11 @@ export function clearIntents(): void {
   persist()
 }
 
+export function resetIntents(): void {
+  currentFilterPath = null
+  currentLog = { filterName: '', intents: [] }
+}
+
 export function hasIntentLog(filterPath: string): boolean {
   return existsSync(getIntentFilePath(filterPath))
 }

@@ -9,6 +9,7 @@ import {
   deleteProfileAndChooseFallback,
   listProfileSummaries,
   switchActiveProfileByGameVariant,
+  writeActiveRegexPresetsByGameVariant,
   writeActiveProfileSetting,
 } from './profile-settings'
 
@@ -40,6 +41,49 @@ describe('profile-settings', () => {
     expect(store.get('league')).toBe('Return of the Settlers')
     expect(store.get('leaguePoe1')).toBe('Return of the Settlers')
     expect(profiles.getProfile(poe1.id)?.league).toBe('Return of the Settlers')
+  })
+
+  it('writes same-game profile-backed settings only to the active profile', () => {
+    const profiles = setupProfiles()
+    const trade = { ...profiles.createDefault(1), name: 'Trade', league: 'Mirage' }
+    const ssf = { ...profiles.createDefault(1), name: 'SSF', league: 'Standard' }
+    profiles.saveProfile(trade)
+    profiles.saveProfile(ssf)
+
+    const store = makeStore({ poeVersion: 1, activeProfileId: ssf.id, league: 'Standard', leaguePoe1: 'Standard' })
+
+    writeActiveProfileSetting(store, 'league', 'Return of the Settlers')
+
+    expect(store.get('league')).toBe('Return of the Settlers')
+    expect(store.get('leaguePoe1')).toBe('Return of the Settlers')
+    expect(profiles.getProfile(ssf.id)?.league).toBe('Return of the Settlers')
+    expect(profiles.getProfile(trade.id)?.league).toBe('Mirage')
+  })
+
+  it('writes regex presets only to the active same-game profile', () => {
+    const profiles = setupProfiles()
+    const trade = { ...profiles.createDefault(1), name: 'Trade' }
+    const ssf = { ...profiles.createDefault(1), name: 'SSF' }
+    profiles.saveProfile(trade)
+    profiles.saveProfile(ssf)
+
+    const preset = {
+      id: 'preset-1',
+      regex: '"reflect"',
+      tags: [],
+      avoid: [],
+      want: [],
+      wantMode: 'any' as const,
+      qualifiers: {},
+      nightmare: false,
+    }
+    const store = makeStore({ poeVersion: 1, activeProfileId: ssf.id, regexPresetsPoe1: [] })
+
+    writeActiveRegexPresetsByGameVariant(store, 1, [preset])
+
+    expect(store.get('regexPresetsPoe1')).toEqual([preset])
+    expect(profiles.getProfile(ssf.id)?.regexPresets).toEqual([preset])
+    expect(profiles.getProfile(trade.id)?.regexPresets).toEqual([])
   })
 
   it('switches game variant from the target profile instead of stale mirror settings', () => {
