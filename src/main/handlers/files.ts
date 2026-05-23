@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import type Store from 'electron-store'
@@ -107,7 +107,7 @@ export function register(store: Store<AppSettings>): void {
           const fullPath = join(onlinePath, f)
           // Skip directories and .filter files (those are local filters)
           try {
-            const stat = require('node:fs').statSync(fullPath)
+            const stat = statSync(fullPath)
             if (stat.isDirectory()) continue
           } catch {
             continue

@@ -1,12 +1,7 @@
 import type { ScalpelPluginContext } from '../../../plugin-sdk/src/types'
 import type { PluginContextFactoryDeps } from './types'
 
-// Mirrors SCALPEL_DEBUG_LOG into the renderer via a contextBridge global the
-// preload sets at boot. Plugins call ctx.log() and the call is dropped when
-// the env var isn't set, so debug spam doesn't reach production users.
-const DEBUG = (): boolean => {
-  return Boolean((globalThis as unknown as { __SCALPEL_DEBUG_LOG?: boolean }).__SCALPEL_DEBUG_LOG)
-}
+const DEBUG = (): boolean => Boolean(window.__SCALPEL_DEBUG_LOG)
 
 export function createPluginContext(deps: PluginContextFactoryDeps): ScalpelPluginContext {
   let tabRegistered = false

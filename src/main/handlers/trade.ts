@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, net, session } from 'electron'
+import { app, BrowserWindow, ipcMain, net, session, shell } from 'electron'
 import type Store from 'electron-store'
 import { getTradeUrls, POE_WEBSITE } from '../../shared/endpoints'
 import type { AppSettings, AuthResult } from '../../shared/types'
@@ -286,7 +286,7 @@ export function register(store: Store<AppSettings>): void {
   })
 
   ipcMain.handle('open-external', (_event, url: string) => {
-    require('electron').shell.openExternal(url)
+    shell.openExternal(url)
   })
 
   ipcMain.handle(

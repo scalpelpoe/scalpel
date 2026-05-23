@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { ipcMain } from 'electron'
 import type Store from 'electron-store'
@@ -33,7 +33,7 @@ function findOnlineFilter(
   for (const f of readdirSync(onlineDirPath)) {
     const fullPath = join(onlineDirPath, f)
     try {
-      if (require('node:fs').statSync(fullPath).isDirectory()) continue
+      if (statSync(fullPath).isDirectory()) continue
       const content = readFileSync(fullPath, 'utf-8')
       for (const line of content.split('\n').slice(0, 15)) {
         const match = line.match(/^#name:(.+)/)

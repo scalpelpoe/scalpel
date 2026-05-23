@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto'
+import { execSync, spawn } from 'node:child_process'
 import { createWriteStream, existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { app, type BrowserWindow, ipcMain } from 'electron'
@@ -151,8 +152,7 @@ async function checkForUpdates(channel: string): Promise<void> {
 
     const remote = await fetchJson<InstallManifest>(manifestAsset.browser_download_url)
     const local = readLocalManifest()
-    const pkg = require('../../package.json')
-    const runningVersion = pkg.version as string
+    const runningVersion = app.getVersion()
 
     // Advisory: if the running version matches a bricked rule, surface a banner asking the
     // user to reinstall. Separate from the update flow -- they see this even if auto-update
@@ -246,10 +246,9 @@ async function downloadAsarUpdate(): Promise<void> {
         await downloadFile(unpackedZipUrl, unpackedZipPath, remote.unpackedSize || 0)
 
         // Extract the zip to staging/app.asar.unpacked/
-        const { execSync: exec } = require('node:child_process')
         const unpackedDir = join(stagingDir, 'app.asar.unpacked')
         mkdirSync(unpackedDir, { recursive: true })
-        exec(
+        execSync(
           `powershell -NoProfile -Command "Expand-Archive -Path '${unpackedZipPath}' -DestinationPath '${unpackedDir}' -Force"`,
           { stdio: 'ignore', windowsHide: true },
         )
@@ -513,7 +512,6 @@ ipcMain.handle('install-update', () => {
   const vbsPath = join(userDataDir, 'apply-update.vbs')
   writeFileSync(vbsPath, `CreateObject("WScript.Shell").Run """${batPath}""", 0, False\r\n`)
 
-  const { spawn } = require('node:child_process')
   spawn('wscript.exe', [vbsPath], {
     detached: true,
     stdio: 'ignore',
