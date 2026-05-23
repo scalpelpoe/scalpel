@@ -125,7 +125,7 @@ export function GeneralTab({ settings, update }: Props): JSX.Element {
             max={100}
             step={5}
             value={Math.round((settings.previewVolume ?? 0.25) * 100)}
-            onChange={(e) => update('previewVolume', parseInt(e.target.value) / 100)}
+            onChange={(e) => update('previewVolume', parseInt(e.target.value, 10) / 100)}
             className="flex-1"
           />
           <span className="text-[13px] font-semibold text-text min-w-[36px] text-right">

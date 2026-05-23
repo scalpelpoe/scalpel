@@ -113,9 +113,10 @@ export interface PoeItem {
   isSynthetic?: boolean
   fractured: boolean
   transfigured: boolean
+  alternateQuality?: boolean
   vaalGem?: boolean
   blighted: boolean
-  uberBlighted: boolean
+  uberBlighted?: boolean
   scourged: boolean
   zanaMemory: boolean
   implicitCount: number
@@ -530,7 +531,7 @@ export interface HistoryEntry {
   timestamp: number
   description: string
   /** The kind of edit that was made */
-  action: 'block-edit' | 'tier-move' | 'stack-threshold'
+  action: 'block-edit' | 'tier-move' | 'stack-threshold' | 'strand-threshold'
   /** Item name/baseType — used to show the item icon in the history panel */
   itemName?: string
 }

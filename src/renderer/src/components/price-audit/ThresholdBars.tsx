@@ -1,7 +1,7 @@
 import { getCurrencyIcons } from '../../shared/icons'
 import dustIcon from '../../assets/currency/thaumaturgic-dust.png'
 import type { FilterBlock } from '../../../../shared/types'
-import { AuditItem, formatDust, formatTierLabel, mirrorIcon, retierSelectStyle } from './constants'
+import { type AuditItem, formatDust, formatTierLabel, mirrorIcon, retierSelectStyle } from './constants'
 import { usePoeVersion } from '../../shared/poe-version-context'
 
 interface TierSibling {

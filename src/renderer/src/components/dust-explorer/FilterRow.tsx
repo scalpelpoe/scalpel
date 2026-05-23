@@ -2,7 +2,7 @@ import dustIcon from '../../assets/currency/thaumaturgic-dust.png'
 import { chaosIcon } from '../../shared/icons'
 import { IconGlow } from '../../shared/IconGlow'
 import { RemoveButton } from '../RemoveButton'
-import { ActiveFilter, FilterType } from './types'
+import type { ActiveFilter, FilterType } from './types'
 import { ALL_FILTER_TYPES, FILTER_LABELS } from './constants'
 import { scaleRange, formatDust, formatRatio } from './utils'
 

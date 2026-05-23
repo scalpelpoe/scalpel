@@ -1,10 +1,10 @@
 import type {
+  ConditionResult,
+  EvaluatedCondition,
   FilterCondition,
   FilterFile,
   MatchResult,
   PoeItem,
-  ConditionResult,
-  EvaluatedCondition,
   StackSizeBreakpoint,
 } from '../../shared/types'
 import { evaluatePoe2Condition } from './matcher.poe2'
@@ -66,27 +66,27 @@ function evaluateCondition(cond: FilterCondition, item: PoeItem): ConditionResul
     }
 
     case 'ItemLevel':
-      return compareNum(item.itemLevel, operator, parseInt(values[0])) ? 'pass' : 'fail'
+      return compareNum(item.itemLevel, operator, parseInt(values[0], 10)) ? 'pass' : 'fail'
 
     case 'Quality':
-      return compareNum(item.quality, operator, parseInt(values[0])) ? 'pass' : 'fail'
+      return compareNum(item.quality, operator, parseInt(values[0], 10)) ? 'pass' : 'fail'
 
     case 'Sockets': {
       const socketCount = item.sockets ? item.sockets.replace(/[^RGBWAD]/g, '').length : 0
-      return compareNum(socketCount, operator, parseInt(values[0])) ? 'pass' : 'fail'
+      return compareNum(socketCount, operator, parseInt(values[0], 10)) ? 'pass' : 'fail'
     }
 
     case 'LinkedSockets':
-      return compareNum(item.linkedSockets, operator, parseInt(values[0])) ? 'pass' : 'fail'
+      return compareNum(item.linkedSockets, operator, parseInt(values[0], 10)) ? 'pass' : 'fail'
 
     case 'SocketGroup':
       return socketGroupMatches(item.sockets, values[0]) ? 'pass' : 'fail'
 
     case 'GemLevel':
-      return compareNum(item.gemLevel, operator, parseInt(values[0])) ? 'pass' : 'fail'
+      return compareNum(item.gemLevel, operator, parseInt(values[0], 10)) ? 'pass' : 'fail'
 
     case 'StackSize':
-      return compareNum(item.stackSize, operator, parseInt(values[0])) ? 'pass' : 'fail'
+      return compareNum(item.stackSize, operator, parseInt(values[0], 10)) ? 'pass' : 'fail'
 
     case 'Corrupted':
       return boolMatch(item.corrupted, values[0]) ? 'pass' : 'fail'
@@ -127,7 +127,7 @@ function evaluateCondition(cond: FilterCondition, item: PoeItem): ConditionResul
     case 'HasExplicitMod': {
       // HasExplicitMod can check mod names (from advanced data) or mod text
       // With >= N operator, count how many mods from the list are present
-      const threshold = operator !== '=' ? parseInt(values[0]) : 1
+      const threshold = operator !== '=' ? parseInt(values[0], 10) : 1
       const modNames = operator !== '=' ? values.slice(1) : values
       // Check advanced mod names first (prefix/suffix names like "Athlete's", "of the Leviathan")
       const advModNames = item.advancedMods?.filter((m) => m.type !== 'implicit').map((m) => m.name) ?? []
@@ -153,17 +153,21 @@ function evaluateCondition(cond: FilterCondition, item: PoeItem): ConditionResul
 
     case 'Height':
       return item.height != null
-        ? compareNum(item.height, operator, parseInt(values[0]))
+        ? compareNum(item.height, operator, parseInt(values[0], 10))
           ? 'pass'
           : 'fail'
         : 'unknown'
     case 'Width':
-      return item.width != null ? (compareNum(item.width, operator, parseInt(values[0])) ? 'pass' : 'fail') : 'unknown'
+      return item.width != null
+        ? compareNum(item.width, operator, parseInt(values[0], 10))
+          ? 'pass'
+          : 'fail'
+        : 'unknown'
 
     case 'MapTier':
     case 'WaystoneTier':
       return item.mapTier > 0
-        ? compareNum(item.mapTier, operator || '=', parseInt(values[0]))
+        ? compareNum(item.mapTier, operator || '=', parseInt(values[0], 10))
           ? 'pass'
           : 'fail'
         : 'unknown'
@@ -186,7 +190,7 @@ function evaluateCondition(cond: FilterCondition, item: PoeItem): ConditionResul
 
     case 'MemoryStrands':
       // Items without memory strands have 0 strands (not unknown)
-      return compareNum(item.memoryStrands ?? 0, operator, parseInt(values[0])) ? 'pass' : 'fail'
+      return compareNum(item.memoryStrands ?? 0, operator, parseInt(values[0], 10)) ? 'pass' : 'fail'
 
     case 'CorruptedMods':
       // Can't reliably distinguish corruption implicits from natural ones via clipboard
@@ -209,7 +213,7 @@ function evaluateCondition(cond: FilterCondition, item: PoeItem): ConditionResul
 
     // Conditions we can't evaluate from clipboard data
     case 'AreaLevel':
-      if (item.areaLevel != null) return compareNum(item.areaLevel, operator, parseInt(values[0])) ? 'pass' : 'fail'
+      if (item.areaLevel != null) return compareNum(item.areaLevel, operator, parseInt(values[0], 10)) ? 'pass' : 'fail'
       return 'unknown'
     case 'DropLevel':
     case 'BaseArmour':
@@ -333,8 +337,8 @@ export function findStackSizeBreakpoints(filter: FilterFile, item: PoeItem): Sta
 
     for (const cond of block.conditions) {
       if (cond.type === 'StackSize') {
-        const val = parseInt(cond.values[0])
-        if (!isNaN(val)) {
+        const val = parseInt(cond.values[0], 10)
+        if (!Number.isNaN(val)) {
           // Add the threshold and one below it to capture range boundaries
           thresholds.add(val)
           if (val > 1) thresholds.add(val - 1)
@@ -386,8 +390,8 @@ export function findQualityBreakpoints(filter: FilterFile, item: PoeItem): Stack
 
     for (const cond of block.conditions) {
       if (cond.type === 'Quality') {
-        const val = parseInt(cond.values[0])
-        if (!isNaN(val)) {
+        const val = parseInt(cond.values[0], 10)
+        if (!Number.isNaN(val)) {
           thresholds.add(val)
           if (val > 0) thresholds.add(val - 1)
         }
@@ -436,8 +440,8 @@ export function findStrandBreakpoints(filter: FilterFile, item: PoeItem): StackS
 
     for (const cond of block.conditions) {
       if (cond.type === 'MemoryStrands') {
-        const val = parseInt(cond.values[0])
-        if (!isNaN(val)) {
+        const val = parseInt(cond.values[0], 10)
+        if (!Number.isNaN(val)) {
           thresholds.add(val)
           if (val > 0) thresholds.add(val - 1)
         }
@@ -473,12 +477,4 @@ function sameActiveBlock(a: MatchResult | null, b: MatchResult | null): boolean 
   if (a === null && b === null) return true
   if (a === null || b === null) return false
   return a.blockIndex === b.blockIndex
-}
-
-// Extend PoeItem to handle optional fields safely
-declare module '../../shared/types' {
-  interface PoeItem {
-    alternateQuality?: boolean
-    uberBlighted?: boolean
-  }
 }

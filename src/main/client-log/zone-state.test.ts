@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { getCurrentZone, onZoneChanged, ingestZoneEvent, _resetForTests } from './zone-state'
+import { _resetForTests, getCurrentZone, ingestZoneEvent, onZoneChanged } from './zone-state'
 
 describe('zone-state', () => {
   beforeEach(() => {

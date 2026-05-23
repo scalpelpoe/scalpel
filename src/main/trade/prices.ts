@@ -1,16 +1,16 @@
-import { net } from 'electron'
-import { app } from 'electron'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
-import { join } from 'path'
-import type { PriceInfo } from '../../shared/types'
-import { POE_NINJA_API } from '../../shared/endpoints'
-import { deriveItemVariant } from '../../shared/external-link'
-import type { NinjaItemRef } from '../../shared/external-link'
-import { getPoeVersion } from '../game-state'
-import { fetchAndBuildPoe2PriceMap, fetchPoe2PricesFromProxy, type Poe2PriceResult } from './prices.poe2'
-import { getManifest } from '../manifest'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { app, net } from 'electron'
 import uniqueInfoPoe1 from '../../shared/data/items/unique-info.json'
 import uniqueInfoPoe2 from '../../shared/data/items/unique-info-poe2.json'
+import { POE_NINJA_API } from '../../shared/endpoints'
+import type { NinjaItemRef } from '../../shared/external-link'
+import { deriveItemVariant } from '../../shared/external-link'
+import type { PriceInfo } from '../../shared/types'
+import { getPoeVersion } from '../game-state'
+import { getManifest } from '../manifest'
+import { fetchAndBuildPoe2PriceMap, fetchPoe2PricesFromProxy, type Poe2PriceResult } from './prices.poe2'
+
 const staticUniquesByVersion: Record<1 | 2, Record<string, string[]>> = {
   1: uniqueInfoPoe1 as Record<string, string[]>,
   2: uniqueInfoPoe2 as Record<string, string[]>,

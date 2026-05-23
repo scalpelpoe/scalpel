@@ -1,7 +1,7 @@
+import { readFileSync, statSync } from 'node:fs'
+import { extname } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { clipboard, ipcMain } from 'electron'
-import { readFileSync, statSync } from 'fs'
-import { extname } from 'path'
-import { fileURLToPath } from 'url'
 
 /** Cap on the size of a file we'll inline as a data URL on paste. Larger
  *  images bloat the BoardLibrary JSON and grind the renderer. The user can

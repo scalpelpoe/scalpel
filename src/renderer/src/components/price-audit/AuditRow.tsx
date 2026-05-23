@@ -1,6 +1,6 @@
 import { getCurrencyIcons } from '../../shared/icons'
 import dustIcon from '../../assets/currency/thaumaturgic-dust.png'
-import { AuditItem, calcMaxDust, divCardArtMap, formatDust, mirrorIcon } from './constants'
+import { type AuditItem, calcMaxDust, divCardArtMap, formatDust, mirrorIcon } from './constants'
 import { IconGlow } from '../../shared/IconGlow'
 import { CurrencyChip } from '../../shared/CurrencyChip'
 import { usePoeVersion } from '../../shared/poe-version-context'

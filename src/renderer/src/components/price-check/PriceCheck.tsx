@@ -15,7 +15,6 @@ import {
   MINMAX_CHIP_IDS,
 } from './constants'
 import { FilterChip } from './FilterChip'
-import { PriceChip } from '../../shared/PriceChip'
 import { FaustusBanner } from './FaustusBanner'
 import { AngeBanner } from './AngeBanner'
 import { TradeTimeoutBanner } from './TradeTimeoutBanner'

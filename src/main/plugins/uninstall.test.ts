@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { join, sep } from 'path'
+import { join, sep } from 'node:path'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const TEST_USER_DATA = '/test/userData'
 
@@ -34,7 +34,7 @@ vi.mock('fs', () => ({
     mockFs.dirsRemoved.push(p)
     if (opts?.recursive) {
       for (const k of [...mockFs.files.keys()]) {
-        if (k === p || k.startsWith(p + '/')) mockFs.files.delete(k)
+        if (k === p || k.startsWith(`${p}/`)) mockFs.files.delete(k)
       }
     } else {
       mockFs.files.delete(p)

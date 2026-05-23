@@ -1,5 +1,5 @@
-import { existsSync, unlinkSync } from 'fs'
-import { join, dirname } from 'path'
+import { existsSync, unlinkSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 
 /**
  * Clean up after updates at startup.

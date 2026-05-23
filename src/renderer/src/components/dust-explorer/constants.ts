@@ -5,7 +5,7 @@ import baseToUniques from '../../../../shared/data/items/unique-info.json'
 // directly rather than going through the shared iconMap.
 import itemIcons from '../../../../shared/data/items/item-icons-poe1.json'
 import { getItemClasses } from '../../../../shared/data/items/item-classes'
-import { FilterType } from './types'
+import type { FilterType } from './types'
 
 const dustMap = dustValues as Record<string, number>
 const _baseToUniques = baseToUniques as Record<string, string[]>

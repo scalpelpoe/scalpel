@@ -1,16 +1,16 @@
-import { uIOhook, UiohookKey } from 'uiohook-napi'
 import { clipboard, globalShortcut, ipcMain } from 'electron'
-import { snapshotClipboard } from './clipboard-preserve'
 import { OverlayController } from 'electron-overlay-window'
+import { UiohookKey, uIOhook } from 'uiohook-napi'
+import {
+  appMacroEffectiveScope,
+  chatCommandEffectiveScope,
+  type MacroScope,
+  scopeAppliesTo,
+} from '../shared/macro-scope'
+import { snapshotClipboard } from './clipboard-preserve'
+import { getPoeVersion } from './game-state'
 import { focusGameWindow, getOverlayWindow, isTypingInOverlay } from './overlay'
 import { hideFocusedOrAnyVisibleSecondaryOverlay } from './windowing'
-import { getPoeVersion } from './game-state'
-import {
-  chatCommandEffectiveScope,
-  appMacroEffectiveScope,
-  scopeAppliesTo,
-  type MacroScope,
-} from '../shared/macro-scope'
 
 // ─── Accelerator → uiohook keycode mapping ────────────────────────────────────
 
@@ -177,7 +177,7 @@ export function startHotkeyListener(handler: () => void): void {
   uIOhook.on('wheel', (e) => {
     if (!stashScrollEnabled || !e.ctrlKey || !OverlayController.targetHasFocus) return
     const tb = OverlayController.targetBounds
-    if (!tb || !tb.width) return
+    if (!tb?.width) return
     // Only act when cursor is inside the PoE window but outside the stash grid area
     if (e.x < tb.x || e.x > tb.x + tb.width || e.y < tb.y || e.y > tb.y + tb.height) return
     if (isStashGridArea(e.x, e.y, tb)) return

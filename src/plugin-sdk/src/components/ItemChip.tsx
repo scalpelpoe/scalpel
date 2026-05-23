@@ -1,5 +1,5 @@
-import { getScalpelGlobal } from '../runtime-helpers/scalpel-global'
 import { POE_CDN } from '../../../shared/endpoints'
+import { getScalpelGlobal } from '../runtime-helpers/scalpel-global'
 
 export interface ItemChipProps {
   name: string

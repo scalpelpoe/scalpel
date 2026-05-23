@@ -1,5 +1,5 @@
-const path = require('path')
-const fs = require('fs')
+const path = require('node:path')
+const fs = require('node:fs')
 
 exports.default = async function afterPack(context) {
   // Remove app-update.yml (we use our own update system, not electron-updater)

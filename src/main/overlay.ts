@@ -1,9 +1,9 @@
+import { join } from 'node:path'
 import { BrowserWindow, ipcMain, screen, webContents } from 'electron'
-import { join } from 'path'
-import { OverlayController, OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
+import { OVERLAY_WINDOW_OPTS, OverlayController } from 'electron-overlay-window'
 import { uIOhook } from 'uiohook-napi'
-import { getPoeVersion, setPoeVersion } from './game-state'
 import { startClientLogWatcher } from './client-log'
+import { getPoeVersion, setPoeVersion } from './game-state'
 import { closeAllOverlaysOnPoeExit, isAnyScalpelWindowFocused, isInsideAnySecondaryOverlay } from './windowing'
 
 let overlayWindow: BrowserWindow | null = null
@@ -61,7 +61,7 @@ function getScaleFactor(): number {
   // Use the display the game is actually on, not the primary display.
   // Multi-monitor setups with different DPIs need the correct scale factor.
   const tb = OverlayController.targetBounds
-  if (tb && tb.width) {
+  if (tb?.width) {
     return screen.getDisplayNearestPoint({ x: tb.x + tb.width / 2, y: tb.y + tb.height / 2 }).scaleFactor
   }
   return screen.getPrimaryDisplay().scaleFactor
@@ -73,7 +73,7 @@ ipcMain.on('report-panel-rect', (event, payload: unknown) => {
     ? (payload as Array<{ left: number; top: number; width: number; height: number }>)
     : [payload as { left: number; top: number; width: number; height: number }]
   const tb = OverlayController.targetBounds
-  if (!tb || !tb.width) return
+  if (!tb?.width) return
   const sf = getScaleFactor()
   const phys = rects
     .filter((r) => r.width > 0 && r.height > 0)
@@ -108,14 +108,13 @@ ipcMain.handle('get-overlay-state', () => {
   const sf = getScaleFactor()
   return {
     poeVersion: getPoeVersion(),
-    gameBounds:
-      tb && tb.width
-        ? {
-            gameWidth: Math.round(tb.width / sf),
-            gameHeight: Math.round(tb.height / sf),
-            sidebarWidth: Math.round((tb.height / sf) * POE_SIDEBAR_RATIO),
-          }
-        : null,
+    gameBounds: tb?.width
+      ? {
+          gameWidth: Math.round(tb.width / sf),
+          gameHeight: Math.round(tb.height / sf),
+          sidebarWidth: Math.round((tb.height / sf) * POE_SIDEBAR_RATIO),
+        }
+      : null,
   }
 })
 
@@ -244,8 +243,8 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
     },
   })
 
-  if (process.env['ELECTRON_RENDERER_URL']) {
-    overlayWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
+  if (process.env.ELECTRON_RENDERER_URL) {
+    overlayWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
     overlayWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
@@ -272,8 +271,8 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
     if (isAnyScalpelWindowFocused()) return
 
     // Make it invisible and click-through - don't actually hide from OS to avoid animation
-    overlayWindow!.setOpacity(0)
-    overlayWindow!.setIgnoreMouseEvents(true)
+    overlayWindow?.setOpacity(0)
+    overlayWindow?.setIgnoreMouseEvents(true)
 
     opacityHidden = true
     if (onGameBlur) setImmediate(onGameBlur)
@@ -284,10 +283,10 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
     if (!OverlayController.targetHasFocus) return
 
     // Restore opacity before showing so it's visible immediately
-    overlayWindow!.setOpacity(1)
+    overlayWindow?.setOpacity(1)
     opacityHidden = false
 
-    overlayWindow!.setSkipTaskbar(true)
+    overlayWindow?.setSkipTaskbar(true)
     origShowInactive()
 
     if (onGameFocus) setImmediate(onGameFocus)
@@ -339,7 +338,7 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
     if (!OverlayController.targetHasFocus) return
 
     const tb = OverlayController.targetBounds
-    if (tb && tb.width) sendGameBounds(tb.width, tb.height)
+    if (tb?.width) sendGameBounds(tb.width, tb.height)
     if (overlayVisible) {
       // Patched showInactive() fires onGameFocus internally, which resumes
       // hotkeys and restores any hidden secondary overlays.
@@ -397,7 +396,7 @@ export function showOverlay(): void {
   } catch {}
   try {
     const tb = OverlayController.targetBounds
-    if (tb && tb.width) sendGameBounds(tb.width, tb.height)
+    if (tb?.width) sendGameBounds(tb.width, tb.height)
     overlayWindow.webContents.send('poe-version', getPoeVersion())
   } catch (err) {
     console.error('[overlay] Error in showOverlay:', err)

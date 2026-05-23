@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // electron's `app.getPath('userData')` drives the on-disk path; mock it to a
 // throwaway location and skip fs writes entirely (debounce timer never fires

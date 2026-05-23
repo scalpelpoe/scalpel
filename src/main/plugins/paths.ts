@@ -1,5 +1,5 @@
+import { join } from 'node:path'
 import { app } from 'electron'
-import { join } from 'path'
 
 export function pluginsDir(): string {
   return join(app.getPath('userData'), 'plugins')

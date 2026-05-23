@@ -1,10 +1,10 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { net } from 'electron'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs'
-import { dirname, join } from 'path'
-import { pluginsDir } from './paths'
-import { PLUGIN_ID_PATTERN } from './manifest-validator'
 import { PLUGIN_REGISTRY_URL } from '../../shared/endpoints'
 import type { RegistryEntry, RegistrySnapshot } from '../../shared/plugin-registry-types'
+import { PLUGIN_ID_PATTERN } from './manifest-validator'
+import { pluginsDir } from './paths'
 
 export type FetchResult = { ok: true; snapshot: RegistrySnapshot } | { ok: false; error: string }
 

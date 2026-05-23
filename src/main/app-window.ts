@@ -1,6 +1,6 @@
-import { BrowserWindow, ipcMain, app, nativeImage } from 'electron'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { app, BrowserWindow, ipcMain, nativeImage } from 'electron'
 
 let appWindow: BrowserWindow | null = null
 let quitting = false
@@ -34,8 +34,8 @@ export function createAppWindow(): BrowserWindow {
     },
   })
 
-  if (process.env['ELECTRON_RENDERER_URL']) {
-    appWindow.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/app.html`)
+  if (process.env.ELECTRON_RENDERER_URL) {
+    appWindow.loadURL(`${process.env.ELECTRON_RENDERER_URL}/app.html`)
   } else {
     appWindow.loadFile(join(__dirname, '../renderer/app.html'))
   }

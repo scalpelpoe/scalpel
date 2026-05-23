@@ -1,11 +1,11 @@
+import { BENEFICIAL_NEGATIVE_KEYWORDS } from '../../../../shared/data/trade/beneficial-negatives'
+import { isClusterJewel } from '../../../../shared/poe-item'
 import type { StatFilter } from '../../trade'
+import { findAdvMod } from '../adv-mods'
+import { isDefenseMod, isLocalMod, isLowPriority } from '../classification'
 import type { MatchContext } from '../context'
 import { matchModToStat } from '../mod-matcher'
-import { findAdvMod } from '../adv-mods'
-import { PSEUDO_CONTRIBUTIONS, accumulatePseudo } from '../pseudo'
-import { isLocalMod, isLowPriority, isDefenseMod } from '../classification'
-import { isClusterJewel } from '../../../../shared/poe-item'
-import { BENEFICIAL_NEGATIVE_KEYWORDS } from '../../../../shared/data/trade/beneficial-negatives'
+import { accumulatePseudo, PSEUDO_CONTRIBUTIONS } from '../pseudo'
 
 // Tinctures: disambiguate duplicate stat texts (e.g. "#% increased effect" has two stat IDs)
 const TINCTURE_STAT_REMAP: Record<string, string> = {
@@ -45,7 +45,7 @@ export function processExplicits(ctx: MatchContext): StatFilter[] {
     let isFractured = false
     let isFoulborn = false
     let isRandomSupport = false
-    let advMod: ReturnType<typeof findAdvMod> = undefined
+    let advMod: ReturnType<typeof findAdvMod>
     if (advancedMods) {
       advMod = findAdvMod(advancedMods, cleaned, 'explicit')
       if (advMod?.fractured) isFractured = true
@@ -139,7 +139,7 @@ export function processExplicits(ctx: MatchContext): StatFilter[] {
               const s = l
                 .replace(/(-?\d+(?:\.\d+)?)\(-?\d+(?:\.\d+)?--?\d+(?:\.\d+)?\)/g, '$1')
                 .replace(/([a-zA-Z]\w*)\s*\([^)]*\)/g, '$1')
-                .replace(/\s*[—–\-]+\s*Unscalable Value$/i, '')
+                .replace(/\s*[—–-]+\s*Unscalable Value$/i, '')
                 .trim()
               return s === cleaned
             }),
@@ -152,9 +152,9 @@ export function processExplicits(ctx: MatchContext): StatFilter[] {
       // by explicit.* IDs) still hits for fractured/crafted mods -- they
       // otherwise contribute to total ele res / total life same as a regular roll.
       if (isFractured && matched.statId.startsWith('explicit.')) {
-        matched.statId = 'fractured.' + matched.statId.split('.').slice(1).join('.')
+        matched.statId = `fractured.${matched.statId.split('.').slice(1).join('.')}`
       } else if (isCrafted && matched.statId.startsWith('explicit.')) {
-        matched.statId = 'crafted.' + matched.statId.split('.').slice(1).join('.')
+        matched.statId = `crafted.${matched.statId.split('.').slice(1).join('.')}`
       }
 
       out.push({
@@ -181,7 +181,7 @@ export function processExplicits(ctx: MatchContext): StatFilter[] {
       })
       // For fractured mods, also add the unfractured (explicit) version, disabled by default
       if (isFractured) {
-        const explicitId = 'explicit.' + matched.statId.split('.').slice(1).join('.')
+        const explicitId = `explicit.${matched.statId.split('.').slice(1).join('.')}`
         out.push({
           id: explicitId,
           text: cleaned,

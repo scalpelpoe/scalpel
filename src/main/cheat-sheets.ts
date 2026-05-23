@@ -1,14 +1,14 @@
 import { screen } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
-import { registerSecondaryOverlay, sendCanvasIpc, moveCanvasTop, type Rect, type SecondaryOverlay } from './windowing'
-import { setSecondaryOverlayHotkeys } from './hotkeys'
-import { forwardZoneChangesTo, sendCurrentZoneTo } from './client-log'
 import {
-  CHEAT_SHEET_MINIMIZED_WIDTH,
   CHEAT_SHEET_MINIMIZED_HEIGHT,
   CHEAT_SHEET_MINIMIZED_SLACK,
+  CHEAT_SHEET_MINIMIZED_WIDTH,
 } from '../shared/cheat-sheet-window'
 import type { AppSettings, OverlayAnchor } from '../shared/types'
+import { forwardZoneChangesTo, sendCurrentZoneTo } from './client-log'
+import { setSecondaryOverlayHotkeys } from './hotkeys'
+import { moveCanvasTop, type Rect, registerSecondaryOverlay, type SecondaryOverlay, sendCanvasIpc } from './windowing'
 
 // Re-export the pure storage / image-fetch helpers so consumers (handlers,
 // protocol handler, tests) keep their existing import path. The actual
@@ -16,14 +16,14 @@ import type { AppSettings, OverlayAnchor } from '../shared/types'
 // without dragging the full main-process module graph in.
 export {
   categoryDir,
-  sheetFilePath,
-  generateSheetId,
-  generateCategoryId,
-  saveSheetBuffer,
-  removeSheetFile,
-  removeCategoryDir,
   ensureThumb,
   fetchImageBuffer,
+  generateCategoryId,
+  generateSheetId,
+  removeCategoryDir,
+  removeSheetFile,
+  saveSheetBuffer,
+  sheetFilePath,
 } from './cheat-sheet-storage'
 
 // ---- Overlay registration ---------------------------------------------------
@@ -180,7 +180,7 @@ function clearAnimationTimer(): void {
 }
 
 function easeOutCubic(t: number): number {
-  return 1 - Math.pow(1 - t, 3)
+  return 1 - (1 - t) ** 3
 }
 
 function animateBoundsTo(target: Rect): void {

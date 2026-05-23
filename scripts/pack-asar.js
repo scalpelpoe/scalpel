@@ -1,7 +1,7 @@
 const asar = require('@electron/asar')
-const fs = require('fs')
-const path = require('path')
-const crypto = require('crypto')
+const fs = require('node:fs')
+const path = require('node:path')
+const crypto = require('node:crypto')
 
 const projectRoot = path.join(__dirname, '..')
 const outDir = path.join(projectRoot, 'out')
@@ -14,7 +14,9 @@ const NATIVE_MODULES = ['electron-overlay-window', 'uiohook-napi']
 
 // Packages to fully exclude from the asar
 const EXCLUDE = new Set([
-  'electron', '@electron/get', '@types/node',  // electron runtime (already present)
+  'electron',
+  '@electron/get',
+  '@types/node', // electron runtime (already present)
 ])
 
 const nodeModulesSrc = path.join(projectRoot, 'node_modules')
@@ -25,13 +27,17 @@ if (!fs.existsSync(outDir)) {
 }
 
 // Use npm to resolve the full production dependency tree (including nested deps)
-const { execSync } = require('child_process')
+const { execSync } = require('node:child_process')
 const npmOutput = execSync('npm ls --prod --all --parseable', {
-  cwd: projectRoot, encoding: 'utf8', stdio: ['pipe', 'pipe', 'ignore']
+  cwd: projectRoot,
+  encoding: 'utf8',
+  stdio: ['pipe', 'pipe', 'ignore'],
 })
-const prodPaths = npmOutput.trim().split('\n')
-  .filter(p => p.includes('node_modules'))
-  .map(p => path.relative(projectRoot, p).replace(/\\/g, '/'))
+const prodPaths = npmOutput
+  .trim()
+  .split('\n')
+  .filter((p) => p.includes('node_modules'))
+  .map((p) => path.relative(projectRoot, p).replace(/\\/g, '/'))
 
 // Build a set of production packages to copy
 // Paths look like "node_modules/foo" or "node_modules/conf/node_modules/ajv"
@@ -41,9 +47,7 @@ for (const p of prodPaths) {
   const parts = p.split('/')
   const nmIdx = parts.lastIndexOf('node_modules')
   if (nmIdx === -1) continue
-  const pkgName = parts[nmIdx + 1].startsWith('@')
-    ? parts[nmIdx + 1] + '/' + parts[nmIdx + 2]
-    : parts[nmIdx + 1]
+  const pkgName = parts[nmIdx + 1].startsWith('@') ? `${parts[nmIdx + 1]}/${parts[nmIdx + 2]}` : parts[nmIdx + 1]
   if (EXCLUDE.has(pkgName)) continue
   prodPackages.add(p)
 }
@@ -103,7 +107,7 @@ function pruneDir(dir) {
       } else {
         pruneDir(fullPath)
       }
-    } else if (pruneExts.some(ext => entry.endsWith(ext))) {
+    } else if (pruneExts.some((ext) => entry.endsWith(ext))) {
       const relative = path.relative(nodeModulesDest, fullPath)
       const depth = relative.split(path.sep).length
       if (depth <= 2) fs.unlinkSync(fullPath)
@@ -118,74 +122,81 @@ if (!fs.existsSync(versionDir)) fs.mkdirSync(versionDir, { recursive: true })
 
 // Pack the asar (unpack .node native binaries so they can be loaded at runtime)
 const asarPath = path.join(versionDir, 'app.asar')
-asar.createPackageWithOptions(tempAppDir, asarPath, {
-  unpack: '*.node'
-}).then(() => {
-  // Zip the unpacked directory for separate upload
-  const unpackedDir = asarPath + '.unpacked'
-  if (fs.existsSync(unpackedDir)) {
-    const { execSync } = require('child_process')
-    const zipPath = path.join(versionDir, 'app.asar.unpacked.zip')
-    execSync(`powershell -NoProfile -Command "Compress-Archive -Path '${unpackedDir}\\*' -DestinationPath '${zipPath}' -Force"`, { stdio: 'inherit' })
-    console.log(`Zipped unpacked modules: ${(fs.statSync(zipPath).size / 1024 / 1024).toFixed(1)} MB`)
-  }
-
-  // Compute sha512
-  const data = fs.readFileSync(asarPath)
-  const sha512 = crypto.createHash('sha512').update(data).digest('base64')
-  const size = data.length
-
-  // Compute unpacked zip hash if it exists
-  const unpackedZipPath = path.join(versionDir, 'app.asar.unpacked.zip')
-  let unpackedSha512 = ''
-  let unpackedSize = 0
-  if (fs.existsSync(unpackedZipPath)) {
-    const unpackedData = fs.readFileSync(unpackedZipPath)
-    unpackedSha512 = crypto.createHash('sha512').update(unpackedData).digest('base64')
-    unpackedSize = unpackedData.length
-  }
-
-  // Write manifest
-  const electronVersion = require('../node_modules/electron/package.json').version
-  // Bricked-release advisories: list of version rules surfaced as a banner to users stuck
-  // on a broken version. Sourced from bricked-releases.json at repo root so the list can
-  // be edited without touching this script.
-  let brickedReleases
-  let brickedMessage
-  try {
-    const bricked = require('../bricked-releases.json')
-    if (Array.isArray(bricked.brickedReleases) && bricked.brickedReleases.length > 0) {
-      brickedReleases = bricked.brickedReleases
+asar
+  .createPackageWithOptions(tempAppDir, asarPath, {
+    unpack: '*.node',
+  })
+  .then(() => {
+    // Zip the unpacked directory for separate upload
+    const unpackedDir = `${asarPath}.unpacked`
+    if (fs.existsSync(unpackedDir)) {
+      const { execSync } = require('node:child_process')
+      const zipPath = path.join(versionDir, 'app.asar.unpacked.zip')
+      execSync(
+        `powershell -NoProfile -Command "Compress-Archive -Path '${unpackedDir}\\*' -DestinationPath '${zipPath}' -Force"`,
+        { stdio: 'inherit' },
+      )
+      console.log(`Zipped unpacked modules: ${(fs.statSync(zipPath).size / 1024 / 1024).toFixed(1)} MB`)
     }
-    if (typeof bricked.brickedMessage === 'string' && bricked.brickedMessage) {
-      brickedMessage = bricked.brickedMessage
+
+    // Compute sha512
+    const data = fs.readFileSync(asarPath)
+    const sha512 = crypto.createHash('sha512').update(data).digest('base64')
+    const size = data.length
+
+    // Compute unpacked zip hash if it exists
+    const unpackedZipPath = path.join(versionDir, 'app.asar.unpacked.zip')
+    let unpackedSha512 = ''
+    let unpackedSize = 0
+    if (fs.existsSync(unpackedZipPath)) {
+      const unpackedData = fs.readFileSync(unpackedZipPath)
+      unpackedSha512 = crypto.createHash('sha512').update(unpackedData).digest('base64')
+      unpackedSize = unpackedData.length
     }
-  } catch { /* no advisories file; field stays undefined */ }
-  const manifest = {
-    version,
-    electronVersion,
-    asarUrl: `v${version}/app.asar`,
-    asarSha512: sha512,
-    asarSize: size,
-    unpackedUrl: unpackedSize > 0 ? `v${version}/app.asar.unpacked.zip` : undefined,
-    unpackedSha512: unpackedSha512 || undefined,
-    unpackedSize: unpackedSize || undefined,
-    nativeModules: {
-      'electron-overlay-window': require('../node_modules/electron-overlay-window/package.json').version,
-      'uiohook-napi': require('../node_modules/uiohook-napi/package.json').version
-    },
-    brickedReleases,
-    brickedMessage
-  }
 
-  const manifestPath = path.join(versionDir, 'manifest.json')
-  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2))
+    // Write manifest
+    const electronVersion = require('../node_modules/electron/package.json').version
+    // Bricked-release advisories: list of version rules surfaced as a banner to users stuck
+    // on a broken version. Sourced from bricked-releases.json at repo root so the list can
+    // be edited without touching this script.
+    let brickedReleases
+    let brickedMessage
+    try {
+      const bricked = require('../bricked-releases.json')
+      if (Array.isArray(bricked.brickedReleases) && bricked.brickedReleases.length > 0) {
+        brickedReleases = bricked.brickedReleases
+      }
+      if (typeof bricked.brickedMessage === 'string' && bricked.brickedMessage) {
+        brickedMessage = bricked.brickedMessage
+      }
+    } catch {
+      /* no advisories file; field stays undefined */
+    }
+    const manifest = {
+      version,
+      electronVersion,
+      asarUrl: `v${version}/app.asar`,
+      asarSha512: sha512,
+      asarSize: size,
+      unpackedUrl: unpackedSize > 0 ? `v${version}/app.asar.unpacked.zip` : undefined,
+      unpackedSha512: unpackedSha512 || undefined,
+      unpackedSize: unpackedSize || undefined,
+      nativeModules: {
+        'electron-overlay-window': require('../node_modules/electron-overlay-window/package.json').version,
+        'uiohook-napi': require('../node_modules/uiohook-napi/package.json').version,
+      },
+      brickedReleases,
+      brickedMessage,
+    }
 
-  // Clean up staging
-  fs.rmSync(tempAppDir, { recursive: true })
+    const manifestPath = path.join(versionDir, 'manifest.json')
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2))
 
-  console.log(`Packed app.asar (${(size / 1024 / 1024).toFixed(1)} MB)`)
-  console.log(`SHA512: ${sha512}`)
-  console.log(`Manifest: ${manifestPath}`)
-  console.log(`\nArtifacts in dist/v${version}/`)
-})
+    // Clean up staging
+    fs.rmSync(tempAppDir, { recursive: true })
+
+    console.log(`Packed app.asar (${(size / 1024 / 1024).toFixed(1)} MB)`)
+    console.log(`SHA512: ${sha512}`)
+    console.log(`Manifest: ${manifestPath}`)
+    console.log(`\nArtifacts in dist/v${version}/`)
+  })

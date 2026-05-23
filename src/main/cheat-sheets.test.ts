@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { mkdtempSync, existsSync, readFileSync, rmSync } from 'fs'
-import { tmpdir } from 'os'
-import { join as pathJoin } from 'path'
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join as pathJoin } from 'node:path'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const MOCK_USER_DATA = pathJoin(tmpdir(), 'scalpel-test')
 
@@ -60,7 +60,7 @@ describe('cheat-sheet file IO', () => {
 describe('fetchImageBuffer', () => {
   it('returns buffer + ext for a data:image/png URL', async () => {
     const { fetchImageBuffer } = await import('./cheat-sheet-storage')
-    const dataUrl = 'data:image/png;base64,' + Buffer.from('fake').toString('base64')
+    const dataUrl = `data:image/png;base64,${Buffer.from('fake').toString('base64')}`
     const result = await fetchImageBuffer(dataUrl)
     expect(result.ext).toBe('png')
     expect(result.buffer).toEqual(Buffer.from('fake'))

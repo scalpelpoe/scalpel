@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { Stats } from 'node:fs'
+import type { Stats } from 'node:fs'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('node:fs', () => ({
   statSync: vi.fn(),
@@ -11,10 +11,22 @@ vi.mock('node:fs', () => ({
 }))
 
 import * as fs from 'node:fs'
-import { startWatcher, _resetForTests } from './watcher'
+import { _resetForTests, startWatcher } from './watcher'
 
 function fakeStats(size: number, mtimeMs: number): Stats {
   return { size, mtime: new Date(mtimeMs), mtimeMs } as unknown as Stats
+}
+
+type ReadSyncMock = {
+  mockImplementation: (
+    impl: (fd: number, buffer: Buffer, offset: number, length: number, position: number | null) => number,
+  ) => void
+}
+
+function mockReadSync(
+  impl: (fd: number, buffer: Buffer, offset: number, length: number, position: number | null) => number,
+): void {
+  ;(vi.mocked(fs.readSync) as unknown as ReadSyncMock).mockImplementation(impl)
 }
 
 describe('watcher', () => {
@@ -48,12 +60,12 @@ describe('watcher', () => {
     const onLine = vi.fn()
     startWatcher('C:/fake/Client.txt', onLine)
 
-    vi.mocked(fs.readSync).mockImplementation((_fd, buffer, _offset, length, _pos) => {
-      Buffer.from('first\nsecond\n').copy(buffer as Buffer, 0, 0, length as number)
-      return length as number
+    mockReadSync((_fd, buffer, _offset, length, _pos) => {
+      Buffer.from('first\nsecond\n').copy(buffer, 0, 0, length)
+      return length
     })
 
-    watchCb!(fakeStats(113, 2), fakeStats(100, 1))
+    watchCb?.(fakeStats(113, 2), fakeStats(100, 1))
 
     expect(fs.openSync).toHaveBeenCalledWith('C:/fake/Client.txt', 'r')
     expect(fs.readSync).toHaveBeenCalledWith(42, expect.any(Buffer), 0, 13, 100)
@@ -67,12 +79,12 @@ describe('watcher', () => {
     const onLine = vi.fn()
     startWatcher('C:/fake/Client.txt', onLine)
 
-    vi.mocked(fs.readSync).mockImplementation((_fd, buffer, _offset, length) => {
-      Buffer.from('fresh\n').copy(buffer as Buffer, 0, 0, length as number)
-      return length as number
+    mockReadSync((_fd, buffer, _offset, length) => {
+      Buffer.from('fresh\n').copy(buffer, 0, 0, length)
+      return length
     })
 
-    watchCb!(fakeStats(6, 2), fakeStats(1000, 1))
+    watchCb?.(fakeStats(6, 2), fakeStats(1000, 1))
 
     expect(fs.readSync).toHaveBeenCalledWith(42, expect.any(Buffer), 0, 6, 0)
     expect(onLine).toHaveBeenCalledWith('fresh')
@@ -82,7 +94,7 @@ describe('watcher', () => {
     vi.mocked(fs.statSync).mockReturnValue(fakeStats(100, 1))
     const onLine = vi.fn()
     startWatcher('C:/fake/Client.txt', onLine)
-    watchCb!(fakeStats(100, 1), fakeStats(100, 1))
+    watchCb?.(fakeStats(100, 1), fakeStats(100, 1))
     expect(fs.readSync).not.toHaveBeenCalled()
   })
 
@@ -91,10 +103,10 @@ describe('watcher', () => {
     const onLine = vi.fn()
     startWatcher('C:/fake/Client.txt', onLine)
 
-    vi.mocked(fs.readSync).mockImplementation((_fd, _b, _o, length) => length as number)
+    mockReadSync((_fd, _b, _o, length) => length)
 
     const huge = 5_000_000
-    watchCb!(fakeStats(huge, 2), fakeStats(0, 1))
+    watchCb?.(fakeStats(huge, 2), fakeStats(0, 1))
 
     expect(fs.readSync).toHaveBeenCalledWith(42, expect.any(Buffer), 0, 1_000_000, huge - 1_000_000)
   })
@@ -104,12 +116,12 @@ describe('watcher', () => {
     const onLine = vi.fn()
     startWatcher('C:/fake/Client.txt', onLine)
 
-    vi.mocked(fs.readSync).mockImplementation((_fd, buffer, _o, length) => {
-      Buffer.from('\n\nreal\n\n').copy(buffer as Buffer, 0, 0, length as number)
-      return length as number
+    mockReadSync((_fd, buffer, _o, length) => {
+      Buffer.from('\n\nreal\n\n').copy(buffer, 0, 0, length)
+      return length
     })
 
-    watchCb!(fakeStats(8, 2), fakeStats(0, 1))
+    watchCb?.(fakeStats(8, 2), fakeStats(0, 1))
     expect(onLine).toHaveBeenCalledTimes(1)
     expect(onLine).toHaveBeenCalledWith('real')
   })

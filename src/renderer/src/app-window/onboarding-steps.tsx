@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react'
-import type { AppSettings, AuthResult } from '../../../shared/types'
+import appIcon from '../../../../resources/icon.png'
 import { getGameFeatures } from '../../../shared/game-features'
+import type { AppSettings, AuthResult } from '../../../shared/types'
 import poeFilterSettingImg from '../assets/other/poe-filter-setting.png'
 import poe1Logo from '../assets/other/poe1-logo.png'
 import poe2Logo from '../assets/other/poe2-logo.png'
 import { FilterPicker } from '../components/FilterPicker'
 import { LeagueDropdown } from '../components/LeagueDropdown'
-import { Toggle } from '../components/Toggle'
 import { HotkeyField } from '../components/settings'
-import appIcon from '../../../../resources/icon.png'
+import { Toggle } from '../components/Toggle'
 import { IconGlow } from '../shared/IconGlow'
 import type { SelectedGames } from './constants'
-import { StepHeader } from './StepHeader'
 import { NavButtons } from './NavButtons'
+import { StepHeader } from './StepHeader'
 
 function GameCard({
   alt,

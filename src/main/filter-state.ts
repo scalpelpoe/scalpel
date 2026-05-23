@@ -1,9 +1,9 @@
-import { readFileSync } from 'fs'
-import { parseFilterFile } from './filter/parser'
+import { readFileSync } from 'node:fs'
+import type { FilterFile } from '../shared/types'
 import { loadIntents } from './filter/intent-recorder'
+import { parseFilterFile } from './filter/parser'
 import { registerFilterBaseTypes } from './trade/clipboard'
 import { saveVersion } from './update/versions'
-import type { FilterFile } from '../shared/types'
 
 // ---- In-memory filter state ------------------------------------------------
 

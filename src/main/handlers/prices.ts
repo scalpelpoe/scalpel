@@ -1,24 +1,24 @@
 import { ipcMain } from 'electron'
-import Store from 'electron-store'
-import { getCurrentFilter, onFilterLoaded } from '../filter-state'
+import type Store from 'electron-store'
+import divCardsData from '../../shared/data/economy/div-cards.json'
+import { getItemClasses } from '../../shared/data/items/item-classes'
+import uniqueInfoData from '../../shared/data/items/unique-info.json'
+import { TRANSFIGURED_GEM_DISC } from '../../shared/data/trade/transfigured-gems'
+import { defaultPoeItem } from '../../shared/poe-item'
+import type { AppSettings, FilterBlock, FilterFile, PoeItem, SearchableItem } from '../../shared/types'
 import { evaluateAndSend, preloadPriceCheck, runPriceCheck } from '../evaluation'
 import { findMatchingBlocks } from '../filter/matcher'
+import { getCurrentFilter, onFilterLoaded } from '../filter-state'
+import { getPoeVersion } from '../game-state'
+import { loadIconCache } from '../trade/icon-cache'
 import {
-  refreshPrices,
-  lookupPrice,
+  getGemNames,
+  getUniquesByBase,
   lookupBestUniquePrice,
   lookupDivCardPrice,
-  getUniquesByBase,
-  getGemNames,
+  lookupPrice,
+  refreshPrices,
 } from '../trade/prices'
-import { loadIconCache } from '../trade/icon-cache'
-import { getPoeVersion } from '../game-state'
-import type { AppSettings, FilterBlock, FilterFile, PoeItem, SearchableItem } from '../../shared/types'
-import { defaultPoeItem } from '../../shared/poe-item'
-import uniqueInfoData from '../../shared/data/items/unique-info.json'
-import { getItemClasses } from '../../shared/data/items/item-classes'
-import divCardsData from '../../shared/data/economy/div-cards.json'
-import { TRANSFIGURED_GEM_DISC } from '../../shared/data/trade/transfigured-gems'
 
 /** Classes whose BaseTypes should surface in the item search combobox. */
 const STACKABLE_CLASSES = new Set([
@@ -270,7 +270,7 @@ export function clickSyntheticOverrides(
       itemClass,
       rarity: 'Normal',
       baseType,
-      mapTier: tierMatch ? parseInt(tierMatch[1]) : 16,
+      mapTier: tierMatch ? parseInt(tierMatch[1], 10) : 16,
       itemLevel: 83,
       zanaMemory: flags?.zanaMemory ?? false,
     }

@@ -1,4 +1,4 @@
-import { MapCardEntry, TierStyle } from './types'
+import type { MapCardEntry, TierStyle } from './types'
 
 interface CardChipsProps {
   topCards: MapCardEntry[]

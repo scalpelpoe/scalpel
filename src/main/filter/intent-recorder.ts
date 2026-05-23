@@ -1,7 +1,7 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs'
-import { join } from 'path'
+import { createHash } from 'node:crypto'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { app } from 'electron'
-import { createHash } from 'crypto'
 import type { Intent, IntentLog } from './intents'
 
 let currentFilterPath: string | null = null

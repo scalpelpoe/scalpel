@@ -7,9 +7,9 @@
  * Runs automatically in background on dev start.
  */
 
-const https = require('https')
-const fs = require('fs')
-const path = require('path')
+const https = require('node:https')
+const fs = require('node:fs')
+const path = require('node:path')
 
 const REPO = 'veiset/poe-vendor-string'
 const BRANCH = 'master'
@@ -40,19 +40,23 @@ const ATTRIBUTION = `// Data sourced from poe-vendor-string (https://github.com/
 
 function fetch(url) {
   return new Promise((resolve, reject) => {
-    https.get(url, { headers: { 'User-Agent': 'Scalpel' } }, (res) => {
-      if (res.statusCode === 301 || res.statusCode === 302) {
-        return fetch(res.headers.location).then(resolve, reject)
-      }
-      if (res.statusCode !== 200) {
-        res.resume()
-        return reject(new Error(`HTTP ${res.statusCode} for ${url}`))
-      }
-      let data = ''
-      res.on('data', (chunk) => { data += chunk })
-      res.on('end', () => resolve(data))
-      res.on('error', reject)
-    }).on('error', reject)
+    https
+      .get(url, { headers: { 'User-Agent': 'Scalpel' } }, (res) => {
+        if (res.statusCode === 301 || res.statusCode === 302) {
+          return fetch(res.headers.location).then(resolve, reject)
+        }
+        if (res.statusCode !== 200) {
+          res.resume()
+          return reject(new Error(`HTTP ${res.statusCode} for ${url}`))
+        }
+        let data = ''
+        res.on('data', (chunk) => {
+          data += chunk
+        })
+        res.on('end', () => resolve(data))
+        res.on('error', reject)
+      })
+      .on('error', reject)
   })
 }
 
@@ -69,7 +73,9 @@ async function sync() {
   // Check if we need to update
   let meta = { commit: null, timestamp: null }
   if (fs.existsSync(META_FILE)) {
-    try { meta = JSON.parse(fs.readFileSync(META_FILE, 'utf-8')) } catch {}
+    try {
+      meta = JSON.parse(fs.readFileSync(META_FILE, 'utf-8'))
+    } catch {}
   }
 
   const latestCommit = await getLatestCommit()
@@ -109,11 +115,18 @@ async function sync() {
   }
 
   // Save meta
-  fs.writeFileSync(META_FILE, JSON.stringify({
-    commit: latestCommit,
-    timestamp: new Date().toISOString(),
-    repo: REPO,
-  }, null, 2))
+  fs.writeFileSync(
+    META_FILE,
+    JSON.stringify(
+      {
+        commit: latestCommit,
+        timestamp: new Date().toISOString(),
+        repo: REPO,
+      },
+      null,
+      2,
+    ),
+  )
 
   if (updated > 0) {
     console.log(`[sync-regex] Updated ${updated} file(s).`)

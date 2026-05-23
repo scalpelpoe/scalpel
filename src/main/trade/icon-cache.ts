@@ -1,6 +1,6 @@
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { app } from 'electron'
-import { readFileSync, writeFileSync, existsSync } from 'fs'
-import { join } from 'path'
 import bundledPoe1 from '../../shared/data/items/item-icons-poe1.json'
 import bundledPoe2 from '../../shared/data/items/item-icons-poe2.json'
 

@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+import type { FilterBlock, FilterCondition, FilterFile, PoeItem } from '../../shared/types'
 import { evaluateBlock, findMatchingBlocks } from './matcher'
-import type { PoeItem, FilterCondition, FilterBlock, FilterFile } from '../../shared/types'
 
 function makeItem(overrides: Partial<PoeItem> = {}): PoeItem {
   return {

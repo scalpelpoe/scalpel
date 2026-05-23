@@ -1,6 +1,6 @@
+import { SKILL_GEM_CLASSES } from '../../../shared/poe-item'
 import type { AdvancedMod } from '../../../shared/types'
 import { ARMOUR_CLASSES, WEAPON_CLASSES } from './item-classes'
-import { SKILL_GEM_CLASSES } from '../../../shared/poe-item'
 import type { PseudoAccumulatorEntry } from './pseudo'
 
 export interface ItemInfo {

@@ -1,7 +1,7 @@
 import type { StatFilter } from '../../trade'
 import {
-  ULTIMATUM_CHALLENGE_TEXT_TO_ID,
   resolveUltimatumRewardId,
+  ULTIMATUM_CHALLENGE_TEXT_TO_ID,
   ULTIMATUM_REWARD_ID_LABEL,
 } from '../ultimatum-rewards'
 

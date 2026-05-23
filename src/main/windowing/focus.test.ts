@@ -1,6 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { overlays, type OverlayState } from './state'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { closeAllOverlaysOnPoeExit } from './focus'
+import { type OverlayState, overlays } from './state'
 
 function fakeState(opts: { visible: boolean; wasVisible: boolean }): OverlayState {
   return {
@@ -35,7 +35,7 @@ describe('closeAllOverlaysOnPoeExit', () => {
     // hide() called (it's idempotent in production via the opacity-hide
     // patch); the contract is that the restore flag is cleared on both
     // so a stray focus event doesn't try to restore either one.
-    expect(visible.win!.hide).toHaveBeenCalled()
+    expect(visible.win?.hide).toHaveBeenCalled()
     expect(visible.wasVisibleBeforeFocusLoss).toBe(false)
     expect(hidden.wasVisibleBeforeFocusLoss).toBe(false)
   })
@@ -57,7 +57,7 @@ describe('closeAllOverlaysOnPoeExit', () => {
     overlays.set('destroyed', destroyed)
 
     expect(() => closeAllOverlaysOnPoeExit()).not.toThrow()
-    expect(destroyed.win!.hide).not.toHaveBeenCalled()
+    expect(destroyed.win?.hide).not.toHaveBeenCalled()
   })
 
   it('skips overlays with no window', () => {

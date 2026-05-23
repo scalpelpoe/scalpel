@@ -1,18 +1,18 @@
 import { ipcMain } from 'electron'
-import Store from 'electron-store'
-import { getCurrentFilter, loadFilter } from '../filter-state'
+import type Store from 'electron-store'
+import type { AppSettings, FilterAction, FilterBlock, PoeItem } from '../../shared/types'
 import { evaluateAndSend } from '../evaluation'
-import { reloadFilterInGame } from '../overlay'
-import { captureSnapshot } from '../history'
 import { record } from '../filter/intent-recorder'
 import {
-  writeBlockEdit,
   moveBaseTypeBetweenTiers,
-  updateStackThresholds,
   updateQualityThresholds,
+  updateStackThresholds,
   updateStrandThresholds,
+  writeBlockEdit,
 } from '../filter/writer'
-import type { AppSettings, FilterAction, FilterBlock, PoeItem } from '../../shared/types'
+import { getCurrentFilter, loadFilter } from '../filter-state'
+import { captureSnapshot } from '../history'
+import { reloadFilterInGame } from '../overlay'
 
 // ---- History description helpers -------------------------------------------
 
@@ -261,7 +261,7 @@ export function register(store: Store<AppSettings>): void {
       for (const block of currentFilter.blocks) {
         if (!block.tierTag) continue
         const hasThreshold = block.conditions.some(
-          (c) => c.type === 'StackSize' && parseInt(c.values[0]) === oldBoundary,
+          (c) => c.type === 'StackSize' && parseInt(c.values[0], 10) === oldBoundary,
         )
         if (hasThreshold) {
           record({
@@ -308,7 +308,9 @@ export function register(store: Store<AppSettings>): void {
       // Record threshold intent
       for (const block of currentFilter.blocks) {
         if (!block.tierTag) continue
-        const hasThreshold = block.conditions.some((c) => c.type === 'Quality' && parseInt(c.values[0]) === oldBoundary)
+        const hasThreshold = block.conditions.some(
+          (c) => c.type === 'Quality' && parseInt(c.values[0], 10) === oldBoundary,
+        )
         if (hasThreshold) {
           record({
             type: 'set-threshold',
@@ -350,7 +352,7 @@ export function register(store: Store<AppSettings>): void {
       for (const block of currentFilter.blocks) {
         if (!block.tierTag) continue
         const hasThreshold = block.conditions.some(
-          (c) => c.type === 'MemoryStrands' && parseInt(c.values[0]) === oldBoundary,
+          (c) => c.type === 'MemoryStrands' && parseInt(c.values[0], 10) === oldBoundary,
         )
         if (hasThreshold) {
           record({

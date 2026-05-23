@@ -1,14 +1,12 @@
-import { BrowserWindow, screen } from 'electron'
+import { type BrowserWindow, screen } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
 import { uIOhook } from 'uiohook-napi'
-import { createOverlayWindow } from './window'
-import { prewarmSnapCanvas, setSnapGhost, type Rect } from './snap-canvas'
 import { hideAllOnPoeBlur, isAnyScalpelWindowFocused } from './focus'
-import { fireOnLeaveScalpel, overlays, type OverlayState } from './state'
+import { prewarmSnapCanvas, type Rect, setSnapGhost } from './snap-canvas'
+import { fireOnLeaveScalpel, type OverlayState, overlays } from './state'
+import { createOverlayWindow } from './window'
 
-// Public re-exports - this module is the public face of the windowing system.
-export type { Rect }
-export { sendCanvasIpc, moveCanvasTop, prewarmSnapCanvas, setSnapGhost } from './snap-canvas'
+export type { OverlayAnchor } from '../../shared/types'
 export {
   aroundNativeDialog,
   closeAllOverlaysOnPoeExit,
@@ -19,8 +17,10 @@ export {
   isSecondaryOverlayWindow,
   restoreAllOnPoeFocus,
 } from './focus'
+export { moveCanvasTop, prewarmSnapCanvas, sendCanvasIpc, setSnapGhost } from './snap-canvas'
 export { setMainOverlayGetter, setOnLeaveScalpel } from './state'
-export type { OverlayAnchor } from '../../shared/types'
+// Public re-exports - this module is the public face of the windowing system.
+export type { Rect }
 
 import type { OverlayAnchor } from '../../shared/types'
 

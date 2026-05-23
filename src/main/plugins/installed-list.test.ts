@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { join } from 'path'
+import { join } from 'node:path'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const TEST_USER_DATA = '/test/userData'
 
@@ -30,6 +30,12 @@ beforeEach(() => {
 })
 
 const installedPath = join(TEST_USER_DATA, 'plugins', 'installed.json')
+
+function readMockJson(path: string): unknown {
+  const value = mockFs.files.get(path)
+  if (value == null) throw new Error(`Expected mock file to exist: ${path}`)
+  return JSON.parse(value)
+}
 
 describe('readInstalledIds', () => {
   it('returns [] when file does not exist', async () => {
@@ -67,7 +73,7 @@ describe('addInstalledId', () => {
     const { addInstalledId } = await import('./installed-list')
     const changed = addInstalledId('my-plugin')
     expect(changed).toBe(true)
-    expect(JSON.parse(mockFs.files.get(installedPath)!)).toEqual(['my-plugin'])
+    expect(readMockJson(installedPath)).toEqual(['my-plugin'])
   })
 
   it('does not duplicate an id and returns false', async () => {
@@ -75,7 +81,7 @@ describe('addInstalledId', () => {
     const { addInstalledId } = await import('./installed-list')
     const changed = addInstalledId('my-plugin')
     expect(changed).toBe(false)
-    expect(JSON.parse(mockFs.files.get(installedPath)!)).toEqual(['my-plugin'])
+    expect(readMockJson(installedPath)).toEqual(['my-plugin'])
   })
 })
 
@@ -85,7 +91,7 @@ describe('removeInstalledId', () => {
     const { removeInstalledId } = await import('./installed-list')
     const changed = removeInstalledId('alpha')
     expect(changed).toBe(true)
-    expect(JSON.parse(mockFs.files.get(installedPath)!)).toEqual(['beta'])
+    expect(readMockJson(installedPath)).toEqual(['beta'])
   })
 
   it('returns false when id is not present', async () => {

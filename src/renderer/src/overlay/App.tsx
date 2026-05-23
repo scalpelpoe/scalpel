@@ -415,7 +415,7 @@ export default function App(): JSX.Element {
     ]
 
     return () => {
-      unsubs.forEach((fn) => fn())
+      for (const unsub of unsubs) unsub()
       unsubElevation()
       if (externalLinkPendingTimerRef.current) clearTimeout(externalLinkPendingTimerRef.current)
     }

@@ -29,11 +29,11 @@ function copyItemToClipboard(d: Listing['itemData'] & {}, rarity: string, btn: H
   if (d.ilvl) lines.push(`Item Level: ${d.ilvl}`)
   if (d.implicitMods?.length) {
     lines.push('--------')
-    d.implicitMods.forEach((m) => lines.push(`${m} (implicit)`))
+    for (const mod of d.implicitMods) lines.push(`${mod} (implicit)`)
   }
   if (d.explicitMods?.length) {
     lines.push('--------')
-    d.explicitMods.forEach((m) => lines.push(m))
+    for (const mod of d.explicitMods) lines.push(mod)
   }
   navigator.clipboard.writeText(lines.join('\n'))
   btn.textContent = 'Copied!'

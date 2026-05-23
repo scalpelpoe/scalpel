@@ -7,7 +7,7 @@ function statTextToPattern(text: string): RegExp {
   // Callers also normalize their input text to a single space before `.match(pattern)`.
   const normalized = text.replace(/\s+/g, ' ')
   const escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/#/g, '(.+?)')
-  return new RegExp('^' + escaped + '$', 'i')
+  return new RegExp(`^${escaped}$`, 'i')
 }
 
 /** Validates a `(.+?)` capture as a numeric value worth parsing. Allows an
@@ -26,7 +26,7 @@ function statTextToRelaxedPattern(text: string): RegExp {
   let escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/#/g, '(.+?)')
   // Replace hardcoded numbers (e.g. "50%", "20") with capture groups
   escaped = escaped.replace(/\d+(?:\\\.\d+)?/g, '(.+?)')
-  return new RegExp('^' + escaped + '$', 'i')
+  return new RegExp(`^${escaped}$`, 'i')
 }
 
-export { statTextToPattern, NUMERIC_CAPTURE, statTextToRelaxedPattern }
+export { NUMERIC_CAPTURE, statTextToPattern, statTextToRelaxedPattern }

@@ -28,6 +28,12 @@
     "enabled": true,
     "rules": {
       "recommended": false,
+      "a11y": {
+        "recommended": false
+      },
+      "complexity": {
+        "useLiteralKeys": "off"
+      },
       "correctness": {
         "noUnusedImports": "warn",
         "noUnusedVariables": "warn",

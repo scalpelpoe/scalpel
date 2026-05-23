@@ -1,8 +1,8 @@
 import type { StatFilter } from '../../trade'
+import { findAdvMod } from '../adv-mods'
 import type { MatchContext } from '../context'
 import { matchModToStat } from '../mod-matcher'
-import { findAdvMod } from '../adv-mods'
-import { PSEUDO_CONTRIBUTIONS, accumulatePseudo } from '../pseudo'
+import { accumulatePseudo, PSEUDO_CONTRIBUTIONS } from '../pseudo'
 
 export function processImplicits(ctx: MatchContext): StatFilter[] {
   const { implicits, itemInfo, advancedMods, isWeapon, pseudoAccumulator } = ctx
@@ -16,7 +16,7 @@ export function processImplicits(ctx: MatchContext): StatFilter[] {
       (() => {
         const fallback = matchModToStat(cleaned, false, 'explicit') ?? matchModToStat(cleaned, true, 'explicit')
         if (!fallback) return null
-        return { ...fallback, statId: 'implicit.' + fallback.statId.split('.')[1] }
+        return { ...fallback, statId: `implicit.${fallback.statId.split('.')[1]}` }
       })()
     if (matched) {
       // Skip "X per Y" mods -- they're conditional and shouldn't inflate pseudo totals
@@ -26,10 +26,10 @@ export function processImplicits(ctx: MatchContext): StatFilter[] {
         accumulatePseudo(pseudoAccumulator, pseudoList, matched.value, isWeapon)
       }
       // Check if this implicit is from eldritch (Searing Exarch / Eater of Worlds)
-      let isEldritch = false
+      let _isEldritch = false
       if (advancedMods) {
         const advMod = findAdvMod(advancedMods, cleaned, 'implicit')
-        if (advMod?.eldritch) isEldritch = true
+        if (advMod?.eldritch) _isEldritch = true
       }
       out.push({
         id: matched.statId,

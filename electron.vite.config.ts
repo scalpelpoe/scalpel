@@ -1,19 +1,19 @@
-import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
+import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
-import { resolve } from 'path'
+import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import pkg from './package.json'
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
   },
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    plugins: [externalizeDepsPlugin()],
   },
   renderer: {
     plugins: [react()],
     define: {
-      __APP_VERSION__: JSON.stringify(pkg.version)
+      __APP_VERSION__: JSON.stringify(pkg.version),
     },
     build: {
       rollupOptions: {
@@ -24,8 +24,8 @@ export default defineConfig({
           secondaryOverlayCanvas: resolve(__dirname, 'src/renderer/secondary-overlay-canvas.html'),
           whiteboard: resolve(__dirname, 'src/renderer/whiteboard.html'),
           pinnedZone: resolve(__dirname, 'src/renderer/pinned-zone.html'),
-        }
-      }
-    }
-  }
+        },
+      },
+    },
+  },
 })
