@@ -52,7 +52,10 @@ function redact(text: string): string {
   ]) {
     if (typeof value === 'string' && value.length > 0) out = out.split(value).join('<path>')
   }
-  out = out.replace(/(POESESSID|session|token|cookie|authorization)(["':=\s]+)[^\s"',}]+/gi, '$1$2<redacted>')
+  out = out.replace(
+    /(POESESSID|session|token|cookie|authorization)(["':=\s]+)(?:Bearer\s+)?[^\s"',}]+/gi,
+    '$1$2<redacted>',
+  )
   out = out.replace(/[A-Za-z]:\\Users\\[^\\\r\n]+/g, '<home>')
   return out
 }
@@ -139,7 +142,7 @@ function githubIssueUrl(reportPath: string): string {
       '',
       'Steps to reproduce:',
       '',
-      `Diagnostics report generated at: ${reportPath}`,
+      `Diagnostics report generated at: ${redact(reportPath)}`,
       'Please attach the generated report file.',
     ].join('\n'),
   )

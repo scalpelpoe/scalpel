@@ -43,9 +43,17 @@ export function serializeDiagnosticError(input: unknown): SerializedDiagnosticEr
     if (maybe.reason !== undefined) return serializeDiagnosticError(maybe.reason)
     return {
       name: typeof maybe.name === 'string' ? maybe.name : undefined,
-      message: typeof maybe.message === 'string' ? maybe.message : JSON.stringify(input),
+      message: typeof maybe.message === 'string' ? maybe.message : safeStringify(input),
       stack: typeof maybe.stack === 'string' ? maybe.stack : undefined,
     }
   }
   return { message: String(input) }
+}
+
+function safeStringify(input: object): string {
+  try {
+    return JSON.stringify(input)
+  } catch {
+    return String(input)
+  }
 }

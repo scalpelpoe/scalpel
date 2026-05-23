@@ -18,4 +18,11 @@ describe('serializeDiagnosticError', () => {
   it('handles primitive values', () => {
     expect(serializeDiagnosticError('plain failure')).toEqual({ message: 'plain failure' })
   })
+
+  it('handles circular non-Error objects', () => {
+    const err: { self?: unknown } = {}
+    err.self = err
+
+    expect(serializeDiagnosticError(err)).toEqual({ message: '[object Object]' })
+  })
 })
