@@ -39,3 +39,4 @@ scripts/local/
 .vs/
 .vscode/
 *.log
+.zed/
