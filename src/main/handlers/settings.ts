@@ -2,6 +2,17 @@ import { ipcMain } from 'electron'
 import type Store from 'electron-store'
 import type { AppSettings, RegexPreset } from '../../shared/types'
 import { getColorFrequencies } from '../filter-state'
+import { refreshPrices } from '../trade/prices'
+import { refreshLeagues } from '../trade/leagues'
+import { applyProfileHydrationSideEffects, applySetting, broadcastSettingUpdate } from '../settings-write'
+import {
+  createProfile,
+  deleteProfileAndChooseFallback,
+  listProfileSummaries,
+  renameProfile,
+  writeRegexPresetsByGameVariant,
+} from '../profile-settings'
+import type { AppSettings, GameVariant, RegexPreset } from '../../shared/types'
 import { applySetting, broadcastSettingUpdate } from '../settings-write'
 import { writeRegexPresetsByGameVariant } from '../profile-settings'
 import { refreshLeagues } from '../trade/leagues'
@@ -23,6 +34,46 @@ export function register(store: Store<AppSettings>): void {
     // requestGameSwitch() in main/game-switch.ts is the user-facing toggle that
     // adds a relaunch prompt; this IPC is the lower-level write.
     applySetting(store, key, value, event.sender)
+  })
+
+  ipcMain.handle('list-profiles', () => listProfileSummaries(store))
+
+  ipcMain.handle(
+    'create-profile',
+    (_event, input: { name: string; gameVariant: GameVariant; cloneFromId?: string }) => {
+      const profile = createProfile(store, input)
+      return listProfileSummaries(store).find((summary) => summary.id === profile.id)!
+    },
+  )
+
+  ipcMain.handle('rename-profile', (_event, id: string, name: string) => {
+    const profile = renameProfile(id, name)
+    return profile ? listProfileSummaries(store).find((summary) => summary.id === profile.id) : null
+  })
+
+  ipcMain.handle('duplicate-profile', (_event, id: string, name: string) => {
+    const profile = createProfile(store, { name, gameVariant: 1, cloneFromId: id })
+    return listProfileSummaries(store).find((summary) => summary.id === profile.id)!
+  })
+
+  ipcMain.handle('delete-profile', (event, id: string) => {
+    const previous = {
+      activeProfileId: store.get('activeProfileId'),
+      poeVersion: store.get('poeVersion'),
+      filterPath: store.get('filterPath'),
+      league: store.get('league'),
+      cheatSheets: store.get('cheatSheets'),
+    }
+    const changes = deleteProfileAndChooseFallback(store, id)
+    applyProfileHydrationSideEffects(changes, previous)
+    for (const change of changes) {
+      broadcastSettingUpdate(event.sender, change.key, change.value)
+    }
+  })
+
+  ipcMain.handle('set-active-profile', async (event, id: string) => {
+    applySetting(store, 'activeProfileId', id, event.sender)
+    return store.store
   })
 
   ipcMain.handle('refresh-leagues', async (event) => {

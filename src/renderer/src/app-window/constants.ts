@@ -1,4 +1,5 @@
 export type Step =
+  | 'profiles'
   | 'welcome'
   | 'filter-folder-poe1'
   | 'filter-poe1'
@@ -14,6 +15,7 @@ export type Step =
   | 'settings'
 
 export const STEP_ORDER: Step[] = [
+  'profiles',
   'welcome',
   'filter-folder-poe1',
   'filter-poe1',

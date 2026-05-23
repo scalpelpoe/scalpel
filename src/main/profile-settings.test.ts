@@ -1,11 +1,16 @@
-import { mkdtempSync } from 'fs'
+import { mkdirSync, mkdtempSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { describe, expect, it } from 'vitest'
 import type Store from 'electron-store'
 import type { AppSettings } from '../shared/types'
 import { initProfileStore } from './profiles/store'
-import { switchActiveProfileByGameVariant, writeActiveProfileSetting } from './profile-settings'
+import {
+  deleteProfileAndChooseFallback,
+  listProfileSummaries,
+  switchActiveProfileByGameVariant,
+  writeActiveProfileSetting,
+} from './profile-settings'
 
 function makeStore(initial: Partial<AppSettings>): Store<AppSettings> {
   const data: Record<string, unknown> = { ...initial }
@@ -59,5 +64,53 @@ describe('profile-settings', () => {
     expect(store.get('filterPath')).toBe('C:\\filters\\poe2.filter')
     expect(store.get('filterPathPoe2')).toBe('C:\\filters\\poe2.filter')
     expect(store.get('league')).toBe('Fate of the Vaal')
+  })
+
+  it('discovers multiple profiles per game and marks the active one', () => {
+    const profiles = setupProfiles()
+    const trade = { ...profiles.createDefault(1), name: 'Mirage trade', league: 'Mirage' }
+    const ssf = { ...profiles.createDefault(1), name: 'SSF strict', league: 'Standard' }
+    profiles.saveProfile(trade)
+    profiles.saveProfile(ssf)
+
+    const store = makeStore({ activeProfileId: ssf.id })
+
+    const summaries = listProfileSummaries(store)
+
+    expect(summaries.filter((profile) => profile.gameVariant === 1)).toHaveLength(2)
+    expect(summaries.find((profile) => profile.id === ssf.id)?.active).toBe(true)
+  })
+
+  it('deleting the active profile switches to a remaining profile for the same game', () => {
+    const profiles = setupProfiles()
+    const trade = { ...profiles.createDefault(1), name: 'Mirage trade', league: 'Mirage' }
+    const ssf = { ...profiles.createDefault(1), name: 'SSF strict', league: 'Standard' }
+    profiles.saveProfile(trade)
+    profiles.saveProfile(ssf)
+
+    const store = makeStore({ activeProfileId: ssf.id, poeVersion: 1, league: ssf.league })
+
+    deleteProfileAndChooseFallback(store, ssf.id)
+
+    expect(store.get('activeProfileId')).toBe(trade.id)
+    expect(store.get('league')).toBe('Mirage')
+    expect(profiles.getProfile(ssf.id)).toBeNull()
+  })
+
+  it('normalizes legacy profile files that are missing metadata', () => {
+    const root = mkdtempSync(join(tmpdir(), 'scalpel-profiles-'))
+    mkdirSync(join(root, 'profiles'))
+    writeFileSync(
+      join(root, 'profiles', 'legacy.json'),
+      JSON.stringify({ id: 'legacy', name: 'Legacy', gameVariant: 2, league: 'Standard' }),
+      'utf-8',
+    )
+    const profiles = initProfileStore(root)
+
+    const legacy = profiles.getProfile('legacy')
+
+    expect(legacy?.schemaVersion).toBe(1)
+    expect(legacy?.createdAt).toEqual(expect.any(String))
+    expect(legacy?.tradePriceOption).toBe('exalted_divine')
   })
 })

@@ -1,5 +1,5 @@
 import Store from 'electron-store'
-import type { AppSettings, GameVariant, PoeProfile, RegexPreset } from '../shared/types'
+import type { AppSettings, GameVariant, PoeProfile, PoeProfileSummary, RegexPreset } from '../shared/types'
 import { getProfileStore, type ProfileStore } from './profiles/store'
 
 export type ProfileBackedKey = 'league' | 'filterPath' | 'filterDir' | 'tradePriceOption' | 'cheatSheets'
@@ -75,7 +75,25 @@ export function findProfileByGameVariant(variant: GameVariant): PoeProfile | nul
   )
 }
 
+export function listProfileSummaries(store: Store<AppSettings>): PoeProfileSummary[] {
+  const activeId = store.get('activeProfileId')
+  return profileStore()
+    .listProfiles()
+    .map((profile) => ({
+      id: profile.id,
+      name: profile.name,
+      gameVariant: profile.gameVariant,
+      league: profile.league,
+      filterDir: profile.filterDir,
+      filterPath: profile.filterPath,
+      createdAt: profile.createdAt,
+      updatedAt: profile.updatedAt,
+      active: profile.id === activeId,
+    }))
+}
+
 export function hydrateProfileSettings(store: Store<AppSettings>, profile: PoeProfile): ProfileChangedSetting[] {
+  profileStore().touchProfile(profile.id)
   const changed: ProfileChangedSetting[] = []
   rememberChange(store, changed, 'activeProfileId', profile.id)
   rememberChange(store, changed, profileVersionKey, profile.gameVariant)
@@ -123,6 +141,40 @@ export function switchActiveProfileByGameVariant(
   return hydrateProfileSettings(store, profile)
 }
 
+export function createProfile(
+  store: Store<AppSettings>,
+  input: { name: string; gameVariant: GameVariant; cloneFromId?: string },
+): PoeProfile {
+  const profile = profileStore().createProfile(input)
+  if (profileStore().listProfiles().length === 1) hydrateProfileSettings(store, profile)
+  return profile
+}
+
+export function renameProfile(id: string, name: string): PoeProfile | null {
+  return profileStore().renameProfile(id, name)
+}
+
+export function deleteProfileAndChooseFallback(store: Store<AppSettings>, id: string): ProfileChangedSetting[] {
+  const activeId = store.get('activeProfileId')
+  const deleting = profileStore().getProfile(id)
+  profileStore().deleteProfile(id)
+
+  let remaining = profileStore().listProfiles()
+  if (remaining.length === 0) {
+    const created = profileStore().createProfile({
+      name: 'Path of Exile 1',
+      gameVariant: 1,
+    })
+    remaining = [created]
+  }
+
+  if (activeId !== id) return []
+
+  const fallback =
+    (deleting ? remaining.find((profile) => profile.gameVariant === deleting.gameVariant) : null) ?? remaining[0]
+  return hydrateProfileSettings(store, fallback)
+}
+
 export function writeActiveProfileSetting<K extends ProfileBackedKey>(
   store: Store<AppSettings>,
   key: K,
@@ -138,6 +190,7 @@ export function writeActiveProfileSetting<K extends ProfileBackedKey>(
   const profile = activeId ? profileStore().getProfile(activeId) : findProfileByGameVariant(variant)
   if (profile) {
     ;(profile as unknown as Record<string, unknown>)[PROFILE_FIELD_BY_KEY[key]] = value
+    profile.updatedAt = new Date().toISOString()
     profileStore().saveProfile(profile)
   }
 
@@ -156,6 +209,7 @@ export function writeProfileSettingByGameVariant<K extends ProfileBackedKey>(
   const profile = findProfileByGameVariant(variant)
   if (profile) {
     ;(profile as unknown as Record<string, unknown>)[PROFILE_FIELD_BY_KEY[key]] = value
+    profile.updatedAt = new Date().toISOString()
     profileStore().saveProfile(profile)
   }
 
@@ -177,6 +231,7 @@ export function writeRegexPresetsByGameVariant(
   const profile = findProfileByGameVariant(variant)
   if (profile) {
     profile.regexPresets = presets
+    profile.updatedAt = new Date().toISOString()
     profileStore().saveProfile(profile)
   }
 

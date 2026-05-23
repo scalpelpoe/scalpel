@@ -6,15 +6,30 @@ import type { ThemePalette } from './theme/palette'
 export type GameVariant = 1 | 2
 
 export interface PoeProfile {
+  schemaVersion: 1
   id: string
   name: string
   gameVariant: GameVariant
+  createdAt: string
+  updatedAt: string
   filterDir: string
   filterPath: string
   league: string
   tradePriceOption: TradePriceOption
   cheatSheets: CheatSheetsSettings
   regexPresets: RegexPreset[]
+}
+
+export interface PoeProfileSummary {
+  id: string
+  name: string
+  gameVariant: GameVariant
+  league: string
+  filterDir: string
+  filterPath: string
+  createdAt: string
+  updatedAt: string
+  active: boolean
 }
 
 export type Visibility = 'Show' | 'Hide' | 'Minimal'
@@ -485,13 +500,13 @@ export interface AppSettings {
   adaptiveDefaultsMode: AdaptiveMode
   /** UUID of the active profile (loaded from profiles/ dir). */
   activeProfileId: string
-  /** True once the user clicks Finish in the onboarding wizard. */
+  /** True once the user clicks Finish in first-run profile management. */
   onboardingCompleted: boolean
-  /** Onboarding resume: current step key (saved on every step transition). */
+  /** First-run/profile-management resume: current step key (saved on every step transition). */
   onboardingStep?: string
-  /** Onboarding resume: which games the user selected on the welcome screen. */
+  /** Legacy first-run resume: which games the user selected in the old setup flow. */
   onboardingSelectedGames?: { poe1: boolean; poe2: boolean }
-  /** Onboarding resume: name of the online filter imported per game, if any. */
+  /** Legacy first-run resume: name of the online filter imported per game, if any. */
   onboardingImportedOnline?: { poe1: string | null; poe2: string | null }
 }
 

@@ -23,7 +23,7 @@ interface Props {
   onDone?: () => void
   onOnlineFilterUpdated?: (name: string) => void
   onOnlineImport?: (name: string) => void
-  onShowOnboarding?: () => void
+  onManageProfiles?: () => void
   /** Item currently loaded in the overlay, used to preserve context when undoing/restoring */
   currentItem?: PoeItem
   /** Optional callback to show a short banner at the top of the overlay */
@@ -68,7 +68,7 @@ export function SettingsPanel({
   onDone: _onDone,
   onOnlineFilterUpdated,
   onOnlineImport,
-  onShowOnboarding,
+  onManageProfiles,
   currentItem,
   onError,
   tabRequest,
@@ -155,9 +155,9 @@ export function SettingsPanel({
                 {TAB_LABELS[t]}
               </button>
             ))}
-          {!isOverlay && onShowOnboarding && (
-            <button onClick={onShowOnboarding} className="text-[11px] text-text-dim px-3 py-1.5">
-              Setup Wizard
+          {!isOverlay && onManageProfiles && (
+            <button onClick={onManageProfiles} className="text-[11px] text-text-dim px-3 py-1.5">
+              Manage Profiles
             </button>
           )}
         </div>

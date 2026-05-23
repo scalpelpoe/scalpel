@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
-import type { AppSettings } from '../../shared/types'
+import type { AppSettings, PoeProfileSummary } from '../../shared/types'
 import { type Step, STEP_ORDER, type SelectedGames, totalOnboardingSteps } from './app-window/constants'
 import {
   backStepFromFilterFolder,
@@ -27,29 +27,30 @@ import {
 } from './app-window/onboarding-steps'
 import { AppSettingsWrapper } from './app-window/AppSettingsWrapper'
 import { AppUpdateBanner } from './app-window/AppUpdateBanner'
+import { ProfileManagerStep } from './app-window/ProfileManagerStep'
 import { GameSwitchModal } from './components/GameSwitchModal'
 
 type ImportedOnline = { poe1: string | null; poe2: string | null }
 
 export function AppWindow(): JSX.Element {
   const [settings, setSettings] = useState<AppSettings | null>(null)
-  const [step, setStep] = useState<Step>('welcome')
+  const [step, setStep] = useState<Step>('profiles')
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [importedOnline, setImportedOnline] = useState<ImportedOnline>({ poe1: null, poe2: null })
   const [gameSwitchTarget, setGameSwitchTarget] = useState<1 | 2 | null>(null)
   const [selectedGames, setSelectedGames] = useState<SelectedGames>({ poe1: false, poe2: false })
-  // Set when the user clicks "Show Onboarding" from settings so the focus-bounce
+  // Set when the user opens Manage Profiles from settings so the focus-bounce
   // effect below doesn't yank them back to settings on every focus event.
   const [revisitingOnboarding, setRevisitingOnboarding] = useState(false)
 
-  const goTo = (next: Step): void => {
+  const goTo = (next: Step, resumeGames = selectedGames): void => {
     const curIdx = STEP_ORDER.indexOf(step)
     const nextIdx = STEP_ORDER.indexOf(next)
     setDirection(nextIdx >= curIdx ? 'forward' : 'back')
     setStep(next)
     if (next !== 'settings' && next !== 'done') {
       window.api.setSetting('onboardingStep', next)
-      window.api.setSetting('onboardingSelectedGames', selectedGames)
+      window.api.setSetting('onboardingSelectedGames', resumeGames)
       window.api.setSetting('onboardingImportedOnline', importedOnline)
     }
   }
@@ -70,7 +71,7 @@ export function AppWindow(): JSX.Element {
       if (s.onboardingCompleted) {
         goTo('settings')
       } else if (s.onboardingStep) {
-        setStep(s.onboardingStep as Step)
+        setStep((s.onboardingStep === 'welcome' ? 'profiles' : s.onboardingStep) as Step)
         if (s.onboardingSelectedGames) setSelectedGames(s.onboardingSelectedGames)
         if (s.onboardingImportedOnline) setImportedOnline(s.onboardingImportedOnline)
       }
@@ -118,6 +119,20 @@ export function AppWindow(): JSX.Element {
   const orderedGames = selectedGameOrder(selectedGames)
   const showGameLabel = orderedGames.length === 2
 
+  const finishProfileManager = (): void => {
+    window.api.setSetting('onboardingCompleted', true)
+    window.api.setSetting('onboardingStep', '')
+    setRevisitingOnboarding(false)
+    goTo('settings')
+  }
+
+  const editProfile = async (profile: PoeProfileSummary): Promise<void> => {
+    const nextGames = { poe1: profile.gameVariant === 1, poe2: profile.gameVariant === 2 }
+    setSettings(await window.api.setActiveProfile(profile.id))
+    setSelectedGames(nextGames)
+    goTo(filterFolderStepFor(profile.gameVariant), nextGames)
+  }
+
   const startFilterFlowFor = async (game: 1 | 2): Promise<void> => {
     await switchOnboardingGame(game)
     goTo(filterFolderStepFor(game))
@@ -152,6 +167,18 @@ export function AppWindow(): JSX.Element {
         }}
       >
         <div className={`w-full max-w-[480px] px-6 py-8 ${step !== 'settings' ? 'select-none' : ''}`}>
+          {step === 'profiles' && (
+            <SlideIn stepKey="profiles" direction={direction}>
+              <ProfileManagerStep
+                settings={settings}
+                onSettingsChange={setSettings}
+                onEditProfile={(profile) => {
+                  void editProfile(profile)
+                }}
+                onFinish={finishProfileManager}
+              />
+            </SlideIn>
+          )}
           {step === 'welcome' && (
             <SlideIn stepKey="welcome" direction={direction}>
               <WelcomeStep
@@ -311,9 +338,9 @@ export function AppWindow(): JSX.Element {
             <AppSettingsWrapper
               settings={settings}
               onSettingsChange={setSettings}
-              onShowOnboarding={() => {
+              onManageProfiles={() => {
                 setRevisitingOnboarding(true)
-                goTo('welcome')
+                goTo('profiles')
               }}
             />
           )}

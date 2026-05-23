@@ -6,11 +6,11 @@ import { SettingsPanel } from '../components/SettingsPanel'
 export function AppSettingsWrapper({
   settings,
   onSettingsChange,
-  onShowOnboarding,
+  onManageProfiles,
 }: {
   settings: AppSettings
   onSettingsChange: (s: AppSettings) => void
-  onShowOnboarding: () => void
+  onManageProfiles: () => void
 }): JSX.Element {
   const [onlineImportName, setOnlineImportName] = useState<string | null>(null)
 
@@ -20,7 +20,7 @@ export function AppSettingsWrapper({
         settings={settings}
         onSettingsChange={onSettingsChange}
         mode="app"
-        onShowOnboarding={onShowOnboarding}
+        onManageProfiles={onManageProfiles}
         onOnlineImport={setOnlineImportName}
       />
       {onlineImportName && (

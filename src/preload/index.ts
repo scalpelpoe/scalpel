@@ -7,9 +7,11 @@ import type {
   FilterBlock,
   FilterListEntry,
   FilterVersion,
+  GameVariant,
   HistoryEntry,
   Manifest,
   OverlayData,
+  PoeProfileSummary,
   Zone,
 } from '../shared/types'
 import type { BoardLibrary, BoardSnapshot, BoardState } from '../shared/whiteboard-types'
@@ -22,6 +24,18 @@ export const api = {
   getSettings: (): Promise<AppSettings> => ipcRenderer.invoke('get-settings'),
   setSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]): Promise<void> =>
     ipcRenderer.invoke('set-setting', key, value),
+  listProfiles: (): Promise<PoeProfileSummary[]> => ipcRenderer.invoke('list-profiles'),
+  createProfile: (input: {
+    name: string
+    gameVariant: GameVariant
+    cloneFromId?: string
+  }): Promise<PoeProfileSummary> => ipcRenderer.invoke('create-profile', input),
+  renameProfile: (id: string, name: string): Promise<PoeProfileSummary | null> =>
+    ipcRenderer.invoke('rename-profile', id, name),
+  duplicateProfile: (id: string, name: string): Promise<PoeProfileSummary> =>
+    ipcRenderer.invoke('duplicate-profile', id, name),
+  deleteProfile: (id: string): Promise<void> => ipcRenderer.invoke('delete-profile', id),
+  setActiveProfile: (id: string): Promise<AppSettings> => ipcRenderer.invoke('set-active-profile', id),
   refreshLeagues: (): Promise<{
     leaguesPoe1: string[]
     leaguesPoe2: string[]

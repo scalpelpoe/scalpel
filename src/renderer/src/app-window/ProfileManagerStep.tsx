@@ -1,0 +1,198 @@
+import { useEffect, useState } from 'react'
+import type { AppSettings, GameVariant, PoeProfileSummary } from '../../../shared/types'
+import { StepHeader } from './StepHeader'
+
+function filterName(profile: PoeProfileSummary): string {
+  return profile.filterPath ? profile.filterPath.replace(/^.*[\\/]/, '') : 'No filter selected'
+}
+
+function defaultProfileName(variant: GameVariant): string {
+  return variant === 2 ? 'PoE2 profile' : 'PoE1 profile'
+}
+
+export function ProfileManagerStep({
+  settings,
+  onSettingsChange,
+  onEditProfile,
+  onFinish,
+}: {
+  settings: AppSettings
+  onSettingsChange: (settings: AppSettings) => void
+  onEditProfile: (profile: PoeProfileSummary) => void
+  onFinish: () => void
+}): JSX.Element {
+  const [profiles, setProfiles] = useState<PoeProfileSummary[]>([])
+  const [draft, setDraft] = useState<
+    | { kind: 'create'; gameVariant: GameVariant; name: string }
+    | { kind: 'duplicate'; sourceId: string; name: string }
+    | null
+  >(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const reloadProfiles = async (): Promise<void> => {
+    setProfiles(await window.api.listProfiles())
+  }
+
+  useEffect(() => {
+    void reloadProfiles()
+  }, [])
+
+  const activate = async (profile: PoeProfileSummary): Promise<void> => {
+    setError(null)
+    onSettingsChange(await window.api.setActiveProfile(profile.id))
+    await reloadProfiles()
+  }
+
+  const submitDraft = async (): Promise<void> => {
+    if (!draft) return
+    const name = draft.name.trim()
+    if (!name) {
+      setError('Profile name is required.')
+      return
+    }
+    setError(null)
+    try {
+      const profile =
+        draft.kind === 'create'
+          ? await window.api.createProfile({ name, gameVariant: draft.gameVariant })
+          : await window.api.duplicateProfile(draft.sourceId, name)
+      onSettingsChange(await window.api.setActiveProfile(profile.id))
+      setDraft(null)
+      await reloadProfiles()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not save profile.')
+    }
+  }
+
+  const rename = async (profile: PoeProfileSummary): Promise<void> => {
+    const name = window.prompt('Profile name', profile.name)?.trim()
+    if (!name || name === profile.name) return
+    setError(null)
+    await window.api.renameProfile(profile.id, name)
+    await reloadProfiles()
+  }
+
+  const duplicate = async (profile: PoeProfileSummary): Promise<void> => {
+    setDraft({ kind: 'duplicate', sourceId: profile.id, name: `${profile.name} copy` })
+    setError(null)
+  }
+
+  const remove = async (profile: PoeProfileSummary): Promise<void> => {
+    if (!window.confirm(`Delete "${profile.name}"?`)) return
+    setError(null)
+    await window.api.deleteProfile(profile.id)
+    onSettingsChange(await window.api.getSettings())
+    await reloadProfiles()
+  }
+
+  const groups: Array<{ variant: GameVariant; label: string }> = [
+    { variant: 1, label: 'Path of Exile 1' },
+    { variant: 2, label: 'Path of Exile 2' },
+  ]
+
+  return (
+    <div>
+      <StepHeader
+        title="Manage Profiles"
+        subtitle="Create a named setup for each league, character, or filter context you want to switch back to later."
+      />
+
+      <div className="flex flex-col gap-5">
+        {draft && (
+          <section className="rounded border border-border bg-black/20 px-3 py-3 flex flex-col gap-3">
+            <label className="text-[11px] text-text-dim">
+              {draft.kind === 'create' ? 'New profile name' : 'Duplicate profile name'}
+            </label>
+            <input
+              value={draft.name}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') void submitDraft()
+                if (e.key === 'Escape') setDraft(null)
+              }}
+              className="w-full text-[12px] bg-black/30 rounded px-2 py-[7px] border-none text-text"
+              autoFocus
+            />
+            {error && <p className="text-[11px] text-red-300 m-0">{error}</p>}
+            <div className="flex gap-2 justify-end">
+              <button className="text-[11px] px-3 py-1.5" onClick={() => setDraft(null)}>
+                Cancel
+              </button>
+              <button className="primary text-[11px] px-3 py-1.5" onClick={() => void submitDraft()}>
+                Save
+              </button>
+            </div>
+          </section>
+        )}
+
+        {groups.map(({ variant, label }) => {
+          const matching = profiles.filter((profile) => profile.gameVariant === variant)
+          return (
+            <section key={variant} className="flex flex-col gap-2">
+              <div className="flex items-center gap-2">
+                <div className="settings-section-title mt-0 flex-1">{label}</div>
+                <button
+                  className="text-[11px] px-3 py-1.5"
+                  onClick={() => {
+                    setDraft({ kind: 'create', gameVariant: variant, name: defaultProfileName(variant) })
+                    setError(null)
+                  }}
+                >
+                  New
+                </button>
+              </div>
+              {matching.length === 0 ? (
+                <p className="text-[11px] text-text-dim m-0">No profiles yet.</p>
+              ) : (
+                matching.map((profile) => (
+                  <div
+                    key={profile.id}
+                    className="rounded border border-border bg-black/20 px-3 py-2 flex flex-col gap-2"
+                  >
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[13px] font-semibold text-text truncate">{profile.name}</div>
+                        <div className="text-[11px] text-text-dim truncate">
+                          {profile.league || 'No league'} - {filterName(profile)}
+                        </div>
+                      </div>
+                      {profile.id === settings.activeProfileId && (
+                        <span className="text-[10px] text-accent font-semibold shrink-0">Active</span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {profile.id !== settings.activeProfileId && (
+                        <button className="primary text-[11px] px-3 py-1.5" onClick={() => void activate(profile)}>
+                          Switch
+                        </button>
+                      )}
+                      <button className="text-[11px] px-3 py-1.5" onClick={() => onEditProfile(profile)}>
+                        Edit
+                      </button>
+                      <button className="text-[11px] px-3 py-1.5" onClick={() => void duplicate(profile)}>
+                        Duplicate
+                      </button>
+                      <button className="text-[11px] px-3 py-1.5" onClick={() => void rename(profile)}>
+                        Rename
+                      </button>
+                      <button className="text-[11px] px-3 py-1.5 text-text-dim" onClick={() => void remove(profile)}>
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </section>
+          )
+        })}
+      </div>
+
+      <div className="flex gap-[10px] mt-8">
+        <div className="flex-1" />
+        <button className="primary px-6 py-[10px] text-[13px] font-semibold" onClick={onFinish}>
+          Finish
+        </button>
+      </div>
+    </div>
+  )
+}
