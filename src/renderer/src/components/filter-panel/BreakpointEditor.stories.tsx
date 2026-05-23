@@ -29,7 +29,7 @@ const bp = (min: number, vis: 'Show' | 'Hide' | 'Minimal'): StackSizeBreakpoint 
   ({
     min,
     max: Infinity,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: storybook fixture cast
     activeMatch: { block: { visibility: vis } } as any,
   }) as StackSizeBreakpoint
 

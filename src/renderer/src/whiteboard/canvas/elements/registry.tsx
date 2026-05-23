@@ -117,7 +117,7 @@ const imageKind: ElementKindDef<ImageEl, BboxTransformResult> = {
   ),
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: heterogeneous element-kind registry
 export const ELEMENT_KINDS: Record<WhiteboardElement['type'], ElementKindDef<any, any>> = {
   stroke: strokeKind,
   shape: shapeKind,

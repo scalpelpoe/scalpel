@@ -5,7 +5,7 @@ import { useWhiteboardStore, type Tool } from '../state/store'
 
 /** The whiteboard toolbar floats over the game; in stories we render it on a
  *  PoE-ish dark backdrop and stub the IPC surface the toolbar reaches for. */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// biome-ignore lint/suspicious/noExplicitAny: storybook IPC stub
 const win = window as any
 win.api = win.api ?? {}
 win.api.whiteboard = win.api.whiteboard ?? {
