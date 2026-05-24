@@ -10,6 +10,7 @@
 // The cross-platform npm invocation is what required this script: npm runs
 // postinstall via cmd.exe on Windows, which can't parse POSIX shell guards.
 const { spawnSync } = require('child_process')
+const { rmSync } = require('fs')
 
 const env = { ...process.env }
 if (process.platform === 'linux') {
@@ -34,5 +35,25 @@ const result = spawnSync('electron-rebuild', {
   shell: true,
   env,
 })
+const rebuildStatus = result.status ?? 1
+if (rebuildStatus !== 0) {
+  process.exit(rebuildStatus)
+}
 
-process.exit(result.status ?? 1)
+// uiohook-napi ships an ABI-stable N-API prebuilt, so electron-rebuild leaves it
+// untouched and the patched libuiohook source (patches/uiohook-napi+1.5.4.patch)
+// never compiles. Only Linux needs the patch, so there: drop the prebuilt and
+// force a from-source rebuild, making the patched build/Release the binary
+// node-gyp-build loads. (Fail loud rather than silently shipping the unpatched
+// prebuilt.)
+if (process.platform === 'linux') {
+  rmSync('node_modules/uiohook-napi/prebuilds', { recursive: true, force: true })
+  const forced = spawnSync('electron-rebuild', ['-f', '-o', 'uiohook-napi'], {
+    stdio: 'inherit',
+    shell: true,
+    env,
+  })
+  process.exit(forced.status ?? 1)
+}
+
+process.exit(0)
