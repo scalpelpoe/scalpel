@@ -4,7 +4,9 @@
 //   - Linux: newer GCC (14+) promotes -Wincompatible-pointer-types to an
 //     error, which trips one of our native-module deps (uiohook-napi).
 //     Pass -Wno-error=incompatible-pointer-types via CFLAGS/CXXFLAGS to
-//     downgrade it back to a warning so the rebuild completes.
+//     downgrade it back to a warning so the rebuild completes. Linux also
+//     force-rebuilds uiohook-napi from the patched source (see the block
+//     below) since its N-API prebuilt would otherwise mask the patch.
 //   - Windows/macOS: invoke electron-rebuild with no extra flags.
 //
 // The cross-platform npm invocation is what required this script: npm runs
