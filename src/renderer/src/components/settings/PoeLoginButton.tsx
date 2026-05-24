@@ -1,16 +1,7 @@
-import { useEffect, useState } from 'react'
-import type { AuthResult } from '../../../../shared/types'
+import { useAuth } from '../../shared/use-auth'
 
 export function PoeLoginButton(): JSX.Element {
-  const [auth, setAuth] = useState<AuthResult | null>(null)
-
-  const checkAuth = (): void => {
-    window.api.poeCheckAuth().then(setAuth)
-  }
-
-  useEffect(() => {
-    checkAuth()
-  }, [])
+  const { auth, login, logout } = useAuth()
 
   if (auth === null) return <span className="text-[11px] text-text-dim">Checking...</span>
 
@@ -21,7 +12,7 @@ export function PoeLoginButton(): JSX.Element {
         <button
           className="text-[11px] text-text-dim shrink-0 ml-2 px-3 py-[5px]"
           onClick={() => {
-            window.api.poeLogout().then(() => setAuth({ loggedIn: false }))
+            logout()
           }}
         >
           Logout
@@ -36,7 +27,7 @@ export function PoeLoginButton(): JSX.Element {
       <button
         className="primary"
         onClick={() => {
-          window.api.poeLogin().then(() => checkAuth())
+          login()
         }}
       >
         Login

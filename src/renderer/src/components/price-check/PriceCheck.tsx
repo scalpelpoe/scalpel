@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react'
+import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
 import type { PriceCheckProps, StatFilter, Listing, BulkListing } from './types'
 import { getTradeUrls } from '../../../../shared/endpoints'
 import { getGameFeatures } from '../../../../shared/game-features'
@@ -15,7 +15,6 @@ import {
   MINMAX_CHIP_IDS,
 } from './constants'
 import { FilterChip } from './FilterChip'
-import { PriceChip } from '../../shared/PriceChip'
 import { FaustusBanner } from './FaustusBanner'
 import { AngeBanner } from './AngeBanner'
 import { TradeTimeoutBanner } from './TradeTimeoutBanner'
@@ -26,10 +25,13 @@ import { TradeListings } from './TradeListings'
 import { BulkListings } from './BulkListings'
 import { ListingRowsSkeleton } from './PriceCheckSkeleton'
 import { RateLimitBar } from './RateLimitBar'
+import { DismissibleTip } from '../../shared/DismissibleTip'
 import { BASE_DEFAULT_ITEM_CLASSES, applyBaseModeToFilters, shouldIncludeImplicitsInBase } from './base-mode'
 import type { ListedTime, PriceOption, ResultsView, StatusOption } from './search-settings'
 import { LISTED_TIME_OPTIONS, getPriceOptions, primaryCurrencySwap, STATUS_OPTIONS } from './search-settings'
 import { SearchSettingDropdown } from './SearchSettingDropdown'
+import { zebraRowBg } from '../../shared/utils'
+import { useAuth } from '../../shared/use-auth'
 
 export function PriceCheck({
   item,
@@ -52,7 +54,11 @@ export function PriceCheck({
   const color = selectedUnique ? RARITY_COLORS['Unique'] : (RARITY_COLORS[item.rarity] ?? '#c8c8c8')
   const heroIcon = selectedUnique ? (iconMap[selectedUnique] ?? getItemIcon(item)) : getItemIcon(item)
   const heroName = selectedUnique ?? item.name
-  const [loggedIn, setLoggedIn] = useState(false)
+  const { loggedIn, login } = useAuth()
+  // Ids of pseudos the last search dropped because the user is not logged in
+  // (Weighted Sum, e.g. added elemental damage on PoE2). Each drives an in-row
+  // login tip under the matching filter.
+  const [loginRequiredPseudoIds, setLoginRequiredPseudoIds] = useState<string[]>([])
   // Rate-limit state comes from main already merged across all policies we've seen. The
   // RateLimitBar handles decay + blending; we just store the latest snapshot here.
   const [rateLimitTiers, setRateLimitTiers] = useState<
@@ -65,7 +71,6 @@ export function PriceCheck({
   const [penaltyUntil, setPenaltyUntil] = useState<number | null>(null)
 
   useEffect(() => {
-    window.api.poeCheckAuth().then((r) => setLoggedIn(r.loggedIn))
     const unsubRate = window.api.onRateLimit((state) => setRateLimitTiers(state.tiers))
     const unsubPenalty = window.api.onTradePenalty((until) => setPenaltyUntil(until))
     return () => {
@@ -221,6 +226,7 @@ export function PriceCheck({
   const doSearch = async (): Promise<void> => {
     setSearching(true)
     setError(null)
+    setLoginRequiredPseudoIds([])
     // With "don't hide unchecked" on, still collapse on the first auto-search, then skip
     // re-collapse on subsequent manual searches. If "never auto-search" is also on, there
     // is no auto-search -- the user is actively unchecking from the start, so skip even the
@@ -260,6 +266,7 @@ export function PriceCheck({
       setQueryId(result.queryId)
       queryIdRef.current = result.queryId
       setRemainingIds(result.remainingIds ?? [])
+      setLoginRequiredPseudoIds(result.loginRequiredPseudoIds ?? [])
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Search failed')
     }
@@ -606,16 +613,39 @@ export function PriceCheck({
               <div className="bg-black/20 flex flex-col rounded-none mx-[-14px] p-0">
                 {/* Visible filters */}
                 {visibleStats.map(({ f, i }, rowIdx) => (
-                  <StatFilterRow
-                    key={i}
-                    f={f}
-                    i={i}
-                    rowIdx={rowIdx}
-                    toggleFilter={toggleFilter}
-                    updateFilterMin={updateFilterMin}
-                    updateFilterMax={updateFilterMax}
-                    itemRarity={item.rarity}
-                  />
+                  <Fragment key={i}>
+                    <StatFilterRow
+                      f={f}
+                      i={i}
+                      rowIdx={rowIdx}
+                      toggleFilter={toggleFilter}
+                      updateFilterMin={updateFilterMin}
+                      updateFilterMax={updateFilterMax}
+                      itemRarity={item.rarity}
+                    />
+                    {/* This pseudo needs a Weighted Sum search, which the trade API
+                        only allows for logged-in users; it was dropped this search. */}
+                    {loginRequiredPseudoIds.includes(f.id) && (
+                      <div
+                        className="px-3 pt-2 pb-2"
+                        // Match the StatFilterRow alternating background (same rowIdx)
+                        // so the tip reads as part of its pseudo's row, not a gap.
+                        style={{ background: zebraRowBg(rowIdx) }}
+                      >
+                        <DismissibleTip id={`pseudo-login-${f.id}`} dismissible={false}>
+                          <span
+                            className="font-bold underline cursor-pointer"
+                            onClick={() => {
+                              login().then(() => doSearch())
+                            }}
+                          >
+                            Log in
+                          </span>{' '}
+                          to add this pseudo to your search
+                        </DismissibleTip>
+                      </div>
+                    )}
+                  </Fragment>
                 ))}
 
                 {/* Show more / hide toggle when collapsed after search */}

@@ -21,7 +21,10 @@ import { DustEntryRow } from './DustEntryRow'
 export function DustExplorer({
   onSelectItem,
   onPriceCheckItem,
-}: { onSelectItem?: () => void; onPriceCheckItem?: () => void } = {}): JSX.Element {
+}: {
+  onSelectItem?: () => void
+  onPriceCheckItem?: () => void
+} = {}): JSX.Element {
   const [sortKey, setSortKey] = useState<SortKey>(persistedState.sortKey)
   const [sortDir, setSortDir] = useState<SortDir>(persistedState.sortDir)
   const [prices, setPrices] = useState<Record<string, number>>({})

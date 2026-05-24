@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import type { PoeItem } from '../../../shared/types'
 import { ItemSummary } from './ItemSummary'
+import { zebraRowBg } from '../shared/utils'
 import socketRed from '../assets/sockets/socket-red.png'
 import socketGreen from '../assets/sockets/socket-green.png'
 import socketBlue from '../assets/sockets/socket-blue.png'
@@ -385,7 +386,7 @@ export function SocketRecolor({ item, priceInfo }: Props): JSX.Element {
                     className="flex items-center gap-2"
                     style={{
                       padding: '6px 12px',
-                      background: i % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent',
+                      background: zebraRowBg(i, 'rgba(255,255,255,0.03)'),
                       borderLeft: isBest ? '3px solid var(--accent)' : '3px solid transparent',
                     }}
                   >

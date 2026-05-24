@@ -1,6 +1,7 @@
 import type { BulkListing } from './types'
 import { getCurrencyIconMap } from './constants'
 import { usePoeVersion } from '../../shared/poe-version-context'
+import { zebraRowBg } from '../../shared/utils'
 
 export function BulkListings({
   bulkListings,
@@ -16,11 +17,7 @@ export function BulkListings({
       style={{ margin: '0 -14px -10px -14px' }}
     >
       {bulkListings.map((l, i) => (
-        <div
-          key={l.id}
-          className="flex items-center gap-2 px-3 py-2 text-xs"
-          style={{ background: i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent' }}
-        >
+        <div key={l.id} className="flex items-center gap-2 px-3 py-2 text-xs" style={{ background: zebraRowBg(i) }}>
           {/* Ratio */}
           <span className="flex items-center justify-center gap-1 font-bold text-sm shrink-0 bg-black/30 rounded-full px-[10px] py-[3px]">
             {l.ratio < 1 ? l.ratio.toFixed(3) : l.ratio.toFixed(1)}

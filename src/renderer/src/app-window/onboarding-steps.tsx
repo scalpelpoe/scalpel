@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import type { AppSettings, AuthResult } from '../../../shared/types'
+import { useState } from 'react'
+import type { AppSettings } from '../../../shared/types'
+import { useAuth } from '../shared/use-auth'
 import { getGameFeatures } from '../../../shared/game-features'
 import poeFilterSettingImg from '../assets/other/poe-filter-setting.png'
 import poe1Logo from '../assets/other/poe1-logo.png'
@@ -291,15 +292,7 @@ export function TradeLoginStep({
   stepNum: number
   totalSteps: number
 }): JSX.Element {
-  const [auth, setAuth] = useState<AuthResult | null>(null)
-
-  useEffect(() => {
-    window.api.poeCheckAuth().then(setAuth)
-  }, [])
-
-  const checkAuth = (): void => {
-    window.api.poeCheckAuth().then(setAuth)
-  }
+  const { auth, login, logout } = useAuth()
 
   return (
     <div>
@@ -318,7 +311,7 @@ export function TradeLoginStep({
             <button
               className="text-[11px] text-text-dim shrink-0 ml-2 px-3 py-[5px]"
               onClick={() => {
-                window.api.poeLogout().then(() => setAuth({ loggedIn: false }))
+                logout()
               }}
             >
               Logout
@@ -330,7 +323,7 @@ export function TradeLoginStep({
             <button
               className="primary"
               onClick={() => {
-                window.api.poeLogin().then(() => checkAuth())
+                login()
               }}
             >
               Login

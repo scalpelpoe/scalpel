@@ -5,6 +5,7 @@ import { computeEvBarRGB } from './utils'
 import { MapInfoBlock } from './MapInfoBlock'
 import { CardChips } from './CardChips'
 import { ExpandedCardList } from './ExpandedCardList'
+import { zebraRowBg } from '../../shared/utils'
 
 export function DivCardExplorer({ onSelectItem }: Props): JSX.Element {
   const [prices, setPrices] = useState<Record<string, number>>({})
@@ -213,7 +214,7 @@ export function DivCardExplorer({ onSelectItem }: Props): JSX.Element {
                 onClick={() => setExpandedMap(isExpanded ? null : entry.map.name)}
                 className="flex items-center gap-2 py-2 px-3 cursor-pointer relative overflow-hidden"
                 style={{
-                  background: i % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent',
+                  background: zebraRowBg(i, 'rgba(255,255,255,0.03)'),
                   borderLeft: `3px solid ${barColor}`,
                 }}
               >

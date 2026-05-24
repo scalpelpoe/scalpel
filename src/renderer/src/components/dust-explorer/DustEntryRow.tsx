@@ -6,6 +6,7 @@ import { CurrencyChip } from '../../shared/CurrencyChip'
 import { DustEntry } from './types'
 import { COL_PRICE, COL_DUST, COL_DPC, COL_DPCS, mirrorIconUrl } from './constants'
 import { formatDust, formatRatio } from './utils'
+import { zebraRowBg } from '../../shared/utils'
 
 interface DustEntryRowProps {
   entry: DustEntry
@@ -41,7 +42,7 @@ export function DustEntryRow({
   return (
     <div
       className="flex items-center gap-[6px] px-3 py-1"
-      style={{ background: index % 2 === 0 ? 'rgba(255,255,255,0.03)' : 'transparent' }}
+      style={{ background: zebraRowBg(index, 'rgba(255,255,255,0.03)') }}
     >
       {/* Icon with glow */}
       {entry.iconUrl ? (

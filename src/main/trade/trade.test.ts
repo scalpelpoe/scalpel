@@ -60,8 +60,28 @@ vi.mock('./stat-matcher', async (orig) => {
   return { ...actual, ensureStatsLoaded: vi.fn().mockResolvedValue(undefined) }
 })
 
-import { buildGemTypeField, searchTrade, stripTradeTokens, _resetRateLimitsForTests, type StatFilter } from './trade'
+import {
+  buildGemTypeField,
+  searchTrade,
+  searchNeedsLogin,
+  stripTradeTokens,
+  _resetRateLimitsForTests,
+  type StatFilter,
+} from './trade'
 import { setPoeVersion } from '../game-state'
+import { matchItemMods, _setStatEntriesForTests } from './stat-matcher'
+
+// Shared rare-body-armour fixture for the searchTrade describes below. The
+// evasion/energyShield feed the defence-filter tests and are harmless to the
+// pseudo tests (which pass no defence filters).
+const bodyArmourItem = {
+  name: '',
+  baseType: "Falconer's Jacket",
+  itemClass: 'Body Armours',
+  rarity: 'Rare',
+  evasion: 542,
+  energyShield: 203,
+}
 
 describe('buildGemTypeField', () => {
   it('returns baseType as a plain string for a regular gem', () => {
@@ -122,15 +142,6 @@ describe('stripTradeTokens', () => {
 // group" and demands everything under `equipment_filters`. Anyone who edits
 // TRADE_DIALECTS or the defence/weapon filter branches has this test as a guard.
 describe('searchTrade filter-group dispatch', () => {
-  const bodyArmourItem = {
-    name: '',
-    baseType: "Falconer's Jacket",
-    itemClass: 'Body Armours',
-    rarity: 'Rare',
-    evasion: 542,
-    energyShield: 203,
-  }
-
   const defenceFilters: StatFilter[] = [
     {
       id: 'defence.evasion',
@@ -163,7 +174,10 @@ describe('searchTrade filter-group dispatch', () => {
 
   it('PoE1 rare body armour uses armour_filters, never equipment_filters', async () => {
     setPoeVersion(1)
-    await searchTrade('Mirage', bodyArmourItem, defenceFilters, 'any', 'chaos_divine')
+    await searchTrade('Mirage', bodyArmourItem, defenceFilters, {
+      tradeStatus: 'any',
+      tradePriceOption: 'chaos_divine',
+    })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     expect(req).toBeDefined()
     expect(req!.url).toContain('/api/trade/search/')
@@ -175,7 +189,10 @@ describe('searchTrade filter-group dispatch', () => {
 
   it('PoE2 rare body armour uses equipment_filters, never armour_filters or weapon_filters', async () => {
     setPoeVersion(2)
-    await searchTrade('Fate of the Vaal', bodyArmourItem, defenceFilters, 'any', 'exalted_divine')
+    await searchTrade('Fate of the Vaal', bodyArmourItem, defenceFilters, {
+      tradeStatus: 'any',
+      tradePriceOption: 'exalted_divine',
+    })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     expect(req).toBeDefined()
     expect(req!.url).toContain('/api/trade2/search/')
@@ -197,7 +214,7 @@ describe('searchTrade filter-group dispatch', () => {
       itemClass: 'Jewels',
       rarity: 'Rare',
     }
-    await searchTrade('Mirage', clusterItem, [], 'any', 'chaos_divine')
+    await searchTrade('Mirage', clusterItem, [], { tradeStatus: 'any', tradePriceOption: 'chaos_divine' })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     expect(req).toBeDefined()
     const body = JSON.parse(req!.body!)
@@ -216,7 +233,7 @@ describe('searchTrade filter-group dispatch', () => {
       itemClass: 'Stackable Currency',
       rarity: 'Unique',
     }
-    await searchTrade('Mirage', beast, [], 'any', 'chaos_divine')
+    await searchTrade('Mirage', beast, [], { tradeStatus: 'any', tradePriceOption: 'chaos_divine' })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     expect(req).toBeDefined()
     const body = JSON.parse(req!.body!)
@@ -253,7 +270,7 @@ describe('searchTrade filter-group dispatch', () => {
         max: null,
       },
     ]
-    await searchTrade('Mirage', unidCluster, filters, 'any', 'chaos_divine')
+    await searchTrade('Mirage', unidCluster, filters, { tradeStatus: 'any', tradePriceOption: 'chaos_divine' })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     const body = JSON.parse(req!.body!)
     const sentIds = body.query.stats[0].filters.map((f: { id: string }) => f.id)
@@ -270,7 +287,7 @@ describe('searchTrade filter-group dispatch', () => {
       itemClass: 'Jewels',
       rarity: 'Rare',
     }
-    await searchTrade('Mirage', abyssJewel, [], 'any', 'chaos_divine')
+    await searchTrade('Mirage', abyssJewel, [], { tradeStatus: 'any', tradePriceOption: 'chaos_divine' })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     const body = JSON.parse(req!.body!)
     expect(body.query.filters.type_filters.filters.category).toEqual({ option: 'jewel' })
@@ -282,11 +299,230 @@ describe('searchTrade filter-group dispatch', () => {
       ...defenceFilters,
       { id: 'socket.rune_sockets', text: '2 Rune Sockets', type: 'socket', enabled: true, value: 2, min: 2, max: null },
     ]
-    await searchTrade('Fate of the Vaal', bodyArmourItem, withRunes, 'any', 'exalted_divine')
+    await searchTrade('Fate of the Vaal', bodyArmourItem, withRunes, {
+      tradeStatus: 'any',
+      tradePriceOption: 'exalted_divine',
+    })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     const body = JSON.parse(req!.body!)
     expect(body.query.filters.equipment_filters.filters.rune_sockets).toEqual({ min: 2 })
     expect(body.query.filters.equipment_filters.filters.ev.min).toBe(487)
     expect(body.query.filters.socket_filters).toBeUndefined()
+  })
+})
+
+describe('searchTrade pseudo emission', () => {
+  const lifePseudo: StatFilter = {
+    id: 'pseudo.pseudo_total_life',
+    text: 'Total Life: 120',
+    type: 'pseudo',
+    enabled: true,
+    value: 120,
+    min: 108,
+    max: null,
+    weightFilters: [{ id: 'explicit.stat_life' }, { id: 'explicit.stat_str' }],
+  }
+
+  // Added elemental damage is NOT a native PoE2 pseudo id (it 400s), so it is
+  // the one that must go out as a Weighted Sum group on PoE2.
+  const addsElePseudo: StatFilter = {
+    id: 'pseudo.pseudo_adds_elemental_damage',
+    text: 'Adds # to # Elemental Damage: 40',
+    type: 'pseudo',
+    enabled: true,
+    value: 40,
+    min: 36,
+    max: null,
+    weightFilters: [{ id: 'explicit.stat_fire_add' }, { id: 'explicit.stat_cold_add' }],
+  }
+
+  const addsEleSpellsPseudo: StatFilter = {
+    id: 'pseudo.pseudo_adds_elemental_damage_to_spells',
+    text: 'Adds # to # Elemental Damage to Spells: 60',
+    type: 'pseudo',
+    enabled: true,
+    value: 60,
+    min: 54,
+    max: null,
+    weightFilters: [{ id: 'explicit.stat_fire_spell' }, { id: 'explicit.stat_cold_spell' }],
+  }
+
+  beforeEach(() => {
+    capturedRequests.length = 0
+    _resetRateLimitsForTests()
+  })
+
+  it('PoE2 emits an unsupported pseudo (added ele damage) as a Weighted Sum group, never a native pseudo id', async () => {
+    setPoeVersion(2)
+    await searchTrade('Fate of the Vaal', bodyArmourItem, [addsElePseudo], {
+      tradeStatus: 'any',
+      tradePriceOption: 'exalted_divine',
+    })
+    const req = capturedRequests.find((r) => r.url.includes('/search/'))
+    expect(req).toBeDefined()
+    const body = JSON.parse(req!.body!)
+    const groups = body.query.stats as Array<{
+      type: string
+      filters: Array<{ id: string; value?: Record<string, unknown>; disabled?: boolean }>
+      value?: Record<string, unknown>
+      disabled?: boolean
+    }>
+    const weightGroup = groups.find((g) => g.type === 'weight')
+    expect(weightGroup).toBeDefined()
+    expect(weightGroup!.disabled).toBe(false)
+    // trade2 weight-group filters are {id, disabled:false} -- summed at the
+    // implicit default weight of 1, no per-filter value:{weight}.
+    expect(weightGroup!.filters).toEqual([
+      { id: 'explicit.stat_fire_add', disabled: false },
+      { id: 'explicit.stat_cold_add', disabled: false },
+    ])
+    expect(weightGroup!.value).toEqual({ min: 36 })
+    // The native pseudo id must not leak into any and-group.
+    const andGroup = groups.find((g) => g.type === 'and')
+    const ids = (andGroup?.filters ?? []).map((f) => f.id)
+    expect(ids).not.toContain('pseudo.pseudo_adds_elemental_damage')
+  })
+
+  it('PoE2 emits one Weighted Sum group per enabled unsupported pseudo', async () => {
+    setPoeVersion(2)
+    await searchTrade('Fate of the Vaal', bodyArmourItem, [addsElePseudo, addsEleSpellsPseudo], {
+      tradeStatus: 'any',
+      tradePriceOption: 'exalted_divine',
+    })
+    const body = JSON.parse(capturedRequests.find((r) => r.url.includes('/search/'))!.body!)
+    const weightGroups = (
+      body.query.stats as Array<{
+        type: string
+        filters: Array<{ id: string; value?: Record<string, unknown>; disabled?: boolean }>
+        value?: Record<string, unknown>
+        disabled?: boolean
+      }>
+    ).filter((g) => g.type === 'weight')
+    expect(weightGroups).toHaveLength(2)
+    // Groups preserve input order.
+    expect(weightGroups[0].filters).toEqual([
+      { id: 'explicit.stat_fire_add', disabled: false },
+      { id: 'explicit.stat_cold_add', disabled: false },
+    ])
+    expect(weightGroups[0].value).toEqual({ min: 36 })
+    expect(weightGroups[1].filters).toEqual([
+      { id: 'explicit.stat_fire_spell', disabled: false },
+      { id: 'explicit.stat_cold_spell', disabled: false },
+    ])
+    expect(weightGroups[1].value).toEqual({ min: 54 })
+  })
+
+  it('PoE2 keeps a natively-supported pseudo (Total Life) on the native pseudo path', async () => {
+    setPoeVersion(2)
+    await searchTrade('Fate of the Vaal', bodyArmourItem, [lifePseudo], {
+      tradeStatus: 'any',
+      tradePriceOption: 'exalted_divine',
+    })
+    const body = JSON.parse(capturedRequests.find((r) => r.url.includes('/search/'))!.body!)
+    const groups = body.query.stats as Array<{ type: string; filters: Array<{ id: string }> }>
+    // No weight group: Total Life is a valid PoE2 pseudo id.
+    expect(groups.find((g) => g.type === 'weight')).toBeUndefined()
+    const andGroup = groups.find((g) => g.type === 'and')
+    expect(andGroup).toBeDefined()
+    expect(andGroup!.filters.map((f) => f.id)).toContain('pseudo.pseudo_total_life')
+  })
+
+  it('PoE1 keeps all calculated pseudos as native pseudo ids in the and group', async () => {
+    setPoeVersion(1)
+    await searchTrade('Mirage', bodyArmourItem, [lifePseudo, addsElePseudo], {
+      tradeStatus: 'any',
+      tradePriceOption: 'chaos_divine',
+    })
+    const body = JSON.parse(capturedRequests.find((r) => r.url.includes('/search/'))!.body!)
+    const groups = body.query.stats as Array<{ type: string; filters: Array<{ id: string }> }>
+    expect(groups.find((g) => g.type === 'weight')).toBeUndefined()
+    const andGroup = groups.find((g) => g.type === 'and')
+    expect(andGroup).toBeDefined()
+    const ids = andGroup!.filters.map((f) => f.id)
+    expect(ids).toContain('pseudo.pseudo_total_life')
+    expect(ids).toContain('pseudo.pseudo_adds_elemental_damage')
+  })
+
+  it('PoE2: a real matchItemMods supported pseudo stays on the native path', async () => {
+    // Fire Resistance feeds Total Elemental Resistance, which IS a valid PoE2
+    // pseudo id, so it must stay native -- the regression guard for the
+    // over-eager weighted-sum routing that broke supported pseudos.
+    _setStatEntriesForTests([{ id: 'explicit.stat_fire', text: '+#% to Fire Resistance', type: 'explicit' }])
+    const chips = matchItemMods(['+40% to Fire Resistance'], [], undefined, {
+      sockets: '',
+      linkedSockets: 0,
+      quality: 0,
+      itemLevel: 0,
+      baseType: '',
+      rarity: 'Rare',
+      itemClass: 'Body Armours',
+      gemLevel: 0,
+      corrupted: false,
+      mirrored: false,
+    })
+    const elePseudo = chips.find((f) => f.id === 'pseudo.pseudo_total_elemental_resistance')
+    // Guard: if matchItemMods didn't produce the chip we expected, fail loudly.
+    expect(elePseudo).toBeDefined()
+
+    setPoeVersion(2)
+    await searchTrade('Fate of the Vaal', bodyArmourItem, chips, {
+      tradeStatus: 'any',
+      tradePriceOption: 'exalted_divine',
+    })
+    const req = capturedRequests.find((r) => r.url.includes('/search/'))
+    expect(req).toBeDefined()
+    const body = JSON.parse(req!.body!)
+    const groups = body.query.stats as Array<{
+      type: string
+      filters: Array<{ id: string; value: Record<string, unknown> }>
+      value?: Record<string, unknown>
+    }>
+    // No weight group from a natively-supported pseudo...
+    expect(groups.find((g) => g.type === 'weight')).toBeUndefined()
+    // ...and the native id IS present on the wire.
+    const allFilterIds = groups.flatMap((g) => g.filters.map((f) => f.id))
+    expect(allFilterIds).toContain('pseudo.pseudo_total_elemental_resistance')
+  })
+
+  it('PoE2 drops the weighted pseudo and flags the result when not logged in', async () => {
+    setPoeVersion(2)
+    const result = await searchTrade('Fate of the Vaal', bodyArmourItem, [addsElePseudo], {
+      tradeStatus: 'any',
+      tradePriceOption: 'exalted_divine',
+      loggedIn: false, // not logged in
+    })
+    const body = JSON.parse(capturedRequests.find((r) => r.url.includes('/search/'))!.body!)
+    const groups = body.query.stats as Array<{ type: string }>
+    // No weight group is sent (the API would reject it for an anonymous user)...
+    expect(groups.find((g) => g.type === 'weight')).toBeUndefined()
+    // ...and the result reports the dropped pseudo id so the UI can prompt a login.
+    expect(result.loginRequiredPseudoIds).toEqual(['pseudo.pseudo_adds_elemental_damage'])
+  })
+
+  it('PoE2 emits the weighted pseudo and sets no flag when logged in', async () => {
+    setPoeVersion(2)
+    const result = await searchTrade('Fate of the Vaal', bodyArmourItem, [addsElePseudo], {
+      tradeStatus: 'any',
+      tradePriceOption: 'exalted_divine',
+      loggedIn: true, // logged in
+    })
+    const body = JSON.parse(capturedRequests.find((r) => r.url.includes('/search/'))!.body!)
+    const groups = body.query.stats as Array<{ type: string }>
+    expect(groups.find((g) => g.type === 'weight')).toBeDefined()
+    expect(result.loginRequiredPseudoIds).toBeUndefined()
+  })
+
+  it('searchNeedsLogin: true only for an enabled weighted pseudo on PoE2', () => {
+    setPoeVersion(2)
+    expect(searchNeedsLogin([addsElePseudo])).toBe(true)
+    // Natively-supported pseudo needs no login.
+    expect(searchNeedsLogin([lifePseudo])).toBe(false)
+    // Disabled weighted pseudo needs no login.
+    expect(searchNeedsLogin([{ ...addsElePseudo, enabled: false }])).toBe(false)
+  })
+
+  it('searchNeedsLogin: false on PoE1 even for an otherwise-weighted pseudo id', () => {
+    setPoeVersion(1)
+    expect(searchNeedsLogin([addsElePseudo])).toBe(false)
   })
 })

@@ -3,6 +3,7 @@ import { IconGlow } from '../../shared/IconGlow'
 import { MapCardEntry } from './types'
 import { formatEv } from './utils'
 import { PriceChip } from './PriceChip'
+import { zebraRowBg } from '../../shared/utils'
 
 interface ExpandedCardListProps {
   cards: MapCardEntry[]
@@ -57,7 +58,7 @@ export function ExpandedCardList({
             key={c.card.name}
             className="flex items-center gap-[10px] pr-[14px] pl-0 py-0 text-[13px] min-h-[34px]"
             style={{
-              background: isFlagged ? 'rgba(239,154,63,0.05)' : j % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+              background: isFlagged ? 'rgba(239,154,63,0.05)' : zebraRowBg(j),
               opacity: isRowHidden ? 0.35 : isFlagged ? 0.5 : c.cardEv < 0.0001 ? 0.4 : 1,
               overflow: j === 0 ? 'visible' : 'hidden',
             }}

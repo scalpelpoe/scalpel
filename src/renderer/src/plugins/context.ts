@@ -48,7 +48,7 @@ export function createPluginContext(deps: PluginContextFactoryDeps): ScalpelPlug
     copyAndEvaluateItem: () => deps.copyAndEvaluateItem(),
     log: (...args: unknown[]) => {
       if (DEBUG()) {
-        // eslint-disable-next-line no-console
+        // biome-ignore lint/suspicious/noConsole: gated behind DEBUG() debug logging
         console.log(`[plugin:${deps.pluginId}]`, ...args)
       }
     },
