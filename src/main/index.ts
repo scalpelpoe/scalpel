@@ -1,4 +1,4 @@
-import { app, type BrowserWindow, ipcMain, Menu, nativeImage, powerMonitor, protocol, screen, Tray } from 'electron'
+import { app, type BrowserWindow, clipboard, ipcMain, Tray, Menu, nativeImage, powerMonitor, screen } from 'electron'
 import {
   createAndOpenBugReport,
   installEarlyDiagnostics,
@@ -6,81 +6,84 @@ import {
   registerDiagnostics,
 } from './diagnostics'
 
+// Prevent unhandled JS exceptions from crashing the native overlay thread
+// electron-overlay-window's tsfn_to_js_proxy calls napi_fatal_error if napi_call_function
+// returns non-ok, which happens when there's a pending exception on the JS isolate
 installEarlyDiagnostics()
 
+import { dirname, join } from 'node:path'
 import { execSync } from 'node:child_process'
-import { join } from 'node:path'
+import { uIOhook, UiohookKey } from 'uiohook-napi'
 import Store from 'electron-store'
-import type { AppSettings, CheatSheetsSettings, RegexPreset } from '../shared/types'
-import { initAppMacrosRefresh, withPluginHotkeys } from './app-macros'
-import { createAppWindow, getAppWindow, showAppWindow } from './app-window'
-import {
-  applyCheatSheetHotkeys,
-  categoryDir,
-  ensureThumb,
-  getCheatSheetsOverlay,
-  registerCheatSheetsOverlay,
-  setCheatSheetsBeforeShow,
-} from './cheat-sheets'
-import { snapshotClipboard } from './clipboard-preserve'
-import { createHotkeyHandler, createPriceCheckHandler, setEvaluationStore, setOpenSide } from './evaluation'
-import { loadFilter } from './filter-state'
-import { requestGameSwitch } from './game-switch'
-import { register as registerCheatSheets } from './handlers/cheat-sheets'
-import { register as registerClipboard } from './handlers/clipboard'
-import * as editingHandlers from './handlers/editing'
-import * as filesHandlers from './handlers/files'
-import { register as registerManifest } from './handlers/manifest'
-import * as onlineSyncHandlers from './handlers/online-sync'
-import { register as registerPlugins } from './handlers/plugins'
-import * as pricesHandlers from './handlers/prices'
-import * as settingsHandlers from './handlers/settings'
-import * as tradeHandlers from './handlers/trade'
-import * as versionsHandlers from './handlers/versions'
-import { register as registerWhiteboard } from './handlers/whiteboard'
-import {
-  resumeHotkeys,
-  setAppMacroHandler,
-  setAppMacros,
-  setChatCommands,
-  setEscapeHandler,
-  setHotkey,
-  setPriceCheckHandler,
-  setPriceCheckHotkey,
-  setStashScrollEnabled,
-  startHotkeyListener,
-  stopHotkeyListener,
-  suspendHotkeys,
-} from './hotkeys'
-import { refreshManifest } from './manifest'
-import { startOnlineSync, stopOnlineSync } from './online-sync'
 import {
   createOverlayWindow,
-  getOverlayWindow,
   hideOverlay,
+  showOverlay,
+  getOverlayWindow,
   setCloseOnClickOutside,
   setGameFocusHandlers,
   setWindowInputFocused,
-  showOverlay,
 } from './overlay'
-import { applyPinnedZoneEnabled, registerPinnedZoneOverlay } from './pinned-zone'
-import { registerScalpelPluginProtocol, registerScalpelPluginSchemePrivileges } from './plugins/plugin-protocol'
-import { registerScalpelInternalProtocol, registerScalpelInternalSchemePrivileges } from './plugins/protocol'
-import { flushAll as flushPluginStorage } from './plugins/storage'
-import { refreshLeagues } from './trade/leagues'
-import { invalidatePriceCache, refreshPrices } from './trade/prices'
+import { createAppWindow, showAppWindow, getAppWindow } from './app-window'
+import {
+  startHotkeyListener,
+  setHotkey,
+  setPriceCheckHotkey,
+  setPriceCheckHandler,
+  setEscapeHandler,
+  stopHotkeyListener,
+  setChatCommands,
+  setAppMacros,
+  setAppMacroHandler,
+  suspendHotkeys,
+  resumeHotkeys,
+  setStashScrollEnabled,
+} from './hotkeys'
+import { refreshPrices, invalidatePriceCache } from './trade/prices'
 import { onRateLimitUpdate } from './trade/trade'
-import { applyPendingUpdate } from './update/update-swap'
+import { refreshLeagues } from './trade/leagues'
+import { requestGameSwitch } from './game-switch'
+import { startOnlineSync, stopOnlineSync } from './online-sync'
 import { initUpdater } from './update/updater'
+import { applyPendingUpdate } from './update/update-swap'
+import { loadFilter } from './filter-state'
+import { createHotkeyHandler, createPriceCheckHandler, setOpenSide, setEvaluationStore } from './evaluation'
+import { snapshotClipboard } from './clipboard-preserve'
+import * as tradeHandlers from './handlers/trade'
+import * as settingsHandlers from './handlers/settings'
+import * as filesHandlers from './handlers/files'
+import * as editingHandlers from './handlers/editing'
+import * as versionsHandlers from './handlers/versions'
+import * as onlineSyncHandlers from './handlers/online-sync'
+import * as pricesHandlers from './handlers/prices'
+import { register as registerCheatSheets } from './handlers/cheat-sheets'
+import { register as registerWhiteboard } from './handlers/whiteboard'
+import { register as registerClipboard } from './handlers/clipboard'
+import { register as registerManifest } from './handlers/manifest'
+import { register as registerPlugins } from './handlers/plugins'
+import { flushAll as flushPluginStorage } from './plugins/storage'
+import { refreshManifest } from './manifest'
+import { registerCheatSheetProtocol } from './cheat-sheet-protocol'
+import { registerScalpelInternalProtocol, registerScalpelInternalSchemePrivileges } from './plugins/protocol'
+import { registerScalpelPluginProtocol, registerScalpelPluginSchemePrivileges } from './plugins/plugin-protocol'
+import {
+  registerCheatSheetsOverlay,
+  applyCheatSheetHotkeys,
+  setCheatSheetsBeforeShow,
+  getCheatSheetsOverlay,
+} from './cheat-sheets'
 import { registerWhiteboardOverlay, toggleWhiteboard } from './whiteboard'
+import { registerPinnedZoneOverlay, applyPinnedZoneEnabled } from './pinned-zone'
 import {
   hideAllOnPoeBlur,
-  isAnyScalpelWindowFocused,
   restoreAllOnPoeFocus,
+  isAnyScalpelWindowFocused,
   setMainOverlayGetter,
   setOnLeaveScalpel,
   subscribeToPoeMoves,
 } from './windowing'
+import { initAppMacrosRefresh, withPluginHotkeys } from './app-macros'
+import type { AppSettings, CheatSheetsSettings, RegexPreset } from '../shared/types'
 
 // ---- Elevation detection ---------------------------------------------------
 
@@ -164,7 +167,6 @@ app.whenReady().then(() => {
 
 // Migrate: derive filterDir from existing filterPath for users upgrading
 if (!store.get('filterDir') && store.get('filterPath')) {
-  const { dirname } = require('node:path')
   store.set('filterDir', dirname(store.get('filterPath')))
 } else if (!store.get('filterDir')) {
   store.set('filterDir', '')
@@ -332,24 +334,7 @@ app.whenReady().then(() => {
   // lives on http://localhost and Chromium blocks file:// resource loads).
   registerScalpelPluginProtocol()
 
-  // Serve cheat sheet images via a custom protocol so the renderer can load local files.
-  // Append ?thumb=1 to get a 360px-max JPEG thumbnail (lazily generated + cached
-  // by ensureThumb) instead of the full-resolution original.
-  protocol.handle('cheatsheet', (request) => {
-    const raw = request.url.replace('cheatsheet://', '')
-    const [pathPart, queryPart = ''] = raw.split('?')
-    const [categoryId, file = ''] = pathPart.split('/')
-    let filePath: string
-    if (queryPart.includes('thumb=1') && file) {
-      const dot = file.lastIndexOf('.')
-      const sheetId = dot >= 0 ? file.slice(0, dot) : file
-      const ext = dot >= 0 ? file.slice(dot + 1) : ''
-      filePath = ensureThumb(categoryId, sheetId, ext)
-    } else {
-      filePath = join(categoryDir(categoryId), file)
-    }
-    return new Response(require('node:fs').createReadStream(filePath) as unknown as ReadableStream)
-  })
+  registerCheatSheetProtocol()
 
   // Broadcast rate limit state to overlay
   onRateLimitUpdate((state) => {
@@ -380,10 +365,8 @@ app.whenReady().then(() => {
     openRegex: 'regex',
   }
   const pasteRegexToSearch = (regex: string): void => {
-    const { clipboard } = require('electron') as typeof import('electron')
     const restoreClip = snapshotClipboard()
     clipboard.writeText(regex)
-    const { uIOhook, UiohookKey } = require('uiohook-napi') as typeof import('uiohook-napi')
     // Open search box first (Ctrl+F)
     uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
     uIOhook.keyTap(UiohookKey.F)

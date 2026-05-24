@@ -1,18 +1,18 @@
-import { app, BrowserWindow, ipcMain, net, session } from 'electron'
-import Store from 'electron-store'
+import { app, BrowserWindow, ipcMain, net, session, shell } from 'electron'
+import type Store from 'electron-store'
+import { getTradeUrls, POE_WEBSITE } from '../../shared/endpoints'
+import type { AppSettings, AuthResult } from '../../shared/types'
+import { getPoeVersion } from '../game-state'
+import type { BulkExchangeResult, StatFilter, TradeResult } from '../trade/trade'
 import {
-  searchTrade,
   searchNeedsLogin,
   fetchMoreListings,
-  isBulkExchangeItem,
   getBulkExchangeId,
+  isBulkExchangeItem,
   searchBulkExchange,
   searchMapsByRegex,
+  searchTrade,
 } from '../trade/trade'
-import type { StatFilter, TradeResult, BulkExchangeResult } from '../trade/trade'
-import type { AppSettings, AuthResult } from '../../shared/types'
-import { POE_WEBSITE, getTradeUrls } from '../../shared/endpoints'
-import { getPoeVersion } from '../game-state'
 
 async function clickTradeButton(
   queryId: string,
@@ -329,7 +329,7 @@ export function register(store: Store<AppSettings>): void {
   })
 
   ipcMain.handle('open-external', (_event, url: string) => {
-    require('electron').shell.openExternal(url)
+    shell.openExternal(url)
   })
 
   ipcMain.handle(

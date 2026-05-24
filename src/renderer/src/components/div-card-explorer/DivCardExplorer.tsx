@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
-import { MapCardEntry, Props, TierStyle } from './types'
+import type { MapCardEntry, Props, TierStyle } from './types'
 import { cards, regularMaps, DROPPOOL_WEIGHT, DROPS_PER_MAP } from './constants'
 import { computeEvBarRGB } from './utils'
 import { MapInfoBlock } from './MapInfoBlock'

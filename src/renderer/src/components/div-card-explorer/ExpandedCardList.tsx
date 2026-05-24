@@ -1,6 +1,6 @@
 import { chaosIcon } from '../../shared/icons'
 import { IconGlow } from '../../shared/IconGlow'
-import { MapCardEntry } from './types'
+import type { MapCardEntry } from './types'
 import { formatEv } from './utils'
 import { PriceChip } from './PriceChip'
 import { zebraRowBg } from '../../shared/utils'

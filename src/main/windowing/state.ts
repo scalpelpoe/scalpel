@@ -1,4 +1,4 @@
-import { BrowserWindow } from 'electron'
+import type { BrowserWindow } from 'electron'
 
 /** Per-overlay state held by the windowing system. Internal to this module -
  *  consumers use the SecondaryOverlay facade returned by registerSecondaryOverlay. */

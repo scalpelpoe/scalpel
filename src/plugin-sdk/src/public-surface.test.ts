@@ -23,10 +23,10 @@
 // runtime and are not covered here; they are guarded by types.test.ts and the
 // generated rolled-up .d.ts.
 
-import { describe, it, expect } from 'vitest'
-import * as SDK from './index'
+import { describe, expect, it } from 'vitest'
 import { createPluginContext } from '../../renderer/src/plugins/context'
 import type { PluginContextFactoryDeps } from '../../renderer/src/plugins/types'
+import * as SDK from './index'
 
 // The exact runtime (value) exports of @scalpelpoe/plugin-sdk, sorted.
 const EXPECTED_SDK_EXPORTS = [

@@ -1,8 +1,8 @@
-import { protocol, net } from 'electron'
-import { pathToFileURL } from 'url'
-import { existsSync } from 'fs'
-import { pluginEntryPath } from './paths'
+import { existsSync } from 'node:fs'
+import { pathToFileURL } from 'node:url'
+import { net, protocol } from 'electron'
 import { PLUGIN_ID_PATTERN } from './manifest-validator'
+import { pluginEntryPath } from './paths'
 
 const SCHEME = 'scalpel-plugin'
 

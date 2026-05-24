@@ -1,4 +1,4 @@
-import { writeFileSync } from 'fs'
+import { writeFileSync } from 'node:fs'
 import type { FilterBlock, FilterFile } from '../../shared/types'
 import { NUMERIC_CONDITION_TYPES } from './condition-types'
 
@@ -10,7 +10,7 @@ function serializeBlock(block: FilterBlock): string {
     lines.push(block.leadingComment)
   }
 
-  const commentSuffix = block.inlineComment ? ' # ' + block.inlineComment : ''
+  const commentSuffix = block.inlineComment ? ` # ${block.inlineComment}` : ''
   lines.push(block.visibility + commentSuffix)
 
   for (const cond of block.conditions) {
@@ -37,7 +37,7 @@ function serializeBlock(block: FilterBlock): string {
         return quoteIfNeeded(v)
       })
       .join(' ')
-    lines.push(`    ${action.type}${valStr ? ' ' + valStr : ''}`)
+    lines.push(`    ${action.type}${valStr ? ` ${valStr}` : ''}`)
   }
 
   if (block.continue) {
@@ -140,7 +140,7 @@ function removeBaseTypeFromRawLines(lines: string[], block: FilterBlock, baseTyp
       i--
     } else {
       // Clean up any double spaces left behind
-      lines[i] = line.replace(/  +/g, ' ')
+      lines[i] = line.replace(/ {2,}/g, ' ')
     }
   }
 }
@@ -157,9 +157,9 @@ function addBaseTypeToRawLines(lines: string[], block: FilterBlock, baseType: st
     // Append the new value
     const commentIdx = lines[i].indexOf('#')
     if (commentIdx !== -1) {
-      lines[i] = lines[i].slice(0, commentIdx).trimEnd() + ' ' + quoted + ' ' + lines[i].slice(commentIdx)
+      lines[i] = `${lines[i].slice(0, commentIdx).trimEnd()} ${quoted} ${lines[i].slice(commentIdx)}`
     } else {
-      lines[i] = lines[i].trimEnd() + ' ' + quoted
+      lines[i] = `${lines[i].trimEnd()} ${quoted}`
     }
     return
   }
@@ -179,7 +179,7 @@ function escapeRegex(str: string): string {
  */
 function updateThresholds(
   filterFile: FilterFile,
-  condType: 'StackSize' | 'Quality',
+  condType: 'StackSize' | 'Quality' | 'MemoryStrands',
   oldBoundary: number,
   newBoundary: number,
   minValue: number,
@@ -198,7 +198,7 @@ function updateThresholds(
       const stripped = line.replace(/#.*/, '').trim()
       if (!stripped.startsWith(condType)) continue
       const match = stripped.match(re)
-      if (match) allValues.add(parseInt(match[2]))
+      if (match) allValues.add(parseInt(match[2], 10))
     }
   }
 
@@ -255,7 +255,7 @@ function updateThresholds(
       const match = stripped.match(re)
       if (!match) continue
 
-      const val = parseInt(match[2])
+      const val = parseInt(match[2], 10)
       const newVal = replacements.get(val)
       if (newVal !== undefined && newVal !== val) {
         lines[lineIdx] = line.replace(new RegExp(`(${condType}\\s*(?:>=|>|<=|<|==|=)?\\s*)${val}\\b`), `$1${newVal}`)

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { AppSettings } from '../../../shared/types'
-import { SettingsPanel } from '../components/SettingsPanel'
 import { OnlineFilterModal } from '../components/OnlineFilterModal'
+import { SettingsPanel } from '../components/SettingsPanel'
 
 export function AppSettingsWrapper({
   settings,

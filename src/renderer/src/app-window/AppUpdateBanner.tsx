@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { UpdateAvailableBanner, JustUpdatedBanner, BrickedReleaseBanner } from '../shared/update-banners'
+import { BrickedReleaseBanner, JustUpdatedBanner, UpdateAvailableBanner } from '../shared/update-banners'
 
 /**
  * Top-of-window update + bricked-release banners for the app (settings) window.
@@ -42,7 +42,7 @@ export function AppUpdateBanner(): JSX.Element | null {
       window.api.onBrickedRelease((info) => setBrickedRelease(info)),
     ]
     return () => {
-      unsubs.forEach((fn) => fn())
+      for (const unsub of unsubs) unsub()
       if (justUpdatedTimer.current) clearTimeout(justUpdatedTimer.current)
     }
   }, [])

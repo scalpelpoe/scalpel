@@ -1,5 +1,5 @@
-import type { AdvancedMod } from '../../../../shared/types'
 import { SKILL_GEM_CLASSES } from '../../../../shared/poe-item'
+import type { AdvancedMod } from '../../../../shared/types'
 import type { StatFilter } from '../../trade'
 import { ITEM_CLASS_TO_CATEGORY } from '../item-classes'
 

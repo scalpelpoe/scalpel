@@ -1,14 +1,15 @@
 // src/main/filter/intent-replay.ts
-import { parseFilterFile } from './parser'
-import type { FilterFile, FilterBlock, ComparisonOperator, ActionType } from '../../shared/types'
+
+import type { ActionType, ComparisonOperator, FilterBlock, FilterFile } from '../../shared/types'
 import type {
   Intent,
   IntentLog,
   MoveBaseTypePayload,
-  SetVisibilityPayload,
-  SetThresholdPayload,
   SetActionPayload,
+  SetThresholdPayload,
+  SetVisibilityPayload,
 } from './intents'
+import { parseFilterFile } from './parser'
 
 export interface ReplayConflict {
   intent: Intent

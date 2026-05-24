@@ -1,6 +1,6 @@
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { FilterFile } from '../../shared/types'
 
 // Stub `../trade/prices` before importing the handler module -- the real implementation
@@ -61,8 +61,8 @@ describe('buildSearchableRow', () => {
     // Matched blocks give a visibility + actions payload; unmatched rows get null.
     // The chain is an array; the primary (last) block is what drives visibility.
     expect(row.blocks).not.toBeNull()
-    expect(row.blocks!.length).toBeGreaterThan(0)
-    expect(row.blocks![row.blocks!.length - 1].visibility).toMatch(/Show|Hide/)
+    expect(row.blocks?.length).toBeGreaterThan(0)
+    expect(row.blocks?.[row.blocks?.length - 1].visibility).toMatch(/Show|Hide/)
   })
 
   it('returns a null block when no filter rule matches the synthetic', () => {

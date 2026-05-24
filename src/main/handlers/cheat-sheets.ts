@@ -1,24 +1,24 @@
-import { ipcMain, dialog } from 'electron'
-import { readFileSync } from 'fs'
-import { extname } from 'path'
-import {
-  saveSheetBuffer,
-  removeSheetFile,
-  removeCategoryDir,
-  generateSheetId,
-  generateCategoryId,
-  fetchImageBuffer,
-  getCheatSheetsOverlay,
-  showPreview,
-  hidePreview,
-  minimizeCheatSheets,
-  restoreCheatSheets,
-} from '../cheat-sheets'
-import { setPinnedZoneRendererVisible, setPinnedZoneContentHeight } from '../pinned-zone'
-import { getOverlayWindow, showOverlay } from '../overlay'
-import { aroundNativeDialog } from '../windowing'
+import { readFileSync } from 'node:fs'
+import { extname } from 'node:path'
+import { dialog, ipcMain } from 'electron'
 import { PREFAB_PACKS } from '../../shared/data/cheat-sheet-prefabs'
 import { CHEAT_SHEET_PREFAB_BASE_URL } from '../../shared/endpoints'
+import {
+  fetchImageBuffer,
+  generateCategoryId,
+  generateSheetId,
+  getCheatSheetsOverlay,
+  hidePreview,
+  minimizeCheatSheets,
+  removeCategoryDir,
+  removeSheetFile,
+  restoreCheatSheets,
+  saveSheetBuffer,
+  showPreview,
+} from '../cheat-sheets'
+import { getOverlayWindow, showOverlay } from '../overlay'
+import { setPinnedZoneContentHeight, setPinnedZoneRendererVisible } from '../pinned-zone'
+import { aroundNativeDialog } from '../windowing'
 
 const ALLOWED_EXTS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif'])
 

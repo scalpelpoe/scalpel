@@ -1,14 +1,14 @@
-import { net, app } from 'electron'
-import { mkdirSync, rmSync, writeFileSync } from 'fs'
 import { createHash } from 'node:crypto'
-import { join } from 'path'
-import { pluginDir } from './paths'
-import { validateManifest } from './manifest-validator'
-import { versionMatches } from '../../shared/version-match'
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { app, net } from 'electron'
 import { pluginReleaseAssetUrl } from '../../shared/endpoints'
-import { addInstalledId } from './installed-list'
-import type { InstallResult } from './install-types'
 import type { RegistryEntry } from '../../shared/plugin-registry-types'
+import { versionMatches } from '../../shared/version-match'
+import type { InstallResult } from './install-types'
+import { addInstalledId } from './installed-list'
+import { validateManifest } from './manifest-validator'
+import { pluginDir } from './paths'
 
 function currentScalpelVersion(): string {
   return app.getVersion()

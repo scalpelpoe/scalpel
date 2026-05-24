@@ -1,4 +1,4 @@
-import { FilterType } from './types'
+import type { FilterType } from './types'
 import { formatDust } from '../../shared/utils'
 
 export { formatDust }
@@ -31,7 +31,7 @@ export function posRange(val: number, min: number, max: number, type: FilterType
   if (range <= 0 || val <= min) return 0
   const t = (val - min) / range
   if (DUST_TYPES.has(type)) {
-    return Math.round(Math.pow(t, 1 / 3) * 1000)
+    return Math.round(t ** (1 / 3) * 1000)
   }
   return Math.round((Math.log1p(val - min) / Math.log1p(range)) * 1000)
 }

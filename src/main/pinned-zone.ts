@@ -1,6 +1,6 @@
 import type { OverlayAnchor } from '../shared/types'
-import { registerSecondaryOverlay, type SecondaryOverlay } from './windowing'
 import { forwardZoneChangesTo, sendCurrentZoneTo } from './client-log'
+import { registerSecondaryOverlay, type SecondaryOverlay } from './windowing'
 
 const DEFAULT_ANCHOR: OverlayAnchor = {
   fracX: 0,

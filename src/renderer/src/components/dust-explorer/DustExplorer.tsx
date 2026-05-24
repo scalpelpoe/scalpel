@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import dustIcon from '../../assets/currency/thaumaturgic-dust.png'
 import { chaosIcon } from '../../shared/icons'
 import socketWhite from '../../assets/sockets/socket-white.png'
-import { DustEntry, ActiveFilter, FilterType, SortKey, SortDir } from './types'
+import type { DustEntry, ActiveFilter, FilterType, SortKey, SortDir } from './types'
 import {
   cachedBaseEntries,
   ALL_FILTER_TYPES,

@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest'
-import { parseItemText } from './clipboard'
+import { describe, expect, it } from 'vitest'
 import { endgameAreaLevel } from '../../shared/poe-item'
 import { getPoeVersion } from '../game-state'
+import { parseItemText } from './clipboard'
 
 describe('parseItemText', () => {
   // ---------------------------------------------------------------------------
@@ -37,8 +37,8 @@ describe('parseItemText', () => {
 
       const item = parseItemText(text)
       expect(item).not.toBeNull()
-      expect(item!.itemClass).toBe('Rings')
-      expect(item!.rarity).toBe('Rare')
+      expect(item?.itemClass).toBe('Rings')
+      expect(item?.rarity).toBe('Rare')
     })
 
     it('parses name and base type for Rare items', () => {
@@ -801,14 +801,14 @@ describe('parseItemText', () => {
 
       const item = parseItemText(text)!
       expect(item.advancedMods).toBeDefined()
-      expect(item.advancedMods!.length).toBe(3)
-      expect(item.advancedMods![0].type).toBe('implicit')
-      expect(item.advancedMods![1].type).toBe('prefix')
-      expect(item.advancedMods![1].name).toBe("Athlete's")
-      expect(item.advancedMods![1].tier).toBe(3)
-      expect(item.advancedMods![1].tags).toEqual(['Life'])
-      expect(item.advancedMods![2].type).toBe('suffix')
-      expect(item.advancedMods![2].name).toBe('of the Furnace')
+      expect(item.advancedMods?.length).toBe(3)
+      expect(item.advancedMods?.[0].type).toBe('implicit')
+      expect(item.advancedMods?.[1].type).toBe('prefix')
+      expect(item.advancedMods?.[1].name).toBe("Athlete's")
+      expect(item.advancedMods?.[1].tier).toBe(3)
+      expect(item.advancedMods?.[1].tags).toEqual(['Life'])
+      expect(item.advancedMods?.[2].type).toBe('suffix')
+      expect(item.advancedMods?.[2].name).toBe('of the Furnace')
     })
 
     it('strips roll ranges from mod text', () => {
@@ -829,7 +829,7 @@ describe('parseItemText', () => {
       // The stripped version in explicits
       expect(item.explicits).toContain('41% increased Evasion and Energy Shield')
       // The raw range data in advancedMods
-      expect(item.advancedMods![0].ranges).toEqual([{ value: 41, min: 39, max: 42 }])
+      expect(item.advancedMods?.[0].ranges).toEqual([{ value: 41, min: 39, max: 42 }])
     })
 
     it('strips variant alternatives like Ghost Reaver()', () => {
@@ -944,9 +944,9 @@ describe('parseItemText', () => {
       ].join('\n')
 
       const item = parseItemText(text)!
-      const eldritchMod = item.advancedMods!.find((m) => m.eldritch)
+      const eldritchMod = item.advancedMods?.find((m) => m.eldritch)
       expect(eldritchMod).toBeDefined()
-      expect(eldritchMod!.type).toBe('implicit')
+      expect(eldritchMod?.type).toBe('implicit')
       expect(item.implicits).toContain('+2% to maximum Fire Resistance')
     })
 
@@ -967,9 +967,9 @@ describe('parseItemText', () => {
       ].join('\n')
 
       const item = parseItemText(text)!
-      const eldritchMod = item.advancedMods!.find((m) => m.eldritch)
+      const eldritchMod = item.advancedMods?.find((m) => m.eldritch)
       expect(eldritchMod).toBeDefined()
-      expect(eldritchMod!.type).toBe('implicit')
+      expect(eldritchMod?.type).toBe('implicit')
     })
 
     it('stops collecting mod lines at section separators', () => {
@@ -994,7 +994,7 @@ describe('parseItemText', () => {
 
       const item = parseItemText(text)!
       // Flavour text should not appear in any mod lines
-      const allModLines = item.advancedMods!.flatMap((m) => m.lines)
+      const allModLines = item.advancedMods?.flatMap((m) => m.lines)
       expect(allModLines).not.toContain('This is flavour text that should not leak into mods.')
     })
 
@@ -1017,9 +1017,9 @@ describe('parseItemText', () => {
       ].join('\n')
 
       const item = parseItemText(text)!
-      const fracturedMod = item.advancedMods!.find((m) => m.fractured)
+      const fracturedMod = item.advancedMods?.find((m) => m.fractured)
       expect(fracturedMod).toBeDefined()
-      expect(fracturedMod!.name).toBe("Athlete's")
+      expect(fracturedMod?.name).toBe("Athlete's")
     })
 
     it('handles crafted (Master Crafted) mods in advanced format', () => {
@@ -1039,7 +1039,7 @@ describe('parseItemText', () => {
       ].join('\n')
 
       const item = parseItemText(text)!
-      const craftedMod = item.advancedMods!.find((m) => m.crafted)
+      const craftedMod = item.advancedMods?.find((m) => m.crafted)
       expect(craftedMod).toBeDefined()
     })
 

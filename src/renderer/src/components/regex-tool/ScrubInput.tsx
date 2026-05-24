@@ -35,7 +35,7 @@ export function ScrubInput({
   // Default step follows the precision so a decimals=2 input scrubs in 0.01 increments.
   const effectiveStep = step ?? (decimals > 0 ? 1 / 10 ** decimals : 1)
   const formatValue = (v: number): string => (decimals > 0 ? v.toFixed(decimals) : String(v))
-  const parseValue = (s: string): number => (decimals > 0 ? parseFloat(s) : parseInt(s))
+  const parseValue = (s: string): number => (decimals > 0 ? parseFloat(s) : parseInt(s, 10))
   // Snap to the configured precision so floating-point scrub math doesn't emit
   // 1.4500000001-style junk.
   const snapToPrecision = (v: number): number => {
@@ -57,7 +57,7 @@ export function ScrubInput({
   const commitEdit = () => {
     setEditing(false)
     const parsed = parseValue(editText)
-    if (isNaN(parsed) || parsed === 0) onChange(null)
+    if (Number.isNaN(parsed) || parsed === 0) onChange(null)
     else onChange(snapToPrecision(Math.min(max, Math.max(min, parsed))))
   }
 
@@ -95,7 +95,7 @@ export function ScrubInput({
     window.addEventListener('mouseup', onUp)
   }
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (_e: React.MouseEvent) => {
     if (!scrubRef.current) {
       if (value == null && defaultValue != null) {
         onChange(defaultValue)

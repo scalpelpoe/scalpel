@@ -1,7 +1,7 @@
-import { readFileSync, existsSync, readdirSync, statSync } from 'fs'
-import { join } from 'path'
-import { createHash } from 'crypto'
-import { BrowserWindow } from 'electron'
+import { createHash } from 'node:crypto'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
+import type { BrowserWindow } from 'electron'
 
 /** Map of online filter path -> last known MD5 hash */
 const knownHashes = new Map<string, string>()

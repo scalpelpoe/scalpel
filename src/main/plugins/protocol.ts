@@ -1,6 +1,6 @@
-import { protocol, app } from 'electron'
-import { existsSync, readFileSync } from 'fs'
-import { join } from 'path'
+import { existsSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { app, protocol } from 'electron'
 
 const SCHEME = 'scalpel-internal'
 

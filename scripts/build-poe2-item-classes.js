@@ -17,8 +17,8 @@
  *   node scripts/build-poe2-item-classes.js
  */
 
-const fs = require('fs')
-const path = require('path')
+const fs = require('node:fs')
+const path = require('node:path')
 
 const SRC_URL = 'https://repoe-fork.github.io/poe2/base_items.min.json'
 const TRADE_ITEMS_URL = 'https://www.pathofexile.com/api/trade2/data/items'
@@ -168,7 +168,7 @@ function pickDominantSize(sizeCounts) {
   }
 
   fs.mkdirSync(path.dirname(OUT), { recursive: true })
-  fs.writeFileSync(OUT, JSON.stringify(out, null, 2) + '\n')
+  fs.writeFileSync(OUT, `${JSON.stringify(out, null, 2)}\n`)
 
   let baseCount = 0
   for (const cls of sortedClasses) baseCount += out[cls].bases.length

@@ -7,18 +7,18 @@
  *  table and broadcast targets stay in lockstep. */
 
 import type { WebContents } from 'electron'
-import Store from 'electron-store'
-import { loadFilter } from './filter-state'
-import { getOverlayWindow, setCloseOnClickOutside } from './overlay'
+import type Store from 'electron-store'
+import type { AppSettings } from '../shared/types'
+import { withPluginHotkeys } from './app-macros'
 import { getAppWindow } from './app-window'
 import { applyCheatSheetHotkeys, getCheatSheetsOverlay } from './cheat-sheets'
+import { reEvaluateLastItem, setOpenSide } from './evaluation'
+import { loadFilter } from './filter-state'
+import { setAppMacros, setChatCommands, setHotkey, setPriceCheckHotkey, setStashScrollEnabled } from './hotkeys'
+import { getOverlayWindow, setCloseOnClickOutside } from './overlay'
 import { applyPinnedZoneEnabled, getPinnedZoneOverlay } from './pinned-zone'
-import { setHotkey, setPriceCheckHotkey, setChatCommands, setAppMacros, setStashScrollEnabled } from './hotkeys'
-import { withPluginHotkeys } from './app-macros'
-import { setOpenSide, reEvaluateLastItem } from './evaluation'
 import { refreshPrices } from './trade/prices'
 import { setUpdateChannel } from './update/updater'
-import type { AppSettings } from '../shared/types'
 
 /** Flat active key -> per-version mirror keys (PoE1, PoE2). When a flat key is
  *  written we also write to the mirror entry matching the current `poeVersion`,

@@ -6,10 +6,10 @@
 //
 // Run via: node scripts/build-internal-assets.mjs
 
+import { mkdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
-import { mkdirSync } from 'fs'
-import { join, dirname } from 'path'
-import { fileURLToPath } from 'url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const root = join(here, '..')

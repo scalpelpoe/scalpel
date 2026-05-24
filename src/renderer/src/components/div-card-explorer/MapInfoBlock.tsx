@@ -1,6 +1,6 @@
 import mapFrame from '../../assets/other/map-frame.png'
 import { chaosIcon } from '../../shared/icons'
-import { MapData } from './types'
+import type { MapData } from './types'
 import { formatEv } from './utils'
 
 interface MapInfoBlockProps {

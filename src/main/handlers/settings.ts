@@ -1,10 +1,10 @@
 import { ipcMain } from 'electron'
-import Store from 'electron-store'
-import { getColorFrequencies } from '../filter-state'
-import { refreshPrices } from '../trade/prices'
-import { refreshLeagues } from '../trade/leagues'
-import { applySetting, broadcastSettingUpdate } from '../settings-write'
+import type Store from 'electron-store'
 import type { AppSettings, RegexPreset } from '../../shared/types'
+import { getColorFrequencies } from '../filter-state'
+import { applySetting, broadcastSettingUpdate } from '../settings-write'
+import { refreshLeagues } from '../trade/leagues'
+import { refreshPrices } from '../trade/prices'
 
 export function register(store: Store<AppSettings>): void {
   ipcMain.handle('get-settings', () => store.store)

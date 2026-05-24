@@ -1,5 +1,5 @@
-import { readFileSync, writeFileSync, mkdirSync, readdirSync, unlinkSync, existsSync } from 'fs'
-import { join, basename, resolve, sep } from 'path'
+import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
+import { basename, join, resolve, sep } from 'node:path'
 import { app } from 'electron'
 import type { FilterVersion } from '../../shared/types'
 
@@ -16,7 +16,7 @@ function makeFilename(filterName: string, timestamp: number, isCheckpoint: boole
   const dateStr = date.toISOString().replace(/[:.]/g, '-').replace('T', '_').slice(0, 19)
   const prefix = isCheckpoint ? 'cp' : 'auto'
   const safeName = filterName.replace(/[^a-zA-Z0-9_-]/g, '_')
-  const safeLabel = label ? '.' + label.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40) : ''
+  const safeLabel = label ? `.${label.replace(/[^a-zA-Z0-9_-]/g, '_').slice(0, 40)}` : ''
   return `${safeName}.${prefix}.${dateStr}${safeLabel}.filter`
 }
 
@@ -24,14 +24,14 @@ function parseVersionFile(filename: string): FilterVersion | null {
   const match = filename.match(/^(.+?)\.(auto|cp)\.(\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2})(\.(.+?))?\.filter$/)
   if (!match) return null
   const [, rawName, type, dateStr, , label] = match
-  const _isoDate = dateStr.replace(/_/, 'T').replace(/-/g, (m, offset) => (offset > 9 ? ':' : m)) + 'Z'
+  const _isoDate = `${dateStr.replace(/_/, 'T').replace(/-/g, (m, offset) => (offset > 9 ? ':' : m))}Z`
   // Reconstruct from parts: 2026-03-13T14:30:22Z
   const parts = dateStr.split('_')
   const datePart = parts[0] // 2026-03-13
   const timeParts = parts[1].split('-') // 14-30-22
   const iso = `${datePart}T${timeParts.join(':')}Z`
   const timestamp = new Date(iso).getTime()
-  if (isNaN(timestamp)) return null
+  if (Number.isNaN(timestamp)) return null
   return {
     filename,
     timestamp,
@@ -69,7 +69,7 @@ export function listVersions(filterPath: string): FilterVersion[] {
     const files = readdirSync(dir)
     const versions: FilterVersion[] = []
     for (const f of files) {
-      if (!f.startsWith(safeName + '.')) continue
+      if (!f.startsWith(`${safeName}.`)) continue
       const v = parseVersionFile(f)
       if (v) versions.push(v)
     }
@@ -121,7 +121,7 @@ function pruneAutoVersions(filterName: string): void {
     const files = readdirSync(dir)
     const autos: { filename: string; timestamp: number }[] = []
     for (const f of files) {
-      if (!f.startsWith(safeName + '.auto.')) continue
+      if (!f.startsWith(`${safeName}.auto.`)) continue
       const v = parseVersionFile(f)
       if (v) autos.push({ filename: f, timestamp: v.timestamp })
     }

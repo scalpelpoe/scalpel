@@ -1,5 +1,5 @@
+import { join } from 'node:path'
 import { BrowserWindow, screen } from 'electron'
-import { join } from 'path'
 import { OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
 
 /** Shared transparent click-through window used by the secondary-overlay system
@@ -64,8 +64,8 @@ function ensureCanvasWindow(): BrowserWindow {
   canvasWin.setAlwaysOnTop(true, 'screen-saver')
   applyCanvasBounds(canvasWin)
   canvasWin.setIgnoreMouseEvents(true)
-  if (process.env['ELECTRON_RENDERER_URL']) {
-    void canvasWin.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/secondary-overlay-canvas.html`)
+  if (process.env.ELECTRON_RENDERER_URL) {
+    void canvasWin.loadURL(`${process.env.ELECTRON_RENDERER_URL}/secondary-overlay-canvas.html`)
   } else {
     void canvasWin.loadFile(join(__dirname, '../renderer/secondary-overlay-canvas.html'))
   }

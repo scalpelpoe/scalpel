@@ -1,7 +1,7 @@
-import { existsSync, rmSync } from 'fs'
-import { pluginDir } from './paths'
-import { PLUGIN_ID_PATTERN } from './manifest-validator'
+import { existsSync, rmSync } from 'node:fs'
 import { removeInstalledId } from './installed-list'
+import { PLUGIN_ID_PATTERN } from './manifest-validator'
+import { pluginDir } from './paths'
 import { clearCache } from './storage'
 
 export type UninstallResult = { ok: true } | { ok: false; error: string }

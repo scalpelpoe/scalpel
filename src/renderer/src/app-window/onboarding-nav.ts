@@ -2,7 +2,7 @@
  *  module exists so the "what step is next given X" logic is unit-testable
  *  without React + IPC mocks. */
 
-import type { Step, SelectedGames } from './constants'
+import type { SelectedGames, Step } from './constants'
 
 /** Games the user picked, in flow order. */
 export function selectedGameOrder(games: SelectedGames): Array<1 | 2> {

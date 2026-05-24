@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'vitest'
+import { describe, expect, it } from 'vitest'
+import type { PriceInfo } from '../../shared/types'
 import {
   applyProxyResponse,
-  fetchPoe2PricesFromProxy,
-  fetchAndBuildPoe2PriceMap,
   buildPoe2UniquesByBaseFromProxy,
+  fetchAndBuildPoe2PriceMap,
+  fetchPoe2PricesFromProxy,
 } from './prices.poe2'
-import type { PriceInfo } from '../../shared/types'
 
 // Helper: minimal valid Ee2OverviewResponse shape for the parts applyProxyResponse
 // reads. The real EE2 payload has more fields but they're ignored.
@@ -320,7 +320,7 @@ describe('fetchPoe2PricesFromProxy', () => {
     expect(result.priceMap.get('chaos orb')).toMatchObject({ chaosValue: 200, divineValue: 1 })
     expect(result.priceMap.get('divine orb')).toMatchObject({ chaosValue: 200, divineValue: 1 })
     expect(result.pricesByVariant.get('grand spectrum|Emerald')).toMatchObject({ divineValue: 5 })
-    expect(new Set(result.uniquesByBase['Emerald'])).toEqual(new Set(['Old Static Jewel', 'Grand Spectrum']))
+    expect(new Set(result.uniquesByBase.Emerald)).toEqual(new Set(['Old Static Jewel', 'Grand Spectrum']))
   })
 
   it('throws on an unknown league name', async () => {
@@ -390,7 +390,7 @@ describe('buildPoe2UniquesByBaseFromProxy', () => {
     )
     expect(out['Shrine Sceptre']).toContain('Sacred Flame')
     expect(out['Heavy Bow']).toContain("Lioneye's Glare")
-    expect(out['Emerald']).toContain('Grand Spectrum')
+    expect(out.Emerald).toContain('Grand Spectrum')
   })
 
   it('merges with the static map (union per base, dynamic supplements static)', () => {
@@ -398,7 +398,7 @@ describe('buildPoe2UniquesByBaseFromProxy', () => {
       proxyResp([{ type: 'UniqueJewels', lines: [{ name: 'Grand Spectrum', variant: 'Emerald' }] }]),
       { Emerald: ['Old Static Jewel'], 'Amber Amulet': ['Carnage Heart'] },
     )
-    expect(new Set(out['Emerald'])).toEqual(new Set(['Old Static Jewel', 'Grand Spectrum']))
+    expect(new Set(out.Emerald)).toEqual(new Set(['Old Static Jewel', 'Grand Spectrum']))
     expect(out['Amber Amulet']).toEqual(['Carnage Heart'])
   })
 

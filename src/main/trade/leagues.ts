@@ -8,10 +8,10 @@
  *  module deliberately doesn't share the search/fetch/exchange rate buckets. */
 
 import { net } from 'electron'
-import Store from 'electron-store'
-import type { AppSettings } from '../../shared/types'
-import { getGameFeatures } from '../../shared/game-features'
+import type Store from 'electron-store'
 import { getTradeUrls } from '../../shared/endpoints'
+import { getGameFeatures } from '../../shared/game-features'
+import type { AppSettings } from '../../shared/types'
 
 interface LeaguesResponse {
   result?: Array<{ id?: string; text?: string; realm?: string }>

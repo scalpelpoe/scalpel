@@ -7,8 +7,16 @@
     "strict": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "noEmit": true
   },
-  "include": ["src/main/**/*", "src/preload/**/*", "src/shared/**/*", "src/plugin-sdk/**/*", "electron.vite.config.ts"],
-  "exclude": ["src/plugin-sdk/dist/**", "src/plugin-sdk/node_modules/**"]
+  "include": [
+    "src/main/**/*",
+    "src/preload/**/*",
+    "src/shared/**/*",
+    "src/plugin-sdk/**/*",
+    "src/renderer/src/env.d.ts",
+    "electron.vite.config.ts"
+  ],
+  "exclude": ["src/plugin-sdk/dist/**", "src/plugin-sdk/node_modules/**", "src/shared/data/filter/filter-actions.ts"]
 }

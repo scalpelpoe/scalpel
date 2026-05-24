@@ -27,12 +27,14 @@ export function resolveClientLogPath(): string | null {
     )
     exePath = out.trim()
   } catch (err) {
+    // eslint-disable-next-line no-console
     if (process.env.SCALPEL_DEBUG_LOG) console.log('[client-log] path resolver: PowerShell shellout failed', err)
     return null
   }
   if (!exePath) return null
   const candidate = join(dirname(exePath), 'logs', 'Client.txt')
   if (!existsSync(candidate)) {
+    // eslint-disable-next-line no-console
     if (process.env.SCALPEL_DEBUG_LOG) console.log('[client-log] path resolver: not found at', candidate)
     return null
   }

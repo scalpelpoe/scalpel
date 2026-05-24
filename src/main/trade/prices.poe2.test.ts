@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
-import { applyResponse } from './prices.poe2'
+import { describe, expect, it } from 'vitest'
 import type { PriceInfo } from '../../shared/types'
+import { applyResponse } from './prices.poe2'
 
 // Helper: minimal valid Poe2ExchangeResponse shape for the parts applyResponse
 // reads. The real ninja payload has more fields but they're ignored.

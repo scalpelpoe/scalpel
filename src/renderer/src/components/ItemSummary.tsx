@@ -153,7 +153,7 @@ export function ItemSummary({
             const firstName = info.reward.split(',')[0].trim()
             // Parse "Nx ItemName" multiplier prefix
             const multiMatch = firstName.match(/^(\d+)x\s+(.+)$/)
-            const rewardMulti = multiMatch ? parseInt(multiMatch[1]) : null
+            const rewardMulti = multiMatch ? parseInt(multiMatch[1], 10) : null
             const rewardItemName = multiMatch ? multiMatch[2] : firstName
             const rewardIsDivCard = !!divCardArtMap.get(rewardItemName)
             const hasIcon = rewardIsDivCard || !!(iconMap[info.reward] ?? iconMap[rewardItemName])

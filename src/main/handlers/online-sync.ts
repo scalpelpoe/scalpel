@@ -1,16 +1,16 @@
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { basename, join } from 'node:path'
 import { ipcMain } from 'electron'
-import { readFileSync, writeFileSync, readdirSync, existsSync } from 'fs'
-import { join, basename } from 'path'
-import Store from 'electron-store'
-import { loadFilter } from '../filter-state'
-import { switchFilterInGame } from '../overlay'
+import type Store from 'electron-store'
+import type { AppSettings } from '../../shared/types'
+import { saveBaseline } from '../baselines'
 import { clearIntents, getIntents } from '../filter/intent-recorder'
 import { replayIntents } from '../filter/intent-replay'
 import { writeFilterSelective } from '../filter/writer'
-import { saveBaseline } from '../baselines'
-import { saveVersion } from '../update/versions'
+import { loadFilter } from '../filter-state'
 import { checkOnlineSyncNow } from '../online-sync'
-import type { AppSettings } from '../../shared/types'
+import { switchFilterInGame } from '../overlay'
+import { saveVersion } from '../update/versions'
 
 /** Look up the online filter name and path for the currently active local filter */
 function findOnlineFilter(
@@ -33,7 +33,7 @@ function findOnlineFilter(
   for (const f of readdirSync(onlineDirPath)) {
     const fullPath = join(onlineDirPath, f)
     try {
-      if (require('fs').statSync(fullPath).isDirectory()) continue
+      if (statSync(fullPath).isDirectory()) continue
       const content = readFileSync(fullPath, 'utf-8')
       for (const line of content.split('\n').slice(0, 15)) {
         const match = line.match(/^#name:(.+)/)
@@ -169,7 +169,7 @@ export function register(store: Store<AppSettings>): void {
     'merge-online-filter',
     (
       _event,
-      onlineFilterName: string,
+      _onlineFilterName: string,
       onlinePath: string,
       localPath: string,
     ): {

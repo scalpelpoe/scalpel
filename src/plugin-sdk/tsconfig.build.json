@@ -15,14 +15,6 @@
     "outDir": "dist",
     "types": []
   },
-  "include": [
-    "src/**/*",
-    "../../shared/**/*",
-    "../../renderer/src/**/*"
-  ],
-  "exclude": [
-    "**/*.test.ts",
-    "**/*.test.tsx",
-    "**/*.stories.tsx"
-  ]
+  "include": ["src/**/*", "../../shared/**/*", "../../renderer/src/**/*"],
+  "exclude": ["**/*.test.ts", "**/*.test.tsx", "**/*.stories.tsx"]
 }

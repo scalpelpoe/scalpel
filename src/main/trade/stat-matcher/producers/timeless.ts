@@ -26,7 +26,7 @@ export function buildTimelessFilters(
       const leaderLine = timelessMod.lines.find((l) => /\d/.test(l))
       if (leaderLine) {
         const seedMatch = leaderLine.match(/(\d+)\(\d+-\d+\)/)
-        seed = seedMatch ? parseInt(seedMatch[1]) : null
+        seed = seedMatch ? parseInt(seedMatch[1], 10) : null
         const leaderMatch = leaderLine.match(/(\w+)\(([^)]+)\)\s*$/)
         if (leaderMatch) {
           currentLeader = leaderMatch[1]
@@ -42,7 +42,7 @@ export function buildTimelessFilters(
     const remembrancingLine = explicits.find((l) => /^Remembrancing/i.test(l))
     if (remembrancingLine) {
       const seedMatch = remembrancingLine.match(/Remembrancing (\d+)/)
-      seed = seedMatch ? parseInt(seedMatch[1]) : null
+      seed = seedMatch ? parseInt(seedMatch[1], 10) : null
       const leaderMatch = remembrancingLine.match(/by the line of (\w+)/i)
       if (leaderMatch) {
         currentLeader = leaderMatch[1]
@@ -56,7 +56,7 @@ export function buildTimelessFilters(
     const seedLine = explicits.find((l) => /Commanded|Commissioned|Carved|Bathed|Denoted/i.test(l))
     if (seedLine) {
       const seedMatch = seedLine.match(/\b(\d{4,5})\b/)
-      seed = seedMatch ? parseInt(seedMatch[1]) : null
+      seed = seedMatch ? parseInt(seedMatch[1], 10) : null
       const leaderMatch = seedLine.match(/by (?:High Templar |Victorious |)(\w+)\s*$/i)
       if (leaderMatch) {
         currentLeader = leaderMatch[1]

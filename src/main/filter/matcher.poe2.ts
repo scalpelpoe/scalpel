@@ -35,7 +35,7 @@ export function evaluatePoe2Condition(cond: FilterCondition, item: PoeItem): Con
 
     case 'UnidentifiedItemTier':
       if (item.unidentifiedItemTier == null) return 'unknown'
-      return compareNum(item.unidentifiedItemTier, operator, parseInt(values[0])) ? 'pass' : 'fail'
+      return compareNum(item.unidentifiedItemTier, operator, parseInt(values[0], 10)) ? 'pass' : 'fail'
 
     default:
       return 'unknown'

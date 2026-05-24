@@ -5,7 +5,7 @@ export function generateNumberRegex(number: string, round10: boolean, over100: b
     return ''
   }
   const quant = round10 ? Math.floor(Number(numbers.join('')) / 10) * 10 : Number(numbers.join(''))
-  if (isNaN(quant) || quant === 0) {
+  if (Number.isNaN(quant) || quant === 0) {
     if (round10 && numbers.length === 1) {
       return '\\d'
     }

@@ -1,7 +1,7 @@
-import { createHash } from 'crypto'
-import type { FilterBlock, FilterCondition, FilterAction, FilterFile } from '../../shared/types'
-import { parseFilterFile } from './parser'
+import { createHash } from 'node:crypto'
+import type { FilterAction, FilterBlock, FilterCondition, FilterFile } from '../../shared/types'
 import { NUMERIC_CONDITION_TYPES } from './condition-types'
+import { parseFilterFile } from './parser'
 
 // ─── Block Fingerprinting ─────────────────────────────────────────────────────
 
@@ -263,7 +263,7 @@ function serializeBlock(block: FilterBlock, indent: string): string[] {
     lines.push(block.leadingComment)
   }
 
-  const commentSuffix = block.inlineComment ? ' # ' + block.inlineComment : ''
+  const commentSuffix = block.inlineComment ? ` # ${block.inlineComment}` : ''
   lines.push(block.visibility + commentSuffix)
 
   for (const cond of block.conditions) {
@@ -279,7 +279,7 @@ function serializeBlock(block: FilterBlock, indent: string): string[] {
   for (const action of block.actions) {
     if (action.values.length === 0) continue
     const valStr = action.values.map((v) => (v.includes(' ') || v === '' ? `"${v}"` : v)).join(' ')
-    lines.push(`${indent}${action.type}${valStr ? ' ' + valStr : ''}`)
+    lines.push(`${indent}${action.type}${valStr ? ` ${valStr}` : ''}`)
   }
 
   if (block.continue) {

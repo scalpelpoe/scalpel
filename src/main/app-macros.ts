@@ -1,6 +1,6 @@
+import type { AppSettings } from '../shared/types'
 import { setAppMacros } from './hotkeys'
 import { getRegisteredPluginHotkeys } from './plugins/hotkey-registry'
-import type { AppSettings } from '../shared/types'
 
 /** Merge plugin-registered hotkey stubs into a user-defined macro list.
  *  Plugin hotkeys appear with action "plugin:<id>" and an empty hotkey by

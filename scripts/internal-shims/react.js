@@ -17,10 +17,10 @@
 // a ReactNode would force the host to mount the plugin's component inside its
 // own React tree and the dispatcher mismatch crashes useContext).
 import * as React from 'react'
+import * as JsxRuntime from 'react/jsx-runtime'
 import * as ReactDOM from 'react-dom'
 import * as ReactDOMClient from 'react-dom/client'
 import * as ReactDOMServer from 'react-dom/server'
-import * as JsxRuntime from 'react/jsx-runtime'
 
 const {
   useState,
@@ -61,48 +61,48 @@ const { renderToString, renderToStaticMarkup } = ReactDOMServer
 const { jsx, jsxs } = JsxRuntime
 
 export {
-  // react
-  useState,
-  useEffect,
-  useRef,
-  useCallback,
-  useMemo,
-  useContext,
-  useLayoutEffect,
-  useReducer,
-  useImperativeHandle,
-  useDebugValue,
-  useTransition,
-  useDeferredValue,
-  useId,
-  useSyncExternalStore,
-  useInsertionEffect,
-  Fragment,
-  StrictMode,
-  Suspense,
-  createContext,
-  createElement,
-  cloneElement,
-  isValidElement,
-  lazy,
-  memo,
-  forwardRef,
-  startTransition,
   Children,
   Component,
-  PureComponent,
-  version,
+  cloneElement,
+  createContext,
+  createElement,
   // react-dom
   createPortal,
-  flushSync,
   // react-dom/client
   createRoot,
+  Fragment,
+  flushSync,
+  forwardRef,
   hydrateRoot,
-  // react-dom/server
-  renderToString,
-  renderToStaticMarkup,
+  isValidElement,
   // react/jsx-runtime
   jsx,
   jsxs,
+  lazy,
+  memo,
+  PureComponent,
+  renderToStaticMarkup,
+  // react-dom/server
+  renderToString,
+  StrictMode,
+  Suspense,
+  startTransition,
+  useCallback,
+  useContext,
+  useDebugValue,
+  useDeferredValue,
+  useEffect,
+  useId,
+  useImperativeHandle,
+  useInsertionEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  // react
+  useState,
+  useSyncExternalStore,
+  useTransition,
+  version,
 }
 export default React

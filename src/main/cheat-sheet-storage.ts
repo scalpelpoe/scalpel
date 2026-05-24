@@ -2,10 +2,11 @@
  *  cheat-sheets.ts (which registers a window with the secondary-overlay system)
  *  so the unit test can exercise these without dragging in BrowserWindow,
  *  ipcMain, or the rest of the main-process module graph. */
+
+import { randomBytes } from 'node:crypto'
+import { existsSync, mkdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { app, nativeImage } from 'electron'
-import { existsSync, mkdirSync, writeFileSync, unlinkSync, rmSync } from 'fs'
-import { join } from 'path'
-import { randomBytes } from 'crypto'
 
 function rootDir(): string {
   return join(app.getPath('userData'), 'cheat-sheets')

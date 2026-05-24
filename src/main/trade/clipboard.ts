@@ -1,8 +1,8 @@
 import { clipboard } from 'electron'
-import type { PoeItem, ItemRarity, AdvancedMod } from '../../shared/types'
 import { getItemClasses } from '../../shared/data/items/item-classes'
+import { endgameAreaLevel, SKILL_GEM_CLASSES } from '../../shared/poe-item'
+import type { AdvancedMod, ItemRarity, PoeItem } from '../../shared/types'
 import { getPoeVersion } from '../game-state'
-import { SKILL_GEM_CLASSES, endgameAreaLevel } from '../../shared/poe-item'
 
 // Both base-name and class-size lookups seed lazily from the active game's
 // class sheet -- getPoeVersion() isn't reliable at module load (game-state
@@ -125,7 +125,7 @@ export function readItemFromClipboard(): PoeItem | null {
 }
 
 export function parseItemText(text: string): PoeItem | null {
-  if (!text || !text.includes('--------')) return null
+  if (!text?.includes('--------')) return null
 
   const sections = text.split('--------').map((s) => s.trim())
   if (sections.length < 2) return null
@@ -155,7 +155,7 @@ export function parseItemText(text: string): PoeItem | null {
   // type so filter `BaseType` conditions and the sister panel's current-base
   // highlight see the plain "Uncut Skill Gem" the filter lists.
   const nameLevelMatch = name.match(/\s*\(Level (\d+)\)\s*$/)
-  const nameGemLevel = nameLevelMatch ? parseInt(nameLevelMatch[1]) : 0
+  const nameGemLevel = nameLevelMatch ? parseInt(nameLevelMatch[1], 10) : 0
   const nameStripped = nameLevelMatch ? name.slice(0, nameLevelMatch.index).trim() : name
   // For Normal/Magic items, name IS the base type; for Rare/Unique, line 2 is base type
   // Unidentified Rare/Unique items only have one line (the base type), no separate name
@@ -222,15 +222,15 @@ export function parseItemText(text: string): PoeItem | null {
   // Heist job skill requirement: "Requires Engineering (Level 3)" or "(Level 3 (unmet))"
   const heistJobLine = allLines.find((l) => /^Requires \w+.*\(Level \d+/.test(l))
   const heistJobMatch = heistJobLine?.match(/^Requires (\w[\w -]*?)\s*\(Level (\d+)/)
-  const heistJob = heistJobMatch ? { skill: heistJobMatch[1].trim(), level: parseInt(heistJobMatch[2]) } : undefined
+  const heistJob = heistJobMatch ? { skill: heistJobMatch[1].trim(), level: parseInt(heistJobMatch[2], 10) } : undefined
 
   // Monster level (maps) or Area Level (heist contracts/blueprints)
   const monsterLevel = extractNum(allLines, 'Monster Level:') ?? extractNum(allLines, 'Area Level:')
-  const mapTier = tierMatch ? parseInt(tierMatch[1]) : monsterLevel && monsterLevel >= 68 ? monsterLevel - 67 : 0
+  const mapTier = tierMatch ? parseInt(tierMatch[1], 10) : monsterLevel && monsterLevel >= 68 ? monsterLevel - 67 : 0
   const itemLevel = extractNum(allLines, 'Item Level:') ?? 0
   const qualityLine = allLines.find((l) => l.startsWith('Quality'))
   const qualityMatch = qualityLine?.match(/\+(\d+)%/)
-  const quality = qualityMatch ? parseInt(qualityMatch[1]) : 0
+  const quality = qualityMatch ? parseInt(qualityMatch[1], 10) : 0
   // Map properties (Item Quantity, Rarity, Pack Size, More X)
   const mapQuantity = extractNum(allLines, 'Item Quantity:')
   const mapRarity = extractNum(allLines, 'Item Rarity:')
@@ -252,11 +252,13 @@ export function parseItemText(text: string): PoeItem | null {
   // Heist blueprints: "Wings Revealed: 3/4"
   const wingsLine = allLines.find((l) => l.startsWith('Wings Revealed:'))
   const wingsParts = wingsLine?.split(':')[1]?.trim().split('/')
-  const wingsRevealed = wingsParts ? parseInt(wingsParts[0]) : undefined
-  const wingsTotal = wingsParts && wingsParts[1] ? parseInt(wingsParts[1]) : undefined
+  const wingsRevealed = wingsParts ? parseInt(wingsParts[0], 10) : undefined
+  const wingsTotal = wingsParts?.[1] ? parseInt(wingsParts[1], 10) : undefined
   // Facetor's Lens: "Stored Experience: 999,627,082"
   const storedExpLine = allLines.find((l) => l.startsWith('Stored Experience:'))
-  const storedExperience = storedExpLine ? parseInt(storedExpLine.split(':')[1].trim().replace(/,/g, '')) : undefined
+  const storedExperience = storedExpLine
+    ? parseInt(storedExpLine.split(':')[1].trim().replace(/,/g, ''), 10)
+    : undefined
 
   // `Level:` body line is how PoE1 gems report their level. PoE2 uncut gems
   // don't have it -- their level lives in the name (see nameGemLevel above) --
@@ -264,8 +266,8 @@ export function parseItemText(text: string): PoeItem | null {
   const gemLevel = extractNum(allLines, 'Level:') ?? nameGemLevel
   const stackSizeLine = allLines.find((l) => l.startsWith('Stack Size:'))
   const stackParts = stackSizeLine?.split(':')[1]?.trim().split('/') ?? []
-  const stackSize = stackParts[0] ? parseInt(stackParts[0].replace(/,/g, '')) : 1
-  const maxStackSize = stackParts[1] ? parseInt(stackParts[1].replace(/,/g, '')) : undefined
+  const stackSize = stackParts[0] ? parseInt(stackParts[0].replace(/,/g, ''), 10) : 1
+  const maxStackSize = stackParts[1] ? parseInt(stackParts[1].replace(/,/g, ''), 10) : undefined
 
   // Requirements
   // Defenses (total computed values from the item header)
@@ -285,8 +287,8 @@ export function parseItemText(text: string): PoeItem | null {
   if (physDamageLine) {
     const m = physDamageLine.match(/(\d+)-(\d+)/)
     if (m) {
-      physDamageMin = parseInt(m[1])
-      physDamageMax = parseInt(m[2])
+      physDamageMin = parseInt(m[1], 10)
+      physDamageMax = parseInt(m[2], 10)
     }
   }
 
@@ -295,7 +297,7 @@ export function parseItemText(text: string): PoeItem | null {
   if (eleDamageLine) {
     const ranges = [...eleDamageLine.matchAll(/(\d+)-(\d+)/g)]
     if (ranges.length > 0) {
-      eleDamageAvg = ranges.reduce((sum, m) => sum + (parseInt(m[1]) + parseInt(m[2])) / 2, 0)
+      eleDamageAvg = ranges.reduce((sum, m) => sum + (parseInt(m[1], 10) + parseInt(m[2], 10)) / 2, 0)
     }
   }
 
@@ -303,7 +305,7 @@ export function parseItemText(text: string): PoeItem | null {
   let chaosDamageAvg: number | undefined
   if (chaosDamageLine) {
     const m = chaosDamageLine.match(/(\d+)-(\d+)/)
-    if (m) chaosDamageAvg = (parseInt(m[1]) + parseInt(m[2])) / 2
+    if (m) chaosDamageAvg = (parseInt(m[1], 10) + parseInt(m[2], 10)) / 2
   }
 
   const attacksPerSecond = extractFloat(allLines, 'Attacks per Second:')
@@ -475,7 +477,7 @@ export function parseItemText(text: string): PoeItem | null {
           l
             .replace(/(-?\d+(?:\.\d+)?)\(-?\d+(?:\.\d+)?(?:--?\d+(?:\.\d+)?)?\)/g, '$1') // Strip roll ranges: 18(15-20) and fixed 18(15)
             .replace(/([a-zA-Z]\w*)\s*\([^)]*\)/g, '$1') // Strip variant alternatives e.g. Bladefall(Fireball-Divine Blast) -> Bladefall, Ghost Reaver() -> Ghost Reaver
-            .replace(/\s*[\u2014\u2013\-]+\s*Unscalable Value$/i, '') // Strip "— Unscalable Value" suffix
+            .replace(/\s*[\u2014\u2013-]+\s*Unscalable Value$/i, '') // Strip "— Unscalable Value" suffix
             .trim(),
         )
         .filter(Boolean)
@@ -484,10 +486,10 @@ export function parseItemText(text: string): PoeItem | null {
       // individual lines (for hybrid mods that have two independent stats under one affix header).
       // The stat matcher picks the best match by text length, so the right one wins.
       if (am.type === 'implicit') {
-        stripped.forEach((l) => implicits.push(l))
+        for (const line of stripped) implicits.push(line)
         if (stripped.length > 1) implicits.push(stripped.join('\n'))
       } else {
-        stripped.forEach((l) => explicits.push(l))
+        for (const line of stripped) explicits.push(line)
         if (stripped.length > 1) explicits.push(stripped.join('\n'))
       }
     }
@@ -575,7 +577,7 @@ function extractNum(lines: string[], prefix: string): number | null {
   const line = lines.find((l) => l.startsWith(prefix))
   if (!line) return null
   const match = line.replace(prefix, '').match(/\d+/)
-  return match ? parseInt(match[0]) : null
+  return match ? parseInt(match[0], 10) : null
 }
 
 /** Like `extractNum` but keeps decimal precision -- for lines like "Attacks per
@@ -672,7 +674,7 @@ function parseModSections(sections: string[], explicits: string[], implicits: st
       .map((l) => l.trim())
       .filter(Boolean)
     // Flavour text sections have no mod-like patterns (no numbers with +/%)
-    return lines.every((l) => !l.match(/[+\-]\d|^\d+%|\d+(?:\.\d+)?%/) && !l.endsWith('(crafted)'))
+    return lines.every((l) => !l.match(/[+-]\d|^\d+%|\d+(?:\.\d+)?%/) && !l.endsWith('(crafted)'))
   }
 
   const modSections = sections.filter((s) => {
@@ -683,7 +685,7 @@ function parseModSections(sections: string[], explicits: string[], implicits: st
     if (!lines.some(isModLine)) return false
     if (isImplicitSection(s)) return false
     // Skip single-word/short sections that are likely flavour or labels
-    if (lines.length === 1 && lines[0].length < 20 && !lines[0].match(/[+\-]\d|^\d+%/)) return false
+    if (lines.length === 1 && lines[0].length < 20 && !lines[0].match(/[+-]\d|^\d+%/)) return false
     return true
   })
 
@@ -697,7 +699,7 @@ function parseModSections(sections: string[], explicits: string[], implicits: st
       .filter(Boolean)
       .filter(isModLine)
     const hasRealMods = lines.some(
-      (l) => l.match(/[+\-]\d|^\d+%|\d+(?:\.\d+)?%/) || l.endsWith('(crafted)') || l.startsWith('Adds '),
+      (l) => l.match(/[+-]\d|^\d+%|\d+(?:\.\d+)?%/) || l.endsWith('(crafted)') || l.startsWith('Adds '),
     )
     if (hasRealMods || !isFlavourOrMeta(modSections[i])) {
       lines
@@ -724,7 +726,7 @@ function parseAdvancedMods(text: string): AdvancedMod[] {
   // Name and Tier are optional (implicits and uniques may omit them)
   // Eldritch mods use named tiers like (Exquisite), (Grand) instead of (Tier: N)
   const headerPattern =
-    /^\{\s*((?:(?:Foulborn|Corruption|Enchant|Scourge|Fractured|Master Crafted|Searing Exarch|Eater of Worlds)\s+)?)(Prefix|Suffix|Implicit|Unique)\s+Modifier\s*(?:"([^"]*)")?\s*(?:\((?:(?:Tier|Rank):\s*(\d+)|[A-Za-z]+)\))?\s*(?:[—\-]+\s*(.+))?\s*\}$/
+    /^\{\s*((?:(?:Foulborn|Corruption|Enchant|Scourge|Fractured|Master Crafted|Searing Exarch|Eater of Worlds)\s+)?)(Prefix|Suffix|Implicit|Unique)\s+Modifier\s*(?:"([^"]*)")?\s*(?:\((?:(?:Tier|Rank):\s*(\d+)|[A-Za-z]+)\))?\s*(?:[—-]+\s*(.+))?\s*\}$/
 
   let currentMod: AdvancedMod | null = null
 
@@ -741,11 +743,11 @@ function parseAdvancedMods(text: string): AdvancedMod[] {
       const rawTags = match[5] ?? ''
       // Parse magnitude multiplier from tag suffix like "— 25% Increased" or "— 8% Increased"
       const multMatch = rawTags.match(/(\d+)%\s+Increased\s*$/)
-      const magnitudeMultiplier = multMatch ? 1 + parseInt(multMatch[1]) / 100 : undefined
+      const magnitudeMultiplier = multMatch ? 1 + parseInt(multMatch[1], 10) / 100 : undefined
       currentMod = {
         type: (modType === 'unique' ? 'prefix' : modType) as 'prefix' | 'suffix' | 'implicit',
         name: match[3] ?? '',
-        tier: match[4] ? parseInt(match[4]) : 0,
+        tier: match[4] ? parseInt(match[4], 10) : 0,
         tags: rawTags
           .split(',')
           .map((t) => t.trim())

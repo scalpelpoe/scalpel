@@ -29,7 +29,7 @@ export const Empty: Story = {
   args: { message: null },
 }
 
-export const Error: Story = {
+export const ErrorState: Story = {
   render: (args) => (
     <HostWithHeight>
       <ErrorBanner {...args} />

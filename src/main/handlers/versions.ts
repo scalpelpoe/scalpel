@@ -1,11 +1,11 @@
 import { ipcMain } from 'electron'
-import Store from 'electron-store'
-import { getCurrentFilter, loadFilter } from '../filter-state'
-import { evaluateAndSend } from '../evaluation'
-import { reloadFilterInGame } from '../overlay'
-import { undoLast, getHistory, clearHistory } from '../history'
-import { saveVersion, listVersions, restoreVersion, deleteVersion } from '../update/versions'
+import type Store from 'electron-store'
 import type { AppSettings, PoeItem } from '../../shared/types'
+import { evaluateAndSend } from '../evaluation'
+import { getCurrentFilter, loadFilter } from '../filter-state'
+import { clearHistory, getHistory, undoLast } from '../history'
+import { reloadFilterInGame } from '../overlay'
+import { deleteVersion, listVersions, restoreVersion, saveVersion } from '../update/versions'
 
 export function register(store: Store<AppSettings>): void {
   ipcMain.handle('get-history', () => getHistory())

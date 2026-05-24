@@ -1,19 +1,19 @@
-import { ipcMain, dialog, BrowserWindow } from 'electron'
-import { getInstalledPlugins } from '../plugins/manager'
-import { pluginEntryUrl } from '../plugins/plugin-protocol'
-import { getValue, setValue, deleteValue, listKeys } from '../plugins/storage'
-import { refreshAppMacros } from '../app-macros'
-import { setPluginHotkey, getRegisteredPluginHotkeys, removePluginHotkey } from '../plugins/hotkey-registry'
-import { PLUGIN_ID_PATTERN } from '../plugins/manifest-validator'
-import { installUnpacked } from '../plugins/install-unpacked'
-import { fetchRegistry } from '../plugins/registry'
-import { installFromRegistry } from '../plugins/install-from-registry'
-import { uninstallPlugin } from '../plugins/uninstall'
-import { runMainHotkeyFlow } from '../evaluation'
-import { getOverlayWindow, showOverlay } from '../overlay'
+import { BrowserWindow, dialog, ipcMain } from 'electron'
+import type Store from 'electron-store'
 import type { PluginManifest } from '../../plugin-sdk/src/types'
 import type { AppSettings } from '../../shared/types'
-import type Store from 'electron-store'
+import { refreshAppMacros } from '../app-macros'
+import { runMainHotkeyFlow } from '../evaluation'
+import { getOverlayWindow, showOverlay } from '../overlay'
+import { getRegisteredPluginHotkeys, removePluginHotkey, setPluginHotkey } from '../plugins/hotkey-registry'
+import { installFromRegistry } from '../plugins/install-from-registry'
+import { installUnpacked } from '../plugins/install-unpacked'
+import { getInstalledPlugins } from '../plugins/manager'
+import { PLUGIN_ID_PATTERN } from '../plugins/manifest-validator'
+import { pluginEntryUrl } from '../plugins/plugin-protocol'
+import { fetchRegistry } from '../plugins/registry'
+import { deleteValue, getValue, listKeys, setValue } from '../plugins/storage'
+import { uninstallPlugin } from '../plugins/uninstall'
 
 export interface InstalledPluginIpc {
   manifest: PluginManifest
@@ -78,7 +78,7 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
       if (installed) {
         getOverlayWindow()?.webContents.send('plugin-installed', {
           manifest: installed.manifest,
-          entryUrl: pluginEntryUrl(installed.manifest.id) + `?v=${installed.manifest.version}`,
+          entryUrl: `${pluginEntryUrl(installed.manifest.id)}?v=${installed.manifest.version}`,
         })
       }
     }
@@ -105,7 +105,7 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
       if (installed) {
         getOverlayWindow()?.webContents.send('plugin-installed', {
           manifest: installed.manifest,
-          entryUrl: pluginEntryUrl(installed.manifest.id) + `?v=${installed.manifest.version}`,
+          entryUrl: `${pluginEntryUrl(installed.manifest.id)}?v=${installed.manifest.version}`,
         })
       }
     }

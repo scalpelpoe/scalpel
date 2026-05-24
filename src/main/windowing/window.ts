@@ -1,5 +1,5 @@
+import { join } from 'node:path'
 import { BrowserWindow } from 'electron'
-import { join } from 'path'
 import { OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
 import type { Rect } from './snap-canvas'
 
@@ -33,10 +33,10 @@ export function createOverlayWindow({ htmlEntry, bounds }: CreateOptions): Brows
   // region (the default 'floating' level silently clips into the work area).
   win.setAlwaysOnTop(true, 'screen-saver')
   installOpacityHideShow(win)
-  if (process.env['ELECTRON_RENDERER_URL']) {
-    void win.loadURL(`${process.env['ELECTRON_RENDERER_URL']}/${htmlEntry}`)
+  if (process.env.ELECTRON_RENDERER_URL) {
+    void win.loadURL(`${process.env.ELECTRON_RENDERER_URL}/${htmlEntry}`)
   } else {
-    void win.loadFile(join(__dirname, '../renderer/' + htmlEntry))
+    void win.loadFile(join(__dirname, `../renderer/${htmlEntry}`))
   }
   return win
 }

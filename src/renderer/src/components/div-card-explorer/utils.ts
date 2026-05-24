@@ -1,5 +1,5 @@
 import { chaosIcon, divineIcon } from '../../shared/icons'
-import { MapCardEntry, MapEntry } from './types'
+import type { MapCardEntry, MapEntry } from './types'
 import { cards, regularMaps, DROPPOOL_WEIGHT } from './constants'
 
 export function buildMapEntries(_divineRate: number): MapEntry[] {

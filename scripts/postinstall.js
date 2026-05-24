@@ -8,7 +8,7 @@
 //
 // The cross-platform npm invocation is what required this script: npm runs
 // postinstall via cmd.exe on Windows, which can't parse POSIX shell guards.
-const { spawnSync } = require('child_process')
+const { spawnSync } = require('node:child_process')
 
 const env = { ...process.env }
 if (process.platform === 'linux') {

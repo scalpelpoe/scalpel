@@ -1,6 +1,6 @@
 /* Reference implementation from poe2.re/src/pages/waystone/WaystoneResult.ts.
  * Imports rewritten to use the local fixture files. Body unchanged. */
-import { Settings } from './Settings'
+import type { Settings } from './Settings'
 import { selectedOptionRegex } from './SelectedOptionRegex'
 
 export function generateWaystoneRegex(settings: Settings): string {

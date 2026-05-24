@@ -8,7 +8,7 @@ function stripAdvModLines(lines: string[]): string[] {
       l
         .replace(/(-?\d+(?:\.\d+)?)\(-?\d+(?:\.\d+)?(?:--?\d+(?:\.\d+)?)?\)/g, '$1')
         .replace(/([a-zA-Z]\w*)\s*\([^)]*\)/g, '$1')
-        .replace(/\s*[—–\-]+\s*Unscalable Value$/i, '')
+        .replace(/\s*[—–-]+\s*Unscalable Value$/i, '')
         .trim(),
     )
     .filter(Boolean)

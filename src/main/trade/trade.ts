@@ -1,11 +1,11 @@
 import { app, net } from 'electron'
-import { getTradeUrls } from '../../shared/endpoints'
-import { getPoeVersion } from '../game-state'
-import { harvestIcons } from './icon-cache'
-import { getOverlayWindow } from '../overlay'
 import { TRANSFIGURED_GEM_DISC } from '../../shared/data/trade/transfigured-gems'
+import { getTradeUrls } from '../../shared/endpoints'
 import { isClusterJewel, isSkillGem } from '../../shared/poe-item'
-import { RateLimiter, adjustRateLimits } from './rate-limiter'
+import { getPoeVersion } from '../game-state'
+import { getOverlayWindow } from '../overlay'
+import { harvestIcons } from './icon-cache'
+import { adjustRateLimits, RateLimiter } from './rate-limiter'
 
 /** Forward any newly-harvested name->icon pairs to the overlay so it can merge
  *  them into the in-session iconMap. Without this the renderer would only pick
@@ -25,7 +25,7 @@ function broadcastTradePenalty(untilEpochMs: number): void {
 }
 
 // Re-export stat-matcher functions so existing importers don't need to change
-export { ensureStatsLoaded, matchModToStat, matchItemMods, ITEM_CLASS_TO_CATEGORY } from './stat-matcher'
+export { ensureStatsLoaded, ITEM_CLASS_TO_CATEGORY, matchItemMods, matchModToStat } from './stat-matcher'
 
 // ─── Version-specific trade dialect ──────────────────────────────────────────
 //
@@ -258,12 +258,12 @@ function parseAndBroadcastRateLimit(state: string, rules: string): void {
     const s = stateParts[i].split(':')
     const r = ruleParts[i].split(':')
     if (s.length < 3 || r.length < 2) continue
-    const window = parseInt(r[1])
+    const window = parseInt(r[1], 10)
     knownTiers.set(window, {
-      used: parseInt(s[0]),
-      max: parseInt(r[0]),
+      used: parseInt(s[0], 10),
+      max: parseInt(r[0], 10),
       window,
-      penalty: parseInt(s[2]),
+      penalty: parseInt(s[2], 10),
       lastUpdate: now,
     })
   }
@@ -391,7 +391,7 @@ async function fetchJson(url: string, options?: { method?: string; body?: string
           if (response.statusCode === 429) {
             clearTimeout(timer)
             const retryAfter = response.headers['retry-after']
-            const wait = retryAfter ? parseInt(String(retryAfter)) * 1000 : 5000
+            const wait = retryAfter ? parseInt(String(retryAfter), 10) * 1000 : 5000
             console.error(`[trade] 429 rate limited: retry-after=${Math.round(wait / 1000)}s for ${url}`)
             // Broadcast only when the penalty is long enough to surface to the
             // user. Short waits are absorbed by the retry loop and never reach
@@ -468,8 +468,11 @@ async function fetchJson(url: string, options?: { method?: string; body?: string
 
 // ─── Trade API ────────────────────────────────────────────────────────────────
 
-import { ITEM_CLASS_TO_CATEGORY as _ITEM_CLASS_TO_CATEGORY } from './stat-matcher'
-import { ensureStatsLoaded as _ensureStatsLoaded, matchModToStat } from './stat-matcher'
+import {
+  ensureStatsLoaded as _ensureStatsLoaded,
+  ITEM_CLASS_TO_CATEGORY as _ITEM_CLASS_TO_CATEGORY,
+  matchModToStat,
+} from './stat-matcher'
 
 export interface SearchTradeOptions {
   tradeStatus?: string
@@ -524,7 +527,7 @@ export async function searchTrade(
     // Maps: use "Map" type with discriminator, add tier + blight filters
     const isValdoMap = item.baseType === 'Valdo Map'
     const tierMatch = item.baseType.match(/\(Tier (\d+)\)/)
-    const mapTier = tierMatch ? parseInt(tierMatch[1]) : null
+    const mapTier = tierMatch ? parseInt(tierMatch[1], 10) : null
     const isBlighted = /^Blighted /i.test(item.baseType)
     const isBlightRavaged = /^Blight-ravaged /i.test(item.baseType)
     query.type = isValdoMap ? 'Valdo Map' : { option: 'Map', discriminator: 'map' }
@@ -839,7 +842,7 @@ export async function searchTrade(
   // Timeless jewel: "any leader" uses count group, specific leader uses and group
   const timelessAny = timelessFilters.find((f) => f.id === 'timeless-any')
   const timelessSpecific = timelessFilters.find((f) => f.id !== 'timeless-any')
-  if (timelessAny && timelessAny.timelessLeaders) {
+  if (timelessAny?.timelessLeaders) {
     statGroups.push({
       type: 'count',
       filters: timelessAny.timelessLeaders.map((id) => ({
@@ -947,7 +950,7 @@ export async function searchTrade(
         enchantMods?: string[]
         ilvl?: number
         sockets?: Array<{ group: number; sColour: string }>
-        properties?: Array<{ name: string; values: Array<[string, number]> }>
+        properties?: Array<{ name: string; values: Array<[string, number]>; type?: number }>
         additionalProperties?: Array<{ name: string; values: Array<[string, number]>; type?: number }>
         corrupted?: boolean
         duplicated?: boolean
@@ -1027,27 +1030,27 @@ export async function searchTrade(
             ilvl: r.item.ilvl,
             sockets: r.item.sockets,
             gemLevel: r.item.properties?.find((p) => p.name === 'Level')?.values?.[0]?.[0]
-              ? parseInt(r.item.properties.find((p) => p.name === 'Level')!.values[0][0])
+              ? parseInt(r.item.properties.find((p) => p.name === 'Level')!.values[0][0], 10)
               : undefined,
             quality: r.item.properties?.find((p) => p.name === 'Quality')?.values?.[0]?.[0]
-              ? parseInt(r.item.properties.find((p) => p.name === 'Quality')!.values[0][0].replace(/[+%]/g, ''))
+              ? parseInt(r.item.properties.find((p) => p.name === 'Quality')!.values[0][0].replace(/[+%]/g, ''), 10)
               : undefined,
             storedExperience: r.item.properties?.find((p) => p.name.startsWith('Stored Experience'))?.values?.[0]?.[0]
-              ? parseInt(r.item.properties.find((p) => p.name.startsWith('Stored Experience'))!.values[0][0])
+              ? parseInt(r.item.properties.find((p) => p.name.startsWith('Stored Experience'))!.values[0][0], 10)
               : undefined,
             areaLevel: r.item.properties?.find((p) => p.name === 'Area Level')?.values?.[0]?.[0]
-              ? parseInt(r.item.properties.find((p) => p.name === 'Area Level')!.values[0][0])
+              ? parseInt(r.item.properties.find((p) => p.name === 'Area Level')!.values[0][0], 10)
               : undefined,
             heistJob: (() => {
-              const prop = r.item!.properties?.find((p) => p.type === 46)
+              const prop = r.item?.properties?.find((p) => p.type === 46)
               if (!prop?.values?.[0]?.[0] && !prop?.values?.[1]?.[0]) return undefined
-              return { skill: prop!.values[1]?.[0] as string, level: parseInt(prop!.values[0]?.[0] as string) }
+              return { skill: prop?.values[1]?.[0] as string, level: parseInt(prop?.values[0]?.[0] as string, 10) }
             })(),
             corrupted: r.item.corrupted,
             mirrored: r.item.duplicated,
             identified: r.item.identified,
             ...(() => {
-              const ap = r.item!.additionalProperties
+              const ap = r.item?.additionalProperties
               if (!ap) return {}
               const open: string[] = []
               const obstructed: string[] = []
@@ -1069,28 +1072,28 @@ export async function searchTrade(
               return { templeOpenRooms: open, templeObstructedRooms: obstructed }
             })(),
             modTiers: (() => {
-              const mods = r.item!.extended?.mods
-              const hashes = r.item!.extended?.hashes
+              const mods = r.item?.extended?.mods
+              const hashes = r.item?.extended?.hashes
               if (!mods || !hashes) return undefined
 
               // Detect implicit magnitude multipliers (e.g. "25% increased Suffix Modifier magnitudes")
               let prefixMult = 1
               let suffixMult = 1
-              for (const imp of r.item!.implicitMods ?? []) {
+              for (const imp of r.item?.implicitMods ?? []) {
                 const mm = imp.match(/(\d+)% increased (Prefix|Suffix) Modifier magnitudes/)
                 if (mm) {
-                  if (mm[2] === 'Prefix') prefixMult += parseInt(mm[1]) / 100
-                  if (mm[2] === 'Suffix') suffixMult += parseInt(mm[1]) / 100
+                  if (mm[2] === 'Prefix') prefixMult += parseInt(mm[1], 10) / 100
+                  if (mm[2] === 'Suffix') suffixMult += parseInt(mm[1], 10) / 100
                 }
               }
 
               const result: Record<string, { tier: string; name: string; ranges: string }> = {}
               const categories: Array<{ key: string; texts?: string[] }> = [
-                { key: 'explicit', texts: r.item!.explicitMods },
-                { key: 'implicit', texts: r.item!.implicitMods },
-                { key: 'fractured', texts: r.item!.fracturedMods },
-                { key: 'crafted', texts: r.item!.craftedMods },
-                { key: 'enchant', texts: r.item!.enchantMods },
+                { key: 'explicit', texts: r.item?.explicitMods },
+                { key: 'implicit', texts: r.item?.implicitMods },
+                { key: 'fractured', texts: r.item?.fracturedMods },
+                { key: 'crafted', texts: r.item?.craftedMods },
+                { key: 'enchant', texts: r.item?.enchantMods },
               ]
               for (const { key, texts } of categories) {
                 const modEntries = mods[key]
@@ -1150,8 +1153,8 @@ export async function searchTrade(
 
 // ─── Bulk Exchange ──────────────────────────────────────────────────────────
 
-import { getBulkExchangeIdMap } from '../../shared/data/trade/bulk-exchange-ids'
 import { isVendorExchangeItem } from '../../shared/data/trade/bulk-exchange-eligibility'
+import { getBulkExchangeIdMap } from '../../shared/data/trade/bulk-exchange-ids'
 
 /** Build the `type` field of a gem trade query. Returns the discriminator shape for
  *  transfigured gems (with "Vaal " prepended to the base when the gem has a Vaal alt),
@@ -1417,15 +1420,15 @@ export async function searchMapsByRegex(
     return null
   }
 
-  const avoidFilters = avoidTexts
-    .map((t) => matchMod(t))
-    .filter(Boolean)
-    .map((m) => ({ id: m!.statId, value: {} }))
+  const avoidFilters = avoidTexts.flatMap((t) => {
+    const match = matchMod(t)
+    return match?.statId ? [{ id: match.statId, value: {} }] : []
+  })
 
-  const wantFilters = wantTexts
-    .map((t) => matchMod(t))
-    .filter(Boolean)
-    .map((m) => ({ id: m!.statId, value: {} }))
+  const wantFilters = wantTexts.flatMap((t) => {
+    const match = matchMod(t)
+    return match?.statId ? [{ id: match.statId, value: {} }] : []
+  })
 
   const statGroups: Array<{
     type: string
@@ -1514,7 +1517,7 @@ export async function searchMapsByRegex(
   })) as TradeSearchResult
 
   if (!searchResult.result || searchResult.result.length === 0) {
-    return { total: searchResult.total ?? 0, listings: [], queryId: searchResult.id ?? '' }
+    return { total: searchResult.total ?? 0, listings: [], queryId: searchResult.id ?? '', remainingIds: [] }
   }
 
   const listings = await fetchAndMapListings(searchResult.result.slice(0, 10), searchResult.id)
