@@ -16,7 +16,10 @@
     "./tailwind-preset.cjs": "./dist/tailwind-preset.cjs",
     "./package.json": "./package.json"
   },
-  "files": ["dist", "README.md"],
+  "files": [
+    "dist",
+    "README.md"
+  ],
   "scripts": {
     "build": "node build.mjs",
     "prepublishOnly": "node build.mjs"
@@ -26,8 +29,12 @@
     "react-dom": "^18"
   },
   "peerDependenciesMeta": {
-    "react": { "optional": false },
-    "react-dom": { "optional": false }
+    "react": {
+      "optional": false
+    },
+    "react-dom": {
+      "optional": false
+    }
   },
   "devDependencies": {
     "dts-bundle-generator": "^9.5.1"
@@ -41,6 +48,12 @@
     "directory": "src/plugin-sdk"
   },
   "homepage": "https://github.com/scalpelpoe/scalpel/blob/main/PLUGINS.md",
-  "keywords": ["scalpel", "path-of-exile", "poe", "plugin-sdk", "electron"],
+  "keywords": [
+    "scalpel",
+    "path-of-exile",
+    "poe",
+    "plugin-sdk",
+    "electron"
+  ],
   "license": "MIT"
 }

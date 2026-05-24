@@ -1,6 +1,6 @@
 import bundled from '../../manifest.json'
-import type { Manifest } from '../shared/types'
 import { MANIFEST_URL } from '../shared/endpoints'
+import type { Manifest } from '../shared/types'
 
 // Imported directly so the manifest is baked into app.asar. The auto-updater
 // only ships app.asar; using extraResources broke updates from older builds
@@ -19,10 +19,10 @@ function isStringRecord(value: unknown): boolean {
 function isValidManifest(value: unknown): value is Manifest {
   if (!value || typeof value !== 'object') return false
   const m = value as Record<string, unknown>
-  if (!m['ninjaLeagues'] || typeof m['ninjaLeagues'] !== 'object') return false
-  const nl = m['ninjaLeagues'] as Record<string, unknown>
-  if (!isStringRecord(nl['poe1']) || !isStringRecord(nl['poe2'])) return false
-  return isStringRecord(m['poe2NinjaCategories'])
+  if (!m.ninjaLeagues || typeof m.ninjaLeagues !== 'object') return false
+  const nl = m.ninjaLeagues as Record<string, unknown>
+  if (!isStringRecord(nl.poe1) || !isStringRecord(nl.poe2)) return false
+  return isStringRecord(m.poe2NinjaCategories)
 }
 
 export async function refreshManifest(): Promise<void> {
@@ -34,11 +34,11 @@ export async function refreshManifest(): Promise<void> {
     const parsed = await res.json()
     if (isValidManifest(parsed)) {
       cached = parsed
-    } else if (process.env['SCALPEL_DEBUG_LOG']) {
+    } else if (process.env.SCALPEL_DEBUG_LOG) {
       console.warn('[manifest] remote manifest failed shape validation, keeping bundled copy')
     }
   } catch (e) {
-    if (process.env['SCALPEL_DEBUG_LOG']) {
+    if (process.env.SCALPEL_DEBUG_LOG) {
       console.warn('[manifest] fetch failed, keeping bundled copy:', e)
     }
   }

@@ -38,7 +38,7 @@ function ColorInputs({
   }
 
   const handleChannel = (channel: 'r' | 'g' | 'b' | 'a', val: string): void => {
-    const n = Math.max(0, Math.min(channel === 'a' ? 255 : 255, parseInt(val) || 0))
+    const n = Math.max(0, Math.min(channel === 'a' ? 255 : 255, parseInt(val, 10) || 0))
     if (channel === 'a') {
       onChange({ r: rgba.r, g: rgba.g, b: rgba.b, a: n / 255 })
     } else {

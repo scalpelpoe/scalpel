@@ -1,12 +1,12 @@
-import { randomUUID } from 'crypto'
+import { randomUUID } from 'node:crypto'
 import type {
+  ActionType,
+  ComparisonOperator,
+  ConditionType,
+  FilterAction,
   FilterBlock,
   FilterCondition,
   FilterFile,
-  FilterAction,
-  ConditionType,
-  ActionType,
-  ComparisonOperator,
   TierTag,
   Visibility,
 } from '../../shared/types'
@@ -114,7 +114,7 @@ export function parseFilterFile(path: string, content: string): FilterFile {
   const blocks: FilterBlock[] = []
 
   let currentBlock: Omit<FilterBlock, 'id'> | null = null
-  let pendingComment: string | undefined = undefined
+  let pendingComment: string | undefined
 
   const finalizeBlock = (lineEnd: number) => {
     if (currentBlock) {
@@ -133,7 +133,7 @@ export function parseFilterFile(path: string, content: string): FilterFile {
       // Blank line — collect comment if it's a comment-only line
       const trimmed = raw.trim()
       if (trimmed.startsWith('#')) {
-        pendingComment = (pendingComment ? pendingComment + '\n' : '') + trimmed
+        pendingComment = (pendingComment ? `${pendingComment}\n` : '') + trimmed
       } else {
         pendingComment = undefined
       }
@@ -168,7 +168,7 @@ export function parseFilterFile(path: string, content: string): FilterFile {
       // Line outside a block — check for standalone comment
       const trimmed = raw.trim()
       if (trimmed.startsWith('#')) {
-        pendingComment = (pendingComment ? pendingComment + '\n' : '') + trimmed
+        pendingComment = (pendingComment ? `${pendingComment}\n` : '') + trimmed
       }
       continue
     }

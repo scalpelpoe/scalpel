@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, expectTypeOf, vi } from 'vitest'
-import { render, fireEvent } from '@testing-library/react'
+import { fireEvent, render } from '@testing-library/react'
+import { describe, expect, expectTypeOf, it, vi } from 'vitest'
 import * as SDK from './index'
 
 describe('SDK runtime exports', () => {

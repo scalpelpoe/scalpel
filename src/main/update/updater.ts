@@ -1,11 +1,12 @@
-import { BrowserWindow, ipcMain, app } from 'electron'
-import { createHash } from 'crypto'
-import { createWriteStream, existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, rmSync } from 'fs'
-import { join, dirname } from 'path'
+import { createHash } from 'node:crypto'
+import { execSync, spawn } from 'node:child_process'
+import { createWriteStream, existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { app, type BrowserWindow, ipcMain } from 'electron'
+import { ELECTRON_RELEASES, GITHUB_RELEASES_API } from '../../shared/endpoints'
 import type { InstallManifest } from '../../shared/types'
 import { findBrickedMatch } from '../../shared/version-match'
 
-import { GITHUB_RELEASES_API, ELECTRON_RELEASES } from '../../shared/endpoints'
 const CHECK_DELAY = 5000
 const CHECK_INTERVAL = 60_000
 const MAX_RETRIES = 3
@@ -16,7 +17,7 @@ const DEV_FAKE_VERSION = '99.99.99'
 // and the destructive download/install handlers so a dev session doesn't pull a
 // packaged ASAR over the working source tree. Matches the inline check pattern
 // used in app-window.ts, overlay.ts, and index.ts.
-const IS_DEV = !!process.env['ELECTRON_RENDERER_URL']
+const IS_DEV = !!process.env.ELECTRON_RENDERER_URL
 
 let targetWindows: (() => BrowserWindow | null)[] = []
 let installDir: string = ''
@@ -151,8 +152,7 @@ async function checkForUpdates(channel: string): Promise<void> {
 
     const remote = await fetchJson<InstallManifest>(manifestAsset.browser_download_url)
     const local = readLocalManifest()
-    const pkg = require('../../package.json')
-    const runningVersion = pkg.version as string
+    const runningVersion = app.getVersion()
 
     // Advisory: if the running version matches a bricked rule, surface a banner asking the
     // user to reinstall. Separate from the update flow -- they see this even if auto-update
@@ -202,13 +202,13 @@ async function checkForUpdates(channel: string): Promise<void> {
   }
 }
 
-async function handleAsarUpdate(remote: InstallManifest, channel: string): Promise<void> {
+async function handleAsarUpdate(remote: InstallManifest, _channel: string): Promise<void> {
   updateAvailableVersion = remote.version
   broadcast('update-available', remote.version)
   pendingRemote = remote
 }
 
-async function handleFullUpgrade(remote: InstallManifest, channel: string): Promise<void> {
+async function handleFullUpgrade(remote: InstallManifest, _channel: string): Promise<void> {
   updateAvailableVersion = remote.version
   broadcast('update-available', remote.version)
   pendingRemote = remote
@@ -246,10 +246,9 @@ async function downloadAsarUpdate(): Promise<void> {
         await downloadFile(unpackedZipUrl, unpackedZipPath, remote.unpackedSize || 0)
 
         // Extract the zip to staging/app.asar.unpacked/
-        const { execSync: exec } = require('child_process')
         const unpackedDir = join(stagingDir, 'app.asar.unpacked')
         mkdirSync(unpackedDir, { recursive: true })
-        exec(
+        execSync(
           `powershell -NoProfile -Command "Expand-Archive -Path '${unpackedZipPath}' -DestinationPath '${unpackedDir}' -Force"`,
           { stdio: 'ignore', windowsHide: true },
         )
@@ -513,7 +512,6 @@ ipcMain.handle('install-update', () => {
   const vbsPath = join(userDataDir, 'apply-update.vbs')
   writeFileSync(vbsPath, `CreateObject("WScript.Shell").Run """${batPath}""", 0, False\r\n`)
 
-  const { spawn } = require('child_process')
   spawn('wscript.exe', [vbsPath], {
     detached: true,
     stdio: 'ignore',

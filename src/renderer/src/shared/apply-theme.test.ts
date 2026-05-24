@@ -9,7 +9,25 @@ const SAMPLE_A = NON_DEFAULT[0]
 const SAMPLE_B = NON_DEFAULT[1]
 if (!SAMPLE_A || !SAMPLE_B) throw new Error('test requires >=2 non-default presets')
 
+function installLocalStorageMock(): void {
+  const store = new Map<string, string>()
+  Object.defineProperty(window, 'localStorage', {
+    configurable: true,
+    value: {
+      clear: () => store.clear(),
+      getItem: (key: string) => store.get(key) ?? null,
+      removeItem: (key: string) => {
+        store.delete(key)
+      },
+      setItem: (key: string, value: string) => {
+        store.set(key, value)
+      },
+    },
+  })
+}
+
 beforeEach(() => {
+  installLocalStorageMock()
   localStorage.clear()
   document.documentElement.removeAttribute('style')
 })

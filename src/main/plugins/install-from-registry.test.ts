@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { join } from 'path'
 import { createHash } from 'node:crypto'
+import { join } from 'node:path'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const PLUGIN_BYTES = new Uint8Array([1, 2, 3])
 const PLUGIN_SHA = createHash('sha256').update(PLUGIN_BYTES).digest('hex')
@@ -64,6 +64,12 @@ const matchingManifest = {
   scalpelMinVersion: '>=0.0.0',
 }
 
+function readMockJson(path: string): unknown {
+  const value = mockFs.files.get(path)
+  if (value == null) throw new Error(`Expected mock file to exist: ${path}`)
+  return JSON.parse(value)
+}
+
 function fetchResponses(map: Record<string, Response>) {
   mockNetFetchFn.mockImplementation(async (url: string) => {
     const r = map[url]
@@ -98,7 +104,7 @@ describe('installFromRegistry', () => {
     })
     const { installFromRegistry } = await import('./install-from-registry')
     await installFromRegistry(validEntry)
-    const installed = JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'installed.json'))!)
+    const installed = readMockJson(join(TEST_USER_DATA, 'plugins', 'installed.json'))
     expect(installed).toEqual(['hello-world'])
   })
 
@@ -113,7 +119,7 @@ describe('installFromRegistry', () => {
     })
     const { installFromRegistry } = await import('./install-from-registry')
     await installFromRegistry(validEntry)
-    const installed = JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'installed.json'))!)
+    const installed = readMockJson(join(TEST_USER_DATA, 'plugins', 'installed.json'))
     expect(installed).toEqual(['hello-world'])
   })
 

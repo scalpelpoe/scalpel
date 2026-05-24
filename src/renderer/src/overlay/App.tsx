@@ -228,8 +228,7 @@ export default function App(): JSX.Element {
       if (prev.find((p) => p.id === id)) return prev
       return [...prev, { id, message: err.message }]
     })
-    const dbg = (globalThis as unknown as { __SCALPEL_DEBUG_LOG?: boolean }).__SCALPEL_DEBUG_LOG
-    if (dbg) {
+    if (window.__SCALPEL_DEBUG_LOG) {
       console.warn('[plugin error]', id, err)
     }
   }, [])
@@ -415,7 +414,7 @@ export default function App(): JSX.Element {
     ]
 
     return () => {
-      unsubs.forEach((fn) => fn())
+      for (const unsub of unsubs) unsub()
       unsubElevation()
       if (externalLinkPendingTimerRef.current) clearTimeout(externalLinkPendingTimerRef.current)
     }
@@ -1043,11 +1042,4 @@ export default function App(): JSX.Element {
       />
     </PoeVersionProvider>
   )
-}
-
-// Type augmentation for preload API
-declare global {
-  interface Window {
-    api: import('../../../preload/index').Api
-  }
 }

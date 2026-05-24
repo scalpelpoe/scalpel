@@ -17,8 +17,8 @@
  * bloat the installer.
  */
 
-const fs = require('fs')
-const path = require('path')
+const fs = require('node:fs')
+const path = require('node:path')
 
 const PREFAB_DIR = path.join(__dirname, '..', 'cheat-sheet-prefabs')
 const OUTPUT_FILE = path.join(__dirname, '..', 'src', 'shared', 'data', 'cheat-sheet-prefabs.ts')
@@ -122,7 +122,7 @@ function main() {
 
     const images = imageFiles.map((f) => {
       const relPath = `${slug}/${f}`
-      const areaCodes = (zonesMap && zonesMap[f]) || []
+      const areaCodes = zonesMap?.[f] || []
       return { path: relPath, areaCodes }
     })
 

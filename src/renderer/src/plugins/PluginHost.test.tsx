@@ -303,7 +303,7 @@ describe('PluginHost', () => {
     )
 
     // Initial state: no tabs.
-    await waitFor(() => expect(onTabsChange.mock.calls.at(-1)?.[0]).toEqual([]))
+    await waitFor(() => expect(onTabsChange.mock.calls[onTabsChange.mock.calls.length - 1]?.[0]).toEqual([]))
 
     // Fire the install event.
     ;(installedListener as ((entry: unknown) => void) | null)?.({
@@ -321,7 +321,7 @@ describe('PluginHost', () => {
 
     await waitFor(() => expect(activate).toHaveBeenCalled())
     await waitFor(() => {
-      const last = onTabsChange.mock.calls.at(-1)?.[0]
+      const last = onTabsChange.mock.calls[onTabsChange.mock.calls.length - 1]?.[0]
       expect(last).toHaveLength(1)
       expect(last[0].pluginId).toBe('late')
     })
@@ -379,7 +379,7 @@ describe('PluginHost', () => {
     // Wait for the initial plugin to load.
     await waitFor(() => expect(activate).toHaveBeenCalled())
     await waitFor(() => {
-      const last = onTabsChange.mock.calls.at(-1)?.[0]
+      const last = onTabsChange.mock.calls[onTabsChange.mock.calls.length - 1]?.[0]
       expect(last).toHaveLength(1)
       expect(last[0].pluginId).toBe('hello')
     })
@@ -388,7 +388,7 @@ describe('PluginHost', () => {
     ;(uninstalledListener as ((pluginId: string) => void) | null)?.('hello')
 
     await waitFor(() => {
-      const last = onTabsChange.mock.calls.at(-1)?.[0]
+      const last = onTabsChange.mock.calls[onTabsChange.mock.calls.length - 1]?.[0]
       expect(last).toHaveLength(0)
     })
     expect(onPluginUnloaded).toHaveBeenCalledWith('hello')

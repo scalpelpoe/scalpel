@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
 import type Store from 'electron-store'
+import { describe, expect, it } from 'vitest'
 import type { AppSettings } from '../../shared/types'
 import { migrateLeague, refreshLeagues } from './leagues'
 

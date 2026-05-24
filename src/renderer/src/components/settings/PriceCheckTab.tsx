@@ -84,7 +84,7 @@ export function PriceCheckTab({ settings, update, tryHotkey }: Props): JSX.Eleme
               max={100}
               step={5}
               value={settings.priceCheckDefaultPercent ?? 90}
-              onChange={(e) => update('priceCheckDefaultPercent', parseInt(e.target.value))}
+              onChange={(e) => update('priceCheckDefaultPercent', parseInt(e.target.value, 10))}
               className="flex-1"
             />
             <span className="text-[13px] font-semibold text-text min-w-[36px] text-right">

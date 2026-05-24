@@ -13,8 +13,8 @@ export function BoundaryControl({ value, min, max = Infinity, onChange }: Bounda
         inputMode="numeric"
         value={value}
         onChange={(e) => {
-          const val = parseInt(e.target.value)
-          if (!isNaN(val) && val >= min && val <= max) onChange(val)
+          const val = parseInt(e.target.value, 10)
+          if (!Number.isNaN(val) && val >= min && val <= max) onChange(val)
         }}
         className="w-12 px-1 py-[5px] text-[16px] font-bold font-mono text-center bg-bg-solid text-accent border border-border rounded-[5px] relative z-[1]"
       />

@@ -1,11 +1,11 @@
-import { describe, it, expectTypeOf } from 'vitest'
+import { describe, expectTypeOf, it } from 'vitest'
 import type {
-  PluginManifest,
-  ScalpelPluginContext,
   PluginActivate,
-  RegisterTabOptions,
+  PluginManifest,
   PluginStorage,
   RegisterHotkeyOptions,
+  RegisterTabOptions,
+  ScalpelPluginContext,
 } from './types'
 
 describe('PluginManifest', () => {

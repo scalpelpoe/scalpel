@@ -5,12 +5,13 @@
 // `window.api` subset the SDK depends on, so downstream consumers don't see
 // type errors in HotkeyField / HotkeyRecorder / useCurrentZone.
 /// <reference path="./globals.d.ts" />
+
+export * from './runtime'
 export type {
-  ScalpelPluginContext,
   PluginActivate,
   PluginManifest,
-  RegisterTabOptions,
   PluginStorage,
   RegisterHotkeyOptions,
+  RegisterTabOptions,
+  ScalpelPluginContext,
 } from './types'
-export * from './runtime'

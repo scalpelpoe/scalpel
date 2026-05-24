@@ -1,10 +1,34 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Capture per-request state for the searchTrade assertions below. trade.ts imports
 // electron's `net` at module scope, so the mock has to be installed before `./trade`
 // is loaded. Tests that don't care about captured requests (e.g. buildGemTypeField)
 // still work -- they just never call into a path that invokes net.request.
 const capturedRequests: Array<{ url: string; method: string; body?: string }> = []
+
+interface CapturedTradeFilterGroup {
+  filters: Record<string, { min?: number; option?: string }>
+}
+
+interface CapturedTradeBody {
+  query: {
+    filters: {
+      armour_filters: CapturedTradeFilterGroup
+      equipment_filters: CapturedTradeFilterGroup
+      socket_filters: CapturedTradeFilterGroup
+      type_filters: CapturedTradeFilterGroup
+      weapon_filters: CapturedTradeFilterGroup
+    }
+    name?: string
+    stats: Array<{ filters: Array<{ id: string }> }>
+    type?: string
+  }
+}
+
+function parseCapturedBody(req: { body?: string } | undefined): CapturedTradeBody {
+  if (!req?.body) throw new Error('Expected captured request body')
+  return JSON.parse(req.body) as CapturedTradeBody
+}
 
 vi.mock('electron', () => ({
   // overlay.ts (pulled in transitively via trade.ts -> icon-cache.ts) registers
@@ -44,8 +68,8 @@ vi.mock('electron', () => ({
                 if (event === 'end') endCb = cb as typeof endCb
               },
             })
-            dataCb?.('{"result":[],"total":0,"id":"q"}')
-            endCb?.()
+            ;(dataCb as ((chunk: unknown) => void) | null)?.('{"result":[],"total":0,"id":"q"}')
+            ;(endCb as (() => void) | null)?.()
           })
         }),
       }
@@ -180,8 +204,8 @@ describe('searchTrade filter-group dispatch', () => {
     })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     expect(req).toBeDefined()
-    expect(req!.url).toContain('/api/trade/search/')
-    const body = JSON.parse(req!.body!)
+    expect(req?.url).toContain('/api/trade/search/')
+    const body = parseCapturedBody(req)
     expect(body.query.filters.armour_filters).toBeDefined()
     expect(body.query.filters.armour_filters.filters.ev.min).toBe(487)
     expect(body.query.filters.equipment_filters).toBeUndefined()
@@ -195,10 +219,10 @@ describe('searchTrade filter-group dispatch', () => {
     })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     expect(req).toBeDefined()
-    expect(req!.url).toContain('/api/trade2/search/')
+    expect(req?.url).toContain('/api/trade2/search/')
     // Realm segment belongs in the browser URL only, not the API URL (per EE2).
-    expect(req!.url).not.toContain('/poe2/')
-    const body = JSON.parse(req!.body!)
+    expect(req?.url).not.toContain('/poe2/')
+    const body = parseCapturedBody(req)
     expect(body.query.filters.equipment_filters).toBeDefined()
     expect(body.query.filters.equipment_filters.filters.ev.min).toBe(487)
     expect(body.query.filters.equipment_filters.filters.es.min).toBe(182)
@@ -217,7 +241,7 @@ describe('searchTrade filter-group dispatch', () => {
     await searchTrade('Mirage', clusterItem, [], { tradeStatus: 'any', tradePriceOption: 'chaos_divine' })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     expect(req).toBeDefined()
-    const body = JSON.parse(req!.body!)
+    const body = parseCapturedBody(req)
     expect(body.query.filters.type_filters.filters.category).toEqual({ option: 'jewel.cluster' })
   })
 
@@ -236,7 +260,7 @@ describe('searchTrade filter-group dispatch', () => {
     await searchTrade('Mirage', beast, [], { tradeStatus: 'any', tradePriceOption: 'chaos_divine' })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     expect(req).toBeDefined()
-    const body = JSON.parse(req!.body!)
+    const body = parseCapturedBody(req)
     expect(body.query.type).toBe('Craiceann, First of the Deep')
     expect(body.query.name).toBeUndefined()
   })
@@ -272,7 +296,7 @@ describe('searchTrade filter-group dispatch', () => {
     ]
     await searchTrade('Mirage', unidCluster, filters, { tradeStatus: 'any', tradePriceOption: 'chaos_divine' })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
-    const body = JSON.parse(req!.body!)
+    const body = parseCapturedBody(req)
     const sentIds = body.query.stats[0].filters.map((f: { id: string }) => f.id)
     // Enchant survives the unid drop, regular explicit does not.
     expect(sentIds).toContain('enchant.stat_3086156145')
@@ -289,7 +313,7 @@ describe('searchTrade filter-group dispatch', () => {
     }
     await searchTrade('Mirage', abyssJewel, [], { tradeStatus: 'any', tradePriceOption: 'chaos_divine' })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
-    const body = JSON.parse(req!.body!)
+    const body = parseCapturedBody(req)
     expect(body.query.filters.type_filters.filters.category).toEqual({ option: 'jewel' })
   })
 
@@ -304,7 +328,7 @@ describe('searchTrade filter-group dispatch', () => {
       tradePriceOption: 'exalted_divine',
     })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
-    const body = JSON.parse(req!.body!)
+    const body = parseCapturedBody(req)
     expect(body.query.filters.equipment_filters.filters.rune_sockets).toEqual({ min: 2 })
     expect(body.query.filters.equipment_filters.filters.ev.min).toBe(487)
     expect(body.query.filters.socket_filters).toBeUndefined()

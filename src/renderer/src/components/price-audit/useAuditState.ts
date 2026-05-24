@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { FilterBlock, TierGroup, TierSibling, PoeItem } from '../../../../shared/types'
 import { usePoeVersion } from '../../shared/poe-version-context'
 import {
-  AuditItem,
+  type AuditItem,
   calcMaxDust,
   iconMap,
   savedSliderState,

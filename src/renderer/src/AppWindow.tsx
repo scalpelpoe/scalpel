@@ -295,9 +295,3 @@ export function AppWindow(): JSX.Element {
     </div>
   )
 }
-
-declare global {
-  interface Window {
-    api: import('../../preload/index').Api
-  }
-}

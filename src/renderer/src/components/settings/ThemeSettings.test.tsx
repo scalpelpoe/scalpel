@@ -55,7 +55,7 @@ describe('ThemeSettings custom save sequence', () => {
 
     // The last live-preview call must carry the saved custom palette plus BOTH edits,
     // i.e. it must NOT have reverted accent back to the default palette value.
-    const lastArg = mockApplyVars.mock.calls.at(-1)?.[0]
+    const lastArg = mockApplyVars.mock.calls[mockApplyVars.mock.calls.length - 1]?.[0]
     expect(lastArg).toEqual({ ...DEFAULT_PALETTE, accent: '#111111', bgSolid: '#222222' })
   })
 

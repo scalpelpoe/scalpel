@@ -79,12 +79,7 @@ function multinomial(
     )
   }
   const t = d.r + d.g + d.b
-  return (
-    (factorial(t) / (factorial(d.r) * factorial(d.g) * factorial(d.b))) *
-    Math.pow(ch.r, d.r) *
-    Math.pow(ch.g, d.g) *
-    Math.pow(ch.b, d.b)
-  )
+  return (factorial(t) / (factorial(d.r) * factorial(d.g) * factorial(d.b))) * ch.r ** d.r * ch.g ** d.g * ch.b ** d.b
 }
 
 // --- Currency prices ---
@@ -410,7 +405,7 @@ export function SocketRecolor({ item, priceInfo }: Props): JSX.Element {
                         const socks: string[] = []
                         const m = label.matchAll(/(\d)([RGB])/g)
                         for (const [, count, color] of m) {
-                          for (let j = 0; j < parseInt(count); j++) socks.push(color)
+                          for (let j = 0; j < parseInt(count, 10); j++) socks.push(color)
                         }
                         if (socks.length === 0) return null
                         return (

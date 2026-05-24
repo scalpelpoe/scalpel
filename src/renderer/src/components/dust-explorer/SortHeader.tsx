@@ -1,5 +1,5 @@
 import { Down, Up } from '@icon-park/react'
-import { SortKey, SortDir } from './types'
+import type { SortKey, SortDir } from './types'
 
 interface SortHeaderProps {
   label: React.ReactNode

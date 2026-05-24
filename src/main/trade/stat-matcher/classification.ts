@@ -55,4 +55,4 @@ function isDefenseMod(modText: string): boolean {
   return DEFENSE_MOD_PATTERNS.some((p) => p.test(modText))
 }
 
-export { isLocalMod, isLowPriority, isDefenseMod }
+export { isDefenseMod, isLocalMod, isLowPriority }

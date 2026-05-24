@@ -35,4 +35,4 @@ const ULTIMATUM_REWARD_ID_LABEL: Record<string, string> = {
   ExchangeUnique: 'Unique',
 }
 
-export { ULTIMATUM_CHALLENGE_TEXT_TO_ID, resolveUltimatumRewardId, ULTIMATUM_REWARD_ID_LABEL }
+export { resolveUltimatumRewardId, ULTIMATUM_CHALLENGE_TEXT_TO_ID, ULTIMATUM_REWARD_ID_LABEL }

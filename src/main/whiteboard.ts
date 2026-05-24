@@ -1,7 +1,7 @@
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { app, ipcMain } from 'electron'
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'fs'
-import { join } from 'path'
-import { emptyBoardLibrary, migrateBoardLibrary, type BoardLibrary } from '../shared/whiteboard-types'
+import { type BoardLibrary, emptyBoardLibrary, migrateBoardLibrary } from '../shared/whiteboard-types'
 import { registerSecondaryOverlay, type SecondaryOverlay } from './windowing'
 
 let userDataDirOverride: string | null = null
@@ -174,7 +174,7 @@ ipcMain.on('whiteboard:request-shown-state', (event) => {
   // missed the original onFirstShow push (the Toolbar gates its mount on an
   // async version probe; if that resolves slower than setImmediate, the IPC
   // arrives before any handler is subscribed and is dropped).
-  if (overlay && overlay.isVisible() && !event.sender.isDestroyed()) {
+  if (overlay?.isVisible() && !event.sender.isDestroyed()) {
     event.sender.send('whiteboard:shown')
   }
 })

@@ -1,9 +1,9 @@
-import { readFileSync } from 'fs'
-import { join } from 'path'
-import { describe, it, expect, beforeAll } from 'vitest'
-import { parseFilterFile } from './parser'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { beforeAll, describe, expect, it } from 'vitest'
+import type { FilterFile, MatchResult, PoeItem } from '../../shared/types'
 import { findMatchingBlocks } from './matcher'
-import type { FilterFile, PoeItem, MatchResult } from '../../shared/types'
+import { parseFilterFile } from './parser'
 
 let filter: FilterFile
 
@@ -83,10 +83,10 @@ describe('NeverSink filter integration tests', () => {
       const first = getFirstMatch(matches)
 
       expect(first).toBeDefined()
-      expect(first!.block.visibility).toBe('Show')
-      expect(first!.block.tierTag).toBeDefined()
-      expect(first!.block.tierTag!.typePath).toContain('currency')
-      expect(first!.block.tierTag!.tier).toBe('t1exalted')
+      expect(first?.block.visibility).toBe('Show')
+      expect(first?.block.tierTag).toBeDefined()
+      expect(first?.block.tierTag?.typePath).toContain('currency')
+      expect(first?.block.tierTag?.tier).toBe('t1exalted')
     })
 
     it('Divine Orb should match a high-tier currency block and Show', () => {
@@ -101,9 +101,9 @@ describe('NeverSink filter integration tests', () => {
       const first = getFirstMatch(matches)
 
       expect(first).toBeDefined()
-      expect(first!.block.visibility).toBe('Show')
-      expect(first!.block.tierTag).toBeDefined()
-      expect(first!.block.tierTag!.typePath).toContain('currency')
+      expect(first?.block.visibility).toBe('Show')
+      expect(first?.block.tierTag).toBeDefined()
+      expect(first?.block.tierTag?.typePath).toContain('currency')
     })
 
     it('Chaos Orb should Show', () => {
@@ -118,7 +118,7 @@ describe('NeverSink filter integration tests', () => {
       const first = getFirstMatch(matches)
 
       expect(first).toBeDefined()
-      expect(first!.block.visibility).toBe('Show')
+      expect(first?.block.visibility).toBe('Show')
     })
 
     it('Scroll of Wisdom (stack of 1) should be hidden or match a low tier', () => {
@@ -151,9 +151,9 @@ describe('NeverSink filter integration tests', () => {
       const first = getFirstMatch(matches)
 
       expect(first).toBeDefined()
-      expect(first!.block.visibility).toBe('Show')
+      expect(first?.block.visibility).toBe('Show')
       // Should match a uniques tier block
-      const hasUniqueCondition = first!.block.conditions.some((c) => c.type === 'Rarity' && c.values.includes('Unique'))
+      const hasUniqueCondition = first?.block.conditions.some((c) => c.type === 'Rarity' && c.values.includes('Unique'))
       expect(hasUniqueCondition).toBe(true)
     })
 
@@ -169,7 +169,7 @@ describe('NeverSink filter integration tests', () => {
       const first = getFirstMatch(matches)
 
       expect(first).toBeDefined()
-      expect(first!.block.visibility).toBe('Show')
+      expect(first?.block.visibility).toBe('Show')
     })
   })
 
@@ -187,9 +187,9 @@ describe('NeverSink filter integration tests', () => {
       const first = getFirstMatch(matches)
 
       expect(first).toBeDefined()
-      expect(first!.block.visibility).toBe('Show')
-      expect(first!.block.tierTag).toBeDefined()
-      expect(first!.block.tierTag!.typePath).toContain('maps')
+      expect(first?.block.visibility).toBe('Show')
+      expect(first?.block.tierTag).toBeDefined()
+      expect(first?.block.tierTag?.typePath).toContain('maps')
     })
 
     it('a Tier 1 normal map should be hidden in uber strict', () => {
@@ -205,7 +205,7 @@ describe('NeverSink filter integration tests', () => {
       const first = getFirstMatch(matches)
 
       expect(first).toBeDefined()
-      expect(first!.block.visibility).toBe('Hide')
+      expect(first?.block.visibility).toBe('Hide')
     })
   })
 
@@ -222,10 +222,10 @@ describe('NeverSink filter integration tests', () => {
       const first = getFirstMatch(matches)
 
       expect(first).toBeDefined()
-      expect(first!.block.visibility).toBe('Show')
-      expect(first!.block.tierTag).toBeDefined()
-      expect(first!.block.tierTag!.typePath).toBe('divination')
-      expect(first!.block.tierTag!.tier).toBe('t1')
+      expect(first?.block.visibility).toBe('Show')
+      expect(first?.block.tierTag).toBeDefined()
+      expect(first?.block.tierTag?.typePath).toBe('divination')
+      expect(first?.block.tierTag?.tier).toBe('t1')
     })
 
     it('a div card should match some divination block', () => {
@@ -240,8 +240,8 @@ describe('NeverSink filter integration tests', () => {
       const first = getFirstMatch(matches)
 
       expect(first).toBeDefined()
-      expect(first!.block.tierTag).toBeDefined()
-      expect(first!.block.tierTag!.typePath).toBe('divination')
+      expect(first?.block.tierTag).toBeDefined()
+      expect(first?.block.tierTag?.typePath).toBe('divination')
     })
   })
 

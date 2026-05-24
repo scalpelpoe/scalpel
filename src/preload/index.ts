@@ -1,4 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { BugReportResult, RendererDiagnosticPayload } from '../shared/diagnostics'
+import type { ExternalLinkTarget } from '../shared/external-link'
 import type {
   AppSettings,
   AuthResult,
@@ -10,7 +12,6 @@ import type {
   OverlayData,
   Zone,
 } from '../shared/types'
-import type { ExternalLinkTarget } from '../shared/external-link'
 import type { BoardLibrary, BoardSnapshot, BoardState } from '../shared/whiteboard-types'
 
 export const api = {
@@ -145,6 +146,15 @@ export const api = {
 
   // Dev tools
   openDevTools: (): void => ipcRenderer.send('open-devtools'),
+  reportRendererError: (payload: RendererDiagnosticPayload): void =>
+    ipcRenderer.send('diagnostics:renderer-error', payload),
+  createBugReport: (): Promise<BugReportResult> => ipcRenderer.invoke('diagnostics:create-report'),
+  showBugReport: (reportPath: string): Promise<void> => ipcRenderer.invoke('diagnostics:show-report', reportPath),
+  onDevDiagnosticError: (cb: (payload: RendererDiagnosticPayload) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, payload: RendererDiagnosticPayload): void => cb(payload)
+    ipcRenderer.on('diagnostics:dev-error', handler)
+    return () => ipcRenderer.removeListener('diagnostics:dev-error', handler)
+  },
 
   // Overlay control
   closeOverlay: (): void => ipcRenderer.send('close-overlay'),

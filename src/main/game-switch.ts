@@ -1,5 +1,5 @@
 import { app, ipcMain } from 'electron'
-import Store from 'electron-store'
+import type Store from 'electron-store'
 import type { AppSettings } from '../shared/types'
 import { getAppWindow, showAppWindow } from './app-window'
 

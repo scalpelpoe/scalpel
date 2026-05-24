@@ -1,6 +1,6 @@
+import { POE_CDN } from '../../../shared/endpoints'
 import type { PoeItem } from '../../../shared/types'
 import { getScalpelGlobal } from './scalpel-global'
-import { POE_CDN } from '../../../shared/endpoints'
 
 export function getItemIcon(item: PoeItem): string | null {
   const { iconMap, divCardArtMap } = getScalpelGlobal()

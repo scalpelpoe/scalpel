@@ -1,18 +1,19 @@
-import { app, BrowserWindow, ipcMain, Tray, Menu, nativeImage, powerMonitor, screen, protocol } from 'electron'
+import { app, type BrowserWindow, clipboard, ipcMain, Tray, Menu, nativeImage, powerMonitor, screen } from 'electron'
+import {
+  createAndOpenBugReport,
+  installEarlyDiagnostics,
+  recordMainDiagnostic,
+  registerDiagnostics,
+} from './diagnostics'
 
 // Prevent unhandled JS exceptions from crashing the native overlay thread
 // electron-overlay-window's tsfn_to_js_proxy calls napi_fatal_error if napi_call_function
 // returns non-ok, which happens when there's a pending exception on the JS isolate
-process.on('uncaughtException', (err) => {
-  console.error('[UNCAUGHT]', err)
-})
-process.on('unhandledRejection', (err) => {
-  console.error('[UNHANDLED REJECTION]', err)
-})
+installEarlyDiagnostics()
 
-import { existsSync } from 'fs'
-import { join } from 'path'
-import { execSync } from 'child_process'
+import { dirname, join } from 'node:path'
+import { execSync } from 'node:child_process'
+import { uIOhook, UiohookKey } from 'uiohook-napi'
 import Store from 'electron-store'
 import {
   createOverlayWindow,
@@ -62,11 +63,10 @@ import { register as registerManifest } from './handlers/manifest'
 import { register as registerPlugins } from './handlers/plugins'
 import { flushAll as flushPluginStorage } from './plugins/storage'
 import { refreshManifest } from './manifest'
+import { registerCheatSheetProtocol } from './cheat-sheet-protocol'
 import { registerScalpelInternalProtocol, registerScalpelInternalSchemePrivileges } from './plugins/protocol'
 import { registerScalpelPluginProtocol, registerScalpelPluginSchemePrivileges } from './plugins/plugin-protocol'
 import {
-  categoryDir,
-  ensureThumb,
   registerCheatSheetsOverlay,
   applyCheatSheetHotkeys,
   setCheatSheetsBeforeShow,
@@ -189,7 +189,6 @@ app.whenReady().then(() => {
 
 // Migrate: derive filterDir from existing filterPath for users upgrading
 if (!store.get('filterDir') && store.get('filterPath')) {
-  const { dirname } = require('path')
   store.set('filterDir', dirname(store.get('filterPath')))
 } else if (!store.get('filterDir')) {
   store.set('filterDir', '')
@@ -254,6 +253,7 @@ registerWhiteboard()
 registerClipboard()
 registerManifest()
 registerPlugins(store, isElevated)
+registerDiagnostics({ store, getAppWindow, showAppWindow })
 
 ipcMain.on('close-overlay', () => hideOverlay())
 ipcMain.on('open-devtools', (event) => {
@@ -301,6 +301,12 @@ function createTray(): void {
     {
       label: 'Settings',
       click: () => showAppWindow(),
+    },
+    {
+      label: 'Report a Bug',
+      click: () => {
+        createAndOpenBugReport().catch((err) => recordMainDiagnostic('bug-report', err))
+      },
     },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() },
@@ -350,24 +356,7 @@ app.whenReady().then(() => {
   // lives on http://localhost and Chromium blocks file:// resource loads).
   registerScalpelPluginProtocol()
 
-  // Serve cheat sheet images via a custom protocol so the renderer can load local files.
-  // Append ?thumb=1 to get a 360px-max JPEG thumbnail (lazily generated + cached
-  // by ensureThumb) instead of the full-resolution original.
-  protocol.handle('cheatsheet', (request) => {
-    const raw = request.url.replace('cheatsheet://', '')
-    const [pathPart, queryPart = ''] = raw.split('?')
-    const [categoryId, file = ''] = pathPart.split('/')
-    let filePath: string
-    if (queryPart.includes('thumb=1') && file) {
-      const dot = file.lastIndexOf('.')
-      const sheetId = dot >= 0 ? file.slice(0, dot) : file
-      const ext = dot >= 0 ? file.slice(dot + 1) : ''
-      filePath = ensureThumb(categoryId, sheetId, ext)
-    } else {
-      filePath = join(categoryDir(categoryId), file)
-    }
-    return new Response(require('fs').createReadStream(filePath) as unknown as ReadableStream)
-  })
+  registerCheatSheetProtocol()
 
   // Broadcast rate limit state to overlay
   onRateLimitUpdate((state) => {
@@ -398,10 +387,8 @@ app.whenReady().then(() => {
     openRegex: 'regex',
   }
   const pasteRegexToSearch = (regex: string): void => {
-    const { clipboard } = require('electron') as typeof import('electron')
     const restoreClip = snapshotClipboard()
     clipboard.writeText(regex)
-    const { uIOhook, UiohookKey } = require('uiohook-napi') as typeof import('uiohook-napi')
     // Open search box first (Ctrl+F)
     uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
     uIOhook.keyTap(UiohookKey.F)

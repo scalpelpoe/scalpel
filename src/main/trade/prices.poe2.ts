@@ -1,6 +1,6 @@
-import type { PriceInfo } from '../../shared/types'
 import { POE_NINJA_POE2_EXCHANGE, POE2_NINJA_PROXY } from '../../shared/endpoints'
 import { getGameFeatures } from '../../shared/game-features'
+import type { PriceInfo } from '../../shared/types'
 
 /**
  * PoE2 ninja price fetching + processing. The PoE2 API has no dense/overviews
@@ -85,7 +85,7 @@ export function applyResponse(
   for (const item of resp.core.items ?? []) {
     const divineValue = item.id === resp.core.primary ? 1 : 1 / (resp.core.rates?.[item.id] ?? 0)
     const chaosValue = divineValue * exaltedPerPrimary
-    if (!isFinite(chaosValue) || chaosValue <= 0) continue
+    if (!Number.isFinite(chaosValue) || chaosValue <= 0) continue
     priceMap.set(item.name.toLowerCase(), { chaosValue, divineValue, ninjaCategory: 'currency' })
   }
 

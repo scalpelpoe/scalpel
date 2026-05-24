@@ -1,8 +1,8 @@
-import { existsSync, readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'node:fs'
 import type { PluginManifest } from '../../plugin-sdk/src/types'
-import { pluginManifestPath, pluginEntryPath } from './paths'
-import { validateManifest } from './manifest-validator'
 import { readInstalledIds } from './installed-list'
+import { validateManifest } from './manifest-validator'
+import { pluginEntryPath, pluginManifestPath } from './paths'
 
 export interface InstalledPlugin {
   manifest: PluginManifest

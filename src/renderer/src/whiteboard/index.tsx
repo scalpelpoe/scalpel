@@ -6,12 +6,6 @@ import { createDebouncedSaver } from './state/persistence'
 import { useReportInputFocus } from '../shared/use-report-input-focus'
 import type { BoardState } from '../../../shared/whiteboard-types'
 
-declare global {
-  interface Window {
-    api: import('../../../preload/index').Api
-  }
-}
-
 export function Whiteboard(): JSX.Element {
   const [version, setVersion] = useState<1 | 2 | null>(null)
   const replaceAll = useWhiteboardStore((s) => s.replaceAll)

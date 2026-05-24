@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 // Mock electron before importing stat-matcher
 vi.mock('electron', () => ({
@@ -7,8 +7,8 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { matchItemMods, matchModToStat, ITEM_CLASS_TO_CATEGORY, _setStatEntriesForTests } from './stat-matcher'
 import type { AdvancedMod } from '../../shared/types'
+import { _setStatEntriesForTests, ITEM_CLASS_TO_CATEGORY, matchItemMods, matchModToStat } from './stat-matcher'
 
 // Helper to build a minimal itemInfo object
 function makeItemInfo(overrides: Record<string, unknown> = {}) {
@@ -31,18 +31,18 @@ function makeItemInfo(overrides: Record<string, unknown> = {}) {
 
 describe('ITEM_CLASS_TO_CATEGORY', () => {
   it('maps common item classes to trade categories', () => {
-    expect(ITEM_CLASS_TO_CATEGORY['Rings']).toBe('accessory.ring')
+    expect(ITEM_CLASS_TO_CATEGORY.Rings).toBe('accessory.ring')
     expect(ITEM_CLASS_TO_CATEGORY['Body Armours']).toBe('armour.chest')
-    expect(ITEM_CLASS_TO_CATEGORY['Wands']).toBe('weapon.wand')
-    expect(ITEM_CLASS_TO_CATEGORY['Jewels']).toBe('jewel')
-    expect(ITEM_CLASS_TO_CATEGORY['Flasks']).toBe('flask')
+    expect(ITEM_CLASS_TO_CATEGORY.Wands).toBe('weapon.wand')
+    expect(ITEM_CLASS_TO_CATEGORY.Jewels).toBe('jewel')
+    expect(ITEM_CLASS_TO_CATEGORY.Flasks).toBe('flask')
     // PoE2-specific classes that have live listings -- without these the
     // trade router falls back to searching a single base type instead of the
     // whole class.
-    expect(ITEM_CLASS_TO_CATEGORY['Bucklers']).toBe('armour.buckler')
-    expect(ITEM_CLASS_TO_CATEGORY['Crossbows']).toBe('weapon.crossbow')
-    expect(ITEM_CLASS_TO_CATEGORY['Spears']).toBe('weapon.spear')
-    expect(ITEM_CLASS_TO_CATEGORY['Foci']).toBe('armour.focus')
+    expect(ITEM_CLASS_TO_CATEGORY.Bucklers).toBe('armour.buckler')
+    expect(ITEM_CLASS_TO_CATEGORY.Crossbows).toBe('weapon.crossbow')
+    expect(ITEM_CLASS_TO_CATEGORY.Spears).toBe('weapon.spear')
+    expect(ITEM_CLASS_TO_CATEGORY.Foci).toBe('armour.focus')
   })
 
   it('excludes PoE2 categories that have zero live listings (Claws, Daggers, Flails, 1H/2H Swords+Axes, Trap Tools)', () => {
@@ -50,12 +50,12 @@ describe('ITEM_CLASS_TO_CATEGORY', () => {
     // get drops in them, so trade2/search returns nothing. Routing through
     // baseType (the fallback when the class has no category) is closer to
     // correct than pointing at an empty category.
-    expect(ITEM_CLASS_TO_CATEGORY['Flails']).toBeUndefined()
+    expect(ITEM_CLASS_TO_CATEGORY.Flails).toBeUndefined()
     expect(ITEM_CLASS_TO_CATEGORY['Trap Tools']).toBeUndefined()
   })
 
   it('does not contain unknown classes', () => {
-    expect(ITEM_CLASS_TO_CATEGORY['Maps']).toBeUndefined()
+    expect(ITEM_CLASS_TO_CATEGORY.Maps).toBeUndefined()
     expect(ITEM_CLASS_TO_CATEGORY['Divination Cards']).toBeUndefined()
   })
 })
@@ -95,7 +95,7 @@ describe('matchItemMods', () => {
       )
       const wardChip = filters.find((f) => f.id === 'defence.ward')
       expect(wardChip).toBeDefined()
-      expect(wardChip!.value).toBe(200)
+      expect(wardChip?.value).toBe(200)
     })
 
     it('generates block chip when block > 0', () => {
@@ -107,7 +107,7 @@ describe('matchItemMods', () => {
       )
       const blockChip = filters.find((f) => f.id === 'defence.block')
       expect(blockChip).toBeDefined()
-      expect(blockChip!.text).toBe('Block: 30%')
+      expect(blockChip?.text).toBe('Block: 30%')
     })
 
     it('skips defense chips when all values are zero', () => {
@@ -222,9 +222,9 @@ describe('matchItemMods', () => {
       const filters = matchItemMods([], [], undefined, makeItemInfo({ sockets: 'R-R-R-R-R', linkedSockets: 5 }))
       const linkChip = filters.find((f) => f.id === 'socket.links')
       expect(linkChip).toBeDefined()
-      expect(linkChip!.text).toBe('5L')
-      expect(linkChip!.min).toBe(5)
-      expect(linkChip!.enabled).toBe(true)
+      expect(linkChip?.text).toBe('5L')
+      expect(linkChip?.min).toBe(5)
+      expect(linkChip?.enabled).toBe(true)
     })
 
     it('does not generate link chip for fewer than 5 links', () => {
@@ -237,15 +237,15 @@ describe('matchItemMods', () => {
       const filters = matchItemMods([], [], undefined, makeItemInfo({ sockets: 'W-R-G', linkedSockets: 3 }))
       const whiteRow = filters.find((f) => f.id === 'socket.white_sockets')
       expect(whiteRow).toBeDefined()
-      expect(whiteRow!.value).toBe(1)
-      expect(whiteRow!.enabled).toBe(false)
+      expect(whiteRow?.value).toBe(1)
+      expect(whiteRow?.enabled).toBe(false)
     })
 
     it('generates abyssal socket chip', () => {
       const filters = matchItemMods([], [], undefined, makeItemInfo({ sockets: 'A-R', linkedSockets: 2 }))
       const abyssChip = filters.find((f) => f.id === 'implicit.stat_3527617737')
       expect(abyssChip).toBeDefined()
-      expect(abyssChip!.value).toBe(1)
+      expect(abyssChip?.value).toBe(1)
     })
   })
 
@@ -259,7 +259,7 @@ describe('matchItemMods', () => {
       )
       const corruptedChip = filters.find((f) => f.id === 'misc.corrupted')
       expect(corruptedChip).toBeDefined()
-      expect(corruptedChip!.chipState).toBe('yes')
+      expect(corruptedChip?.chipState).toBe('yes')
     })
 
     it('generates corrupted chip in "no" state when item is not corrupted (equipment)', () => {
@@ -271,7 +271,7 @@ describe('matchItemMods', () => {
       )
       const corruptedChip = filters.find((f) => f.id === 'misc.corrupted')
       expect(corruptedChip).toBeDefined()
-      expect(corruptedChip!.chipState).toBe('no')
+      expect(corruptedChip?.chipState).toBe('no')
     })
 
     it('generates mirrored chip when item is mirrored', () => {
@@ -283,7 +283,7 @@ describe('matchItemMods', () => {
       )
       const mirroredChip = filters.find((f) => f.id === 'misc.mirrored')
       expect(mirroredChip).toBeDefined()
-      expect(mirroredChip!.chipState).toBe('yes')
+      expect(mirroredChip?.chipState).toBe('yes')
     })
 
     it('generates unidentified chip when item is not identified', () => {
@@ -295,30 +295,30 @@ describe('matchItemMods', () => {
       )
       const unidChip = filters.find((f) => f.id === 'misc.identified')
       expect(unidChip).toBeDefined()
-      expect(unidChip!.text).toBe('Unidentified')
+      expect(unidChip?.text).toBe('Unidentified')
     })
 
     it('generates ilvl chip disabled by default', () => {
       const filters = matchItemMods([], [], undefined, makeItemInfo({ itemLevel: 84, sockets: '' }))
       const ilvlChip = filters.find((f) => f.id === 'misc.ilvl')
       expect(ilvlChip).toBeDefined()
-      expect(ilvlChip!.value).toBe(84)
-      expect(ilvlChip!.enabled).toBe(false)
+      expect(ilvlChip?.value).toBe(84)
+      expect(ilvlChip?.enabled).toBe(false)
     })
 
     it('generates quality chip disabled for non-base items', () => {
       const filters = matchItemMods([], [], undefined, makeItemInfo({ quality: 15, rarity: 'Rare', sockets: '' }))
       const qualityChip = filters.find((f) => f.id === 'misc.quality')
       expect(qualityChip).toBeDefined()
-      expect(qualityChip!.value).toBe(15)
-      expect(qualityChip!.enabled).toBe(false)
+      expect(qualityChip?.value).toBe(15)
+      expect(qualityChip?.enabled).toBe(false)
     })
 
     it('generates quality chip enabled for overqualitied bases', () => {
       const filters = matchItemMods([], [], undefined, makeItemInfo({ quality: 28, rarity: 'Normal', sockets: '' }))
       const qualityChip = filters.find((f) => f.id === 'misc.quality')
       expect(qualityChip).toBeDefined()
-      expect(qualityChip!.enabled).toBe(true)
+      expect(qualityChip?.enabled).toBe(true)
     })
 
     it('generates base type chip disabled for rare items', () => {
@@ -330,8 +330,8 @@ describe('matchItemMods', () => {
       )
       const baseChip = filters.find((f) => f.id === 'misc.basetype')
       expect(baseChip).toBeDefined()
-      expect(baseChip!.text).toBe('Titanium Spirit Shield')
-      expect(baseChip!.enabled).toBe(false)
+      expect(baseChip?.text).toBe('Titanium Spirit Shield')
+      expect(baseChip?.enabled).toBe(false)
     })
 
     it('enables base type chip by default for cluster jewels (size-specific search)', () => {
@@ -343,8 +343,8 @@ describe('matchItemMods', () => {
       )
       const baseChip = filters.find((f) => f.id === 'misc.basetype')
       expect(baseChip).toBeDefined()
-      expect(baseChip!.text).toBe('Large Cluster Jewel')
-      expect(baseChip!.enabled).toBe(true)
+      expect(baseChip?.text).toBe('Large Cluster Jewel')
+      expect(baseChip?.enabled).toBe(true)
     })
 
     it('does not enable base type chip for non-cluster Jewels (e.g. Cobalt Jewel)', () => {
@@ -356,7 +356,7 @@ describe('matchItemMods', () => {
       )
       const baseChip = filters.find((f) => f.id === 'misc.basetype')
       expect(baseChip).toBeDefined()
-      expect(baseChip!.enabled).toBe(false)
+      expect(baseChip?.enabled).toBe(false)
     })
 
     it('generates rarity chip disabled by default for non-unique equipment', () => {
@@ -368,8 +368,8 @@ describe('matchItemMods', () => {
       )
       const rarityChip = filters.find((f) => f.id === 'misc.rarity')
       expect(rarityChip).toBeDefined()
-      expect(rarityChip!.text).toBe('Rare')
-      expect(rarityChip!.enabled).toBe(false)
+      expect(rarityChip?.text).toBe('Rare')
+      expect(rarityChip?.enabled).toBe(false)
     })
 
     it('does not generate rarity chip for unique items', () => {
@@ -393,9 +393,9 @@ describe('matchItemMods', () => {
       const shaperChip = filters.find((f) => f.id === 'misc.influence_shaper')
       const elderChip = filters.find((f) => f.id === 'misc.influence_elder')
       expect(shaperChip).toBeDefined()
-      expect(shaperChip!.enabled).toBe(true)
+      expect(shaperChip?.enabled).toBe(true)
       expect(elderChip).toBeDefined()
-      expect(elderChip!.enabled).toBe(true)
+      expect(elderChip?.enabled).toBe(true)
     })
 
     it('does not generate influence chips for maps', () => {
@@ -427,9 +427,9 @@ describe('matchItemMods', () => {
       const openPrefix = filters.find((f) => f.id === 'pseudo.pseudo_number_of_empty_prefix_mods')
       const openSuffix = filters.find((f) => f.id === 'pseudo.pseudo_number_of_empty_suffix_mods')
       expect(openPrefix).toBeDefined()
-      expect(openPrefix!.value).toBe(2) // 3 max - 1 prefix = 2 open
+      expect(openPrefix?.value).toBe(2) // 3 max - 1 prefix = 2 open
       expect(openSuffix).toBeDefined()
-      expect(openSuffix!.value).toBe(1) // 3 max - 2 suffixes = 1 open
+      expect(openSuffix?.value).toBe(1) // 3 max - 2 suffixes = 1 open
     })
 
     it('uses 2 max affixes for jewels', () => {
@@ -445,7 +445,7 @@ describe('matchItemMods', () => {
       )
       const openPrefix = filters.find((f) => f.id === 'pseudo.pseudo_number_of_empty_prefix_mods')
       expect(openPrefix).toBeDefined()
-      expect(openPrefix!.value).toBe(1) // 2 max - 1 prefix = 1 open
+      expect(openPrefix?.value).toBe(1) // 2 max - 1 prefix = 1 open
     })
 
     it('does not generate open affix chips for unique items', () => {
@@ -474,15 +474,15 @@ describe('matchItemMods', () => {
       )
       const gemLevel = filters.find((f) => f.id === 'misc.gem_level')
       expect(gemLevel).toBeDefined()
-      expect(gemLevel!.value).toBe(21)
-      expect(gemLevel!.min).toBe(21)
-      expect(gemLevel!.type).toBe('gem')
-      expect(gemLevel!.enabled).toBe(true)
+      expect(gemLevel?.value).toBe(21)
+      expect(gemLevel?.min).toBe(21)
+      expect(gemLevel?.type).toBe('gem')
+      expect(gemLevel?.enabled).toBe(true)
 
       const qualityChip = filters.find((f) => f.id === 'misc.quality')
       expect(qualityChip).toBeDefined()
-      expect(qualityChip!.type).toBe('gem')
-      expect(qualityChip!.enabled).toBe(true) // quality >= 20
+      expect(qualityChip?.type).toBe('gem')
+      expect(qualityChip?.enabled).toBe(true) // quality >= 20
     })
 
     it('generates transfigured chip enabled when transfigured', () => {
@@ -494,7 +494,7 @@ describe('matchItemMods', () => {
       )
       const transfigured = filters.find((f) => f.id === 'misc.gem_transfigured')
       expect(transfigured).toBeDefined()
-      expect(transfigured!.enabled).toBe(true)
+      expect(transfigured?.enabled).toBe(true)
     })
 
     it('generates transfigured chip disabled when not transfigured', () => {
@@ -506,7 +506,7 @@ describe('matchItemMods', () => {
       )
       const transfigured = filters.find((f) => f.id === 'misc.gem_transfigured')
       expect(transfigured).toBeDefined()
-      expect(transfigured!.enabled).toBe(false)
+      expect(transfigured?.enabled).toBe(false)
     })
 
     it('skips explicits for gem items', () => {
@@ -630,8 +630,8 @@ describe('matchItemMods', () => {
       )
       const rewardChip = filters.find((f) => f.id === 'map.map_completion_reward')
       expect(rewardChip).toBeDefined()
-      expect(rewardChip!.option).toBe('Divination Cards')
-      expect(rewardChip!.enabled).toBe(true)
+      expect(rewardChip?.option).toBe('Divination Cards')
+      expect(rewardChip?.enabled).toBe(true)
     })
 
     it('does not generate map property chips for non-rare maps', () => {
@@ -664,7 +664,7 @@ describe('matchItemMods', () => {
       )
       const baseChip = filters.find((f) => f.id === 'misc.basetype')
       expect(baseChip).toBeDefined()
-      expect(baseChip!.enabled).toBe(true)
+      expect(baseChip?.enabled).toBe(true)
     })
 
     it('generates 8-mod chip for 4+4 affix maps', () => {
@@ -695,8 +695,8 @@ describe('matchItemMods', () => {
       )
       const eightMod = filters.find((f) => f.id === 'pseudo.pseudo_number_of_affix_mods')
       expect(eightMod).toBeDefined()
-      expect(eightMod!.value).toBe(8)
-      expect(eightMod!.enabled).toBe(true)
+      expect(eightMod?.value).toBe(8)
+      expect(eightMod?.enabled).toBe(true)
     })
   })
 
@@ -808,8 +808,8 @@ describe('matchItemMods', () => {
       )
       const areaLevel = filters.find((f) => f.id === 'misc.area_level')
       expect(areaLevel).toBeDefined()
-      expect(areaLevel!.value).toBe(83)
-      expect(areaLevel!.enabled).toBe(true)
+      expect(areaLevel?.value).toBe(83)
+      expect(areaLevel?.enabled).toBe(true)
     })
 
     it('does not generate area level chip for maps', () => {
@@ -844,16 +844,16 @@ describe('matchItemMods', () => {
       // The id strips to the trade API filter key: "heist.heist_wings" -> "heist_wings"
       const wingsRevealed = filters.find((f) => f.id === 'heist.heist_wings')
       expect(wingsRevealed).toBeDefined()
-      expect(wingsRevealed!.value).toBe(3)
-      expect(wingsRevealed!.min).toBe(3)
-      expect(wingsRevealed!.enabled).toBe(true)
+      expect(wingsRevealed?.value).toBe(3)
+      expect(wingsRevealed?.min).toBe(3)
+      expect(wingsRevealed?.enabled).toBe(true)
 
       // Total wings uses min (not max) per trade site behavior
       const wingsTotal = filters.find((f) => f.id === 'heist.heist_max_wings')
       expect(wingsTotal).toBeDefined()
-      expect(wingsTotal!.value).toBe(4)
-      expect(wingsTotal!.min).toBe(4)
-      expect(wingsTotal!.enabled).toBe(true)
+      expect(wingsTotal?.value).toBe(4)
+      expect(wingsTotal?.min).toBe(4)
+      expect(wingsTotal?.enabled).toBe(true)
     })
 
     it('generates heist job filter for contracts (min: 1)', () => {
@@ -866,8 +866,8 @@ describe('matchItemMods', () => {
       // The id strips to the trade API filter key: "heist.heist_engineering"
       const jobFilter = filters.find((f) => f.id === 'heist.heist_engineering')
       expect(jobFilter).toBeDefined()
-      expect(jobFilter!.min).toBe(1)
-      expect(jobFilter!.enabled).toBe(true)
+      expect(jobFilter?.min).toBe(1)
+      expect(jobFilter?.enabled).toBe(true)
     })
 
     it('does NOT generate heist job filter for blueprints', () => {
@@ -893,18 +893,18 @@ describe('matchItemMods', () => {
       const filters = matchItemMods([], [], undefined, makeItemInfo({ itemClass: 'Sanctum Research', itemLevel: 83 }))
       const ilvl = filters.find((f) => f.id === 'misc.ilvl')
       expect(ilvl).toBeDefined()
-      expect(ilvl!.enabled).toBe(true)
-      expect(ilvl!.chipState).toBe('max')
-      expect(ilvl!.min).toBeNull()
-      expect(ilvl!.max).toBe(83)
+      expect(ilvl?.enabled).toBe(true)
+      expect(ilvl?.chipState).toBe('max')
+      expect(ilvl?.min).toBeNull()
+      expect(ilvl?.max).toBe(83)
     })
 
     it('generates ilvl chip with enabled=false and no chipState for regular rares', () => {
       const filters = matchItemMods([], [], undefined, makeItemInfo({ itemClass: 'Body Armours', itemLevel: 86 }))
       const ilvl = filters.find((f) => f.id === 'misc.ilvl')
       expect(ilvl).toBeDefined()
-      expect(ilvl!.enabled).toBe(false)
-      expect(ilvl!.chipState).toBeUndefined()
+      expect(ilvl?.enabled).toBe(false)
+      expect(ilvl?.chipState).toBeUndefined()
     })
   })
 
@@ -956,7 +956,7 @@ describe('matchItemMods', () => {
       )
       const pseudo = filters.find((f) => f.id === PSEUDO_TO_ATK)
       expect(pseudo).toBeDefined()
-      expect(pseudo!.value).toBe(71)
+      expect(pseudo?.value).toBe(71)
     })
 
     it('one ele color to-attacks on a non-weapon: no pseudo emitted (single-color row already shown)', () => {
@@ -973,7 +973,7 @@ describe('matchItemMods', () => {
       )
       const pseudo = filters.find((f) => f.id === PSEUDO_PLAIN)
       expect(pseudo).toBeDefined()
-      expect(pseudo!.value).toBe(43)
+      expect(pseudo?.value).toBe(43)
     })
 
     it('two ele colors on a weapon: no pseudo (weapon DPS pipeline owns this)', () => {
@@ -994,7 +994,7 @@ describe('matchItemMods', () => {
       const pseudo = filters.find((f) => f.id === PSEUDO_TO_SPL)
       expect(pseudo).toBeDefined()
       // (5+15)/2 + (7+86)/2 = 10 + 46.5 = 56.5 -> 56
-      expect(pseudo!.value).toBe(56)
+      expect(pseudo?.value).toBe(56)
       expect(filters.find((f) => f.id === PSEUDO_TO_ATK)).toBeUndefined()
     })
 
@@ -1010,17 +1010,17 @@ describe('matchItemMods', () => {
       )
       // To-attacks: fire-both (45) + lightning-attacks (10) = 55
       const atk = filters.find((f) => f.id === PSEUDO_TO_ATK)
-      expect(atk!.value).toBe(55)
+      expect(atk?.value).toBe(55)
       // To-spells: fire-both (45) + lightning-spells (10) = 55
       const spl = filters.find((f) => f.id === PSEUDO_TO_SPL)
-      expect(spl!.value).toBe(55)
+      expect(spl?.value).toBe(55)
     })
 
     it('does not regress existing pseudos with default minCount=1', () => {
       _setStatEntriesForTests([{ id: 'explicit.stat_1671376347', text: '+#% to Fire Resistance', type: 'explicit' }])
       const filters = matchItemMods(['+30% to Fire Resistance'], [], undefined, makeItemInfo({ rarity: 'Rare' }))
       // Single resistance roll still emits Total Ele Res pseudo (minCount default = 1)
-      expect(filters.find((f) => f.id === 'pseudo.pseudo_total_elemental_resistance')!.value).toBe(30)
+      expect(filters.find((f) => f.id === 'pseudo.pseudo_total_elemental_resistance')?.value).toBe(30)
     })
   })
 
@@ -1080,9 +1080,9 @@ describe('matchItemMods', () => {
       const filters = matchItemMods([], [], undefined, makeItemInfo({ sockets: '', memoryStrands: 5 }))
       const strandChip = filters.find((f) => f.id === 'misc.memory_level')
       expect(strandChip).toBeDefined()
-      expect(strandChip!.value).toBe(5)
-      expect(strandChip!.min).toBe(5)
-      expect(strandChip!.enabled).toBe(true)
+      expect(strandChip?.value).toBe(5)
+      expect(strandChip?.min).toBe(5)
+      expect(strandChip?.enabled).toBe(true)
     })
   })
 
@@ -1108,12 +1108,12 @@ describe('matchItemMods', () => {
 
     it('Strength contributes 0.5x to Total Life pseudo', () => {
       const filters = runWithStats([STR], ['+30 to Strength'])
-      expect(filters.find((f) => f.id === TOTAL_LIFE)!.value).toBe(15)
+      expect(filters.find((f) => f.id === TOTAL_LIFE)?.value).toBe(15)
     })
 
     it('Intelligence contributes 0.5x to Total Mana pseudo', () => {
       const filters = runWithStats([INT], ['+40 to Intelligence'])
-      expect(filters.find((f) => f.id === TOTAL_MANA)!.value).toBe(20)
+      expect(filters.find((f) => f.id === TOTAL_MANA)?.value).toBe(20)
     })
 
     it('Dexterity does not contribute to Life or Mana pseudo', () => {
@@ -1124,49 +1124,49 @@ describe('matchItemMods', () => {
 
     it('Str+Int hybrid contributes to both Life and Mana', () => {
       const filters = runWithStats([STR_INT], ['+20 to Strength and Intelligence'])
-      expect(filters.find((f) => f.id === TOTAL_LIFE)!.value).toBe(10)
-      expect(filters.find((f) => f.id === TOTAL_MANA)!.value).toBe(10)
+      expect(filters.find((f) => f.id === TOTAL_LIFE)?.value).toBe(10)
+      expect(filters.find((f) => f.id === TOTAL_MANA)?.value).toBe(10)
     })
 
     it('Str+Dex hybrid contributes to Life only', () => {
       const filters = runWithStats([STR_DEX], ['+24 to Strength and Dexterity'])
-      expect(filters.find((f) => f.id === TOTAL_LIFE)!.value).toBe(12)
+      expect(filters.find((f) => f.id === TOTAL_LIFE)?.value).toBe(12)
       expect(filters.find((f) => f.id === TOTAL_MANA)).toBeUndefined()
     })
 
     it('Dex+Int hybrid contributes to Mana only', () => {
       const filters = runWithStats([DEX_INT], ['+24 to Dexterity and Intelligence'])
-      expect(filters.find((f) => f.id === TOTAL_MANA)!.value).toBe(12)
+      expect(filters.find((f) => f.id === TOTAL_MANA)?.value).toBe(12)
       expect(filters.find((f) => f.id === TOTAL_LIFE)).toBeUndefined()
     })
 
     it('all Attributes contributes to both Life and Mana', () => {
       const filters = runWithStats([ALL_ATTR], ['+10 to all Attributes'])
-      expect(filters.find((f) => f.id === TOTAL_LIFE)!.value).toBe(5)
-      expect(filters.find((f) => f.id === TOTAL_MANA)!.value).toBe(5)
+      expect(filters.find((f) => f.id === TOTAL_LIFE)?.value).toBe(5)
+      expect(filters.find((f) => f.id === TOTAL_MANA)?.value).toBe(5)
     })
 
     it('floors the final Total Life value (single odd Str source)', () => {
       // 25 * 0.5 = 12.5 -> floor to 12
       const filters = runWithStats([STR], ['+25 to Strength'])
-      expect(filters.find((f) => f.id === TOTAL_LIFE)!.value).toBe(12)
+      expect(filters.find((f) => f.id === TOTAL_LIFE)?.value).toBe(12)
     })
 
     it('pools Str sources before flooring (matches in-game pooling)', () => {
       // Game pools Str (38) then halves -> 19. Flooring per-contribution would give 12 + 6 = 18.
       const filters = runWithStats([STR], ['+25 to Strength', '+13 to Strength'])
-      expect(filters.find((f) => f.id === TOTAL_LIFE)!.value).toBe(19)
+      expect(filters.find((f) => f.id === TOTAL_LIFE)?.value).toBe(19)
     })
 
     it('maximum Mana contributes 1:1 to Total Mana', () => {
       const filters = runWithStats([MAX_MANA], ['+50 to maximum Mana'])
-      expect(filters.find((f) => f.id === TOTAL_MANA)!.value).toBe(50)
+      expect(filters.find((f) => f.id === TOTAL_MANA)?.value).toBe(50)
     })
 
     it('Str + maximum Life roll combine into a single Total Life pseudo', () => {
       // 60 (life) + 30 * 0.5 (Str) = 75
       const filters = runWithStats([STR, MAX_LIFE], ['+30 to Strength', '+60 to maximum Life'])
-      expect(filters.find((f) => f.id === TOTAL_LIFE)!.value).toBe(75)
+      expect(filters.find((f) => f.id === TOTAL_LIFE)?.value).toBe(75)
     })
   })
 
@@ -1202,11 +1202,11 @@ describe('matchItemMods', () => {
       )
       const pseudoEle = filters.find((f) => f.id === 'pseudo.pseudo_total_elemental_resistance')
       expect(pseudoEle).toBeDefined()
-      expect(pseudoEle!.value).toBe(41)
+      expect(pseudoEle?.value).toBe(41)
       // The fractured row itself should still be tagged with the fractured stat id and type
       const fracturedRow = filters.find((f) => f.id === 'fractured.stat_3261801346')
       expect(fracturedRow).toBeDefined()
-      expect(fracturedRow!.type).toBe('fractured')
+      expect(fracturedRow?.type).toBe('fractured')
     })
   })
 
@@ -1225,9 +1225,9 @@ describe('matchItemMods', () => {
       const ele = filters.find((f) => f.id === 'pseudo.pseudo_total_elemental_resistance')
       const chaos = filters.find((f) => f.id === 'pseudo.pseudo_total_chaos_resistance')
       expect(ele).toBeDefined()
-      expect(ele!.value).toBe(14)
+      expect(ele?.value).toBe(14)
       expect(chaos).toBeDefined()
-      expect(chaos!.value).toBe(14)
+      expect(chaos?.value).toBe(14)
     })
 
     it('fire+chaos and cold+chaos hybrids also feed both pseudos', () => {
@@ -1242,8 +1242,8 @@ describe('matchItemMods', () => {
         undefined,
         makeItemInfo({ rarity: 'Rare' }),
       )
-      expect(filters.find((f) => f.id === 'pseudo.pseudo_total_elemental_resistance')!.value).toBe(22)
-      expect(filters.find((f) => f.id === 'pseudo.pseudo_total_chaos_resistance')!.value).toBe(22)
+      expect(filters.find((f) => f.id === 'pseudo.pseudo_total_elemental_resistance')?.value).toBe(22)
+      expect(filters.find((f) => f.id === 'pseudo.pseudo_total_chaos_resistance')?.value).toBe(22)
     })
   })
 
@@ -1285,7 +1285,7 @@ describe('matchItemMods', () => {
       const pseudo = filters.find((f) => f.id === 'pseudo.pseudo_total_elemental_resistance')
       expect(pseudo).toBeDefined()
       // Only the +36 Cold Res counts; the -11 exposure debuff must not subtract.
-      expect(pseudo!.value).toBe(36)
+      expect(pseudo?.value).toBe(36)
     })
 
     it('cold and lightning exposure implicits are likewise excluded', () => {
@@ -1324,8 +1324,8 @@ describe('matchItemMods', () => {
       )
       const fracturedChip = filters.find((f) => f.id === 'misc.fractured')
       expect(fracturedChip).toBeDefined()
-      expect(fracturedChip!.text).toBe('Fractured')
-      expect(fracturedChip!.chipState).toBeUndefined()
+      expect(fracturedChip?.text).toBe('Fractured')
+      expect(fracturedChip?.chipState).toBeUndefined()
     })
 
     it('does not generate fractured chip for unique items', () => {
@@ -1414,35 +1414,35 @@ describe('matchModToStat (PoE2 stat text without leading sign)', () => {
     _setStatEntriesForTests([{ id: 'explicit.stat_3299347043', text: '# to maximum Life', type: 'explicit' }])
     const result = matchModToStat('+50 to maximum Life')
     expect(result).not.toBeNull()
-    expect(result!.value).toBe(50)
+    expect(result?.value).toBe(50)
   })
 
   it('extracts percent value from "+#% to Cold Resistance" item against bare "#% to Cold Resistance" stat', () => {
     _setStatEntriesForTests([{ id: 'explicit.stat_4220027924', text: '#% to Cold Resistance', type: 'explicit' }])
     const result = matchModToStat('+47% to Cold Resistance')
     expect(result).not.toBeNull()
-    expect(result!.value).toBe(47)
+    expect(result?.value).toBe(47)
   })
 
   it('extracts negative value when stat text has no sign', () => {
     _setStatEntriesForTests([{ id: 'explicit.stat_x', text: '#% to Lightning Resistance', type: 'explicit' }])
     const result = matchModToStat('-50% to Lightning Resistance')
     expect(result).not.toBeNull()
-    expect(result!.value).toBe(-50)
+    expect(result?.value).toBe(-50)
   })
 
   it('still works for unsigned PoE1-style mod text', () => {
     _setStatEntriesForTests([{ id: 'explicit.stat_y', text: '#% increased Spell Damage', type: 'explicit' }])
     const result = matchModToStat('20% increased Spell Damage')
     expect(result).not.toBeNull()
-    expect(result!.value).toBe(20)
+    expect(result?.value).toBe(20)
   })
 
   it('averages multiple signed numeric captures (PoE2 "Adds #-#" hybrid case)', () => {
     _setStatEntriesForTests([{ id: 'explicit.stat_z', text: 'Adds # to # Cold Damage', type: 'explicit' }])
     const result = matchModToStat('Adds +5 to +15 Cold Damage')
     expect(result).not.toBeNull()
-    expect(result!.value).toBe(10)
+    expect(result?.value).toBe(10)
   })
 
   it('rejects non-numeric captures', () => {
@@ -1450,7 +1450,7 @@ describe('matchModToStat (PoE2 stat text without leading sign)', () => {
     const result = matchModToStat('Causes random additional Effects')
     // "random" isn't numeric -- value stays null even though the pattern matches
     expect(result).not.toBeNull()
-    expect(result!.value).toBeNull()
+    expect(result?.value).toBeNull()
   })
 
   it('matches "an additional <Noun>" clipboard text against "# additional <Noun>s" trade stat', () => {
@@ -1463,8 +1463,8 @@ describe('matchModToStat (PoE2 stat text without leading sign)', () => {
     ])
     const result = matchModToStat('Bow Attacks fire an additional Arrow')
     expect(result).not.toBeNull()
-    expect(result!.statId).toBe('explicit.stat_2222186378')
-    expect(result!.value).toBe(1)
+    expect(result?.statId).toBe('explicit.stat_2222186378')
+    expect(result?.value).toBe(1)
   })
 })
 
@@ -1482,8 +1482,8 @@ describe('matchModToStat (Unscalable Value prefix/suffix fallback)', () => {
     ])
     const result = matchModToStat("Gain Alchemist's Genius when you use a Flask")
     expect(result).not.toBeNull()
-    expect(result!.statId).toBe('explicit.stat_2989883253')
-    expect(result!.value).toBeNull()
+    expect(result?.statId).toBe('explicit.stat_2989883253')
+    expect(result?.value).toBeNull()
   })
 
   it('still matches when clipboard text is the leading portion of the stat (existing prefix case)', () => {
@@ -1492,8 +1492,8 @@ describe('matchModToStat (Unscalable Value prefix/suffix fallback)', () => {
     ])
     const result = matchModToStat('Bladefall deals extra Damage')
     expect(result).not.toBeNull()
-    expect(result!.statId).toBe('explicit.stat_xxx')
-    expect(result!.value).toBeNull()
+    expect(result?.statId).toBe('explicit.stat_xxx')
+    expect(result?.value).toBeNull()
   })
 })
 
@@ -1526,7 +1526,7 @@ describe('matchModToStat (Forbidden Shako indexable_support routing)', () => {
     seedDuplicateSupports()
     const result = matchModToStat('Socketed Gems are Supported by Level 9 Endurance Charge on Melee Stun')
     expect(result).not.toBeNull()
-    expect(result!.statId).toBe('explicit.stat_2388360415')
+    expect(result?.statId).toBe('explicit.stat_2388360415')
   })
 
   it('preferIndexableSupport=true routes to indexable_support family (Forbidden Shako path)', () => {
@@ -1538,7 +1538,7 @@ describe('matchModToStat (Forbidden Shako indexable_support routing)', () => {
       true,
     )
     expect(result).not.toBeNull()
-    expect(result!.statId).toBe('explicit.indexable_support_98')
+    expect(result?.statId).toBe('explicit.indexable_support_98')
   })
 
   it('preferIndexableSupport=true returns null when only the regular stat exists', () => {
@@ -1583,7 +1583,7 @@ describe('matchModToStat (Forbidden Shako indexable_support routing)', () => {
     )
     const supportChip = filters.find((f) => f.text.includes('Endurance Charge on Melee Stun'))
     expect(supportChip).toBeDefined()
-    expect(supportChip!.id).toBe('explicit.indexable_support_98')
+    expect(supportChip?.id).toBe('explicit.indexable_support_98')
   })
 
   it('matchItemMods routes a regular crafted/built-in support to the stat_* family by default', () => {
@@ -1597,7 +1597,7 @@ describe('matchModToStat (Forbidden Shako indexable_support routing)', () => {
     )
     const supportChip = filters.find((f) => f.text.includes('Endurance Charge on Melee Stun'))
     expect(supportChip).toBeDefined()
-    expect(supportChip!.id).toBe('explicit.stat_2388360415')
+    expect(supportChip?.id).toBe('explicit.stat_2388360415')
   })
 })
 
@@ -1625,15 +1625,14 @@ Socketed Gems are Supported by Level 35(25-35) Bloodthirst(Greater Multiple Proj
 `
     const item = parseItemText(text)
     expect(item).not.toBeNull()
-    expect(item!.advancedMods).toBeDefined()
-    const supportMods = item!.advancedMods!.filter((am) =>
-      am.lines.some((l) => /Socketed Gems are Supported by/i.test(l)),
-    )
+    expect(item?.advancedMods).toBeDefined()
+    const supportMods =
+      item?.advancedMods?.filter((am) => am.lines.some((l) => /Socketed Gems are Supported by/i.test(l))) ?? []
     expect(supportMods.length).toBe(2)
     expect(supportMods.every((m) => m.randomSupport === true)).toBe(true)
     // Attribute mod should NOT be flagged (no Unscalable Value).
-    const attrMod = item!.advancedMods!.find((am) => am.lines.some((l) => /to all Attributes/.test(l)))
+    const attrMod = item?.advancedMods?.find((am) => am.lines.some((l) => /to all Attributes/.test(l)))
     expect(attrMod).toBeDefined()
-    expect(attrMod!.randomSupport).toBeUndefined()
+    expect(attrMod?.randomSupport).toBeUndefined()
   })
 })

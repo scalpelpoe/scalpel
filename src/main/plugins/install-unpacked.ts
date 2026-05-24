@@ -1,9 +1,9 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } from 'fs'
-import { join } from 'path'
-import { pluginDir } from './paths'
-import { validateManifest } from './manifest-validator'
-import { addInstalledId } from './installed-list'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
+import { join } from 'node:path'
 import type { InstallResult } from './install-types'
+import { addInstalledId } from './installed-list'
+import { validateManifest } from './manifest-validator'
+import { pluginDir } from './paths'
 
 export type { InstallResult }
 

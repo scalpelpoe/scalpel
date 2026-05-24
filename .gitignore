@@ -5,6 +5,13 @@ node_modules/
 out/
 dist/
 
+# TypeScript accidental in-place emits
+/src/**/*.js
+/src/**/*.jsx
+/src/**/*.js.map
+/src/**/*.jsx.map
+*.tsbuildinfo
+
 # AI slop confirmed
 .claude/
 
@@ -32,3 +39,4 @@ scripts/local/
 .vs/
 .vscode/
 *.log
+.zed/

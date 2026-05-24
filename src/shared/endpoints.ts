@@ -61,6 +61,12 @@ export const ELECTRON_RELEASES = 'https://github.com/electron/electron/releases/
 /** GitHub releases page (user-facing, for manual download links in banners) */
 export const GITHUB_RELEASES_PAGE = 'https://github.com/scalpelpoe/scalpel/releases/latest'
 
+/** GitHub new-issue page, opened (with a prefilled body) by the bug reporter */
+export const GITHUB_NEW_ISSUE_URL = 'https://github.com/scalpelpoe/scalpel/issues/new'
+
+/** Discord invite, opened alongside a generated bug report */
+export const DISCORD_INVITE_URL = 'https://discord.com/invite/nUNcrmEAP5'
+
 /** Raw GitHub URL prefix for the cheat-sheet starter packs hosted in this
  *  repo's /cheat-sheet-prefabs/ folder. Images are not bundled into the
  *  installer; they're fetched on demand when the user clicks "+ <Pack>" in

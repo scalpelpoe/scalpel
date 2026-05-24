@@ -1,5 +1,4 @@
 import type { PriceInfo } from '../../../../shared/types'
-import { formatPrice } from './constants'
 import { getCurrencyIcons } from '../../shared/icons'
 import { getGameFeatures } from '../../../../shared/game-features'
 import { usePoeVersion } from '../../shared/poe-version-context'

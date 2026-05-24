@@ -1,32 +1,7 @@
 import { clipboard, screen } from 'electron'
-import Store from 'electron-store'
 import { OverlayController } from 'electron-overlay-window'
-import { getCurrentFilter } from './filter-state'
-import { readItemFromClipboard } from './trade/clipboard'
-import { getCurrentZone } from './client-log'
+import type Store from 'electron-store'
 import { isTownOrHideout } from '../shared/is-town-or-hideout'
-import {
-  findMatchingBlocks,
-  findStackSizeBreakpoints,
-  findQualityBreakpoints,
-  findStrandBreakpoints,
-  evaluateBlock,
-} from './filter/matcher'
-import { focusGameWindow, getOverlayWindow, isTypingInOverlay, showOverlay } from './overlay'
-import { getPoeVersion } from './game-state'
-import { sendCtrlCToPoE } from './hotkeys'
-import { snapshotClipboard } from './clipboard-preserve'
-import {
-  refreshPrices,
-  lookupPrice,
-  lookupPriceForItem,
-  lookupBestUniquePrice,
-  lookupUniquePriceForBase,
-  getUniquesByBase,
-} from './trade/prices'
-import { ensureStatsLoaded, matchItemMods } from './trade/trade'
-import { detectFocusedPoeVersion } from './game-detector'
-import { requestGameSwitch } from './game-switch'
 import type {
   AppSettings,
   FilterFile,
@@ -36,6 +11,31 @@ import type {
   TierGroup,
   TierSibling,
 } from '../shared/types'
+import { getCurrentZone } from './client-log'
+import { snapshotClipboard } from './clipboard-preserve'
+import {
+  evaluateBlock,
+  findMatchingBlocks,
+  findQualityBreakpoints,
+  findStackSizeBreakpoints,
+  findStrandBreakpoints,
+} from './filter/matcher'
+import { getCurrentFilter } from './filter-state'
+import { detectFocusedPoeVersion } from './game-detector'
+import { getPoeVersion } from './game-state'
+import { requestGameSwitch } from './game-switch'
+import { sendCtrlCToPoE } from './hotkeys'
+import { focusGameWindow, getOverlayWindow, isTypingInOverlay, showOverlay } from './overlay'
+import { readItemFromClipboard } from './trade/clipboard'
+import {
+  getUniquesByBase,
+  lookupBestUniquePrice,
+  lookupPrice,
+  lookupPriceForItem,
+  lookupUniquePriceForBase,
+  refreshPrices,
+} from './trade/prices'
+import { ensureStatsLoaded, matchItemMods } from './trade/trade'
 
 // ---- Tier group builder ----------------------------------------------------
 
@@ -221,7 +221,7 @@ export async function preloadPriceCheck(item: PoeItem, store: Store<AppSettings>
     let names = uniquesByBase[item.baseType] ?? []
     // Unique maps all share "Map" base type
     if (item.itemClass === 'Maps' && names.length === 0) {
-      names = uniquesByBase['Map'] ?? []
+      names = uniquesByBase.Map ?? []
     }
     const isStandard = league.toLowerCase() === 'standard'
     for (const name of names) {

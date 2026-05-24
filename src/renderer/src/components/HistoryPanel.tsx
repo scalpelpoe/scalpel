@@ -11,6 +11,7 @@ const ACTION_FALLBACK_ICONS: Record<HistoryEntry['action'], string> = {
   'block-edit': '✏',
   'tier-move': '↕',
   'stack-threshold': '📊',
+  'strand-threshold': '📊',
 }
 
 export function HistoryPanel({ item }: Props): JSX.Element {

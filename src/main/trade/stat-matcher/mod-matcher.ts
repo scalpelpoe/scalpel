@@ -1,7 +1,7 @@
+import { STAT_ID_REMAPS } from '../stat-exceptions'
+import { NUMERIC_CAPTURE, statTextToPattern, statTextToRelaxedPattern } from './pattern'
 import type { StatEntry } from './stats-cache'
 import { getStatEntries } from './stats-cache'
-import { STAT_ID_REMAPS } from '../stat-exceptions'
-import { statTextToPattern, NUMERIC_CAPTURE, statTextToRelaxedPattern } from './pattern'
 import { generateTextVariants } from './text-variants'
 
 /** Direct text-to-stat mappings for mods where clipboard text is completely different
@@ -54,7 +54,7 @@ function _matchModToStat(
   preferIndexableSupport = false,
 ): { statId: string; value: number | null; option?: number } | null {
   const statEntries: StatEntry[] = getStatEntries()
-  const typePrefix = modType + '.'
+  const typePrefix = `${modType}.`
   const textVariants = generateTextVariants(modText)
   const isNegativeMod = /-\d/.test(modText)
   const isReducedMod = /\breduced\b/i.test(modText)

@@ -99,8 +99,8 @@ export const FlaskGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functi
   const [selectedSuffix, setSelectedSuffix] = useState<Set<string>>(() => loadSet<string>(key('flask-suffix')))
   const [ilevel, setIlevel] = useState<number | null>(() =>
     loadStorage(key('flask-ilevel'), 85, (s) => {
-      const n = parseInt(s)
-      return isNaN(n) ? 85 : n
+      const n = parseInt(s, 10)
+      return Number.isNaN(n) ? 85 : n
     }),
   )
   const [flaskHighestOnly, setFlaskHighestOnly] = useState(() =>

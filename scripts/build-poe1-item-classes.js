@@ -17,8 +17,8 @@
  *   node scripts/build-poe1-item-classes.js
  */
 
-const fs = require('fs')
-const path = require('path')
+const fs = require('node:fs')
+const path = require('node:path')
 
 const SRC_URL = 'https://repoe-fork.github.io/base_items.json'
 const CACHE = path.join(__dirname, 'local', 'poe1-base-items.json')
@@ -128,12 +128,18 @@ function pickDominantSize(sizeCounts) {
     const basesAdded = newBases.filter((b) => !oldBases.includes(b))
     const basesRemoved = oldBases.filter((b) => !newBases.includes(b))
     if (sizeChanged) updates.push(`  ${cls}: size ${oldSize ? oldSize.join('x') : 'NEW'} -> ${newSize.join('x')}`)
-    if (basesAdded.length) updates.push(`  ${cls}: +${basesAdded.length} bases (${basesAdded.slice(0, 3).join(', ')}${basesAdded.length > 3 ? ', ...' : ''})`)
-    if (basesRemoved.length) updates.push(`  ${cls}: -${basesRemoved.length} bases (${basesRemoved.slice(0, 3).join(', ')}${basesRemoved.length > 3 ? ', ...' : ''})`)
+    if (basesAdded.length)
+      updates.push(
+        `  ${cls}: +${basesAdded.length} bases (${basesAdded.slice(0, 3).join(', ')}${basesAdded.length > 3 ? ', ...' : ''})`,
+      )
+    if (basesRemoved.length)
+      updates.push(
+        `  ${cls}: -${basesRemoved.length} bases (${basesRemoved.slice(0, 3).join(', ')}${basesRemoved.length > 3 ? ', ...' : ''})`,
+      )
     out[cls] = { bases: newBases, size: newSize }
   }
 
-  fs.writeFileSync(OUT, JSON.stringify(out, null, 2) + '\n')
+  fs.writeFileSync(OUT, `${JSON.stringify(out, null, 2)}\n`)
 
   console.log(`wrote ${OUT}`)
   if (updates.length === 0) console.log('  (no changes)')

@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { mkdtempSync, rmSync, existsSync, readdirSync, writeFileSync } from 'fs'
-import { tmpdir } from 'os'
-import { join } from 'path'
+import { existsSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // whiteboard.ts registers an ipcMain listener at module scope after Task 20,
 // so the mock must be installed before the module is imported.
@@ -11,8 +11,8 @@ vi.mock('electron', () => ({
   screen: { getPrimaryDisplay: vi.fn(() => ({ workArea: { x: 0, y: 0, width: 1920, height: 1080 } })) },
 }))
 
-import { loadLibrary, saveLibrary, __setUserDataDirForTests } from './whiteboard'
 import { emptyBoardLibrary } from '../shared/whiteboard-types'
+import { __setUserDataDirForTests, loadLibrary, saveLibrary } from './whiteboard'
 
 let tmp: string
 

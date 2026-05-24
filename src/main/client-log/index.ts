@@ -2,7 +2,7 @@ import type { BrowserWindow } from 'electron'
 import { parseClientLogLine } from './parse-client-log'
 import { resolveClientLogPath } from './path-resolver'
 import { startWatcher } from './watcher'
-import { ingestZoneEvent, onZoneChanged, getCurrentZone } from './zone-state'
+import { getCurrentZone, ingestZoneEvent, onZoneChanged } from './zone-state'
 
 let started = false
 

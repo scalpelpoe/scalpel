@@ -1,12 +1,12 @@
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { basename, dirname, join } from 'node:path'
 import { BrowserWindow, dialog, ipcMain } from 'electron'
-import { existsSync, readdirSync, readFileSync } from 'fs'
-import { join, basename, dirname } from 'path'
-import Store from 'electron-store'
-import { setCloseOnClickOutside, showOverlay } from '../overlay'
+import type Store from 'electron-store'
+import type { AppSettings, FilterListEntry } from '../../shared/types'
 import { getAppWindow } from '../app-window'
 import { updateOnlineSyncDir } from '../online-sync'
+import { setCloseOnClickOutside, showOverlay } from '../overlay'
 import { applySetting } from '../settings-write'
-import type { AppSettings, FilterListEntry } from '../../shared/types'
 
 export function register(store: Store<AppSettings>): void {
   const defaultFilterFolderForActiveGame = (): string => {
@@ -107,7 +107,7 @@ export function register(store: Store<AppSettings>): void {
           const fullPath = join(onlinePath, f)
           // Skip directories and .filter files (those are local filters)
           try {
-            const stat = require('fs').statSync(fullPath)
+            const stat = statSync(fullPath)
             if (stat.isDirectory()) continue
           } catch {
             continue
