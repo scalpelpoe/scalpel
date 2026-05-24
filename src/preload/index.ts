@@ -152,8 +152,8 @@ export const api = {
   showBugReport: (reportPath: string): Promise<void> => ipcRenderer.invoke('diagnostics:show-report', reportPath),
   onDevDiagnosticError: (cb: (payload: RendererDiagnosticPayload) => void): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, payload: RendererDiagnosticPayload): void => cb(payload)
-    ipcRenderer.on('dev-diagnostic-error', handler)
-    return () => ipcRenderer.removeListener('dev-diagnostic-error', handler)
+    ipcRenderer.on('diagnostics:dev-error', handler)
+    return () => ipcRenderer.removeListener('diagnostics:dev-error', handler)
   },
 
   // Overlay control

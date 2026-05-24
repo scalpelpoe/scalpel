@@ -27,7 +27,6 @@ export interface RendererDiagnosticPayload {
 export interface BugReportResult {
   reportPath: string
   githubIssueUrl: string
-  discordUrl: string
 }
 
 export function serializeDiagnosticError(input: unknown): SerializedDiagnosticError {

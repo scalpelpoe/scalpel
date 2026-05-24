@@ -11,7 +11,7 @@ interface Props {
 export function GeneralTab({ settings, update }: Props): JSX.Element {
   const [reportMessage, setReportMessage] = useState<string | null>(null)
   const [reporting, setReporting] = useState(false)
-  const [crashPlane, setCrashPlane] = useState(false)
+  const [simulateCrash, setSimulateCrash] = useState(false)
   const features = getGameFeatures(settings.poeVersion)
   const cachedLeagues = settings.poeVersion === 2 ? settings.leaguesPoe2 : settings.leaguesPoe1
   const leagueOptions: readonly string[] = cachedLeagues && cachedLeagues.length > 0 ? cachedLeagues : features.leagues
@@ -29,7 +29,7 @@ export function GeneralTab({ settings, update }: Props): JSX.Element {
     }
   }
 
-  if (crashPlane) {
+  if (simulateCrash) {
     throw new Error('Simulated fatal renderer crash from Dev Only Stuff')
   }
 
@@ -206,11 +206,11 @@ export function GeneralTab({ settings, update }: Props): JSX.Element {
               Simulate a small error
             </button>
             <button
-              onClick={() => setCrashPlane(true)}
+              onClick={() => setSimulateCrash(true)}
               className="text-[11px] px-3 py-1.5 text-text-dim"
               title="Throw during render so the diagnostics error boundary catches it"
             >
-              Crashing this plane with no survivors
+              Simulate a fatal crash
             </button>
           </div>
         </section>

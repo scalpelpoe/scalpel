@@ -1,15 +1,18 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { release } from 'node:os'
 import { join } from 'node:path'
 import { app, type BrowserWindow, ipcMain, shell } from 'electron'
 import type Store from 'electron-store'
 import type { BugReportResult, RendererDiagnosticPayload, SerializedDiagnosticError } from '../shared/diagnostics'
 import { serializeDiagnosticError } from '../shared/diagnostics'
+import { DISCORD_INVITE_URL, GITHUB_NEW_ISSUE_URL } from '../shared/endpoints'
 import type { AppSettings } from '../shared/types'
 
-const DISCORD_URL = 'https://discord.com/invite/nUNcrmEAP5'
-const GITHUB_ISSUE_URL = 'https://github.com/scalpelpoe/scalpel/issues/new'
+// Tail of the log embedded in a generated bug report.
 const MAX_LOG_BYTES = 256 * 1024
+// Hard cap for scalpel.log on disk. Past this it's trimmed back to its most
+// recent half so the file never grows without bound.
+const MAX_LOG_FILE_BYTES = 4 * 1024 * 1024
 const EARLY_LOGS: string[] = []
 
 let initialized = false
@@ -18,7 +21,7 @@ let getAppWindowRef: (() => BrowserWindow | null) | null = null
 let showAppWindowRef: (() => void) | null = null
 
 function isDevRuntime(): boolean {
-  return process.env.NODE_ENV === 'development' || Boolean(process.env.ELECTRON_RENDERER_URL)
+  return !app.isPackaged
 }
 
 function diagnosticsDir(): string | null {
@@ -76,6 +79,25 @@ function appendDiagnosticLine(line: string): void {
     appendFileSync(path, `${EARLY_LOGS.splice(0).join('\n')}\n`, 'utf-8')
   }
   appendFileSync(path, `${sanitized}\n`, 'utf-8')
+  trimLogToTail(path)
+}
+
+// Keep scalpel.log bounded: once it exceeds maxBytes, rewrite it with only its
+// most recent half, starting at a line boundary so no partial line survives.
+// Trimming to the half (rather than exactly maxBytes) means it only rewrites
+// once per half-cap of growth instead of on every subsequent append.
+function trimLogToTail(path: string, maxBytes = MAX_LOG_FILE_BYTES): void {
+  let size: number
+  try {
+    size = statSync(path).size
+  } catch {
+    return
+  }
+  if (size <= maxBytes) return
+  const raw = readFileSync(path)
+  const tail = raw.subarray(raw.length - Math.floor(maxBytes / 2))
+  const newlineIndex = tail.indexOf(0x0a)
+  writeFileSync(path, newlineIndex >= 0 ? tail.subarray(newlineIndex + 1) : tail)
 }
 
 export function recordMainDiagnostic(kind: string, error: unknown): void {
@@ -94,7 +116,7 @@ function recordRendererDiagnostic(payload: RendererDiagnosticPayload): void {
     if (appWindow && !appWindow.isDestroyed()) {
       showAppWindowRef?.()
       appWindow.webContents.openDevTools({ mode: 'detach' })
-      appWindow.webContents.send('dev-diagnostic-error', payload)
+      appWindow.webContents.send('diagnostics:dev-error', payload)
     }
   }
 }
@@ -104,14 +126,6 @@ function recentLog(): string {
   if (!path || !existsSync(path)) return ''
   const raw = readFileSync(path)
   return raw.slice(Math.max(0, raw.length - MAX_LOG_BYTES)).toString('utf-8')
-}
-
-function packageVersion(): string {
-  try {
-    return String(require('../../package.json').version ?? 'unknown')
-  } catch {
-    return 'unknown'
-  }
 }
 
 function settingsSummary(): Record<string, unknown> {
@@ -144,9 +158,11 @@ function githubIssueUrl(reportPath: string): string {
       '',
       `Diagnostics report generated at: ${redact(reportPath)}`,
       'Please attach the generated report file.',
+      '',
+      `Join Aer0's & Fred's Discord to help Scalpel Development and/or help debug this issue: ${DISCORD_INVITE_URL}`,
     ].join('\n'),
   )
-  return `${GITHUB_ISSUE_URL}?title=${title}&body=${body}`
+  return `${GITHUB_NEW_ISSUE_URL}?title=${title}&body=${body}`
 }
 
 function createBugReport(): BugReportResult {
@@ -158,7 +174,7 @@ function createBugReport(): BugReportResult {
     [
       'Scalpel diagnostics report',
       `Created: ${createdAt}`,
-      `Version: ${packageVersion()}`,
+      `Version: ${app.getVersion()}`,
       `Electron: ${process.versions.electron}`,
       `Chrome: ${process.versions.chrome}`,
       `Node: ${process.versions.node}`,
@@ -177,14 +193,12 @@ function createBugReport(): BugReportResult {
   return {
     reportPath,
     githubIssueUrl: githubIssueUrl(reportPath),
-    discordUrl: DISCORD_URL,
   }
 }
 
 export async function createAndOpenBugReport(): Promise<BugReportResult> {
   const report = createBugReport()
   await shell.openExternal(report.githubIssueUrl)
-  await shell.openExternal(report.discordUrl)
   shell.showItemInFolder(report.reportPath)
   return report
 }
@@ -221,3 +235,9 @@ export function registerDiagnostics(deps: {
     shell.showItemInFolder(reportPath)
   })
 }
+
+/** Test-only: the redaction pass that scrubs report and log content. */
+export const _redactForTests = redact
+
+/** Test-only: trims a log file to its most recent tail when it exceeds maxBytes. */
+export const _trimLogToTailForTests = trimLogToTail
