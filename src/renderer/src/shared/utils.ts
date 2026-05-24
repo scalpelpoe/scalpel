@@ -12,3 +12,10 @@ export function formatDust(value: number): string {
   if (value >= 1_000) return `${Math.round(value / 1_000)}k`
   return String(value)
 }
+
+/** Alternating ("zebra") row background: even rows get a faint tint, odd rows
+ *  are transparent. Default even tint is the common rgba(255,255,255,0.02); pass
+ *  evenBg for rows that use a different tint (e.g. 0.03). */
+export function zebraRowBg(index: number, evenBg = 'rgba(255,255,255,0.02)'): string {
+  return index % 2 === 0 ? evenBg : 'transparent'
+}

@@ -1,5 +1,5 @@
 import type { StatFilter } from '../../trade'
-import type { PseudoAccumulatorEntry } from '../pseudo'
+import { PSEUDO_WEIGHT_GROUPS, type PseudoAccumulatorEntry } from '../pseudo'
 
 // Add pseudo stats at the top of the list. Pack the rolled-up total into
 // the label the same way defense chips do ("Armour: 450") so the user can
@@ -29,6 +29,7 @@ export function emitPseudoFilters(
           max: null,
           enabled: true,
           type: 'pseudo',
+          weightFilters: [...(PSEUDO_WEIGHT_GROUPS[id] ?? [])],
         } satisfies StatFilter
       })
   )

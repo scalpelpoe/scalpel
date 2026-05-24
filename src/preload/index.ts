@@ -386,6 +386,7 @@ export const api = {
     }>
     queryId: string
     remainingIds: string[]
+    loginRequiredPseudoIds?: string[]
   }> => ipcRenderer.invoke('trade-search', item, statFilters, searchOptions),
   bulkExchange: (
     itemName: string,

@@ -17,6 +17,13 @@ export type PseudoContribution = {
 
 export const PSEUDO_CONTRIBUTIONS: Record<string, PseudoContribution[]> = {}
 
+// Inverted view of PSEUDO_CONTRIBUTIONS used by the PoE2 Weighted Sum path:
+// pseudoId -> the full universe of contributing real stat ids (deduped). The
+// trade2 weight group sums these at the implicit default weight of 1, so only the
+// ids matter here; the per-stat multiplier stays in PSEUDO_CONTRIBUTIONS for the
+// accumulator total. Built in buildPseudoMap(), cleared by _resetPseudoMap().
+export const PSEUDO_WEIGHT_GROUPS: Record<string, Array<{ id: string }>> = {}
+
 function buildPseudoMap(): void {
   // Attribute -> resource conversions baked into PoE1: each Strength gives
   // 0.5 Life, each Intelligence gives 0.5 Mana. Hybrid attribute mods (Str+Int,
@@ -111,6 +118,11 @@ function buildPseudoMap(): void {
           multiplier: multiplier ?? 1,
           ...(opts ?? {}),
         })
+        if (!PSEUDO_WEIGHT_GROUPS[pseudoId]) PSEUDO_WEIGHT_GROUPS[pseudoId] = []
+        // First match wins if two patterns overlap for the same (entry.id, pseudoId).
+        if (!PSEUDO_WEIGHT_GROUPS[pseudoId].some((w) => w.id === entry.id)) {
+          PSEUDO_WEIGHT_GROUPS[pseudoId].push({ id: entry.id })
+        }
       }
     }
   }
@@ -163,4 +175,5 @@ export function ensurePseudoMapBuilt(): void {
  *  each test rebuilds from its own seeded entries. */
 export function _resetPseudoMap(): void {
   for (const k of Object.keys(PSEUDO_CONTRIBUTIONS)) delete PSEUDO_CONTRIBUTIONS[k]
+  for (const k of Object.keys(PSEUDO_WEIGHT_GROUPS)) delete PSEUDO_WEIGHT_GROUPS[k]
 }

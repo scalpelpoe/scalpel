@@ -2,6 +2,7 @@ import { Down, Right } from '@icon-park/react'
 import { InfoChip } from '../../shared/InfoChip'
 import { formatModText, RegexCheckbox } from './mapmods-helpers'
 import { ScrubInput } from './ScrubInput'
+import { zebraRowBg } from '../../shared/utils'
 
 export interface ModListMod {
   id: string | number
@@ -91,7 +92,7 @@ export function ModList({
                     onClick={() => toggle(m.id)}
                     className="flex items-center gap-2 px-3 py-[4px] cursor-pointer select-none transition-colors"
                     style={{
-                      background: isSelected ? selectedTint : mi % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+                      background: isSelected ? selectedTint : zebraRowBg(mi),
                     }}
                   >
                     <RegexCheckbox checked={isSelected} color={tabColor} />

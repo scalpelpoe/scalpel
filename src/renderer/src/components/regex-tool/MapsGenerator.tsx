@@ -28,9 +28,11 @@ import { ModList } from './ModList'
 import { ScrubInput } from './ScrubInput'
 import { generatePresetTags } from './preset-tags'
 import { InfoChip } from '../../shared/InfoChip'
+import { useAuth } from '../../shared/use-auth'
 import type { Listing } from '../price-check/types'
 import type { RegexPreset } from '../../../../shared/types'
 import type { GeneratorHandle, GeneratorProps } from './generator-types'
+import { zebraRowBg } from '../../shared/utils'
 
 const DANGER_ORDER: Danger[] = ['lethal', 'dangerous', 'annoying', 'mild', 'harmless', 'beneficial']
 
@@ -120,7 +122,7 @@ export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functio
   }, [tradeQueryId, tradeRemainingIds.length, loadingMore])
   const [expandedListing, setExpandedListing] = useState<string | null>(null)
   const [actionStatus, setActionStatus] = useState<Record<string, 'pending' | 'success' | 'failed'>>({})
-  const [loggedIn, setLoggedIn] = useState(false)
+  const { loggedIn } = useAuth()
   const [rateLimitTiers, setRateLimitTiers] = useState<
     Array<{ used: number; max: number; window: number; penalty: number }>
   >([])
@@ -128,7 +130,6 @@ export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functio
   const [tradeCorrupted8mod, setTradeCorrupted8mod] = useState(false)
 
   useEffect(() => {
-    window.api.poeCheckAuth().then((r) => setLoggedIn(r.loggedIn))
     const unsub = window.api.onRateLimit((state) => setRateLimitTiers(state.tiers))
     return unsub
   }, [])
@@ -708,11 +709,7 @@ function MapsGeneratorBody({
                       className="flex items-center gap-2 px-3 py-[6px]"
                       style={{
                         background:
-                          qualifiers[q.id] != null && qualifiers[q.id]! > 0
-                            ? 'rgba(129,199,132,0.08)'
-                            : qi % 2 === 0
-                              ? 'rgba(255,255,255,0.02)'
-                              : 'transparent',
+                          qualifiers[q.id] != null && qualifiers[q.id]! > 0 ? 'rgba(129,199,132,0.08)' : zebraRowBg(qi),
                       }}
                     >
                       <span

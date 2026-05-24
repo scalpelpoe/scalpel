@@ -9,23 +9,26 @@ interface DismissibleTipProps {
    * Multiple instances sharing the same id all dismiss together when any one is dismissed. */
   id: string
   children: React.ReactNode
+  /** When false, the tip has no close button and ignores any persisted dismissal --
+   * it always shows. Defaults to true. */
+  dismissible?: boolean
 }
 
-export function DismissibleTip({ id, children }: DismissibleTipProps): JSX.Element | null {
+export function DismissibleTip({ id, children, dismissible = true }: DismissibleTipProps): JSX.Element | null {
   const key = `${TIP_KEY_PREFIX}${id}.dismissed`
-  const [dismissed, setDismissed] = useState(() => localStorage.getItem(key) === '1')
+  const [dismissed, setDismissed] = useState(() => dismissible && localStorage.getItem(key) === '1')
 
   // Sync sibling instances with the same id: when one dismisses, the others hide too
   // without needing a remount. Per-instance useState would otherwise keep them visible
   // until reload.
   useEffect(() => {
-    if (dismissed) return
+    if (!dismissible || dismissed) return
     const handler = (e: Event): void => {
       if ((e as CustomEvent<string>).detail === id) setDismissed(true)
     }
     window.addEventListener(DISMISS_EVENT, handler)
     return () => window.removeEventListener(DISMISS_EVENT, handler)
-  }, [id, dismissed])
+  }, [id, dismissed, dismissible])
 
   if (dismissed) return null
   return (
@@ -44,17 +47,19 @@ export function DismissibleTip({ id, children }: DismissibleTipProps): JSX.Eleme
         i
       </span>
       <span className="flex-1">{children}</span>
-      <CloseSmall
-        size={12}
-        theme="outline"
-        fill="currentColor"
-        className="cursor-pointer opacity-60 hover:opacity-100 shrink-0"
-        onClick={() => {
-          localStorage.setItem(key, '1')
-          setDismissed(true)
-          window.dispatchEvent(new CustomEvent(DISMISS_EVENT, { detail: id }))
-        }}
-      />
+      {dismissible && (
+        <CloseSmall
+          size={12}
+          theme="outline"
+          fill="currentColor"
+          className="cursor-pointer opacity-60 hover:opacity-100 shrink-0"
+          onClick={() => {
+            localStorage.setItem(key, '1')
+            setDismissed(true)
+            window.dispatchEvent(new CustomEvent(DISMISS_EVENT, { detail: id }))
+          }}
+        />
+      )}
     </div>
   )
 }

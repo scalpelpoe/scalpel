@@ -5,6 +5,7 @@ import type { AppSettings, AuthResult } from '../../shared/types'
 import { getPoeVersion } from '../game-state'
 import type { BulkExchangeResult, StatFilter, TradeResult } from '../trade/trade'
 import {
+  searchNeedsLogin,
   fetchMoreListings,
   getBulkExchangeId,
   isBulkExchangeItem,
@@ -181,6 +182,37 @@ function fetchPoeProfile(): Promise<AuthResult> {
   })
 }
 
+// Session-cached login state for gating weighted-sum searches. Refreshed lazily
+// (only when a search actually needs it) and cleared on login/logout so a fresh
+// login takes effect immediately; the TTL re-validates against server-side
+// session expiry without a network call on every search.
+let authCache: { loggedIn: boolean; at: number } | null = null
+const AUTH_CACHE_TTL_MS = 5 * 60 * 1000
+
+function setAuthCache(loggedIn: boolean): void {
+  authCache = { loggedIn, at: Date.now() }
+}
+
+// Fresh login check (uncached): no POESESSID cookie means logged out; otherwise
+// the profile endpoint decides. Shared by the cached gate and the poe-check-auth
+// IPC so the cookie + profile sequence lives in one place.
+async function checkAuthFresh(): Promise<AuthResult> {
+  try {
+    const cookies = await session.defaultSession.cookies.get({ domain: 'pathofexile.com', name: 'POESESSID' })
+    if (cookies.length === 0) return { loggedIn: false }
+    return await fetchPoeProfile()
+  } catch {
+    return { loggedIn: false }
+  }
+}
+
+async function isLoggedInCached(): Promise<boolean> {
+  if (authCache && Date.now() - authCache.at < AUTH_CACHE_TTL_MS) return authCache.loggedIn
+  const { loggedIn } = await checkAuthFresh()
+  setAuthCache(loggedIn)
+  return loggedIn
+}
+
 export function register(store: Store<AppSettings>): void {
   ipcMain.handle(
     'trade-search',
@@ -207,7 +239,16 @@ export function register(store: Store<AppSettings>): void {
       const status = searchOptions?.statusOption ?? store.get('tradeStatus') ?? 'available'
       const price = searchOptions?.priceOption ?? store.get('tradePriceOption') ?? 'chaos_divine'
       const collapse = store.get('tradeCollapseListings') ?? true
-      return searchTrade(league, item, statFilters, status, price, searchOptions?.listedTime, collapse)
+      // Only spend a login check when the search would carry a Weighted Sum group
+      // (the trade API rejects those for anonymous users). Most searches skip it.
+      const loggedIn = searchNeedsLogin(statFilters) ? await isLoggedInCached() : true
+      return searchTrade(league, item, statFilters, {
+        tradeStatus: status,
+        tradePriceOption: price,
+        listedTime: searchOptions?.listedTime,
+        collapseListings: collapse,
+        loggedIn,
+      })
     },
   )
 
@@ -266,23 +307,25 @@ export function register(store: Store<AppSettings>): void {
         }
       })
 
-      // Resolve after the window closes (user logged in or closed without logging in)
-      loginWindow.on('closed', () => resolve())
+      // Resolve after the window closes (user logged in or closed without logging
+      // in). Drop the cached login state so the next weighted search re-checks.
+      loginWindow.on('closed', () => {
+        authCache = null
+        resolve()
+      })
     })
   })
 
   ipcMain.handle('poe-check-auth', async (): Promise<AuthResult> => {
-    try {
-      const cookies = await session.defaultSession.cookies.get({ domain: 'pathofexile.com', name: 'POESESSID' })
-      if (cookies.length === 0) return { loggedIn: false }
-      return await fetchPoeProfile()
-    } catch {
-      return { loggedIn: false }
-    }
+    // Warm the weighted-search login cache from the renderer's own auth check.
+    const result = await checkAuthFresh()
+    setAuthCache(result.loggedIn)
+    return result
   })
 
   ipcMain.handle('poe-logout', async () => {
     await session.defaultSession.cookies.remove(POE_WEBSITE, 'POESESSID')
+    setAuthCache(false)
   })
 
   ipcMain.handle('open-external', (_event, url: string) => {

@@ -4,6 +4,7 @@ import { ScrubInput } from '../regex-tool/ScrubInput'
 import { divCardArtMap, RARITY_COLORS } from '../../shared/constants'
 import { getModColor, MOD_BOLD_TYPES, uniqueToBase } from './constants'
 import type { StatFilter } from './types'
+import { zebraRowBg } from '../../shared/utils'
 
 /** Tint static-box text by the value's item type. Used by Ultimatum chips
  *  whose value is a literal item name - unique flasks for Sacrifice, unique
@@ -117,7 +118,7 @@ export function StatFilterRow({
       className="flex items-center gap-2 px-3 py-[2px] text-xs"
       style={{
         opacity: f.enabled ? 1 : 0.4,
-        background: rowIdx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
+        background: zebraRowBg(rowIdx),
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}

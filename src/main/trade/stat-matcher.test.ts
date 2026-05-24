@@ -1247,6 +1247,21 @@ describe('matchItemMods', () => {
     })
   })
 
+  describe('pseudo weightFilters attachment', () => {
+    it('attaches the contributing real stat ids to the pseudo chip', () => {
+      _setStatEntriesForTests([{ id: 'explicit.stat_fire', text: '+#% to Fire Resistance', type: 'explicit' }])
+      const filters = matchItemMods(
+        ['+40% to Fire Resistance'],
+        [],
+        undefined,
+        makeItemInfo({ rarity: 'Rare', itemClass: 'Body Armours' }),
+      )
+      const ele = filters.find((f) => f.id === 'pseudo.pseudo_total_elemental_resistance')
+      expect(ele).toBeDefined()
+      expect(ele!.weightFilters).toContainEqual({ id: 'explicit.stat_fire' })
+    })
+  })
+
   describe('exposure implicit excluded from resistance pseudo', () => {
     // Eldritch (Eater of Worlds) "Inflict <Ele> Exposure on Hit, applying
     // -#% to <Ele> Resistance" is an enemy debuff. Its text contains
