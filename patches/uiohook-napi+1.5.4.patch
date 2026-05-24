@@ -1,8 +1,8 @@
 diff --git a/node_modules/uiohook-napi/libuiohook/src/x11/input_helper.c b/node_modules/uiohook-napi/libuiohook/src/x11/input_helper.c
-index 0fb0bc0..e646d8c 100644
+index 0fb0bc0..9ab4af3 100644
 --- a/node_modules/uiohook-napi/libuiohook/src/x11/input_helper.c
 +++ b/node_modules/uiohook-napi/libuiohook/src/x11/input_helper.c
-@@ -1800,30 +1800,43 @@ void load_input_helper() {
+@@ -1800,30 +1800,46 @@ void load_input_helper() {
       * it under the terms of the GNU Lesser General Public License version 2 as
       * published by the Free Software Foundation.
       */
@@ -26,7 +26,10 @@ index 0fb0bc0..e646d8c 100644
 +
 +            const char *prefix_xfree86 = "xfree86_";
 +            #ifdef USE_EVDEV
-+            const char *prefix_evdev = "evdev_";
++            // Match "evdev" not "evdev_": the real keycodes atom on modern
++            // X.Org / XWayland is "evdev+aliases(qwerty)", which the stock
++            // "evdev_" prefix misses, leaving is_evdev false and keycodes wrong.
++            const char *prefix_evdev = "evdev";
 +            if (strncmp(layout_name, prefix_evdev, strlen(prefix_evdev)) == 0) {
 +                is_evdev = true;
 +            } else
