@@ -22,8 +22,9 @@ if (process.platform === 'linux') {
 // patches/uiohook-napi+1.5.4.patch) BEFORE electron-rebuild compiles them.
 // shell: true resolves the .bin shim cross-platform, same as electron-rebuild.
 const patch = spawnSync('patch-package', { stdio: 'inherit', shell: true, env })
-if ((patch.status ?? 1) !== 0) {
-  process.exit(patch.status ?? 1)
+const patchStatus = patch.status ?? 1
+if (patchStatus !== 0) {
+  process.exit(patchStatus)
 }
 
 // shell: true lets Windows resolve node_modules/.bin/electron-rebuild.cmd
