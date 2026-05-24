@@ -85,6 +85,28 @@ import {
 import { initAppMacrosRefresh, withPluginHotkeys } from './app-macros'
 import type { AppSettings, CheatSheetsSettings, RegexPreset } from '../shared/types'
 
+// ---- Linux display-server setup --------------------------------------------
+
+// Electron defaults to the Wayland Ozone backend on Wayland sessions, but
+// Scalpel's overlay attach (electron-overlay-window) and global input hook
+// (uiohook-napi) are X11-only. Relaunch under XWayland so they work at all,
+// mirroring awakened-poe-trade. Skip when a platform was already forced.
+if (
+  process.platform === 'linux' &&
+  process.env.WAYLAND_DISPLAY &&
+  !process.argv.some((a) => a.startsWith('--ozone-platform='))
+) {
+  app.relaunch({ args: [...process.argv.slice(1), '--ozone-platform=x11'] })
+  app.exit(0)
+}
+
+// Compositor GPU acceleration breaks the transparent click-through overlay on
+// Linux (renders black instead of transparent). Disable it there only --
+// Windows keeps hardware acceleration untouched.
+if (process.platform === 'linux') {
+  app.disableHardwareAcceleration()
+}
+
 // ---- Elevation detection ---------------------------------------------------
 
 function isElevated(): boolean {
