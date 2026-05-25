@@ -136,6 +136,8 @@ export function ProfileManagerTab({
           </DismissibleTip>
         )}
 
+        {error && !draft && <p className="text-[11px] text-red-300 m-0">{error}</p>}
+
         {draft && (
           <section className="rounded border border-border bg-black/20 px-3 py-3 flex flex-col gap-3">
             <label className="text-[11px] text-text-dim">
