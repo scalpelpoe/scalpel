@@ -98,6 +98,11 @@ export function PriceCheck({
   const [filters, setFilters] = useState<StatFilter[]>(initialFilters)
   const filtersRef = useRef(filters)
   const sessionIdRef = useRef(sessionId)
+  // Set true once the mount effect has applied base mode + learned defaults. The capture
+  // below must not fire before this: React StrictMode (dev) simulates an unmount before the
+  // async default-setup runs, and a fast overlay close can race it - either would record the
+  // raw matchItemMods state instead of the settled defaults, poisoning the learning data.
+  const defaultsApplied = useRef(false)
   useEffect(() => {
     filtersRef.current = filters
   }, [filters])
@@ -106,6 +111,7 @@ export function PriceCheck({
   }, [sessionId])
   useEffect(
     () => () => {
+      if (!defaultsApplied.current) return
       window.api.recordPrefObservation(
         sessionIdRef.current,
         filtersRef.current.map((f) => ({ id: f.id, type: f.type, enabled: f.enabled })),
@@ -218,6 +224,7 @@ export function PriceCheck({
         return applyLearnedDecisions(based, learnedDecisions)
       })
       baseModeApplied.current = true
+      defaultsApplied.current = true
     })
   }, [])
 
