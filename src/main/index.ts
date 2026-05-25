@@ -115,7 +115,14 @@ import {
 import { initAppMacrosRefresh, withPluginHotkeys } from './app-macros'
 import type { AppSettings, CheatSheetsSettings, GameVariant, RegexPreset } from '../shared/types'
 import { initProfileStore } from './profiles/store'
-import { hydrateActiveProfileSettings, writeActiveProfileSetting } from './profile-settings'
+import {
+  ACTIVE_PROFILE_ID_KEY,
+  LAST_PROFILE_ID_POE1_KEY,
+  LAST_PROFILE_ID_POE2_KEY,
+  PROFILE_VERSION_KEY,
+  hydrateActiveProfileSettings,
+  writeActiveProfileSetting,
+} from './profile-settings'
 
 // ---- Linux display-server setup --------------------------------------------
 
@@ -196,7 +203,9 @@ const store = new Store<AppSettings>({
     themeId: 'default',
     customThemePalette: null,
     pluginRegistryUrl: undefined,
-    activeProfileId: '',
+    [ACTIVE_PROFILE_ID_KEY]: '',
+    [LAST_PROFILE_ID_POE1_KEY]: '',
+    [LAST_PROFILE_ID_POE2_KEY]: '',
     onboardingCompleted: false,
   },
 })
@@ -214,7 +223,9 @@ if (store.get('adaptiveDefaultsMode') === undefined) store.set('adaptiveDefaults
 const profileStore = initProfileStore(app.getPath('userData'))
 
 // Backfill new profile/onboarding keys for existing users
-if (store.get('activeProfileId') === undefined) store.set('activeProfileId', '')
+if (store.get(ACTIVE_PROFILE_ID_KEY) === undefined) store.set(ACTIVE_PROFILE_ID_KEY, '')
+if (store.get(LAST_PROFILE_ID_POE1_KEY) === undefined) store.set(LAST_PROFILE_ID_POE1_KEY, '')
+if (store.get(LAST_PROFILE_ID_POE2_KEY) === undefined) store.set(LAST_PROFILE_ID_POE2_KEY, '')
 if (store.get('onboardingCompleted') === undefined) store.set('onboardingCompleted', false)
 
 // Auto-detect overlay scale on first run (deferred until app ready since screen API requires it)
@@ -259,13 +270,28 @@ if (!store.get('tradePriceOptionPoe1')) store.set('tradePriceOptionPoe1', store.
 // game in the profiles/ directory under userData. Determines whether onboarding
 // was already completed (any legacy filter path set). Sets activeProfileId to
 // match the current poeVersion. Runs once -- guarded by empty activeProfileId.
-if (!store.get('activeProfileId')) {
+if (!store.get(ACTIVE_PROFILE_ID_KEY)) {
   const profiles = profileStore.migrateFromLegacy(store)
-  const version = store.get('poeVersion')
+  const version = store.get(PROFILE_VERSION_KEY)
   const activeId = (version === 2 ? profiles[1] : profiles[0]).id
-  store.set('activeProfileId', activeId)
+  store.set(ACTIVE_PROFILE_ID_KEY, activeId)
+  store.set(LAST_PROFILE_ID_POE1_KEY, profiles[0].id)
+  store.set(LAST_PROFILE_ID_POE2_KEY, profiles[1].id)
   const hadFilter = (store.get('filterPathPoe1') ?? '') !== '' || (store.get('filterPathPoe2') ?? '') !== ''
   store.set('onboardingCompleted', hadFilter)
+}
+
+{
+  const profiles = profileStore.listProfiles()
+  const activeProfile = profileStore.getProfile(store.get(ACTIVE_PROFILE_ID_KEY))
+  if (!store.get(LAST_PROFILE_ID_POE1_KEY)) {
+    const fallback = activeProfile?.gameVariant === 1 ? activeProfile : profiles.find((p) => p.gameVariant === 1)
+    store.set(LAST_PROFILE_ID_POE1_KEY, fallback?.id ?? '')
+  }
+  if (!store.get(LAST_PROFILE_ID_POE2_KEY)) {
+    const fallback = activeProfile?.gameVariant === 2 ? activeProfile : profiles.find((p) => p.gameVariant === 2)
+    store.set(LAST_PROFILE_ID_POE2_KEY, fallback?.id ?? '')
+  }
 }
 
 // On every startup, hydrate flat + per-version mirror fields from the active
@@ -334,7 +360,7 @@ function createTray(): void {
   tray = new Tray(icon)
   tray.setToolTip('Scalpel')
 
-  const current = store.get('poeVersion') === 2 ? 2 : 1
+  const current = store.get(PROFILE_VERSION_KEY) === 2 ? 2 : 1
   const other: GameVariant = current === 1 ? 2 : 1
 
   const contextMenu = Menu.buildFromTemplate([
@@ -455,7 +481,7 @@ app.whenReady().then(() => {
   // Seed the overlay with the last-known game version so attachByTitle waits for
   // that window. The hotkey handler re-detects the focused PoE on every fire and
   // relaunches to swap versions if needed (ensureCorrectGameForHotkey).
-  if (!IS_E2E) createOverlayWindow((store.get('poeVersion') as GameVariant) ?? 1)
+  if (!IS_E2E) createOverlayWindow((store.get(PROFILE_VERSION_KEY) as GameVariant) ?? 1)
   // Let the secondary-overlay system know about the main overlay window so its
   // isAnyScalpelWindowFocused predicate can include it.
   setMainOverlayGetter(getOverlayWindow)
@@ -529,7 +555,7 @@ app.whenReady().then(() => {
     }
     if (action === 'useSavedRegex') {
       if (!tag) return
-      const key = store.get('poeVersion') === 2 ? 'regexPresetsPoe2' : 'regexPresetsPoe1'
+      const key = store.get(PROFILE_VERSION_KEY) === 2 ? 'regexPresetsPoe2' : 'regexPresetsPoe1'
       const presets = store.get(key) ?? []
       const preset = presets.find((p) => p.tags?.some((t) => t.text === tag && (!t.source || t.source === 'custom')))
       if (preset?.regex) pasteRegexToSearch(preset.regex)

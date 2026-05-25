@@ -23,6 +23,11 @@ const PROFILE_FIELD_BY_KEY = {
   cheatSheets: 'cheatSheets',
 } as const satisfies Record<ProfileBackedKey, keyof PoeProfile>
 
+export const ACTIVE_PROFILE_ID_KEY = 'activeProfileId' satisfies keyof AppSettings
+export const PROFILE_VERSION_KEY = 'poeVersion' satisfies keyof AppSettings
+export const LAST_PROFILE_ID_POE1_KEY = 'lastProfileIdPoe1' satisfies keyof AppSettings
+export const LAST_PROFILE_ID_POE2_KEY = 'lastProfileIdPoe2' satisfies keyof AppSettings
+
 const MIRROR_BY_KEY = {
   league: ['leaguePoe1', 'leaguePoe2'],
   filterPath: ['filterPathPoe1', 'filterPathPoe2'],
@@ -31,7 +36,6 @@ const MIRROR_BY_KEY = {
   cheatSheets: ['cheatSheetsPoe1', 'cheatSheetsPoe2'],
 } as const satisfies Record<ProfileBackedKey, readonly [keyof AppSettings, keyof AppSettings]>
 
-const profileVersionKey = 'poeVersion'
 function profileStore(): ProfileStore {
   return getProfileStore()
 }
@@ -52,6 +56,10 @@ function regexKey(variant: GameVariant): 'regexPresetsPoe1' | 'regexPresetsPoe2'
   return variant === 2 ? 'regexPresetsPoe2' : 'regexPresetsPoe1'
 }
 
+function lastProfileIdKey(variant: GameVariant): 'lastProfileIdPoe1' | 'lastProfileIdPoe2' {
+  return variant === 2 ? LAST_PROFILE_ID_POE2_KEY : LAST_PROFILE_ID_POE1_KEY
+}
+
 function rememberChange<K extends keyof AppSettings>(
   store: Store<AppSettings>,
   changed: ProfileChangedSetting[],
@@ -67,16 +75,17 @@ export function isProfileBackedKey(key: keyof AppSettings): key is ProfileBacked
   return PROFILE_BACKED_KEY_SET.has(key)
 }
 
-export function findProfileByGameVariant(variant: GameVariant): PoeProfile | null {
-  return findLastUsedProfileByGameVariant(variant)
+export function findProfileByGameVariant(store: Store<AppSettings>, variant: GameVariant): PoeProfile | null {
+  return findLastUsedProfileByGameVariant(store, variant)
 }
 
-export function findLastUsedProfileByGameVariant(variant: GameVariant): PoeProfile | null {
-  return (
+export function findLastUsedProfileByGameVariant(store: Store<AppSettings>, variant: GameVariant): PoeProfile | null {
+  const profiles =
     maybeProfileStore()
       ?.listProfiles()
-      .find((p) => p.gameVariant === variant) ?? null
-  )
+      .filter((p) => p.gameVariant === variant) ?? []
+  const lastId = store.get(lastProfileIdKey(variant))
+  return profiles.find((profile) => profile.id === lastId) ?? profiles[0] ?? null
 }
 
 export function listProfilesByGameVariant(variant: GameVariant): PoeProfile[] {
@@ -88,7 +97,7 @@ export function listProfilesByGameVariant(variant: GameVariant): PoeProfile[] {
 }
 
 export function listProfileSummaries(store: Store<AppSettings>): PoeProfileSummary[] {
-  const activeId = store.get('activeProfileId')
+  const activeId = store.get(ACTIVE_PROFILE_ID_KEY)
   return profileStore()
     .listProfiles()
     .map((profile) => ({
@@ -107,8 +116,9 @@ export function listProfileSummaries(store: Store<AppSettings>): PoeProfileSumma
 export function hydrateProfileSettings(store: Store<AppSettings>, profile: PoeProfile): ProfileChangedSetting[] {
   profileStore().touchProfile(profile.id)
   const changed: ProfileChangedSetting[] = []
-  rememberChange(store, changed, 'activeProfileId', profile.id)
-  rememberChange(store, changed, profileVersionKey, profile.gameVariant)
+  rememberChange(store, changed, ACTIVE_PROFILE_ID_KEY, profile.id)
+  rememberChange(store, changed, lastProfileIdKey(profile.gameVariant), profile.id)
+  rememberChange(store, changed, PROFILE_VERSION_KEY, profile.gameVariant)
   rememberChange(store, changed, 'league', profile.league)
   rememberChange(store, changed, 'filterPath', profile.filterPath)
   rememberChange(store, changed, 'filterDir', profile.filterDir)
@@ -130,7 +140,7 @@ export function hydrateProfileSettings(store: Store<AppSettings>, profile: PoePr
 }
 
 export function hydrateActiveProfileSettings(store: Store<AppSettings>): ProfileChangedSetting[] {
-  const id = store.get('activeProfileId')
+  const id = store.get(ACTIVE_PROFILE_ID_KEY)
   const profile = id ? profileStore().getProfile(id) : null
   return profile ? hydrateProfileSettings(store, profile) : []
 }
@@ -144,10 +154,10 @@ export function switchActiveProfileByGameVariant(
   store: Store<AppSettings>,
   variant: GameVariant,
 ): ProfileChangedSetting[] {
-  const profile = findLastUsedProfileByGameVariant(variant)
+  const profile = findLastUsedProfileByGameVariant(store, variant)
   if (!profile) {
     const changed: ProfileChangedSetting[] = []
-    rememberChange(store, changed, profileVersionKey, variant)
+    rememberChange(store, changed, PROFILE_VERSION_KEY, variant)
     return changed
   }
   return hydrateProfileSettings(store, profile)
@@ -167,9 +177,10 @@ export function renameProfile(id: string, name: string): PoeProfile | null {
 }
 
 export function deleteProfileAndChooseFallback(store: Store<AppSettings>, id: string): ProfileChangedSetting[] {
-  const activeId = store.get('activeProfileId')
+  const activeId = store.get(ACTIVE_PROFILE_ID_KEY)
   const deleting = profileStore().getProfile(id)
   profileStore().deleteProfile(id)
+  const changed: ProfileChangedSetting[] = []
 
   let remaining = profileStore().listProfiles()
   if (remaining.length === 0) {
@@ -180,11 +191,19 @@ export function deleteProfileAndChooseFallback(store: Store<AppSettings>, id: st
     remaining = [created]
   }
 
-  if (activeId !== id) return []
+  if (deleting && store.get(lastProfileIdKey(deleting.gameVariant)) === id) {
+    const fallbackLast = remaining.find((profile) => profile.gameVariant === deleting.gameVariant)
+    rememberChange(store, changed, lastProfileIdKey(deleting.gameVariant), fallbackLast?.id ?? '')
+  }
+
+  if (activeId !== id) return changed
 
   const fallback =
     (deleting ? remaining.find((profile) => profile.gameVariant === deleting.gameVariant) : null) ?? remaining[0]
-  return hydrateProfileSettings(store, fallback)
+  for (const change of hydrateProfileSettings(store, fallback)) {
+    if (!changed.some((existing) => existing.key === change.key)) changed.push(change)
+  }
+  return changed
 }
 
 export function writeActiveProfileSetting<K extends ProfileBackedKey>(
@@ -195,10 +214,10 @@ export function writeActiveProfileSetting<K extends ProfileBackedKey>(
   const changed: ProfileChangedSetting[] = []
   rememberChange(store, changed, key, value)
 
-  const variant = store.get(profileVersionKey) === 2 ? 2 : 1
+  const variant = store.get(PROFILE_VERSION_KEY) === 2 ? 2 : 1
   rememberChange(store, changed, mirrorKey(key, variant), value as AppSettings[keyof AppSettings])
 
-  const activeId = store.get('activeProfileId')
+  const activeId = store.get(ACTIVE_PROFILE_ID_KEY)
   const profile = activeId ? profileStore().getProfile(activeId) : null
   if (profile && profile.gameVariant === variant) {
     ;(profile as unknown as Record<string, unknown>)[PROFILE_FIELD_BY_KEY[key]] = value
@@ -218,14 +237,14 @@ export function writeLastUsedProfileSettingByGameVariant<K extends ProfileBacked
   const changed: ProfileChangedSetting[] = []
   rememberChange(store, changed, mirrorKey(key, variant), value as AppSettings[keyof AppSettings])
 
-  const profile = findLastUsedProfileByGameVariant(variant)
+  const profile = findLastUsedProfileByGameVariant(store, variant)
   if (profile) {
     ;(profile as unknown as Record<string, unknown>)[PROFILE_FIELD_BY_KEY[key]] = value
     profile.updatedAt = new Date().toISOString()
     profileStore().saveProfile(profile)
   }
 
-  if (store.get(profileVersionKey) === variant) {
+  if (store.get(PROFILE_VERSION_KEY) === variant) {
     rememberChange(store, changed, key, value)
   }
 
@@ -240,7 +259,7 @@ export function writeActiveRegexPresetsByGameVariant(
   const changed: ProfileChangedSetting[] = []
   rememberChange(store, changed, regexKey(variant), presets)
 
-  const activeId = store.get('activeProfileId')
+  const activeId = store.get(ACTIVE_PROFILE_ID_KEY)
   const profile = activeId ? profileStore().getProfile(activeId) : null
   if (profile && profile.gameVariant === variant) {
     profile.regexPresets = presets

@@ -60,11 +60,11 @@ export function ProfileManagerStep({
     }
     setError(null)
     try {
-      const profile =
-        draft.kind === 'create'
-          ? await window.api.createProfile({ name, gameVariant: draft.gameVariant })
-          : await window.api.duplicateProfile(draft.sourceId, name)
-      onSettingsChange(await window.api.setActiveProfile(profile.id))
+      if (draft.kind === 'create') {
+        await window.api.createProfile({ name, gameVariant: draft.gameVariant })
+      } else {
+        await window.api.duplicateProfile(draft.sourceId, name)
+      }
       setDraft(null)
       await reloadProfiles()
     } catch (err) {

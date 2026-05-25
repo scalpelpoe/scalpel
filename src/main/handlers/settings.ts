@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings, RegexPreset } from '../../shared/types'
+import type { AppSettings, GameVariant, RegexPreset } from '../../shared/types'
 import { getColorFrequencies } from '../filter-state'
 import { refreshPrices } from '../trade/prices'
 import { refreshLeagues } from '../trade/leagues'
@@ -12,11 +12,6 @@ import {
   renameProfile,
   writeActiveRegexPresetsByGameVariant,
 } from '../profile-settings'
-import type { AppSettings, GameVariant, RegexPreset } from '../../shared/types'
-import { applySetting, broadcastSettingUpdate } from '../settings-write'
-import { writeRegexPresetsByGameVariant } from '../profile-settings'
-import { refreshLeagues } from '../trade/leagues'
-import { refreshPrices } from '../trade/prices'
 
 export function register(store: Store<AppSettings>): void {
   ipcMain.handle('get-settings', () => store.store)

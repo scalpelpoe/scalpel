@@ -500,6 +500,9 @@ export interface AppSettings {
   adaptiveDefaultsMode: AdaptiveMode
   /** UUID of the active profile (loaded from profiles/ dir). */
   activeProfileId: string
+  /** Last explicitly activated profile for each game. Used when switching games. */
+  lastProfileIdPoe1: string
+  lastProfileIdPoe2: string
   /** True once the user clicks Finish in first-run profile management. */
   onboardingCompleted: boolean
   /** First-run/profile-management resume: current step key (saved on every step transition). */

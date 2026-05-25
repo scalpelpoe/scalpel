@@ -27,15 +27,13 @@ export function resolveClientLogPath(): string | null {
     )
     exePath = out.trim()
   } catch (err) {
-    // biome-ignore lint/suspicious/noConsole: gated behind SCALPEL_DEBUG_LOG
-    if (process.env.SCALPEL_DEBUG_LOG) console.log('[client-log] path resolver: PowerShell shellout failed', err)
+    if (process.env.SCALPEL_DEBUG_LOG) console.warn('[client-log] path resolver: PowerShell shellout failed', err)
     return null
   }
   if (!exePath) return null
   const candidate = join(dirname(exePath), 'logs', 'Client.txt')
   if (!existsSync(candidate)) {
-    // biome-ignore lint/suspicious/noConsole: gated behind SCALPEL_DEBUG_LOG
-    if (process.env.SCALPEL_DEBUG_LOG) console.log('[client-log] path resolver: not found at', candidate)
+    if (process.env.SCALPEL_DEBUG_LOG) console.warn('[client-log] path resolver: not found at', candidate)
     return null
   }
   return candidate

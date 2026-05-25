@@ -11,7 +11,7 @@ if (!SAMPLE_A || !SAMPLE_B) throw new Error('test requires >=2 non-default prese
 
 // Vitest environmentMatchGlobs may run this in Node; always stub DOM globals
 const store = new Map<string, string>()
-const storageStub = {
+const storageStub: Storage = {
   getItem: (k: string) => store.get(k) ?? null,
   setItem: (k: string, v: string) => {
     store.set(k, v)
@@ -27,11 +27,21 @@ const storageStub = {
   },
   key: (i: number) => [...store.keys()][i] ?? null,
 }
-if (typeof localStorage === 'undefined' || typeof (localStorage as any).clear !== 'function') {
-  ;(globalThis as any).localStorage = storageStub
+if (typeof localStorage === 'undefined' || typeof localStorage.clear !== 'function') {
+  Object.defineProperty(globalThis, 'localStorage', { value: storageStub, configurable: true })
 }
 if (typeof document === 'undefined') {
-  ;(globalThis as any).document = { documentElement: {} as any }
+  const style = new Map<string, string>()
+  const documentStub = {
+    documentElement: {
+      removeAttribute: () => style.clear(),
+      style: {
+        setProperty: (key: string, value: string) => style.set(key, value),
+        getPropertyValue: (key: string) => style.get(key) ?? '',
+      },
+    },
+  } as unknown as Document
+  Object.defineProperty(globalThis, 'document', { value: documentStub, configurable: true })
 }
 
 beforeEach(() => {

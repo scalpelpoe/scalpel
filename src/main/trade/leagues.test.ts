@@ -1,10 +1,10 @@
 import { mkdtempSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
-import { describe, it, expect } from 'vitest'
 import type Store from 'electron-store'
 import { describe, expect, it } from 'vitest'
 import type { AppSettings } from '../../shared/types'
+import { ACTIVE_PROFILE_ID_KEY, LAST_PROFILE_ID_POE1_KEY, PROFILE_VERSION_KEY } from '../profile-settings'
 import { initProfileStore } from '../profiles/store'
 import { migrateLeague, refreshLeagues } from './leagues'
 
@@ -240,8 +240,9 @@ describe('refreshLeagues', () => {
     profiles.saveProfile(poe2Active)
 
     const store = makeFakeStore({
-      poeVersion: 2,
-      activeProfileId: poe2Active.id,
+      [PROFILE_VERSION_KEY]: 2,
+      [ACTIVE_PROFILE_ID_KEY]: poe2Active.id,
+      [LAST_PROFILE_ID_POE1_KEY]: poe1Hc.id,
       league: 'Fate of the Vaal',
       leaguePoe1: 'Mirage',
       leaguePoe2: 'Fate of the Vaal',
@@ -258,7 +259,7 @@ describe('refreshLeagues', () => {
     expect(profiles.getProfile(poe1Hc.id)?.league).toBe('Hardcore Return of the Settlers')
     expect(profiles.getProfile(poe2Active.id)?.league).toBe('Fate of the Vaal')
     expect(store.get('league')).toBe('Fate of the Vaal')
-    expect(store.get('leaguePoe1')).toBe('Return of the Settlers')
+    expect(store.get('leaguePoe1')).toBe('Hardcore Return of the Settlers')
     expect(changed).not.toContain('league')
   })
 })

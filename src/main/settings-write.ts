@@ -7,22 +7,22 @@
  *  table and broadcast targets stay in lockstep. */
 
 import type { WebContents } from 'electron'
-import Store from 'electron-store'
+import type Store from 'electron-store'
 import { clearFilterState, loadFilter } from './filter-state'
 import { getOverlayWindow, setCloseOnClickOutside } from './overlay'
-import type Store from 'electron-store'
 import { withPluginHotkeys } from './app-macros'
 import { getAppWindow } from './app-window'
 import { applyCheatSheetHotkeys, getCheatSheetsOverlay } from './cheat-sheets'
 import { reEvaluateLastItem, setOpenSide } from './evaluation'
-import { loadFilter } from './filter-state'
+import { setPoeVersion } from './game-state'
 import { setAppMacros, setChatCommands, setHotkey, setPriceCheckHotkey, setStashScrollEnabled } from './hotkeys'
-import { getOverlayWindow, setCloseOnClickOutside } from './overlay'
 import { applyPinnedZoneEnabled, getPinnedZoneOverlay } from './pinned-zone'
 import { refreshPrices } from './trade/prices'
 import { setUpdateChannel } from './update/updater'
 import type { AppSettings, GameVariant } from '../shared/types'
 import {
+  ACTIVE_PROFILE_ID_KEY,
+  PROFILE_VERSION_KEY,
   hydrateActiveProfileSettings,
   isProfileBackedKey,
   switchActiveProfileByGameVariant,
@@ -57,6 +57,7 @@ function sideEffect<K extends keyof AppSettings>(
   value: AppSettings[K],
   prev: AppSettings[K] | undefined,
 ): void {
+  if (key === PROFILE_VERSION_KEY) setPoeVersion(value as GameVariant)
   if (key === 'filterPath' && value !== prev) {
     const path = value as string
     if (path) loadFilter(path, 'Switched Filters')
@@ -119,9 +120,9 @@ export function applySetting<K extends keyof AppSettings>(
   const previous = capturePreviousSettings(store, key)
   let changes: ProfileChangedSetting[]
 
-  if (key === 'activeProfileId' && value) {
+  if (key === ACTIVE_PROFILE_ID_KEY && value) {
     changes = switchActiveProfileById(store, value as string)
-  } else if (key === 'poeVersion') {
+  } else if (key === PROFILE_VERSION_KEY) {
     changes = switchActiveProfileByGameVariant(store, value as GameVariant)
   } else if (isProfileBackedKey(key)) {
     changes = writeActiveProfileSetting(store, key, value as AppSettings[typeof key])
@@ -130,7 +131,7 @@ export function applySetting<K extends keyof AppSettings>(
     changes = [{ key, value }]
   }
 
-  if (key === 'activeProfileId' && changes.length === 0) {
+  if (key === ACTIVE_PROFILE_ID_KEY && changes.length === 0) {
     changes = hydrateActiveProfileSettings(store)
   }
 

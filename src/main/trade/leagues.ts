@@ -11,7 +11,12 @@ import { net } from 'electron'
 import type Store from 'electron-store'
 import { getTradeUrls } from '../../shared/endpoints'
 import { getProfileStore } from '../profiles/store'
-import { hydrateProfileSettings, listProfilesByGameVariant, type ProfileChangedSetting } from '../profile-settings'
+import {
+  findLastUsedProfileByGameVariant,
+  hydrateProfileSettings,
+  listProfilesByGameVariant,
+  type ProfileChangedSetting,
+} from '../profile-settings'
 import { getGameFeatures } from '../../shared/game-features'
 import type { AppSettings } from '../../shared/types'
 
@@ -132,7 +137,7 @@ function migrateProfileLeagues(
     return changed
   }
 
-  const lastUsedProfile = profiles[0]
+  const lastUsedProfile = findLastUsedProfileByGameVariant(store, version)
   let lastUsedNext: string | null = null
   let activeProfileChanged = false
   const profileStore = getProfileStore()
@@ -146,7 +151,7 @@ function migrateProfileLeagues(
     profile.updatedAt = new Date().toISOString()
     profileStore.saveProfile(profile)
 
-    if (profile.id === lastUsedProfile.id) lastUsedNext = next
+    if (profile.id === lastUsedProfile?.id) lastUsedNext = next
     if (profile.id === activeId) activeProfileChanged = true
   }
 
