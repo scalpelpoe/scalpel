@@ -41,6 +41,7 @@ export function PriceCheck({
   poeVersion,
   chaosPerDivine,
   unidCandidates,
+  sessionId,
   onClose: _onClose,
   onOpenWiki,
   onOpenPoeDb,
@@ -93,6 +94,19 @@ export function PriceCheck({
   }, [penaltyUntil])
 
   const [filters, setFilters] = useState<StatFilter[]>(initialFilters)
+  const filtersRef = useRef(filters)
+  useEffect(() => {
+    filtersRef.current = filters
+  }, [filters])
+  useEffect(
+    () => () => {
+      window.api.recordPrefObservation(
+        sessionId,
+        filtersRef.current.map((f) => ({ id: f.id, type: f.type, enabled: f.enabled })),
+      )
+    },
+    [],
+  )
   const [filtersCollapsed, setFiltersCollapsed] = useState(false)
   const [collapsedVisibleIndices, setCollapsedVisibleIndices] = useState<Set<number> | null>(null)
   const [expandedListing, setExpandedListing] = useState<string | null>(null)
