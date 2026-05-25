@@ -13,6 +13,11 @@ let sessionSeq = 0
 // Cap cached in-flight price-check sessions; covers rapid successive hotkeys without unbounded growth.
 const MAX_SESSIONS = 8
 
+// biome-ignore lint/suspicious/noConsole: gated behind SCALPEL_DEBUG_LOG
+function logLearningError(where: string, err: unknown): void {
+  if (process.env.SCALPEL_DEBUG_LOG) console.error(`[learning] ${where} failed:`, err)
+}
+
 export function initLearning(settings: Store<AppSettings>, version: 1 | 2): void {
   settingsRef = settings
   sessionItems.clear()
@@ -46,14 +51,23 @@ export function beginSession(item: PoeItem): number {
 /** Mutates statFilters in place; returns overridden chip ids. No-op until initLearning. */
 export function applyForSession(statFilters: StatFilter[], item: PoeItem): string[] {
   if (!counterStore) return []
-  return applyLearnedDefaults(statFilters, item, getMode(), counterStore, Date.now())
+  try {
+    return applyLearnedDefaults(statFilters, item, getMode(), counterStore, Date.now())
+  } catch (err) {
+    logLearningError('applyForSession', err)
+    return []
+  }
 }
 
 export function recordSession(sessionId: number, chips: Array<{ id: string; type: string; enabled: boolean }>): void {
   if (!counterStore) return
   const item = sessionItems.get(sessionId)
   if (!item) return
-  captureObservation(item, chips, counterStore, Date.now()) // captures in all modes incl off
+  try {
+    captureObservation(item, chips, counterStore, Date.now()) // captures in all modes incl off
+  } catch (err) {
+    logLearningError('recordSession', err)
+  }
 }
 
 export function resetLearning(scope: 'all' | { rarity: string; itemClass: string }): void {
