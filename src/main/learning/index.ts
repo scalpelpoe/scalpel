@@ -10,10 +10,13 @@ let counterStore: CounterStore | null = null
 let settingsRef: Store<AppSettings> | null = null
 const sessionItems = new Map<number, PoeItem>()
 let sessionSeq = 0
+// Cap cached in-flight price-check sessions; covers rapid successive hotkeys without unbounded growth.
 const MAX_SESSIONS = 8
 
 export function initLearning(settings: Store<AppSettings>, version: 1 | 2): void {
   settingsRef = settings
+  sessionItems.clear()
+  sessionSeq = 0
   const data = new Store<{ buckets: Record<string, Record<string, CounterRecord>> }>({
     name: `scalpel-learning-poe${version}`,
     defaults: { buckets: {} },
@@ -34,8 +37,8 @@ export function beginSession(item: PoeItem): number {
   const id = ++sessionSeq
   sessionItems.set(id, item)
   if (sessionItems.size > MAX_SESSIONS) {
-    const oldest = sessionItems.keys().next().value as number
-    sessionItems.delete(oldest)
+    const oldest = sessionItems.keys().next().value
+    if (oldest !== undefined) sessionItems.delete(oldest)
   }
   return id
 }
