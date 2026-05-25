@@ -4,7 +4,7 @@ import type { AppSettings, GameVariant, RegexPreset } from '../../shared/types'
 import { getColorFrequencies } from '../filter-state'
 import { refreshPrices } from '../trade/prices'
 import { refreshLeagues } from '../trade/leagues'
-import { applyProfileHydrationSideEffects, applySetting, broadcastSettingUpdate } from '../settings-write'
+import { applyProfileHydrationSideEffects, applySetting, broadcastSettingUpdates } from '../settings-write'
 import {
   createProfile,
   deleteProfileAndChooseFallback,
@@ -16,6 +16,7 @@ import {
   renameProfile,
   writeActiveRegexPresetsByGameVariant,
   writeLastUsedProfileSettingByGameVariant,
+  type ProfileChangedSetting,
   type ProfileSettingKey,
   type ProfileSettingValue,
 } from '../profile-settings'
@@ -31,8 +32,7 @@ export function register(store: Store<AppSettings>): void {
 
   ipcMain.handle('set-setting', (event, key: keyof AppSettings, value: AppSettings[typeof key]) => {
     // poeVersion writes are valid here: the onboarding flow uses them to switch
-    // active game between PoE1 and PoE2 setup steps, atomically writing the
-    // dependent flat fields (filterDir/filterPath/league) on either side.
+    // active game between PoE1 and PoE2 setup steps.
     // requestGameSwitch() in main/game-switch.ts is the user-facing toggle that
     // adds a relaunch prompt; this IPC is the lower-level write.
     applySetting(store, key, value, event.sender)
@@ -41,9 +41,10 @@ export function register(store: Store<AppSettings>): void {
   ipcMain.handle(
     'set-profile-setting-for-game',
     (event, variant: GameVariant, key: ProfileSettingKey, value: ProfileSettingValue<typeof key>) => {
+      const previous = getEffectiveSettings(store)
       const changes = writeLastUsedProfileSettingByGameVariant(store, variant, key, value)
       if (changes.length > 0) {
-        broadcastSettingUpdate(event.sender, 'activeProfile', getEffectiveSettings(store).activeProfile)
+        broadcastSettingUpdates(event.sender, changes, previous, getEffectiveSettings(store))
       }
       return getEffectiveSettings(store)
     },
@@ -73,9 +74,7 @@ export function register(store: Store<AppSettings>): void {
     const previous = getEffectiveSettings(store)
     const changes = deleteProfileAndChooseFallback(store, id)
     applyProfileHydrationSideEffects(changes, previous)
-    for (const change of changes) {
-      broadcastSettingUpdate(event.sender, change.key, change.value)
-    }
+    broadcastSettingUpdates(event.sender, changes, previous, getEffectiveSettings(store))
   })
 
   ipcMain.handle('set-active-profile', async (event, id: string, restartIfNeeded = false) => {
@@ -103,11 +102,14 @@ export function register(store: Store<AppSettings>): void {
   })
 
   ipcMain.handle('refresh-leagues', async (event) => {
+    const previous = getEffectiveSettings(store)
     const changed = await refreshLeagues(store)
     const settings = getEffectiveSettings(store)
-    for (const key of changed) {
-      broadcastSettingUpdate(event.sender, key, settings[key])
-    }
+    const changes: ProfileChangedSetting[] = changed.map((key) => {
+      if (key === 'activeProfile') return { key, value: settings.activeProfile, reason: 'migration' }
+      return { key, value: settings[key] } as ProfileChangedSetting
+    })
+    broadcastSettingUpdates(event.sender, changes, previous, settings)
     return {
       leaguesPoe1: store.get('leaguesPoe1'),
       leaguesPoe2: store.get('leaguesPoe2'),

@@ -323,6 +323,11 @@ export const api = {
     ipcRenderer.on('setting-updated', handler)
     return () => ipcRenderer.removeListener('setting-updated', handler)
   },
+  onLeagueUpdated: (cb: (league: string) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, league: string): void => cb(league)
+    ipcRenderer.on('league-updated', handler)
+    return () => ipcRenderer.removeListener('league-updated', handler)
+  },
   onSkipAnimation: (cb: () => void): (() => void) => {
     const handler = (): void => cb()
     ipcRenderer.on('skip-animation', handler)

@@ -573,14 +573,9 @@ app.whenReady().then(() => {
   })
   setAppMacros(withPluginHotkeys((store.get('appMacros') as AppSettings['appMacros']) ?? []))
   // Register the cheat-sheets overlay with the secondary-overlay system. The
-  // anchor persists into settings.cheatSheets.windowAnchor; the system handles
-  // window lifecycle, snap, alt-tab guard, etc. and the wireCheatSheetHotkeys
-  // helper below feeds the global + per-category hotkeys into the shared system.
-  // Persist a partial cheatSheets update from a main-side callback (anchor
-  // drag, etc.). Mirrors the flat write to the active game's per-version slot
-  // so the user's change survives a game switch. The IPC settings path
-  // (set-setting -> applySetting) does this via MIRROR_KEYS for renderer-
-  // initiated writes; this is the parallel path for main-initiated ones.
+  // anchor persists into the active profile's cheatSheets.windowAnchor; the
+  // system handles window lifecycle, snap, alt-tab guard, etc. and the helper
+  // below feeds global + per-category hotkeys into the shared system.
   const patchCheatSheets = (patch: Partial<CheatSheetsSettings>): void => {
     const cs = getProfileBackedSetting(store, 'cheatSheets') ?? { globalHotkey: '', categories: [], pinned: false }
     const next: CheatSheetsSettings = { ...cs, ...patch }

@@ -13,6 +13,10 @@ vi.mock('./overlay', () => ({
   setCloseOnClickOutside: vi.fn(),
 }))
 
+vi.mock('./whiteboard', () => ({
+  getWhiteboardOverlay: vi.fn(() => null),
+}))
+
 vi.mock('./app-macros', () => ({
   withPluginHotkeys: vi.fn((value) => value),
 }))
@@ -250,5 +254,103 @@ describe('settings-write side effects', () => {
     applyProfileHydrationSideEffects(changes, {} as unknown as AppSettings)
 
     expect(setCloseOnClickOutside).toHaveBeenCalledWith(true)
+  })
+
+  it('clears filter state when activation profile has no filterPath', async () => {
+    const { clearFilterState } = await import('./filter-state')
+    const { applyProfileHydrationSideEffects } = await import('./settings-write')
+
+    const changes: ProfileChangedSetting[] = [
+      {
+        key: 'activeProfile',
+        value: {
+          league: '',
+          filterDir: '',
+          filterPath: '',
+          cheatSheets: { globalHotkey: '', categories: [], pinned: false },
+        } as unknown as PoeProfile,
+        reason: 'activation',
+      },
+    ]
+    applyProfileHydrationSideEffects(changes, {} as unknown as AppSettings)
+
+    expect(clearFilterState).toHaveBeenCalled()
+  })
+
+  it('clears filter state and online sync when activation profile is null', async () => {
+    const { clearFilterState } = await import('./filter-state')
+    const { updateOnlineSyncDir } = await import('./online-sync')
+    const { applyPinnedZoneEnabled } = await import('./pinned-zone')
+    const { applyProfileHydrationSideEffects } = await import('./settings-write')
+
+    const changes: ProfileChangedSetting[] = [
+      {
+        key: 'activeProfile',
+        value: null,
+        reason: 'activation',
+      },
+    ]
+    applyProfileHydrationSideEffects(changes, {} as unknown as AppSettings)
+
+    expect(clearFilterState).toHaveBeenCalled()
+    expect(updateOnlineSyncDir).toHaveBeenCalledWith('')
+    expect(applyPinnedZoneEnabled).toHaveBeenCalledWith(false)
+  })
+
+  it('updates online sync dir even when filterDir is empty string on activation', async () => {
+    const { updateOnlineSyncDir } = await import('./online-sync')
+    const { applyProfileHydrationSideEffects } = await import('./settings-write')
+
+    const changes: ProfileChangedSetting[] = [
+      {
+        key: 'activeProfile',
+        value: {
+          league: '',
+          filterDir: '',
+          cheatSheets: { globalHotkey: '', categories: [], pinned: false },
+        } as unknown as PoeProfile,
+        reason: 'activation',
+      },
+    ]
+    applyProfileHydrationSideEffects(changes, {} as unknown as AppSettings)
+
+    expect(updateOnlineSyncDir).toHaveBeenCalledWith('')
+  })
+
+  it('broadcasts league-updated when active profile league changes', async () => {
+    const { getOverlayWindow } = await import('./overlay')
+    const { broadcastSettingUpdates } = await import('./settings-write')
+    const send = vi.fn()
+    vi.mocked(getOverlayWindow).mockReturnValue({ webContents: { send } } as never)
+
+    broadcastSettingUpdates(
+      null,
+      [{ key: 'activeProfile', value: { league: 'Mercenaries' } as PoeProfile, reason: 'edit' }],
+      { activeProfile: { league: 'Standard' } as PoeProfile } as never,
+      { activeProfile: { league: 'Mercenaries' } as PoeProfile } as never,
+    )
+
+    expect(send).toHaveBeenCalledWith('setting-updated', 'activeProfile', { league: 'Mercenaries' })
+    expect(send).toHaveBeenCalledWith('league-updated', 'Mercenaries')
+  })
+
+  it('does not broadcast league-updated for unrelated active profile edits', async () => {
+    const { getOverlayWindow } = await import('./overlay')
+    const { broadcastSettingUpdates } = await import('./settings-write')
+    const send = vi.fn()
+    vi.mocked(getOverlayWindow).mockReturnValue({ webContents: { send } } as never)
+
+    broadcastSettingUpdates(
+      null,
+      [{ key: 'activeProfile', value: { league: 'Standard', filterPath: 'a.filter' } as PoeProfile, reason: 'edit' }],
+      { activeProfile: { league: 'Standard', filterPath: '' } as PoeProfile } as never,
+      { activeProfile: { league: 'Standard', filterPath: 'a.filter' } as PoeProfile } as never,
+    )
+
+    expect(send).toHaveBeenCalledWith('setting-updated', 'activeProfile', {
+      league: 'Standard',
+      filterPath: 'a.filter',
+    })
+    expect(send).not.toHaveBeenCalledWith('league-updated', expect.any(String))
   })
 })

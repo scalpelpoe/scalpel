@@ -4,10 +4,7 @@ import { BrowserWindow, dialog, ipcMain } from 'electron'
 import type Store from 'electron-store'
 import type { AppSettings, FilterListEntry } from '../../shared/types'
 import { getAppWindow } from '../app-window'
-import { clearFilterState, loadFilter } from '../filter-state'
-import { updateOnlineSyncDir } from '../online-sync'
 import { setCloseOnClickOutside, showOverlay } from '../overlay'
-import { applyProfileBackedSetting } from '../settings-write'
 
 export function register(store: Store<AppSettings>): void {
   const defaultFilterFolderForActiveGame = (): string => {
@@ -43,10 +40,6 @@ export function register(store: Store<AppSettings>): void {
     }
 
     const path = result.filePaths[0]
-    if (path) loadFilter(path, 'Switched Filters')
-    else clearFilterState()
-    applyProfileBackedSetting(store, 'filterPath', path, event.sender)
-
     if (isOverlay) showOverlay()
     return path
   })
@@ -75,8 +68,6 @@ export function register(store: Store<AppSettings>): void {
     // folder that contains it. Walk back up so we scan the parent regardless.
     let dir = result.filePaths[0]
     if (basename(dir).toLowerCase() === 'onlinefilters') dir = dirname(dir)
-    updateOnlineSyncDir(dir)
-    applyProfileBackedSetting(store, 'filterDir', dir, event.sender)
     if (isOverlay) showOverlay()
     return dir
   })

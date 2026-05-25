@@ -11,7 +11,6 @@ import { loadFilter } from '../filter-state'
 import { switchFilterInGame } from '../overlay'
 import { saveVersion } from '../update/versions'
 import { checkOnlineSyncNow } from '../online-sync'
-import { applyProfileBackedSetting } from '../settings-write'
 import { getProfileBackedSetting } from '../profile-settings'
 
 /** Look up the online filter name and path for the currently active local filter */
@@ -82,8 +81,6 @@ export function register(store: Store<AppSettings>): void {
         writeFileSync(targetPath, content, 'utf-8')
         clearIntents()
         // Set as active filter
-        loadFilter(targetPath, 'Online Filter Imported')
-        applyProfileBackedSetting(store, 'filterPath', targetPath, null)
         return { ok: true, path: targetPath }
       } catch (err) {
         return { ok: false, error: String(err) }

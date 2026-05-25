@@ -5,14 +5,14 @@ import { withPluginHotkeys } from './app-macros'
 import { getAppWindow } from './app-window'
 import { applyCheatSheetHotkeys, getCheatSheetsOverlay } from './cheat-sheets'
 import { reEvaluateLastItem, setOpenSide } from './evaluation'
-import { loadFilter } from './filter-state'
+import { clearFilterState, loadFilter } from './filter-state'
 import { setPoeVersion } from './game-state'
 import { setAppMacros, setChatCommands, setHotkey, setPriceCheckHotkey, setStashScrollEnabled } from './hotkeys'
 import { applyPinnedZoneEnabled, getPinnedZoneOverlay } from './pinned-zone'
 import { updateOnlineSyncDir } from './online-sync'
 import { refreshPrices } from './trade/prices'
 import { setUpdateChannel } from './update/updater'
-import type { AppSettings, GameVariant, PoeProfile } from '../shared/types'
+import type { AppSettings, GameVariant, PoeProfile, RuntimeSettings } from '../shared/types'
 import {
   ACTIVE_PROFILE_ID_KEY,
   PROFILE_VERSION_KEY,
@@ -52,11 +52,17 @@ function sideEffect(setting: ProfileChangedSetting, prevAppSettings?: AppSetting
       const profile = value as PoeProfile | null
       if (profile) {
         if (profile.league) refreshPrices(profile.league)
-        if (profile.filterDir) updateOnlineSyncDir(profile.filterDir)
+        updateOnlineSyncDir(profile.filterDir)
         if (profile.cheatSheets) applyCheatSheetHotkeys(profile.cheatSheets)
         if (profile.filterPath) loadFilter(profile.filterPath, 'Profile Activation')
+        else clearFilterState()
+        applyPinnedZoneEnabled(profile.cheatSheets?.pinned === true)
+      } else {
+        clearFilterState()
+        updateOnlineSyncDir('')
+        applyPinnedZoneEnabled(false)
       }
-      applyPinnedZoneEnabled(profile?.cheatSheets?.pinned === true)
+      return
     }
     return
   }
@@ -92,13 +98,46 @@ export function applyProfileHydrationSideEffects(changes: ProfileChangedSetting[
   }
 }
 
-export function broadcastSettingUpdates(sender: WebContents | null, changes: ProfileChangedSetting[]): void {
+export function broadcastSettingUpdates(
+  sender: WebContents | null,
+  changes: ProfileChangedSetting[],
+  previous?: RuntimeSettings,
+  current?: RuntimeSettings,
+): void {
   for (const change of changes) {
     broadcastSettingUpdate(sender, change.key, change.value)
   }
+
+  if (changes.some((change) => change.key === 'activeProfile')) {
+    const previousLeague = previous?.activeProfile?.league ?? ''
+    const changedProfile = changes.find((change) => change.key === 'activeProfile')?.value as
+      | PoeProfile
+      | null
+      | undefined
+    const currentLeague = current?.activeProfile?.league ?? changedProfile?.league ?? ''
+    if (!previous || previousLeague !== currentLeague) broadcastLeagueUpdate(sender, currentLeague)
+  }
 }
 
-function capturePreviousSettings(store: Store<AppSettings>): AppSettings {
+export function broadcastLeagueUpdate(sender: WebContents | null, league: string): void {
+  const csWin = getCheatSheetsOverlay()?.getWindow() ?? null
+  const pinnedWin = getPinnedZoneOverlay()?.getWindow() ?? null
+  for (const win of [getOverlayWindow(), getAppWindow(), csWin, pinnedWin]) {
+    if (win && win.webContents !== sender) {
+      win.webContents.send('league-updated', league)
+    }
+  }
+  void import('./whiteboard')
+    .then(({ getWhiteboardOverlay }) => {
+      const wbWin = getWhiteboardOverlay()?.getWindow() ?? null
+      if (wbWin && wbWin.webContents !== sender) {
+        wbWin.webContents.send('league-updated', league)
+      }
+    })
+    .catch(() => {})
+}
+
+function capturePreviousSettings(store: Store<AppSettings>): RuntimeSettings {
   return getEffectiveSettings(store)
 }
 
@@ -125,7 +164,7 @@ export function applySetting<K extends keyof AppSettings>(
   }
 
   applyProfileHydrationSideEffects(changes, previous)
-  broadcastSettingUpdates(sender, changes)
+  broadcastSettingUpdates(sender, changes, previous, getEffectiveSettings(store))
 }
 
 export function applyProfileBackedSetting<K extends ProfileSettingKey>(
@@ -134,6 +173,7 @@ export function applyProfileBackedSetting<K extends ProfileSettingKey>(
   value: Parameters<typeof writeActiveProfileSetting<K>>[2],
   sender: WebContents | null,
 ): void {
+  const previous = capturePreviousSettings(store)
   const changes = writeActiveProfileSetting(store, key, value)
-  broadcastSettingUpdates(sender, changes)
+  broadcastSettingUpdates(sender, changes, previous, getEffectiveSettings(store))
 }

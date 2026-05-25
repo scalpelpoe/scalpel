@@ -217,10 +217,7 @@ export default function App(): JSX.Element {
     [],
   )
   const onSubscribeLeagueChange = useCallback(
-    (h: (l: string) => void): (() => void) =>
-      window.api.onSettingUpdated((k, v) => {
-        if (k === 'league' && typeof v === 'string') h(v)
-      }),
+    (h: (l: string) => void): (() => void) => window.api.onLeagueUpdated((league) => h(league)),
     [],
   )
 

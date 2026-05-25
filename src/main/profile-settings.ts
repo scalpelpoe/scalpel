@@ -7,6 +7,7 @@ import type {
   ProfileSettingKey,
   ProfileSettingValue,
   RegexPreset,
+  RuntimeSettings,
 } from '../shared/types'
 import { getProfileStore, type ProfileStore } from './profiles/store'
 
@@ -73,11 +74,13 @@ export function getProfileBackedSetting<K extends ProfileSettingKey>(
 ): ProfileSettingValue<K> {
   const active = getActiveProfile(store)
   if (active) return active[key]
-  return (active?.[key] ??
-    (key === 'cheatSheets' ? { globalHotkey: '', categories: [], pinned: false } : '')) as ProfileSettingValue<K>
+  if (key === 'cheatSheets')
+    return { globalHotkey: '', categories: [], pinned: false } as unknown as ProfileSettingValue<K>
+  if (key === 'tradePriceOption') return 'chaos_divine' as unknown as ProfileSettingValue<K>
+  return '' as unknown as ProfileSettingValue<K>
 }
 
-export function getEffectiveSettings(store: Store<AppSettings>): AppSettings & { activeProfile: PoeProfile | null } {
+export function getEffectiveSettings(store: Store<AppSettings>): RuntimeSettings {
   const settings = { ...store.store } as AppSettings
   return { ...settings, activeProfile: getActiveProfile(store) }
 }
@@ -148,6 +151,8 @@ export function switchActiveProfileByGameVariant(
   if (!profile) {
     const changed: ProfileChangedSetting[] = []
     rememberChange(store, changed, PROFILE_VERSION_KEY, variant)
+    rememberChange(store, changed, ACTIVE_PROFILE_ID_KEY, '')
+    changed.push({ key: 'activeProfile', value: null, reason: 'activation' })
     return changed
   }
   return hydrateProfileSettings(store, profile)
@@ -179,6 +184,7 @@ export function deleteProfileAndChooseFallback(store: Store<AppSettings>, id: st
   const fallback = deleting ? remaining.find((profile) => profile.gameVariant === deleting.gameVariant) : null
   if (!fallback) {
     rememberChange(store, changed, ACTIVE_PROFILE_ID_KEY, '')
+    changed.push({ key: 'activeProfile', value: null, reason: 'activation' })
     return changed
   }
   for (const change of hydrateProfileSettings(store, fallback)) {

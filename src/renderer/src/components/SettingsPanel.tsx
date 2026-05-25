@@ -179,13 +179,7 @@ export function SettingsPanel({
       {tab === 'view' && <ViewTab settings={settings} update={update} updateMany={updateMany} />}
       {tab === 'macros' && <MacrosTab settings={settings} update={update} tryHotkey={tryHotkey} />}
       {tab === 'cheatsheets' && (
-        <CheatSheetsTab
-          settings={settings}
-          update={update}
-          updateProfile={updateProfile}
-          tryHotkey={tryHotkey}
-          onError={showError}
-        />
+        <CheatSheetsTab settings={settings} updateProfile={updateProfile} tryHotkey={tryHotkey} onError={showError} />
       )}
       {tab === 'filter' && (
         <FilterTab

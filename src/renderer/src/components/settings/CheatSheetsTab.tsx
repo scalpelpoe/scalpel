@@ -1,5 +1,5 @@
 import { ReactSortable } from 'react-sortablejs'
-import type { AppSettings, CheatSheetCategory, ProfileSettingValue, RuntimeSettings } from '../../../../shared/types'
+import type { CheatSheetCategory, ProfileSettingValue, RuntimeSettings } from '../../../../shared/types'
 import { HotkeyField } from './HotkeyField'
 import { generateClientCategoryId } from './utils'
 import type { HotkeySlot } from './hotkey-collisions'
@@ -8,7 +8,6 @@ import { PrefabPicker } from './cheatsheets/PrefabPicker'
 
 interface Props {
   settings: RuntimeSettings
-  update: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
   updateProfile: <K extends 'cheatSheets'>(key: K, value: ProfileSettingValue<K>) => Promise<void>
   tryHotkey: (hotkey: string, slot: HotkeySlot) => boolean
   /** Shows a banner error message via the parent SettingsPanel. Called for
@@ -17,7 +16,7 @@ interface Props {
   onError: (message: string, tone?: 'error' | 'warn') => void
 }
 
-export function CheatSheetsTab({ settings, update, updateProfile, tryHotkey, onError }: Props): JSX.Element {
+export function CheatSheetsTab({ settings, updateProfile, tryHotkey, onError }: Props): JSX.Element {
   const cheatSheets = settings.activeProfile?.cheatSheets ?? { globalHotkey: '', categories: [] }
   const setCategories = (categories: CheatSheetCategory[]): void => {
     updateProfile('cheatSheets', { ...cheatSheets, categories })

@@ -12,6 +12,7 @@ import {
   PROFILE_VERSION_KEY,
   deleteProfileAndChooseFallback,
   getEffectiveSettings,
+  getProfileBackedSetting,
   listProfileSummaries,
   switchActiveProfileByGameVariant,
   writeActiveRegexPresetsByGameVariant,
@@ -267,13 +268,19 @@ describe('profile-settings', () => {
       [PROFILE_VERSION_KEY]: 2,
     })
 
-    deleteProfileAndChooseFallback(store, poe2.id)
+    const changes = deleteProfileAndChooseFallback(store, poe2.id)
 
     expect(profiles.listProfiles().find((profile) => profile.gameVariant === 2)).toBeUndefined()
     expect(store.get(ACTIVE_PROFILE_ID_KEY)).toBe('')
     expect(store.get(LAST_PROFILE_ID_POE2_KEY)).toBe('')
     expect(store.get(PROFILE_VERSION_KEY)).toBe(2)
     expect(profiles.getProfile(poe2.id)).toBeNull()
+    const nullChange = changes.find((c) => c.key === 'activeProfile')
+    expect(nullChange).toBeDefined()
+    if (nullChange && nullChange.key === 'activeProfile') {
+      expect(nullChange.reason).toBe('activation')
+      expect(nullChange.value).toBeNull()
+    }
   })
 
   it('deleting an inactive last profile for a game clears that game without changing active profile', () => {
@@ -312,5 +319,49 @@ describe('profile-settings', () => {
     expect(legacy?.schemaVersion).toBe(1)
     expect(legacy?.createdAt).toEqual(expect.any(String))
     expect(legacy?.tradePriceOption).toBe('exalted_divine')
+  })
+
+  it('switching to a game variant with no profile clears the active profile', () => {
+    const profiles = setupProfiles()
+    const poe1 = profiles.createDefault(1)
+    profiles.saveProfile(poe1)
+
+    const store = makeStore({
+      [PROFILE_VERSION_KEY]: 1,
+      [ACTIVE_PROFILE_ID_KEY]: poe1.id,
+    })
+
+    const changes = switchActiveProfileByGameVariant(store, 2)
+
+    expect(store.get(ACTIVE_PROFILE_ID_KEY)).toBe('')
+    expect(store.get(PROFILE_VERSION_KEY)).toBe(2)
+    const nullChange = changes.find((c) => c.key === 'activeProfile')
+    expect(nullChange).toBeDefined()
+    if (nullChange && nullChange.key === 'activeProfile') {
+      expect(nullChange.reason).toBe('activation')
+      expect(nullChange.value).toBeNull()
+    }
+  })
+
+  it('returns default tradePriceOption when no profile is active', () => {
+    const store = makeStore({ [ACTIVE_PROFILE_ID_KEY]: '' })
+
+    expect(getProfileBackedSetting(store, 'tradePriceOption')).toBe('chaos_divine')
+  })
+
+  it('returns default cheatSheets when no profile is active', () => {
+    const store = makeStore({ [ACTIVE_PROFILE_ID_KEY]: '' })
+
+    expect(getProfileBackedSetting(store, 'cheatSheets')).toEqual({
+      globalHotkey: '',
+      categories: [],
+      pinned: false,
+    })
+  })
+
+  it('returns empty string for league when no profile is active', () => {
+    const store = makeStore({ [ACTIVE_PROFILE_ID_KEY]: '' })
+
+    expect(getProfileBackedSetting(store, 'league')).toBe('')
   })
 })
