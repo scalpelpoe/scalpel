@@ -35,6 +35,9 @@ export function computeLearnedDecisions(
       ...store.sample(k, f.id, now),
       isGlobal: k === GLOBAL_KEY,
     }))
+    // `f.enabled` here is the pre-base-mode (shipped) default and only seeds the
+    // shrinkage prior. The renderer compares the decision against the POST-base-mode
+    // state to decide what counts as a learned change - the two baselines differ on purpose.
     const blend = blendEnableRate(samples, f.enabled)
     const decision = decide(blend, mode)
     if (decision !== null) decisions[f.id] = decision

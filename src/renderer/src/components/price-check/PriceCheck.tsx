@@ -209,7 +209,7 @@ export function PriceCheck({
       if (keepRowsVisible) {
         // Keep rows visible that are enabled pre-Base OR that learning will enable.
         baseModeExpandedIndices.current = new Set(
-          filters.map((f, i) => (f.enabled || learnedDecisions[f.id] === true ? i : -1)).filter((i) => i >= 0),
+          filters.map((f, i) => (f.enabled || learnedDecisions?.[f.id] === true ? i : -1)).filter((i) => i >= 0),
         )
       }
       // Learning is the final layer: apply it on top of the (optionally base-moded) defaults.
