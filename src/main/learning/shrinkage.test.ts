@@ -14,29 +14,40 @@ describe('blendEnableRate', () => {
     // strong "always enabled" at the specific rung
     const blend = blendEnableRate([G(0, 0, true), G(10, 10)], false)
     expect(blend.rate).toBeGreaterThan(0.8)
-    expect(blend.totalMass).toBeCloseTo(10, 6)
-    expect(blend.specificMass).toBeCloseTo(10, 6)
+    expect(blend.specificObs).toBeCloseTo(10, 6)
   })
 
-  it('separates global mass from specific mass', () => {
+  it('does not count global-rung evidence as specific observations', () => {
     const blend = blendEnableRate([G(20, 20, true), G(0, 0)], true)
-    expect(blend.totalMass).toBeCloseTo(20, 6)
-    expect(blend.specificMass).toBe(0)
+    expect(blend.rate).toBeGreaterThan(0.9) // global still shapes the rate (soft transfer)
+    expect(blend.specificObs).toBe(0) // but no specific-context evidence yet
+  })
+
+  it('takes the best-supported specific rung as the observation count', () => {
+    // class rung seen 4x, deeper influence rung seen 2x -> specificObs is the max (4)
+    const blend = blendEnableRate([G(0, 0, true), G(4, 4), G(2, 2)], false)
+    expect(blend.specificObs).toBeCloseTo(4, 6)
   })
 })
 
 describe('decide', () => {
-  it('eager flips once enough total mass crosses the margin', () => {
-    expect(decide({ rate: 0.8, totalMass: 5, specificMass: 0 }, 'eager')).toBe(true)
-    expect(decide({ rate: 0.2, totalMass: 5, specificMass: 0 }, 'eager')).toBe(false)
-    expect(decide({ rate: 0.8, totalMass: 1, specificMass: 0 }, 'eager')).toBeNull() // too little mass
-    expect(decide({ rate: 0.52, totalMass: 9, specificMass: 9 }, 'eager')).toBeNull() // inside margin
+  it('eager flips only after EAGER_MIN_OBS (3) consistent observations', () => {
+    expect(decide({ rate: 0.8, specificObs: 3 }, 'eager')).toBe(true)
+    expect(decide({ rate: 0.2, specificObs: 3 }, 'eager')).toBe(false)
+    expect(decide({ rate: 0.8, specificObs: 2 }, 'eager')).toBeNull() // too few observations
+    expect(decide({ rate: 0.8, specificObs: 1 }, 'eager')).toBeNull() // a single enable must not flip
+    expect(decide({ rate: 0.52, specificObs: 9 }, 'eager')).toBeNull() // inside the rate margin
   })
 
-  it('conservative needs decisive rate and specific mass', () => {
-    expect(decide({ rate: 0.8, totalMass: 50, specificMass: 6 }, 'conservative')).toBe(true)
-    expect(decide({ rate: 0.8, totalMass: 50, specificMass: 4 }, 'conservative')).toBeNull() // not enough specific mass
-    expect(decide({ rate: 0.6, totalMass: 50, specificMass: 9 }, 'conservative')).toBeNull() // rate not decisive
-    expect(decide({ rate: 0.25, totalMass: 50, specificMass: 9 }, 'conservative')).toBe(false)
+  it('rounds the observation count so within-session decay does not delay the flip', () => {
+    expect(decide({ rate: 0.8, specificObs: 2.97 }, 'eager')).toBe(true) // 3 obs lightly decayed
+    expect(decide({ rate: 0.8, specificObs: 2.0 }, 'eager')).toBeNull() // genuinely only 2
+  })
+
+  it('conservative needs a decisive rate and more observations', () => {
+    expect(decide({ rate: 0.8, specificObs: 5 }, 'conservative')).toBe(true)
+    expect(decide({ rate: 0.8, specificObs: 4 }, 'conservative')).toBeNull() // not enough observations
+    expect(decide({ rate: 0.6, specificObs: 9 }, 'conservative')).toBeNull() // rate not decisive
+    expect(decide({ rate: 0.25, specificObs: 9 }, 'conservative')).toBe(false)
   })
 })
