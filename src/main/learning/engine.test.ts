@@ -34,6 +34,11 @@ describe('isLearnable', () => {
     expect(isLearnable({ type: 'misc' })).toBe(false)
     expect(isLearnable({ type: 'socket' })).toBe(false)
   })
+
+  it('accepts imbued chips (real emitted type string)', () => {
+    expect(isLearnable({ type: 'imbued' })).toBe(true)
+    expect(isLearnable({ type: 'imbue' })).toBe(false)
+  })
 })
 
 describe('captureObservation + applyLearnedDefaults round trip', () => {

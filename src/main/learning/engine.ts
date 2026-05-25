@@ -7,7 +7,7 @@ import { CounterStore } from './counter-store'
 import { blendEnableRate, decide, type RungSample } from './shrinkage'
 
 /** v1: stat-mod lines only. Property/ternary/min-max chips are phase 2. */
-export const LEARNABLE_TYPES = new Set(['explicit', 'implicit', 'pseudo', 'crafted', 'fractured', 'enchant', 'imbue'])
+export const LEARNABLE_TYPES = new Set(['explicit', 'implicit', 'pseudo', 'crafted', 'fractured', 'enchant', 'imbued'])
 
 export function isLearnable(f: { type: string }): boolean {
   return LEARNABLE_TYPES.has(f.type)
