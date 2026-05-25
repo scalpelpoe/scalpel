@@ -95,8 +95,8 @@ export const RESULTS_VIEW_OPTIONS: Array<{ value: ResultsView; label: string }> 
   { value: 'shrinkydink', label: 'Shrinkydink' },
 ]
 
-/** Adaptive-defaults learning engine mode. */
-export type AdaptiveMode = 'eager' | 'conservative' | 'off'
+import type { AdaptiveMode } from '../../../../shared/types'
+export type { AdaptiveMode }
 
 export const ADAPTIVE_MODE_OPTIONS: Array<{ value: AdaptiveMode; label: string }> = [
   { value: 'eager', label: 'Eager' },

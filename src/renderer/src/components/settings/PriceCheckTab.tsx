@@ -97,7 +97,7 @@ export function PriceCheckTab({ settings, update, tryHotkey }: Props): JSX.Eleme
           label="Adaptive defaults"
           value={settings.adaptiveDefaultsMode ?? 'eager'}
           options={ADAPTIVE_MODE_OPTIONS}
-          onChange={(v) => update('adaptiveDefaultsMode', v as AppSettings['adaptiveDefaultsMode'])}
+          onChange={(v) => update('adaptiveDefaultsMode', v)}
         />
         <section>
           <label>Reset learned preferences</label>

@@ -359,6 +359,9 @@ export interface CheatSheetsSettings {
   pinnedAnchor?: OverlayAnchor
 }
 
+/** Adaptive price-check defaults learning engine mode. */
+export type AdaptiveMode = 'eager' | 'conservative' | 'off'
+
 export interface AppSettings {
   /** Active filter path + dir + league. Mirrored to/from the per-version fields
    *  (filterPathPoe1, filterPathPoe2, etc.) based on the current poeVersion at
@@ -463,7 +466,7 @@ export interface AppSettings {
    *  learned defaults after a little evidence; 'conservative' needs more evidence
    *  before changing a default; 'off' stops applying learned defaults but keeps
    *  recording so re-enabling is never cold-start. */
-  adaptiveDefaultsMode: 'eager' | 'conservative' | 'off'
+  adaptiveDefaultsMode: AdaptiveMode
 }
 
 /** Title-bar tab keys the user is allowed to hide via View settings. Settings + Close

@@ -1,7 +1,6 @@
 // src/main/learning/types.ts
 
-/** User-facing adaptive-defaults mode (persisted as AppSettings.adaptiveDefaultsMode). */
-export type AdaptiveMode = 'eager' | 'conservative' | 'off'
+export type { AdaptiveMode } from '../../shared/types'
 
 /** A decayed per-(rung, chip) counter. */
 export interface CounterRecord {
