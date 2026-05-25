@@ -1,0 +1,60 @@
+// src/main/learning/index.ts
+import Store from 'electron-store'
+import type { AppSettings, PoeItem } from '../../shared/types'
+import type { StatFilter } from '../trade/trade'
+import type { AdaptiveMode, CounterRecord } from './types'
+import { CounterStore, type LearningPersistence } from './counter-store'
+import { applyLearnedDefaults, captureObservation } from './engine'
+
+let counterStore: CounterStore | null = null
+let settingsRef: Store<AppSettings> | null = null
+const sessionItems = new Map<number, PoeItem>()
+let sessionSeq = 0
+const MAX_SESSIONS = 8
+
+export function initLearning(settings: Store<AppSettings>, version: 1 | 2): void {
+  settingsRef = settings
+  const data = new Store<{ buckets: Record<string, Record<string, CounterRecord>> }>({
+    name: `scalpel-learning-poe${version}`,
+    defaults: { buckets: {} },
+  })
+  const persistence: LearningPersistence = {
+    load: () => data.get('buckets'),
+    save: (b) => data.set('buckets', b),
+  }
+  counterStore = new CounterStore(persistence)
+}
+
+export function getMode(): AdaptiveMode {
+  return settingsRef?.get('adaptiveDefaultsMode') ?? 'eager'
+}
+
+/** Caches the item for the session and returns a session id to echo back on capture. */
+export function beginSession(item: PoeItem): number {
+  const id = ++sessionSeq
+  sessionItems.set(id, item)
+  if (sessionItems.size > MAX_SESSIONS) {
+    const oldest = sessionItems.keys().next().value as number
+    sessionItems.delete(oldest)
+  }
+  return id
+}
+
+/** Mutates statFilters in place; returns overridden chip ids. No-op until initLearning. */
+export function applyForSession(statFilters: StatFilter[], item: PoeItem): string[] {
+  if (!counterStore) return []
+  return applyLearnedDefaults(statFilters, item, getMode(), counterStore, Date.now())
+}
+
+export function recordSession(sessionId: number, chips: Array<{ id: string; type: string; enabled: boolean }>): void {
+  if (!counterStore) return
+  const item = sessionItems.get(sessionId)
+  if (!item) return
+  captureObservation(item, chips, counterStore, Date.now()) // captures in all modes incl off
+}
+
+export function resetLearning(scope: 'all' | { rarity: string; itemClass: string }): void {
+  if (!counterStore) return
+  if (scope === 'all') counterStore.reset()
+  else counterStore.resetByPrefix(`${scope.rarity}|${scope.itemClass}`)
+}

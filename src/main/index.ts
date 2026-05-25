@@ -68,6 +68,7 @@ import { initUpdater } from './update/updater'
 import { applyPendingUpdate } from './update/update-swap'
 import { loadFilter } from './filter-state'
 import { createHotkeyHandler, createPriceCheckHandler, setOpenSide, setEvaluationStore } from './evaluation'
+import { initLearning } from './learning'
 import { snapshotClipboard } from './clipboard-preserve'
 import * as tradeHandlers from './handlers/trade'
 import * as settingsHandlers from './handlers/settings'
@@ -259,6 +260,7 @@ app.whenReady().then(() => {
 })
 
 setEvaluationStore(store)
+initLearning(store, store.get('poeVersion'))
 initAppMacrosRefresh(() => store.get('appMacros') ?? [])
 
 // ---- Register IPC handlers -------------------------------------------------
