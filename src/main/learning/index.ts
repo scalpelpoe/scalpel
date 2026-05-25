@@ -4,7 +4,7 @@ import type { AppSettings, PoeItem } from '../../shared/types'
 import type { StatFilter } from '../trade/trade'
 import type { AdaptiveMode, CounterRecord } from './types'
 import { CounterStore, type LearningPersistence } from './counter-store'
-import { applyLearnedDefaults, captureObservation } from './engine'
+import { captureObservation, computeLearnedDecisions } from './engine'
 
 let counterStore: CounterStore | null = null
 let settingsRef: Store<AppSettings> | null = null
@@ -47,14 +47,14 @@ export function beginSession(item: PoeItem): number {
   return id
 }
 
-/** Mutates statFilters in place; returns overridden chip ids. No-op until initLearning. */
-export function applyForSession(statFilters: StatFilter[], item: PoeItem): string[] {
-  if (!counterStore) return []
+/** Returns the engine's confident enable/disable opinions per chip. {} until initLearning, or on error. */
+export function decisionsForSession(statFilters: StatFilter[], item: PoeItem): Record<string, boolean> {
+  if (!counterStore) return {}
   try {
-    return applyLearnedDefaults(statFilters, item, getMode(), counterStore, Date.now())
+    return computeLearnedDecisions(statFilters, item, getMode(), counterStore, Date.now())
   } catch (err) {
-    logLearningError('applyForSession', err)
-    return []
+    logLearningError('decisionsForSession', err)
+    return {}
   }
 }
 

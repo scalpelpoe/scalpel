@@ -36,7 +36,7 @@ import {
   refreshPrices,
 } from './trade/prices'
 import { ensureStatsLoaded, matchItemMods } from './trade/trade'
-import { applyForSession, beginSession } from './learning'
+import { beginSession, decisionsForSession } from './learning'
 
 // ---- Tier group builder ----------------------------------------------------
 
@@ -298,7 +298,7 @@ export async function preloadPriceCheck(item: PoeItem, store: Store<AppSettings>
   )
 
   const sessionId = beginSession(item)
-  applyForSession(statFilters, item) // mutates statFilters: flips .enabled and sets .learned where confident
+  const learnedDecisions = decisionsForSession(statFilters, item)
 
   const divinePrice = lookupPrice('Divine Orb', 'Divine Orb')
   const chaosPerDivine = divinePrice?.chaosValue ?? 0
@@ -309,6 +309,7 @@ export async function preloadPriceCheck(item: PoeItem, store: Store<AppSettings>
     league,
     chaosPerDivine,
     sessionId,
+    learnedDecisions,
     unidCandidates: unidCandidates.length > 0 ? unidCandidates : undefined,
   })
 }

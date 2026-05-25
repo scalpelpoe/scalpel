@@ -177,6 +177,7 @@ export default function App(): JSX.Element {
     chaosPerDivine?: number
     unidCandidates?: Array<{ name: string; chaosValue: number }>
     sessionId: number
+    learnedDecisions: Record<string, boolean>
   } | null>(null)
 
   // Transient settings banner (hotkey collisions -> red, protected PoE hotkeys -> orange)

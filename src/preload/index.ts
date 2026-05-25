@@ -358,6 +358,7 @@ export const api = {
       chaosPerDivine?: number
       unidCandidates?: Array<{ name: string; chaosValue: number }>
       sessionId: number
+      learnedDecisions: Record<string, boolean>
     }) => void,
   ): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, data: Parameters<typeof cb>[0]): void => cb(data)
