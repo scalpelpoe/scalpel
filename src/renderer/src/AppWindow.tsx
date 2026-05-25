@@ -39,6 +39,7 @@ export function AppWindow(): JSX.Element {
   const [importedOnline, setImportedOnline] = useState<ImportedOnline>({ poe1: null, poe2: null })
   const [gameSwitchTarget, setGameSwitchTarget] = useState<1 | 2 | null>(null)
   const [selectedGames, setSelectedGames] = useState<SelectedGames>({ poe1: false, poe2: false })
+  const [settingsTabRequest, setSettingsTabRequest] = useState<{ tab: string; n: number } | null>(null)
   // Set when the user opens Manage Profiles from settings so the focus-bounce
   // effect below doesn't yank them back to settings on every focus event.
   const [revisitingOnboarding, setRevisitingOnboarding] = useState(false)
@@ -131,20 +132,24 @@ export function AppWindow(): JSX.Element {
   }
 
   const editProfile = async (profile: PoeProfileSummary): Promise<void> => {
-    const nextGames = { poe1: profile.gameVariant === 1, poe2: profile.gameVariant === 2 }
     const result = await window.api.setActiveProfile(profile.id)
     if (!result.ok && 'requiresRestart' in result) {
       const confirmed = window.confirm(
         `Editing this PoE${profile.gameVariant} profile requires restarting Scalpel so the overlay can attach to the correct game. Restart now?`,
       )
-      if (confirmed) await window.api.setActiveProfile(profile.id, true)
+      if (!confirmed) return
+      const restartResult = await window.api.setActiveProfile(profile.id, true)
+      if (!restartResult.ok || !('settings' in restartResult)) return
+      setSettings(restartResult.settings)
+      setSettingsTabRequest((prev) => ({ tab: 'filter', n: (prev?.n ?? 0) + 1 }))
+      goTo('settings')
       return
     }
     if (!result.ok) return
     if ('restarting' in result) return
     setSettings(result.settings)
-    setSelectedGames(nextGames)
-    goTo(filterFolderStepFor(profile.gameVariant), nextGames)
+    setSettingsTabRequest((prev) => ({ tab: 'filter', n: (prev?.n ?? 0) + 1 }))
+    goTo('settings')
   }
 
   const startFilterFlowFor = async (game: 1 | 2): Promise<void> => {
@@ -353,6 +358,7 @@ export function AppWindow(): JSX.Element {
             <AppSettingsWrapper
               settings={settings}
               onSettingsChange={setSettings}
+              tabRequest={settingsTabRequest}
               onManageProfiles={() => {
                 setRevisitingOnboarding(true)
                 goTo('profiles')

@@ -32,6 +32,7 @@ export function ProfileManagerStep({
   const [draft, setDraft] = useState<
     | { kind: 'create'; gameVariant: GameVariant; name: string }
     | { kind: 'duplicate'; sourceId: string; name: string }
+    | { kind: 'rename'; sourceId: string; name: string }
     | null
   >(null)
   const [error, setError] = useState<string | null>(null)
@@ -56,6 +57,11 @@ export function ProfileManagerStep({
       if (!restartResult.ok) {
         setError('Could not switch profile.')
         return
+      }
+      if ('settings' in restartResult) {
+        onSettingsChange(restartResult.settings)
+        setSwitchedFilterName(inGameFilterName(profile))
+        await reloadProfiles()
       }
       if ('devRestartRequired' in restartResult) {
         setError('Profile selected. Restart the dev app to attach to the selected game.')
@@ -83,8 +89,10 @@ export function ProfileManagerStep({
     try {
       if (draft.kind === 'create') {
         await window.api.createProfile({ name, gameVariant: draft.gameVariant })
-      } else {
+      } else if (draft.kind === 'duplicate') {
         await window.api.duplicateProfile(draft.sourceId, name)
+      } else {
+        await window.api.renameProfile(draft.sourceId, name)
       }
       setDraft(null)
       await reloadProfiles()
@@ -94,11 +102,8 @@ export function ProfileManagerStep({
   }
 
   const rename = async (profile: PoeProfileSummary): Promise<void> => {
-    const name = window.prompt('Profile name', profile.name)?.trim()
-    if (!name || name === profile.name) return
+    setDraft({ kind: 'rename', sourceId: profile.id, name: profile.name })
     setError(null)
-    await window.api.renameProfile(profile.id, name)
-    await reloadProfiles()
   }
 
   const duplicate = async (profile: PoeProfileSummary): Promise<void> => {
@@ -137,7 +142,11 @@ export function ProfileManagerStep({
         {draft && (
           <section className="rounded border border-border bg-black/20 px-3 py-3 flex flex-col gap-3">
             <label className="text-[11px] text-text-dim">
-              {draft.kind === 'create' ? 'New profile name' : 'Duplicate profile name'}
+              {draft.kind === 'create'
+                ? 'New profile name'
+                : draft.kind === 'duplicate'
+                  ? 'Duplicate profile name'
+                  : 'Rename profile'}
             </label>
             <input
               value={draft.name}

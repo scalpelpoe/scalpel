@@ -7,10 +7,12 @@ export function AppSettingsWrapper({
   settings,
   onSettingsChange,
   onManageProfiles,
+  tabRequest,
 }: {
   settings: RuntimeSettings
   onSettingsChange: (s: RuntimeSettings) => void
   onManageProfiles: () => void
+  tabRequest?: { tab: string; n: number } | null
 }): JSX.Element {
   const [onlineImportName, setOnlineImportName] = useState<string | null>(null)
 
@@ -22,6 +24,7 @@ export function AppSettingsWrapper({
         mode="app"
         onManageProfiles={onManageProfiles}
         onOnlineImport={setOnlineImportName}
+        tabRequest={tabRequest}
       />
       {onlineImportName && (
         <OnlineFilterModal filterName={onlineImportName} onDismiss={() => setOnlineImportName(null)} />

@@ -87,11 +87,13 @@ export function register(store: Store<AppSettings>): void {
         return { ok: false as const, requiresRestart: true as const, targetGame: profile.gameVariant }
       }
 
-      persistProfileSwitchForRestart(store, profile)
       if (!app.isPackaged) {
+        applySetting(store, 'activeProfileId', id, event.sender)
         console.warn(`[profile-switch] target=PoE${profile.gameVariant}; restart dev to re-attach`)
-        return { ok: true as const, restarting: true as const, devRestartRequired: true as const }
+        return { ok: true as const, settings: getEffectiveSettings(store), devRestartRequired: true as const }
       }
+
+      persistProfileSwitchForRestart(store, profile)
       app.relaunch()
       app.quit()
       return { ok: true as const, restarting: true as const }

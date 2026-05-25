@@ -47,7 +47,7 @@ export const api = {
     id: string,
     restartIfNeeded = false,
   ): Promise<
-    | { ok: true; settings: RuntimeSettings }
+    | { ok: true; settings: RuntimeSettings; devRestartRequired?: true }
     | { ok: true; restarting: true; devRestartRequired?: true }
     | { ok: false; requiresRestart: true; targetGame: GameVariant }
     | { ok: false; error: string }
