@@ -167,6 +167,7 @@ const store = new Store<AppSettings>({
     tradePriceOptionPoe1: 'chaos_divine',
     tradePriceOptionPoe2: 'exalted_divine',
     priceCheckDefaultPercent: 90,
+    adaptiveDefaultsMode: 'eager',
     tradeDefaultToBase: false,
     chatCommands: [],
     appMacros: [],
@@ -194,6 +195,7 @@ if (store.get('openSide') === undefined) store.set('openSide', 'both')
 if ((store.get('tradeStatus') as string) === 'any') store.set('tradeStatus', 'available')
 if (store.get('themeId') === undefined) store.set('themeId', 'default')
 if (store.get('customThemePalette') === undefined) store.set('customThemePalette', null)
+if (store.get('adaptiveDefaultsMode') === undefined) store.set('adaptiveDefaultsMode', 'eager')
 
 // Auto-detect overlay scale on first run (deferred until app ready since screen API requires it)
 app.whenReady().then(() => {

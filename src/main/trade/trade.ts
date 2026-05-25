@@ -191,6 +191,8 @@ export interface StatFilter {
    *  stat ids. Present only on `type: 'pseudo'` chips; ignored on PoE1, where
    *  pseudos use their native `pseudo.*` id. */
   weightFilters?: Array<{ id: string }>
+  /** Set true when the adaptive-defaults engine overrode this chip's enabled state. */
+  learned?: boolean
 }
 
 /** Build a trade `{ min?, max? }` value object from a filter, dropping bounds

@@ -21,6 +21,8 @@ export interface StatFilter {
   /** Ternary chip state: 'yes' | 'no' | undefined (= any). Also used by
    *  minmax chips: 'min' | 'max' | undefined (= off). */
   chipState?: 'yes' | 'no' | 'min' | 'max'
+  /** Set true when the adaptive-defaults engine overrode this chip's enabled state. */
+  learned?: boolean
 }
 
 export interface Listing {

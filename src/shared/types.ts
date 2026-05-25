@@ -459,6 +459,10 @@ export interface AppSettings {
   themeId: string
   /** User's saved custom palette, used only when themeId === 'custom'. */
   customThemePalette: ThemePalette | null
+  /** Controls the adaptive price-check defaults learning engine.
+   *  'eager' = apply learned defaults immediately; 'conservative' = require
+   *  confirmation; 'off' = disable the engine entirely. */
+  adaptiveDefaultsMode: 'eager' | 'conservative' | 'off'
 }
 
 /** Title-bar tab keys the user is allowed to hide via View settings. Settings + Close
