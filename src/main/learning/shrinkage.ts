@@ -4,6 +4,7 @@ import type { AdaptiveMode } from './types'
 export const PRIOR_STRENGTH = 2
 export const SHIPPED_PRIOR_ENABLED = 0.6
 export const SHIPPED_PRIOR_DISABLED = 0.4
+export const EAGER_PIVOT = 0.5
 export const EAGER_MARGIN = 0.05
 export const EAGER_MIN_MASS = 2
 export const CONSERVATIVE_HI = 0.7
@@ -52,7 +53,7 @@ export function decide(blend: Blend, mode: Exclude<AdaptiveMode, 'off'>): boolea
     return null
   }
   if (blend.totalMass < EAGER_MIN_MASS) return null
-  if (blend.rate >= 0.5 + EAGER_MARGIN) return true
-  if (blend.rate <= 0.5 - EAGER_MARGIN) return false
+  if (blend.rate >= EAGER_PIVOT + EAGER_MARGIN) return true
+  if (blend.rate <= EAGER_PIVOT - EAGER_MARGIN) return false
   return null
 }
