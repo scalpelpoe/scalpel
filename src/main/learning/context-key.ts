@@ -12,6 +12,7 @@ const CASTER_CLASSES = new Set(['Wands', 'Sceptres', 'Staves', 'Warstaves'])
 
 function armourArchetype(item: PoeItem): string | null {
   const parts: string[] = []
+  // Canonical order str/dex/int - do not reorder; persisted rung keys depend on it.
   if (item.armour > 0) parts.push('str')
   if (item.evasion > 0) parts.push('dex')
   if (item.energyShield > 0) parts.push('int')
@@ -27,7 +28,7 @@ function weaponFunction(item: PoeItem): string {
 
 function jewelSubtype(item: PoeItem): string {
   if (isClusterJewel(item)) return 'cluster'
-  if (item.baseType === 'Timeless Jewel') return 'timeless'
+  if (item.baseType === 'Timeless Jewel') return 'timeless' // Timeless Jewels are a PoE1 mechanic
   if (item.baseType.endsWith('Eye Jewel')) return 'abyss'
   return 'regular'
 }
@@ -52,14 +53,14 @@ export function deriveLearningContext(item: PoeItem): LearningContext {
   }
   const axis = relevanceAxisFor(item)
   const influence = [...(item.influence ?? [])].sort()
-  const rung3 = `${item.rarity}|${item.itemClass}`
-  const rung2 = `${rung3}|${axis ?? '-'}`
-  const rung1 = `${rung2}|${influence.length ? influence.join(',') : '-'}`
+  const rungClass = `${item.rarity}|${item.itemClass}`
+  const rungAxis = `${rungClass}|${axis ?? '-'}`
+  const rungInfluence = `${rungAxis}|${influence.length ? influence.join(',') : '-'}`
   return {
     rarity: item.rarity,
     itemClass: item.itemClass,
     relevanceAxis: axis,
     influence,
-    rungKeys: [GLOBAL_KEY, rung3, rung2, rung1],
+    rungKeys: [GLOBAL_KEY, rungClass, rungAxis, rungInfluence],
   }
 }
