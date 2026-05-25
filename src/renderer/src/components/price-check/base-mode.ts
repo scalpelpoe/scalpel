@@ -19,12 +19,16 @@ export function shouldIncludeImplicitsInBase(rarity: string, corrupted: boolean)
  *   - implicits/enchants enabled only if useful (non-unique or corrupted unique)
  *   - foulborn mods enabled on uniques
  *   - socket/misc/timeless/fractured/currency/heist left unchanged
+ *   - learned chips (set by the adaptive-defaults engine) preserved as-is
  *   - everything else disabled (explicit, pseudo, defence, weapon, etc)
  */
 export function applyBaseModeToFilters(filters: StatFilter[], rarity: string, corrupted: boolean): StatFilter[] {
   const includeImplicits = shouldIncludeImplicitsInBase(rarity, corrupted)
   const isUnique = rarity === 'Unique'
   return filters.map((f) => {
+    // Chips the adaptive-defaults engine deliberately set (learned) win over base mode;
+    // otherwise base mode would clobber the user's learned default (e.g. dex on a unique).
+    if (f.learned) return f
     if (f.id === 'misc.basetype') return { ...f, enabled: true }
     if (f.id === 'misc.ilvl') return { ...f, enabled: !isUnique, chipState: isUnique ? undefined : ('min' as const) }
     // Memory strands are an intrinsic property of the item base (like ilvl), so

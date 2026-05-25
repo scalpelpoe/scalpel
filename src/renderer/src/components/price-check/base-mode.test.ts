@@ -157,4 +157,23 @@ describe('applyBaseModeToFilters', () => {
     expect(result.find((x) => x.type === 'weapon')!.enabled).toBe(false)
     expect(result.find((x) => x.type === 'defence')!.enabled).toBe(false)
   })
+
+  it('preserves a learned chip so learning overrides base mode', () => {
+    const input = [
+      f({ id: 'explicit.stat_dexterity', type: 'explicit', enabled: true, learned: true }),
+      f({ id: 'explicit.stat_life', type: 'explicit', enabled: true }),
+    ]
+    const result = applyBaseModeToFilters(input, 'Unique', false)
+    // learned chip keeps the engine-set enabled state...
+    expect(result.find((x) => x.id === 'explicit.stat_dexterity')!.enabled).toBe(true)
+    // ...while a non-learned explicit is still disabled by base mode
+    expect(result.find((x) => x.id === 'explicit.stat_life')!.enabled).toBe(false)
+  })
+
+  it('preserves a learned chip the engine disabled', () => {
+    const input = [f({ id: 'explicit.stat_coldres', type: 'explicit', enabled: false, learned: true })]
+    const result = applyBaseModeToFilters(input, 'Unique', false)
+    expect(result[0].enabled).toBe(false)
+    expect(result[0].learned).toBe(true)
+  })
 })
