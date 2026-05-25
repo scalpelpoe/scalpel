@@ -13,7 +13,6 @@ let sessionSeq = 0
 // Cap cached in-flight price-check sessions; covers rapid successive hotkeys without unbounded growth.
 const MAX_SESSIONS = 8
 
-// biome-ignore lint/suspicious/noConsole: gated behind SCALPEL_DEBUG_LOG
 function logLearningError(where: string, err: unknown): void {
   if (process.env.SCALPEL_DEBUG_LOG) console.error(`[learning] ${where} failed:`, err)
 }
