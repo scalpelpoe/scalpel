@@ -182,6 +182,10 @@ export const api = {
   setOverlayInputFocused: (focused: boolean): void => ipcRenderer.send('overlay-input-focused', focused),
   reportRegex: (regex: string): void => ipcRenderer.send('report-regex', regex),
   refreshPrices: (): Promise<void> => ipcRenderer.invoke('refresh-prices'),
+  recordPrefObservation: (sessionId: number, chips: Array<{ id: string; type: string; enabled: boolean }>): void =>
+    ipcRenderer.send('record-pref-observation', sessionId, chips),
+  resetLearning: (scope: 'all' | { rarity: string; itemClass: string }): Promise<void> =>
+    ipcRenderer.invoke('reset-learning', scope),
 
   // Regex presets
   getRegexPresets: (): Promise<import('../shared/types').RegexPreset[]> => ipcRenderer.invoke('get-regex-presets'),
@@ -348,10 +352,12 @@ export const api = {
         max: number | null
         enabled: boolean
         type: string
+        learned?: boolean
       }>
       league: string
       chaosPerDivine?: number
       unidCandidates?: Array<{ name: string; chaosValue: number }>
+      sessionId: number
     }) => void,
   ): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, data: Parameters<typeof cb>[0]): void => cb(data)

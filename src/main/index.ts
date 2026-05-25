@@ -72,6 +72,7 @@ import { initLearning } from './learning'
 import { snapshotClipboard } from './clipboard-preserve'
 import * as tradeHandlers from './handlers/trade'
 import * as settingsHandlers from './handlers/settings'
+import * as learningHandlers from './handlers/learning'
 import * as filesHandlers from './handlers/files'
 import * as editingHandlers from './handlers/editing'
 import * as versionsHandlers from './handlers/versions'
@@ -277,6 +278,7 @@ registerWhiteboard()
 registerClipboard()
 registerManifest()
 registerPlugins(store, isElevated)
+learningHandlers.register()
 registerDiagnostics({ store, getAppWindow, showAppWindow })
 
 ipcMain.on('close-overlay', () => hideOverlay())
