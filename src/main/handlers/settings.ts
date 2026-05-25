@@ -8,20 +8,26 @@ import { applyProfileHydrationSideEffects, applySetting, broadcastSettingUpdate 
 import {
   createProfile,
   deleteProfileAndChooseFallback,
+  getEffectiveSettings,
+  getProfileBackedSetting,
   getProfileById,
+  isProfileBackedKey,
   listProfileSummaries,
   persistProfileSwitchForRestart,
   renameProfile,
   writeActiveRegexPresetsByGameVariant,
+  writeLastUsedProfileSettingByGameVariant,
+  type ProfileBackedKey,
+  type ProfileBackedValue,
 } from '../profile-settings'
 
 export function register(store: Store<AppSettings>): void {
-  ipcMain.handle('get-settings', () => store.store)
+  ipcMain.handle('get-settings', () => getEffectiveSettings(store))
 
   ipcMain.handle('get-color-frequencies', () => getColorFrequencies())
 
   ipcMain.handle('refresh-prices', async () => {
-    await refreshPrices(store.get('league'))
+    await refreshPrices(getProfileBackedSetting(store, 'league'))
   })
 
   ipcMain.handle('set-setting', (event, key: keyof AppSettings, value: AppSettings[typeof key]) => {
@@ -32,6 +38,19 @@ export function register(store: Store<AppSettings>): void {
     // adds a relaunch prompt; this IPC is the lower-level write.
     applySetting(store, key, value, event.sender)
   })
+
+  ipcMain.handle(
+    'set-profile-setting-for-game',
+    (event, variant: GameVariant, key: ProfileBackedKey, value: ProfileBackedValue) => {
+      const previous = getEffectiveSettings(store)
+      const changes = writeLastUsedProfileSettingByGameVariant(store, variant, key, value)
+      applyProfileHydrationSideEffects(changes, previous)
+      for (const change of changes) {
+        broadcastSettingUpdate(event.sender, change.key, change.value)
+      }
+      return getEffectiveSettings(store)
+    },
+  )
 
   ipcMain.handle('list-profiles', () => listProfileSummaries(store))
 
@@ -54,13 +73,7 @@ export function register(store: Store<AppSettings>): void {
   })
 
   ipcMain.handle('delete-profile', (event, id: string) => {
-    const previous = {
-      activeProfileId: store.get('activeProfileId'),
-      poeVersion: store.get('poeVersion'),
-      filterPath: store.get('filterPath'),
-      league: store.get('league'),
-      cheatSheets: store.get('cheatSheets'),
-    }
+    const previous = getEffectiveSettings(store)
     const changes = deleteProfileAndChooseFallback(store, id)
     applyProfileHydrationSideEffects(changes, previous)
     for (const change of changes) {
@@ -89,20 +102,22 @@ export function register(store: Store<AppSettings>): void {
     }
 
     applySetting(store, 'activeProfileId', id, event.sender)
-    return { ok: true as const, settings: store.store }
+    return { ok: true as const, settings: getEffectiveSettings(store) }
   })
 
   ipcMain.handle('refresh-leagues', async (event) => {
     const changed = await refreshLeagues(store)
+    const settings = getEffectiveSettings(store)
     for (const key of changed) {
-      broadcastSettingUpdate(event.sender, key, store.get(key))
+      if (isProfileBackedKey(key)) {
+        broadcastSettingUpdate(event.sender, key, getProfileBackedSetting(store, key))
+      } else {
+        broadcastSettingUpdate(event.sender, key, settings[key])
+      }
     }
     return {
       leaguesPoe1: store.get('leaguesPoe1'),
       leaguesPoe2: store.get('leaguesPoe2'),
-      leaguePoe1: store.get('leaguePoe1'),
-      leaguePoe2: store.get('leaguePoe2'),
-      league: store.get('league'),
     }
   })
 

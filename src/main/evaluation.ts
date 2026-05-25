@@ -13,6 +13,7 @@ import type {
 } from '../shared/types'
 import { getCurrentZone } from './client-log'
 import { snapshotClipboard } from './clipboard-preserve'
+import { getProfileBackedSetting } from './profile-settings'
 import {
   evaluateBlock,
   findMatchingBlocks,
@@ -208,7 +209,7 @@ export function evaluateAndSend(item: PoeItem): void {
 // ---- Preload price check ---------------------------------------------------
 
 export async function preloadPriceCheck(item: PoeItem, store: Store<AppSettings>): Promise<void> {
-  const league = store.get('league')
+  const league = getProfileBackedSetting(store, 'league')
   await refreshPrices(league)
   const priceInfo =
     item.rarity === 'Unique'

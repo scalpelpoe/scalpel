@@ -723,9 +723,9 @@ export default function App(): JSX.Element {
   // don't have a ninja price entry for this item -- ninja's PoE2 catalogue is
   // incomplete and items absent from it 404 on the deep link.
   const ninjaLinkHandler = (item: PoeItem | undefined, priceInfo: PriceInfo | undefined): (() => void) | undefined => {
-    if (!item || !poeVersion || !settings?.league || !priceInfo) return undefined
+    if (!item || !poeVersion || !settings?.activeProfile?.league || !priceInfo) return undefined
     const leagueSlugMap = getManifest().ninjaLeagues[poeVersion === 1 ? 'poe1' : 'poe2']
-    const url = ninjaLinkUrl(item, poeVersion, settings.league, leagueSlugMap, priceInfo)
+    const url = ninjaLinkUrl(item, poeVersion, settings.activeProfile.league, leagueSlugMap, priceInfo)
     if (!url) return undefined
     return () => window.api.openExternal(url)
   }
@@ -861,9 +861,9 @@ export default function App(): JSX.Element {
               }}
             />
 
-            {view === 'item' && settings?.filterPath && (
+            {view === 'item' && settings?.activeProfile?.filterPath && (
               <FilterInfoBanner
-                filterPath={settings.filterPath}
+                filterPath={settings.activeProfile.filterPath}
                 updatedOnlineFilters={updatedOnlineFilters}
                 checkingUpdate={checkingUpdate}
                 updatingFilter={updatingFilter}

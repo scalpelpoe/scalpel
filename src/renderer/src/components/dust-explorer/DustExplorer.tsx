@@ -54,7 +54,7 @@ export function DustExplorer({
         const chunkSize = 200
         for (let i = 0; i < names.length; i += chunkSize) {
           const chunk = names.slice(i, i + chunkSize)
-          const p = await window.api.batchLookupPrices(chunk, settings.league)
+          const p = await window.api.batchLookupPrices(chunk, settings.activeProfile?.league ?? '')
           for (const [name, info] of Object.entries(p)) {
             if (info?.chaosValue) result[name] = info.chaosValue
           }
@@ -67,7 +67,7 @@ export function DustExplorer({
           return
         }
         setPrices(result)
-        const currPrices = await window.api.batchLookupPrices(['Divine Orb', 'Mirror of Kalandra'], settings.league)
+        const currPrices = await window.api.batchLookupPrices(['Divine Orb', 'Mirror of Kalandra'], settings.activeProfile?.league ?? '')
         const divPrice = currPrices['Divine Orb']?.chaosValue ?? 0
         const mirPrice = currPrices['Mirror of Kalandra']?.chaosValue ?? 0
         if (divPrice > 0) setDivineRate(divPrice)

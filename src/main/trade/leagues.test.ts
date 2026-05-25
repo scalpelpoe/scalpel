@@ -89,8 +89,13 @@ function makeFakeStore(initial: Partial<AppSettings>): Store<AppSettings> {
 }
 
 describe('refreshLeagues', () => {
-  it('persists fetched lists and migrates leaguePoe1 + flat league when poe1 is active', async () => {
+  it('persists fetched lists and migrates active profile league when poe1 is active', async () => {
+    const profiles = initProfileStore(mkdtempSync(join(tmpdir(), 'scalpel-league-profiles-')))
+    const poe1 = { ...profiles.createDefault(1), league: 'Mirage' }
+    profiles.saveProfile(poe1)
     const store = makeFakeStore({
+      [ACTIVE_PROFILE_ID_KEY]: poe1.id,
+      [LAST_PROFILE_ID_POE1_KEY]: poe1.id,
       poeVersion: 1,
       league: 'Mirage',
       leaguePoe1: 'Mirage',
@@ -113,16 +118,21 @@ describe('refreshLeagues', () => {
 
     expect(store.get('leaguesPoe1')).toEqual(fresh1)
     expect(store.get('leaguesPoe2')).toEqual(fresh2)
-    expect(store.get('leaguePoe1')).toBe('Return of the Settlers')
-    expect(store.get('league')).toBe('Return of the Settlers') // poe1 is active so flat mirrors
+    expect(profiles.getProfile(poe1.id)?.league).toBe('Return of the Settlers')
+    expect(store.get('leaguePoe1')).toBe('Mirage')
+    expect(store.get('league')).toBe('Mirage')
     expect(store.get('leaguePoe2')).toBe('Fate of the Vaal') // unchanged
     expect(changed).toContain('leaguesPoe1')
-    expect(changed).toContain('leaguePoe1')
     expect(changed).toContain('league')
   })
 
   it('migrates Hardcore Mirage -> Hardcore Return of the Settlers', async () => {
+    const profiles = initProfileStore(mkdtempSync(join(tmpdir(), 'scalpel-league-profiles-')))
+    const poe1 = { ...profiles.createDefault(1), league: 'Hardcore Mirage' }
+    profiles.saveProfile(poe1)
     const store = makeFakeStore({
+      [ACTIVE_PROFILE_ID_KEY]: poe1.id,
+      [LAST_PROFILE_ID_POE1_KEY]: poe1.id,
       poeVersion: 1,
       league: 'Hardcore Mirage',
       leaguePoe1: 'Hardcore Mirage',
@@ -136,14 +146,20 @@ describe('refreshLeagues', () => {
 
     await refreshLeagues(store, fetcher)
 
-    expect(store.get('leaguePoe1')).toBe('Hardcore Return of the Settlers')
-    expect(store.get('league')).toBe('Hardcore Return of the Settlers')
+    expect(profiles.getProfile(poe1.id)?.league).toBe('Hardcore Return of the Settlers')
+    expect(store.get('leaguePoe1')).toBe('Hardcore Mirage')
+    expect(store.get('league')).toBe('Hardcore Mirage')
   })
 
   it('does not touch flat league when the inactive version migrates', async () => {
-    // poe2 is active, but leaguePoe1 (PoE1, inactive) needs migration. The flat
-    // 'league' field reflects the active game (poe2) so it must not be rewritten.
+    const profiles = initProfileStore(mkdtempSync(join(tmpdir(), 'scalpel-league-profiles-')))
+    const poe1 = { ...profiles.createDefault(1), league: 'Mirage' }
+    const poe2 = { ...profiles.createDefault(2), league: 'Fate of the Vaal' }
+    profiles.saveProfile(poe1)
+    profiles.saveProfile(poe2)
     const store = makeFakeStore({
+      [ACTIVE_PROFILE_ID_KEY]: poe2.id,
+      [LAST_PROFILE_ID_POE1_KEY]: poe1.id,
       poeVersion: 2,
       league: 'Fate of the Vaal',
       leaguePoe1: 'Mirage',
@@ -158,7 +174,8 @@ describe('refreshLeagues', () => {
 
     const changed = await refreshLeagues(store, fetcher)
 
-    expect(store.get('leaguePoe1')).toBe('Return of the Settlers')
+    expect(profiles.getProfile(poe1.id)?.league).toBe('Return of the Settlers')
+    expect(store.get('leaguePoe1')).toBe('Mirage')
     expect(store.get('league')).toBe('Fate of the Vaal') // active game (poe2) untouched
     expect(changed).not.toContain('league')
   })
@@ -259,7 +276,7 @@ describe('refreshLeagues', () => {
     expect(profiles.getProfile(poe1Hc.id)?.league).toBe('Hardcore Return of the Settlers')
     expect(profiles.getProfile(poe2Active.id)?.league).toBe('Fate of the Vaal')
     expect(store.get('league')).toBe('Fate of the Vaal')
-    expect(store.get('leaguePoe1')).toBe('Hardcore Return of the Settlers')
+    expect(store.get('leaguePoe1')).toBe('Mirage')
     expect(changed).not.toContain('league')
   })
 })

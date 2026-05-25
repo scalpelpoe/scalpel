@@ -157,9 +157,9 @@ export function useAuditState({ block, blockIndex, tierGroup, item }: UseAuditSt
     try {
       const settings = await window.api.getSettings()
       const isUnique = block.conditions.some((c) => c.type === 'Rarity' && c.values.some((v) => v === 'Unique'))
-      const prices = await window.api.batchLookupPrices(baseTypes, settings.league, isUnique)
+      const prices = await window.api.batchLookupPrices(baseTypes, settings.activeProfile?.league ?? '', isUnique)
 
-      const currPrices = await window.api.batchLookupPrices(['Divine Orb', 'Mirror of Kalandra'], settings.league)
+      const currPrices = await window.api.batchLookupPrices(['Divine Orb', 'Mirror of Kalandra'], settings.activeProfile?.league ?? '')
       const divPrice = currPrices['Divine Orb']?.chaosValue ?? 0
       const mirPrice = currPrices['Mirror of Kalandra']?.chaosValue ?? 0
       if (divPrice > 0) setDivineRate(divPrice)

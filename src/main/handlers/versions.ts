@@ -5,26 +5,27 @@ import { evaluateAndSend } from '../evaluation'
 import { getCurrentFilter, loadFilter } from '../filter-state'
 import { clearHistory, getHistory, undoLast } from '../history'
 import { reloadFilterInGame } from '../overlay'
+import { getProfileBackedSetting } from '../profile-settings'
 import { deleteVersion, listVersions, restoreVersion, saveVersion } from '../update/versions'
 
 export function register(store: Store<AppSettings>): void {
   ipcMain.handle('get-history', () => getHistory())
 
   ipcMain.handle('list-versions', () => {
-    const filterPath = store.get('filterPath')
+    const filterPath = getProfileBackedSetting(store, 'filterPath')
     if (!filterPath) return []
     return listVersions(filterPath)
   })
 
   ipcMain.handle('create-checkpoint', (_event, label?: string) => {
-    const filterPath = store.get('filterPath')
+    const filterPath = getProfileBackedSetting(store, 'filterPath')
     if (!filterPath) return { ok: false, error: 'No filter path set' }
     const version = saveVersion(filterPath, true, label)
     return version ? { ok: true } : { ok: false, error: 'Failed to save checkpoint' }
   })
 
   ipcMain.handle('restore-version', (_event, versionFilename: string, itemJson?: string) => {
-    const filterPath = store.get('filterPath')
+    const filterPath = getProfileBackedSetting(store, 'filterPath')
     if (!filterPath) return { ok: false, error: 'No filter path set' }
     // Save current state as auto-version before restoring
     saveVersion(filterPath, false)
@@ -47,7 +48,7 @@ export function register(store: Store<AppSettings>): void {
   })
 
   ipcMain.handle('undo-edit', (_event, itemJson?: string) => {
-    const filterPath = store.get('filterPath')
+    const filterPath = getProfileBackedSetting(store, 'filterPath')
     if (!filterPath) return { ok: false, error: 'No filter path set' }
     const result = undoLast(filterPath)
     if (result.ok) {

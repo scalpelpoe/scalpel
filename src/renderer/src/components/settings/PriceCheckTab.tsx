@@ -14,10 +14,11 @@ import { SettingToggleBox } from './SettingToggleBox'
 interface Props {
   settings: AppSettings
   update: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
+  updateProfile: (key: 'tradePriceOption', value: unknown) => Promise<void>
   tryHotkey: (hotkey: string, slot: { kind: 'pricecheck' }) => boolean
 }
 
-export function PriceCheckTab({ settings, update, tryHotkey }: Props): JSX.Element {
+export function PriceCheckTab({ settings, update, updateProfile, tryHotkey }: Props): JSX.Element {
   return (
     <>
       <div className="settings-section-title mt-3">Trade Settings</div>
@@ -55,9 +56,9 @@ export function PriceCheckTab({ settings, update, tryHotkey }: Props): JSX.Eleme
         />
         <SettingSelectBox
           label="Buyout currency"
-          value={settings.tradePriceOption ?? (settings.poeVersion === 2 ? 'exalted_divine' : 'chaos_divine')}
+          value={settings.activeProfile?.tradePriceOption ?? (settings.poeVersion === 2 ? 'exalted_divine' : 'chaos_divine')}
           options={getPriceOptions(settings.poeVersion ?? 1)}
-          onChange={(v) => update('tradePriceOption', v)}
+          onChange={(v) => updateProfile('tradePriceOption', v)}
         />
         <SettingSelectBox
           label="Listing time"

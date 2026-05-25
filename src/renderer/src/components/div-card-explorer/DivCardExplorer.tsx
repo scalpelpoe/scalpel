@@ -41,7 +41,7 @@ export function DivCardExplorer({ onSelectItem }: Props): JSX.Element {
         const chunkSize = 200
         for (let i = 0; i < cardNames.length; i += chunkSize) {
           const chunk = cardNames.slice(i, i + chunkSize)
-          const p = await window.api.batchLookupDivCardPrices(chunk, settings.league)
+          const p = await window.api.batchLookupDivCardPrices(chunk, settings.activeProfile?.league ?? '')
           for (const [name, info] of Object.entries(p)) {
             if (info?.chaosValue) result[name] = info.chaosValue
           }
@@ -53,7 +53,7 @@ export function DivCardExplorer({ onSelectItem }: Props): JSX.Element {
           return
         }
         setPrices(result)
-        const currPrices = await window.api.batchLookupPrices(['Divine Orb'], settings.league)
+        const currPrices = await window.api.batchLookupPrices(['Divine Orb'], settings.activeProfile?.league ?? '')
         const divPrice = currPrices['Divine Orb']?.chaosValue ?? 0
         if (divPrice > 0) setDivineRate(divPrice)
       } catch {

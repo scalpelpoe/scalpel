@@ -38,6 +38,10 @@ vi.mock('./hotkeys', () => ({
   setStashScrollEnabled: vi.fn(),
 }))
 
+vi.mock('./online-sync', () => ({
+  updateOnlineSyncDir: vi.fn(),
+}))
+
 vi.mock('./pinned-zone', () => ({
   applyPinnedZoneEnabled: vi.fn(),
   getPinnedZoneOverlay: vi.fn(() => null),
@@ -70,5 +74,14 @@ describe('settings-write side effects', () => {
     applyProfileHydrationSideEffects(changes, { [PROFILE_VERSION_KEY]: 2, league: 'Fate of the Vaal' })
 
     expect(observedVersions).toEqual([1])
+  })
+
+  it('updates online sync directory when filterDir changes', async () => {
+    const { updateOnlineSyncDir } = await import('./online-sync')
+    const { applyProfileHydrationSideEffects } = await import('./settings-write')
+
+    applyProfileHydrationSideEffects([{ key: 'filterDir', value: 'C:\\filters' }], { filterDir: 'C:\\old' })
+
+    expect(updateOnlineSyncDir).toHaveBeenCalledWith('C:\\filters')
   })
 })

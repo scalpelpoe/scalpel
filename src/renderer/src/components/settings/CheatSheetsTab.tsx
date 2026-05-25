@@ -9,6 +9,7 @@ import { PrefabPicker } from './cheatsheets/PrefabPicker'
 interface Props {
   settings: AppSettings
   update: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
+  updateProfile: (key: 'cheatSheets', value: unknown) => Promise<void>
   tryHotkey: (hotkey: string, slot: HotkeySlot) => boolean
   /** Shows a banner error message via the parent SettingsPanel. Called for
    *  URL-paste failures and other transient operations the user should know
@@ -16,10 +17,10 @@ interface Props {
   onError: (message: string, tone?: 'error' | 'warn') => void
 }
 
-export function CheatSheetsTab({ settings, update, tryHotkey, onError }: Props): JSX.Element {
-  const cheatSheets = settings.cheatSheets ?? { globalHotkey: '', categories: [] }
+export function CheatSheetsTab({ settings, update, updateProfile, tryHotkey, onError }: Props): JSX.Element {
+  const cheatSheets = settings.activeProfile?.cheatSheets ?? { globalHotkey: '', categories: [] }
   const setCategories = (categories: CheatSheetCategory[]): void => {
-    update('cheatSheets', { ...cheatSheets, categories })
+    updateProfile('cheatSheets', { ...cheatSheets, categories })
   }
 
   return (
@@ -34,7 +35,7 @@ export function CheatSheetsTab({ settings, update, tryHotkey, onError }: Props):
             value={cheatSheets.globalHotkey}
             onChange={(hotkey) => {
               if (!tryHotkey(hotkey, { kind: 'cheatsheet-global' })) return
-              update('cheatSheets', { ...cheatSheets, globalHotkey: hotkey })
+              updateProfile('cheatSheets', { ...cheatSheets, globalHotkey: hotkey })
             }}
           />
         </div>

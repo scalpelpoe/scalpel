@@ -4,6 +4,7 @@ import type { ExternalLinkTarget } from '../shared/external-link'
 import type {
   AppSettings,
   AuthResult,
+  CheatSheetsSettings,
   FilterBlock,
   FilterListEntry,
   FilterVersion,
@@ -12,9 +13,13 @@ import type {
   Manifest,
   OverlayData,
   PoeProfileSummary,
+  TradePriceOption,
   Zone,
 } from '../shared/types'
 import type { BoardLibrary, BoardSnapshot, BoardState } from '../shared/whiteboard-types'
+
+type ProfileBackedSettingKey = 'league' | 'filterPath' | 'filterDir' | 'tradePriceOption' | 'cheatSheets'
+type ProfileBackedValue = string | TradePriceOption | CheatSheetsSettings
 
 export const api = {
   // Manifest
@@ -24,6 +29,11 @@ export const api = {
   getSettings: (): Promise<AppSettings> => ipcRenderer.invoke('get-settings'),
   setSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]): Promise<void> =>
     ipcRenderer.invoke('set-setting', key, value),
+  setProfileSettingForGame: (
+    variant: GameVariant,
+    key: ProfileBackedSettingKey,
+    value: ProfileBackedValue,
+  ): Promise<AppSettings> => ipcRenderer.invoke('set-profile-setting-for-game', variant, key, value),
   listProfiles: (): Promise<PoeProfileSummary[]> => ipcRenderer.invoke('list-profiles'),
   createProfile: (input: {
     name: string
@@ -47,9 +57,6 @@ export const api = {
   refreshLeagues: (): Promise<{
     leaguesPoe1: string[]
     leaguesPoe2: string[]
-    leaguePoe1: string
-    leaguePoe2: string
-    league: string
   }> => ipcRenderer.invoke('refresh-leagues'),
   pickFilterFile: (): Promise<string | null> => ipcRenderer.invoke('pick-filter-file'),
   pickFilterDir: (): Promise<string | null> => ipcRenderer.invoke('pick-filter-dir'),
@@ -163,7 +170,6 @@ export const api = {
     ipcRenderer.invoke('delete-version', filename),
 
   // App window
-  finishOnboarding: (): Promise<void> => ipcRenderer.invoke('finish-onboarding'),
   setAppWindowMode: (mode: 'onboarding' | 'settings'): void => ipcRenderer.send('app-window-mode', mode),
 
   // Dev tools

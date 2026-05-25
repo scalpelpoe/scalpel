@@ -13,6 +13,7 @@ import {
 import { getCurrentFilter, loadFilter } from '../filter-state'
 import { captureSnapshot } from '../history'
 import { reloadFilterInGame } from '../overlay'
+import { getProfileBackedSetting } from '../profile-settings'
 
 // ---- History description helpers -------------------------------------------
 
@@ -141,7 +142,7 @@ export function register(store: Store<AppSettings>): void {
       }
       writeBlockEdit(currentFilter, blockIndex, updatedBlock)
       // Reload to get fresh parsed state
-      const path = store.get('filterPath')
+      const path = getProfileBackedSetting(store, 'filterPath')
       if (path) loadFilter(path)
 
       // Re-evaluate and send fresh overlay data
@@ -178,7 +179,7 @@ export function register(store: Store<AppSettings>): void {
         }
         moveBaseTypeBetweenTiers(currentFilter, baseType, fromBlockIndex, toBlockIndex)
         // Reload to get fresh parsed state
-        const path = store.get('filterPath')
+        const path = getProfileBackedSetting(store, 'filterPath')
         if (path) loadFilter(path)
 
         // Re-evaluate the item against the updated filter and send fresh data
@@ -224,7 +225,7 @@ export function register(store: Store<AppSettings>): void {
           }
           moveBaseTypeBetweenTiers(currentFilter, bt, fromBlockIndex, toBlockIndex)
         }
-        const path = store.get('filterPath')
+        const path = getProfileBackedSetting(store, 'filterPath')
         if (path) loadFilter(path)
 
         const freshFilter = getCurrentFilter()
@@ -278,7 +279,7 @@ export function register(store: Store<AppSettings>): void {
       }
       updateStackThresholds(currentFilter, oldBoundary, newBoundary)
       // Reload to get fresh parsed state
-      const path = store.get('filterPath')
+      const path = getProfileBackedSetting(store, 'filterPath')
       if (path) loadFilter(path)
 
       // Re-evaluate and send fresh data
@@ -325,7 +326,7 @@ export function register(store: Store<AppSettings>): void {
         }
       }
       updateQualityThresholds(currentFilter, oldBoundary, newBoundary)
-      const path = store.get('filterPath')
+      const path = getProfileBackedSetting(store, 'filterPath')
       if (path) loadFilter(path)
       const freshFilter = getCurrentFilter()
       if (freshFilter && item) {
@@ -368,7 +369,7 @@ export function register(store: Store<AppSettings>): void {
         }
       }
       updateStrandThresholds(currentFilter, oldBoundary, newBoundary)
-      const path = store.get('filterPath')
+      const path = getProfileBackedSetting(store, 'filterPath')
       if (path) loadFilter(path)
       const freshFilter = getCurrentFilter()
       if (freshFilter && item) evaluateAndSend(item)
@@ -380,7 +381,7 @@ export function register(store: Store<AppSettings>): void {
   })
 
   ipcMain.handle('reload-filter', () => {
-    const path = store.get('filterPath')
+    const path = getProfileBackedSetting(store, 'filterPath')
     if (!path) return { ok: false, error: 'No filter path set' }
     return { ok: !!loadFilter(path) }
   })

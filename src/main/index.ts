@@ -113,13 +113,14 @@ import {
   subscribeToPoeMoves,
 } from './windowing'
 import { initAppMacrosRefresh, withPluginHotkeys } from './app-macros'
-import type { AppSettings, CheatSheetsSettings, GameVariant, RegexPreset } from '../shared/types'
+import type { AppSettings, CheatSheetsSettings, GameVariant, LegacyAppSettings, RegexPreset } from '../shared/types'
 import { initProfileStore } from './profiles/store'
 import {
   ACTIVE_PROFILE_ID_KEY,
   LAST_PROFILE_ID_POE1_KEY,
   LAST_PROFILE_ID_POE2_KEY,
   PROFILE_VERSION_KEY,
+  getProfileBackedSetting,
   hydrateActiveProfileSettings,
   writeActiveProfileSetting,
 } from './profile-settings'
@@ -161,15 +162,6 @@ function isElevated(): boolean {
 
 const store = new Store<AppSettings>({
   defaults: {
-    filterPath: '',
-    filterDir: '',
-    filterPathPoe1: '',
-    filterPathPoe2: '',
-    filterDirPoe1: '',
-    filterDirPoe2: '',
-    league: 'Mirage',
-    leaguePoe1: 'Mirage',
-    leaguePoe2: 'Fate of the Vaal',
     hotkey: 'CommandOrControl+Shift+D',
     priceCheckHotkey: 'CommandOrControl+Shift+A',
     overlayOpacity: 0.95,
@@ -182,17 +174,11 @@ const store = new Store<AppSettings>({
     tradeStatus: 'available',
     tradeCollapseListings: true,
     previewVolume: 0.25,
-    tradePriceOption: 'chaos_divine',
-    tradePriceOptionPoe1: 'chaos_divine',
-    tradePriceOptionPoe2: 'exalted_divine',
     priceCheckDefaultPercent: 90,
     adaptiveDefaultsMode: 'eager',
     tradeDefaultToBase: false,
     chatCommands: [],
     appMacros: [],
-    cheatSheets: { globalHotkey: '', categories: [], pinned: false },
-    cheatSheetsPoe1: { globalHotkey: '', categories: [], pinned: false },
-    cheatSheetsPoe2: { globalHotkey: '', categories: [], pinned: false },
     stashScrollEnabled: false,
     poeVersion: 1,
     regexPresetsPoe1: [],
@@ -241,20 +227,24 @@ if (!IS_E2E)
     }
   })
 
-// Migrate: derive filterDir from existing filterPath for users upgrading
-if (!store.get('filterDir') && store.get('filterPath')) {
-  store.set('filterDir', dirname(store.get('filterPath')))
-} else if (!store.get('filterDir')) {
-  store.set('filterDir', '')
-}
+// Migrate: derive filterDir from existing filterPath for users upgrading.
+// Uses legacy key reads via cast — these keys no longer exist on AppSettings
+// but may still be present in the electron-store JSON from a prior version.
+{
+  const legacyStore = store as unknown as Store<AppSettings & LegacyAppSettings>
+  if (!legacyStore.get('filterDir') && legacyStore.get('filterPath')) {
+    legacyStore.set('filterDir', dirname(legacyStore.get('filterPath')!))
+  } else if (!legacyStore.get('filterDir')) {
+    legacyStore.set('filterDir', '')
+  }
 
-// Migrate: seed per-version fields from the pre-existing flat values. Before this
-// change everyone had a single league/filter/price-option -- treat that as their
-// PoE1 setup. Guarded by empty-check so we only migrate once.
-if (!store.get('leaguePoe1')) store.set('leaguePoe1', store.get('league'))
-if (!store.get('filterPathPoe1')) store.set('filterPathPoe1', store.get('filterPath'))
-if (!store.get('filterDirPoe1')) store.set('filterDirPoe1', store.get('filterDir'))
-if (!store.get('tradePriceOptionPoe1')) store.set('tradePriceOptionPoe1', store.get('tradePriceOption'))
+  // Seed per-version mirror fields from the pre-existing flat values so
+  // migrateFromLegacy can read them. Guarded by empty-check (runs once).
+  if (!legacyStore.get('leaguePoe1')) legacyStore.set('leaguePoe1', legacyStore.get('league'))
+  if (!legacyStore.get('filterPathPoe1')) legacyStore.set('filterPathPoe1', legacyStore.get('filterPath'))
+  if (!legacyStore.get('filterDirPoe1')) legacyStore.set('filterDirPoe1', legacyStore.get('filterDir'))
+  if (!legacyStore.get('tradePriceOptionPoe1')) legacyStore.set('tradePriceOptionPoe1', legacyStore.get('tradePriceOption'))
+}
 
 // Migrate: regex presets used to be a single flat `regexPresets` array. Now
 // they're per-version. Existing users only ever ran PoE1 (regex tool was off
@@ -273,11 +263,12 @@ if (!store.get('tradePriceOptionPoe1')) store.set('tradePriceOptionPoe1', store.
 if (!store.get(ACTIVE_PROFILE_ID_KEY)) {
   const profiles = profileStore.migrateFromLegacy(store)
   const version = store.get(PROFILE_VERSION_KEY)
-  const activeId = (version === 2 ? profiles[1] : profiles[0]).id
-  store.set(ACTIVE_PROFILE_ID_KEY, activeId)
-  store.set(LAST_PROFILE_ID_POE1_KEY, profiles[0].id)
-  store.set(LAST_PROFILE_ID_POE2_KEY, profiles[1].id)
-  const hadFilter = (store.get('filterPathPoe1') ?? '') !== '' || (store.get('filterPathPoe2') ?? '') !== ''
+  const active = profiles.find((profile) => profile.gameVariant === version) ?? profiles[0] ?? null
+  store.set(ACTIVE_PROFILE_ID_KEY, active?.id ?? '')
+  store.set(LAST_PROFILE_ID_POE1_KEY, profiles.find((profile) => profile.gameVariant === 1)?.id ?? '')
+  store.set(LAST_PROFILE_ID_POE2_KEY, profiles.find((profile) => profile.gameVariant === 2)?.id ?? '')
+  const legacyStore = store as unknown as Store<AppSettings & LegacyAppSettings>
+  const hadFilter = (legacyStore.get('filterPathPoe1') ?? '') !== '' || (legacyStore.get('filterPathPoe2') ?? '') !== ''
   store.set('onboardingCompleted', hadFilter)
 }
 
@@ -508,7 +499,7 @@ app.whenReady().then(() => {
     getOverlayWindow()?.webContents.send('rate-limit', state)
   })
 
-  const filterPath = store.get('filterPath')
+  const filterPath = getProfileBackedSetting(store, 'filterPath')
   if (!IS_E2E && filterPath) loadFilter(filterPath, 'App Launch')
 
   // Start low-level keyboard hook
@@ -604,24 +595,24 @@ app.whenReady().then(() => {
   // (set-setting -> applySetting) does this via MIRROR_KEYS for renderer-
   // initiated writes; this is the parallel path for main-initiated ones.
   const patchCheatSheets = (patch: Partial<CheatSheetsSettings>): void => {
-    const cs = store.get('cheatSheets') ?? { globalHotkey: '', categories: [], pinned: false }
+    const cs = getProfileBackedSetting(store, 'cheatSheets') ?? { globalHotkey: '', categories: [], pinned: false }
     const next: CheatSheetsSettings = { ...cs, ...patch }
     writeActiveProfileSetting(store, 'cheatSheets', next)
   }
   registerCheatSheetsOverlay({
-    storedAnchor: () => store.get('cheatSheets')?.windowAnchor,
+    storedAnchor: () => getProfileBackedSetting(store, 'cheatSheets')?.windowAnchor,
     onAnchorChanged: (anchor) => patchCheatSheets({ windowAnchor: anchor }),
   })
   // Hide the main overlay before showing the cheat sheet (keeps things tidy if
   // the user hotkeys the cheat sheet while the main overlay was open).
   setCheatSheetsBeforeShow(() => hideOverlay())
-  applyCheatSheetHotkeys(store.get('cheatSheets'))
+  applyCheatSheetHotkeys(getProfileBackedSetting(store, 'cheatSheets'))
   registerWhiteboardOverlay()
   registerPinnedZoneOverlay({
-    storedAnchor: () => store.get('cheatSheets')?.pinnedAnchor,
+    storedAnchor: () => getProfileBackedSetting(store, 'cheatSheets')?.pinnedAnchor,
     onAnchorChanged: (anchor) => patchCheatSheets({ pinnedAnchor: anchor }),
   })
-  applyPinnedZoneEnabled(store.get('cheatSheets')?.pinned === true)
+  applyPinnedZoneEnabled(getProfileBackedSetting(store, 'cheatSheets')?.pinned === true)
   subscribeToPoeMoves()
   setStashScrollEnabled(store.get('stashScrollEnabled') ?? false)
   setOpenSide(store.get('openSide') ?? 'both')

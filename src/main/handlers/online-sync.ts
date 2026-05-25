@@ -11,14 +11,15 @@ import { loadFilter } from '../filter-state'
 import { switchFilterInGame } from '../overlay'
 import { saveVersion } from '../update/versions'
 import { checkOnlineSyncNow } from '../online-sync'
-import { applySetting } from '../settings-write'
+import { applySetting, applyProfileBackedSetting } from '../settings-write'
+import { getProfileBackedSetting } from '../profile-settings'
 
 /** Look up the online filter name and path for the currently active local filter */
 function findOnlineFilter(
   store: Store<AppSettings>,
 ): { onlineFilterName: string; onlineFilePath: string; localFileName: string; localPath: string } | { error: string } {
-  const filterDir = store.get('filterDir') as string
-  const filterPath = store.get('filterPath') as string
+  const filterDir = getProfileBackedSetting(store, 'filterDir') as string
+  const filterPath = getProfileBackedSetting(store, 'filterPath') as string
   if (!filterDir || !filterPath) return { error: 'No filter configured' }
 
   const localFileName = basename(filterPath, '.filter')
@@ -80,8 +81,8 @@ export function register(store: Store<AppSettings>): void {
         content = content.replace(/^#name:.+$/m, `#name: ${localName}`)
         writeFileSync(targetPath, content, 'utf-8')
         clearIntents()
-        // Set as active filter (applySetting mirrors + writes to active profile)
-        applySetting(store, 'filterPath', targetPath, null)
+        // Set as active filter
+        applyProfileBackedSetting(store, 'filterPath', targetPath, null, (p) => { if (p) loadFilter(p, 'Online Filter Imported') })
         return { ok: true, path: targetPath }
       } catch (err) {
         return { ok: false, error: String(err) }
@@ -139,7 +140,7 @@ export function register(store: Store<AppSettings>): void {
         saveBaseline(info.onlineFilterName, upstreamContent, info.onlineFilePath, info.localPath)
         saveVersion(info.localPath, false, 'Online Filter Merged')
 
-        const currentPath = store.get('filterPath')
+        const currentPath = getProfileBackedSetting(store, 'filterPath')
         if (currentPath === info.localPath) {
           loadFilter(info.localPath, 'Online Filter Merged')
         }
@@ -185,7 +186,7 @@ export function register(store: Store<AppSettings>): void {
         if (intentLog.intents.length === 0) {
           // No intents - overwrite with upstream
           writeFileSync(localPath, upstreamContent, 'utf-8')
-          const currentPath = store.get('filterPath')
+          const currentPath = getProfileBackedSetting(store, 'filterPath')
           if (currentPath === localPath) loadFilter(localPath, 'Online Filter Updated')
           return { ok: true, stats: { applied: 0, skipped: 0, conflicts: 0 } }
         }
@@ -212,7 +213,7 @@ export function register(store: Store<AppSettings>): void {
 
         saveVersion(localPath, false, 'Online Filter Merged')
 
-        const currentPath = store.get('filterPath')
+        const currentPath = getProfileBackedSetting(store, 'filterPath')
         if (currentPath === localPath) loadFilter(localPath, 'Online Filter Merged')
 
         return { ok: true, stats: result.stats }

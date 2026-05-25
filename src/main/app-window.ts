@@ -65,11 +65,6 @@ export function getAppWindow(): BrowserWindow | null {
   return appWindow
 }
 
-// Called when onboarding finishes — hide the app window
-ipcMain.handle('finish-onboarding', () => {
-  // Window stays available via tray
-})
-
 ipcMain.on('app-window-mode', (_event, mode: 'onboarding' | 'settings') => {
   if (!appWindow) return
   if (mode === 'onboarding') {

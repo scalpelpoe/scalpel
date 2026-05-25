@@ -3,6 +3,7 @@ import type Store from 'electron-store'
 import { getTradeUrls, POE_WEBSITE } from '../../shared/endpoints'
 import type { AppSettings, AuthResult } from '../../shared/types'
 import { getPoeVersion } from '../game-state'
+import { getProfileBackedSetting } from '../profile-settings'
 import type { BulkExchangeResult, StatFilter, TradeResult } from '../trade/trade'
 import {
   searchNeedsLogin,
@@ -233,11 +234,11 @@ export function register(store: Store<AppSettings>): void {
       statFilters: StatFilter[],
       searchOptions?: { listedTime?: string; priceOption?: string; statusOption?: string },
     ): Promise<TradeResult> => {
-      const league = store.get('league')
+      const league = getProfileBackedSetting(store, 'league')
       // Per-search overrides from the price-check Settings chip take priority over the
       // persisted global settings.
       const status = searchOptions?.statusOption ?? store.get('tradeStatus') ?? 'available'
-      const price = searchOptions?.priceOption ?? store.get('tradePriceOption') ?? 'chaos_divine'
+      const price = searchOptions?.priceOption ?? getProfileBackedSetting(store, 'tradePriceOption') ?? 'chaos_divine'
       const collapse = store.get('tradeCollapseListings') ?? true
       // Only spend a login check when the search would carry a Weighted Sum group
       // (the trade API rejects those for anonymous users). Most searches skip it.
@@ -255,7 +256,7 @@ export function register(store: Store<AppSettings>): void {
   ipcMain.handle(
     'bulk-exchange',
     async (_event, itemName: string, baseType: string, haveId?: string): Promise<BulkExchangeResult> => {
-      const league = store.get('league')
+      const league = getProfileBackedSetting(store, 'league')
       const wantId = getBulkExchangeId(itemName, baseType)
       if (!wantId) return { total: 0, listings: [], queryId: '' }
       return searchBulkExchange(league, wantId, haveId ?? 'chaos')
@@ -347,9 +348,9 @@ export function register(store: Store<AppSettings>): void {
         corrupted8mod: boolean
       },
     ) => {
-      const league = store.get('league')
+      const league = getProfileBackedSetting(store, 'league')
       const tradeStatus = store.get('tradeStatus') ?? 'available'
-      const tradePriceOption = store.get('tradePriceOption') ?? 'chaos_divine'
+      const tradePriceOption = getProfileBackedSetting(store, 'tradePriceOption') ?? 'chaos_divine'
       const collapse = store.get('tradeCollapseListings') ?? true
       const result = await searchMapsByRegex(
         league,

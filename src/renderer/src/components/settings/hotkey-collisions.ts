@@ -38,7 +38,7 @@ interface SlotEntry {
 }
 
 function buildSlots(settings: AppSettings): SlotEntry[] {
-  const cheatSheets = settings.cheatSheets
+  const cheatSheets = settings.activeProfile?.cheatSheets
   return [
     { slot: { kind: 'filter' }, value: settings.hotkey ?? '', scope: 'both' },
     { slot: { kind: 'pricecheck' }, value: settings.priceCheckHotkey ?? '', scope: 'both' },

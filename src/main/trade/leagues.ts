@@ -12,10 +12,10 @@ import type Store from 'electron-store'
 import { getTradeUrls } from '../../shared/endpoints'
 import { getProfileStore } from '../profiles/store'
 import {
-  findLastUsedProfileByGameVariant,
   hydrateProfileSettings,
   listProfilesByGameVariant,
   type ProfileChangedSetting,
+  type SettingChangeKey,
 } from '../profile-settings'
 import { getGameFeatures } from '../../shared/game-features'
 import type { AppSettings } from '../../shared/types'
@@ -123,22 +123,11 @@ function migrateProfileLeagues(
   list: readonly string[],
 ): ProfileChangedSetting[] {
   const changed: ProfileChangedSetting[] = []
-  const mirrorKey = version === 2 ? 'leaguePoe2' : 'leaguePoe1'
   const activeId = store.get('activeProfileId')
   const profiles = listProfilesByGameVariant(version)
 
-  if (profiles.length === 0) {
-    const currentLeague = store.get(mirrorKey)
-    const next = migrateLeague(currentLeague, list)
-    if (next && next !== currentLeague) {
-      rememberChange(store, changed, mirrorKey, next)
-      if (store.get('poeVersion') === version) rememberChange(store, changed, 'league', next)
-    }
-    return changed
-  }
+  if (profiles.length === 0) return changed
 
-  const lastUsedProfile = findLastUsedProfileByGameVariant(store, version)
-  let lastUsedNext: string | null = null
   let activeProfileChanged = false
   const profileStore = getProfileStore()
 
@@ -151,11 +140,8 @@ function migrateProfileLeagues(
     profile.updatedAt = new Date().toISOString()
     profileStore.saveProfile(profile)
 
-    if (profile.id === lastUsedProfile?.id) lastUsedNext = next
     if (profile.id === activeId) activeProfileChanged = true
   }
-
-  if (lastUsedNext) rememberChange(store, changed, mirrorKey, lastUsedNext)
 
   if (activeProfileChanged && activeId) {
     const activeProfile = profileStore.getProfile(activeId)
@@ -182,19 +168,18 @@ export async function refreshLeagues(
   store: Store<AppSettings>,
   fetcher: LeagueFetcher = fetchLeagueList,
   options: { force?: boolean } = {},
-): Promise<Array<keyof AppSettings>> {
+): Promise<SettingChangeKey[]> {
   const COOLDOWN_MS = 60 * 60 * 1000 // 1h
   const lastFetched = store.get('leaguesFetchedAt') ?? 0
   if (!options.force && Date.now() - lastFetched < COOLDOWN_MS) return []
 
-  const changed: Array<keyof AppSettings> = []
+  const changed: SettingChangeKey[] = []
 
   const [poe1, poe2] = await Promise.all([fetcher(1), fetcher(2)])
 
   const apply = (
     fetched: string[] | null,
     listKey: 'leaguesPoe1' | 'leaguesPoe2',
-    _leagueKey: 'leaguePoe1' | 'leaguePoe2',
     fallback: readonly string[],
     version: 1 | 2,
   ): void => {
@@ -210,8 +195,8 @@ export async function refreshLeagues(
     }
   }
 
-  apply(poe1, 'leaguesPoe1', 'leaguePoe1', getGameFeatures(1).leagues, 1)
-  apply(poe2, 'leaguesPoe2', 'leaguePoe2', getGameFeatures(2).leagues, 2)
+  apply(poe1, 'leaguesPoe1', getGameFeatures(1).leagues, 1)
+  apply(poe2, 'leaguesPoe2', getGameFeatures(2).leagues, 2)
 
   // Mark a successful round so the cooldown gate above can short-circuit
   // future calls. Only mark if at least one fetcher returned data, otherwise

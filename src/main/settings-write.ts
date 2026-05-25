@@ -1,14 +1,10 @@
 /** Single source of truth for "what happens when a setting is written":
- *  per-version mirror, side effects, and broadcast to other windows.
- *
- *  The set-setting IPC handler is the canonical caller, but we also write
- *  filterPath/filterDir from the file-pick handlers and broadcast league
- *  changes after refreshLeagues -- everyone goes through here so the mirror
- *  table and broadcast targets stay in lockstep. */
+ *  side effects and broadcast to other windows. Profile-backed fields
+ *  (filterPath, league, etc.) are handled directly by profile management
+ *  code; this module only deals with global AppSettings keys. */
 
 import type { WebContents } from 'electron'
 import type Store from 'electron-store'
-import { clearFilterState, loadFilter } from './filter-state'
 import { getOverlayWindow, setCloseOnClickOutside } from './overlay'
 import { withPluginHotkeys } from './app-macros'
 import { getAppWindow } from './app-window'
@@ -19,20 +15,24 @@ import { setAppMacros, setChatCommands, setHotkey, setPriceCheckHotkey, setStash
 import { applyPinnedZoneEnabled, getPinnedZoneOverlay } from './pinned-zone'
 import { refreshPrices } from './trade/prices'
 import { setUpdateChannel } from './update/updater'
-import type { AppSettings, GameVariant } from '../shared/types'
+import type { AppSettings } from '../shared/types'
 import {
   ACTIVE_PROFILE_ID_KEY,
   PROFILE_VERSION_KEY,
+  getEffectiveSettings,
   hydrateActiveProfileSettings,
   isProfileBackedKey,
   switchActiveProfileByGameVariant,
   switchActiveProfileById,
   writeActiveProfileSetting,
+  type ProfileBackedKey,
   type ProfileChangedSetting,
+  type SettingChangeKey,
+  type SettingValue,
 } from './profile-settings'
 
 /** Send `setting-updated` to every window except the sender. */
-export function broadcastSettingUpdate(sender: WebContents | null, key: keyof AppSettings, value: unknown): void {
+export function broadcastSettingUpdate(sender: WebContents | null, key: SettingChangeKey, value: SettingValue<SettingChangeKey>): void {
   const csWin = getCheatSheetsOverlay()?.getWindow() ?? null
   const pinnedWin = getPinnedZoneOverlay()?.getWindow() ?? null
   for (const win of [getOverlayWindow(), getAppWindow(), csWin, pinnedWin]) {
@@ -51,44 +51,54 @@ export function broadcastSettingUpdate(sender: WebContents | null, key: keyof Ap
       // whiteboard module unavailable; nothing to notify.
     })
 }
+function sideEffect(setting: ProfileChangedSetting, prevAppSettings?: AppSettings): void {
+  const { key, value } = setting
 
-function sideEffect<K extends keyof AppSettings>(
-  key: K,
-  value: AppSettings[K],
-  prev: AppSettings[K] | undefined,
-): void {
-  if (key === PROFILE_VERSION_KEY) setPoeVersion(value as GameVariant)
-  if (key === 'filterPath' && value !== prev) {
-    const path = value as string
-    if (path) loadFilter(path, 'Switched Filters')
-    else clearFilterState()
-  }
-  if (key === 'hotkey') setHotkey(value as string)
-  if (key === 'priceCheckHotkey') setPriceCheckHotkey(value as string)
-  if (key === 'closeOnClickOutside') setCloseOnClickOutside(value as boolean)
-  if (key === 'league') refreshPrices(value as string)
-  if (key === 'chatCommands') setChatCommands(value as AppSettings['chatCommands'])
-  if (key === 'appMacros') setAppMacros(withPluginHotkeys(value as AppSettings['appMacros']))
-  if (key === 'stashScrollEnabled') setStashScrollEnabled(value as boolean)
-  if (key === 'openSide') setOpenSide(value as AppSettings['openSide'])
-  if (key === 'updateChannel') setUpdateChannel(value as string)
-  if (key === 'useCurrentZoneAreaLevel' && value !== prev) reEvaluateLastItem()
-  if (key === 'cheatSheets') {
-    const next = value as AppSettings['cheatSheets']
-    applyCheatSheetHotkeys(next)
-    const prevCs = prev as AppSettings['cheatSheets'] | undefined
-    if ((next?.pinned ?? false) !== (prevCs?.pinned ?? false)) {
-      applyPinnedZoneEnabled(next?.pinned === true)
-    }
+  switch (key) {
+    case PROFILE_VERSION_KEY:
+      setPoeVersion(value)
+      break
+    case 'hotkey':
+      setHotkey(value)
+      break
+    case 'priceCheckHotkey':
+      setPriceCheckHotkey(value)
+      break
+    case 'closeOnClickOutside':
+      setCloseOnClickOutside(value)
+      break
+    case 'league':
+      refreshPrices(value)
+      break
+    case 'chatCommands':
+      setChatCommands(value)
+      break
+    case 'appMacros':
+      setAppMacros(withPluginHotkeys(value))
+      break
+    case 'stashScrollEnabled':
+      setStashScrollEnabled(value)
+      break
+    case 'openSide':
+      setOpenSide(value)
+      break
+    case 'updateChannel':
+      setUpdateChannel(value)
+      break
+    case 'useCurrentZoneAreaLevel':
+      if (prevAppSettings && value !== prevAppSettings.useCurrentZoneAreaLevel) {
+        reEvaluateLastItem()
+      }
+      break
   }
 }
 
 export function applyProfileHydrationSideEffects(
   changes: ProfileChangedSetting[],
-  previous: Partial<AppSettings>,
+  previous: AppSettings,
 ): void {
-  for (const { key, value } of changes) {
-    sideEffect(key, value, previous[key])
+  for (const change of changes) {
+    sideEffect(change, previous)
   }
 }
 
@@ -98,16 +108,11 @@ export function broadcastSettingUpdates(sender: WebContents | null, changes: Pro
   }
 }
 
-function capturePreviousSettings(store: Store<AppSettings>, key: keyof AppSettings): Partial<AppSettings> {
-  return {
-    [key]: store.get(key),
-    filterPath: store.get('filterPath'),
-    league: store.get('league'),
-    cheatSheets: store.get('cheatSheets'),
-  }
+function capturePreviousSettings(store: Store<AppSettings>): AppSettings {
+  return getEffectiveSettings(store)
 }
 
-/** Persist a setting + mirror it + dispatch any side effects + broadcast.
+/** Persist a setting + dispatch any side effects + broadcast.
  *  Pass `sender` from the IPC event so the originating window doesn't echo
  *  its own write. Pass `null` when the write didn't originate from a window
  *  (e.g. main-side migrations). */
@@ -117,15 +122,13 @@ export function applySetting<K extends keyof AppSettings>(
   value: AppSettings[K],
   sender: WebContents | null,
 ): void {
-  const previous = capturePreviousSettings(store, key)
+  const previous = capturePreviousSettings(store)
   let changes: ProfileChangedSetting[]
 
   if (key === ACTIVE_PROFILE_ID_KEY && value) {
-    changes = switchActiveProfileById(store, value as string)
+    changes = switchActiveProfileById(store, value)
   } else if (key === PROFILE_VERSION_KEY) {
-    changes = switchActiveProfileByGameVariant(store, value as GameVariant)
-  } else if (isProfileBackedKey(key)) {
-    changes = writeActiveProfileSetting(store, key, value as AppSettings[typeof key])
+    changes = switchActiveProfileByGameVariant(store, value)
   } else {
     store.set(key, value)
     changes = [{ key, value }]
@@ -133,6 +136,34 @@ export function applySetting<K extends keyof AppSettings>(
 
   if (key === ACTIVE_PROFILE_ID_KEY && changes.length === 0) {
     changes = hydrateActiveProfileSettings(store)
+  }
+
+  applyProfileHydrationSideEffects(changes, previous)
+  broadcastSettingUpdates(sender, changes)
+}
+
+/** Write a profile-backed setting to the active profile, dispatch side
+ *  effects, and broadcast changes to windows. Used when the write originates
+ *  from a main-process handler (e.g. file picker, cheat sheet overlay). */
+export function applyProfileBackedSetting<K extends ProfileBackedKey>(
+  store: Store<AppSettings>,
+  key: K,
+  value: Parameters<typeof writeActiveProfileSetting<K>>[2],
+  sender: WebContents | null,
+  loadFilterFn?: (path: string) => void,
+  updateOnlineSyncDirFn?: (dir: string) => void,
+): void {
+  const previous = getEffectiveSettings(store)
+  const changes = writeActiveProfileSetting(store, key, value)
+
+  if (key === 'filterPath' && loadFilterFn) {
+    if (value) loadFilterFn(value)
+  }
+  if (key === 'filterDir' && updateOnlineSyncDirFn) {
+    updateOnlineSyncDirFn(value)
+  }
+  if (key === 'league') {
+    refreshPrices(value)
   }
 
   applyProfileHydrationSideEffects(changes, previous)

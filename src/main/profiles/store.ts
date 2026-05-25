@@ -2,7 +2,7 @@ import { writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync, unlink
 import { join } from 'path'
 import { randomUUID } from 'crypto'
 import type Store from 'electron-store'
-import type { AppSettings, PoeProfile, GameVariant } from '../../shared/types'
+import type { AppSettings, PoeProfile, GameVariant, LegacyAppSettings } from '../../shared/types'
 
 let _instance: ProfileStore | null = null
 
@@ -172,26 +172,38 @@ export class ProfileStore {
   /** Seed profiles from the legacy per-version mirror keys stored in electron-store.
    *  Returns the created profiles so the caller can pick the active one. */
   migrateFromLegacy(appStore: Store<AppSettings>): PoeProfile[] {
-    const poe1 = this.createDefault(1)
-    const poe2 = this.createDefault(2)
+    const store = appStore as unknown as Store<AppSettings & LegacyAppSettings>
+    const created: PoeProfile[] = []
+    const hasPoe1Data =
+      Boolean(store.get('filterPathPoe1') || store.get('filterDirPoe1')) || Boolean(store.get('filterPath'))
+    const hasPoe2Data = Boolean(store.get('filterPathPoe2') || store.get('filterDirPoe2'))
 
-    poe1.filterPath = appStore.get('filterPathPoe1') ?? ''
-    poe1.filterDir = appStore.get('filterDirPoe1') ?? ''
-    poe1.league = appStore.get('leaguePoe1') ?? poe1.league
-    poe1.tradePriceOption = appStore.get('tradePriceOptionPoe1') ?? poe1.tradePriceOption
-    poe1.cheatSheets = appStore.get('cheatSheetsPoe1') ?? poe1.cheatSheets
-    poe1.regexPresets = appStore.get('regexPresetsPoe1') ?? []
+    if (hasPoe1Data) {
+      const poe1 = this.createDefault(1)
 
-    poe2.filterPath = appStore.get('filterPathPoe2') ?? ''
-    poe2.filterDir = appStore.get('filterDirPoe2') ?? ''
-    poe2.league = appStore.get('leaguePoe2') ?? poe2.league
-    poe2.tradePriceOption = appStore.get('tradePriceOptionPoe2') ?? poe2.tradePriceOption
-    poe2.cheatSheets = appStore.get('cheatSheetsPoe2') ?? poe2.cheatSheets
-    poe2.regexPresets = appStore.get('regexPresetsPoe2') ?? []
+      poe1.filterPath = store.get('filterPathPoe1') || store.get('filterPath') || ''
+      poe1.filterDir = store.get('filterDirPoe1') || store.get('filterDir') || ''
+      poe1.league = store.get('leaguePoe1') ?? poe1.league
+      poe1.tradePriceOption = store.get('tradePriceOptionPoe1') ?? poe1.tradePriceOption
+      poe1.cheatSheets = store.get('cheatSheetsPoe1') ?? poe1.cheatSheets
+      poe1.regexPresets = store.get('regexPresetsPoe1') ?? []
+      this.saveProfile(poe1)
+      created.push(poe1)
+    }
 
-    this.saveProfile(poe1)
-    this.saveProfile(poe2)
+    if (hasPoe2Data) {
+      const poe2 = this.createDefault(2)
 
-    return [poe1, poe2]
+      poe2.filterPath = store.get('filterPathPoe2') ?? ''
+      poe2.filterDir = store.get('filterDirPoe2') ?? ''
+      poe2.league = store.get('leaguePoe2') ?? poe2.league
+      poe2.tradePriceOption = store.get('tradePriceOptionPoe2') ?? poe2.tradePriceOption
+      poe2.cheatSheets = store.get('cheatSheetsPoe2') ?? poe2.cheatSheets
+      poe2.regexPresets = store.get('regexPresetsPoe2') ?? []
+      this.saveProfile(poe2)
+      created.push(poe2)
+    }
+
+    return created
   }
 }

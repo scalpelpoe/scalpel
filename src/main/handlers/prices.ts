@@ -10,6 +10,7 @@ import { evaluateAndSend, preloadPriceCheck, runPriceCheck } from '../evaluation
 import { findMatchingBlocks } from '../filter/matcher'
 import { getCurrentFilter, onFilterLoaded } from '../filter-state'
 import { getPoeVersion } from '../game-state'
+import { getProfileBackedSetting } from '../profile-settings'
 import { loadIconCache } from '../trade/icon-cache'
 import {
   getGemNames,
@@ -250,7 +251,7 @@ function collectStackables(filter: FilterFile): SearchableItem[] {
 }
 
 export async function buildSearchableItems(store: Store<AppSettings>, filter: FilterFile): Promise<SearchableItem[]> {
-  await refreshPrices(store.get('league'))
+  await refreshPrices(getProfileBackedSetting(store, 'league'))
   return [...collectStackables(filter), ...collectUniques(filter), ...collectMaps(filter), ...collectGems(filter)]
 }
 

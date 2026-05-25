@@ -24,7 +24,7 @@ export function useAuditPricePreview(baseTypes: string[], isUniqueTier: boolean)
     setNoPrices(undefined)
     void (async (): Promise<void> => {
       const settings = await window.api.getSettings()
-      const prices = await window.api.batchLookupPrices(baseTypes, settings.league, isUniqueTier)
+      const prices = await window.api.batchLookupPrices(baseTypes, settings.activeProfile?.league ?? '', isUniqueTier)
       if (cancelled) return
       setNoPrices(Object.values(prices).every((p) => p == null))
     })()

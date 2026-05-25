@@ -5,7 +5,7 @@ import {
   CHEAT_SHEET_MINIMIZED_SLACK,
   CHEAT_SHEET_MINIMIZED_WIDTH,
 } from '../shared/cheat-sheet-window'
-import type { AppSettings, OverlayAnchor } from '../shared/types'
+import type { AppSettings, CheatSheetsSettings, OverlayAnchor } from '../shared/types'
 import { forwardZoneChangesTo, sendCurrentZoneTo } from './client-log'
 import { setSecondaryOverlayHotkeys } from './hotkeys'
 import { moveCanvasTop, type Rect, registerSecondaryOverlay, type SecondaryOverlay, sendCanvasIpc } from './windowing'
@@ -138,7 +138,7 @@ export function setCheatSheetsBeforeShow(cb: (() => void) | null): void {
 /** Re-register the cheat-sheet hotkeys (global + per-category) with the
  *  secondary-overlay system. Called once at boot and again whenever the
  *  cheatSheets settings change. */
-export function applyCheatSheetHotkeys(cs: AppSettings['cheatSheets']): void {
+export function applyCheatSheetHotkeys(cs: CheatSheetsSettings): void {
   const hotkeys: Array<{ accelerator: string; handler: () => void }> = []
   const fire = (categoryId?: string): void => {
     beforeShowHook?.()

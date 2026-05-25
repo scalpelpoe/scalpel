@@ -96,6 +96,12 @@ export function SettingsPanel({
     onSettingsChange({ ...settings, [key]: value })
   }
 
+  const updateProfile = async (key: 'league' | 'filterPath' | 'filterDir' | 'tradePriceOption' | 'cheatSheets', value: unknown): Promise<void> => {
+    const variant = settings.poeVersion === 2 ? 2 : 1
+    const updated = await window.api.setProfileSettingForGame(variant, key, value)
+    onSettingsChange(updated)
+  }
+
   // A single merged onSettingsChange avoids the stale-settings-closure clobber you'd get from two sequential update() calls in one tick.
   const updateMany = (patch: Partial<AppSettings>): void => {
     for (const k of Object.keys(patch) as Array<keyof AppSettings>) {
@@ -163,16 +169,17 @@ export function SettingsPanel({
         </div>
       </div>
 
-      {tab === 'general' && <GeneralTab settings={settings} update={update} />}
+      {tab === 'general' && <GeneralTab settings={settings} update={update} updateProfile={updateProfile} />}
       {tab === 'view' && <ViewTab settings={settings} update={update} updateMany={updateMany} />}
       {tab === 'macros' && <MacrosTab settings={settings} update={update} tryHotkey={tryHotkey} />}
       {tab === 'cheatsheets' && (
-        <CheatSheetsTab settings={settings} update={update} tryHotkey={tryHotkey} onError={showError} />
+        <CheatSheetsTab settings={settings} update={update} updateProfile={updateProfile} tryHotkey={tryHotkey} onError={showError} />
       )}
       {tab === 'filter' && (
         <FilterTab
           settings={settings}
           update={update}
+          updateProfile={updateProfile}
           isOverlay={isOverlay}
           onOnlineFilterUpdated={onOnlineFilterUpdated}
           onOnlineImport={onOnlineImport}
@@ -181,7 +188,7 @@ export function SettingsPanel({
           currentItem={currentItem}
         />
       )}
-      {tab === 'pricecheck' && <PriceCheckTab settings={settings} update={update} tryHotkey={tryHotkey} />}
+      {tab === 'pricecheck' && <PriceCheckTab settings={settings} update={update} updateProfile={updateProfile} tryHotkey={tryHotkey} />}
       {tab === 'plugins' && <PluginsSection onError={showError} />}
       {tab === 'faq' && <FaqTab />}
       {tab === 'developer' && <DeveloperSection settings={settings} update={update} onError={showError} />}

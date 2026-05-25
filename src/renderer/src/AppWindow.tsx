@@ -106,6 +106,10 @@ export function AppWindow(): JSX.Element {
     setSettings({ ...settings, [key]: value })
   }
 
+  const updateProfileSettingForGame = async (game: 1 | 2, key: 'league', value: unknown): Promise<void> => {
+    setSettings(await window.api.setProfileSettingForGame(game, key, value))
+  }
+
   if (!settings) return <div />
 
   const showBackToSettings = revisitingOnboarding
@@ -324,6 +328,7 @@ export function AppWindow(): JSX.Element {
                 settings={settings}
                 selectedGames={selectedGames}
                 onUpdate={updateSetting}
+                onProfileUpdateForGame={updateProfileSettingForGame}
                 onNext={() => goTo('done')}
                 onBack={() => goTo('trade-login')}
                 stepNum={sharedBase + 4}

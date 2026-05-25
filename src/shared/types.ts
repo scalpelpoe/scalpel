@@ -400,20 +400,26 @@ export type TradePriceOption =
   | 'exalted_equivalent'
   | 'exalted'
 
+/** Legacy settings keys that existed before the profile system. Used only by
+ *  migrateFromLegacy() to read one-time migration data from the electron-store. */
+export interface LegacyAppSettings {
+  filterPathPoe1?: string
+  filterPathPoe2?: string
+  filterDirPoe1?: string
+  filterDirPoe2?: string
+  leaguePoe1?: string
+  leaguePoe2?: string
+  tradePriceOptionPoe1?: TradePriceOption
+  tradePriceOptionPoe2?: TradePriceOption
+  cheatSheetsPoe1?: CheatSheetsSettings
+  cheatSheetsPoe2?: CheatSheetsSettings
+  regexPresetsPoe1?: RegexPreset[]
+  regexPresetsPoe2?: RegexPreset[]
+  filterPath?: string
+  filterDir?: string
+}
+
 export interface AppSettings {
-  /** Active filter path + dir + league. Mirrored to/from the per-version fields
-   *  (filterPathPoe1, filterPathPoe2, etc.) based on the current poeVersion at
-   *  startup and on every set. Consumers read these flat fields as before --
-   *  the version namespacing is an implementation detail of the store layer. */
-  filterPath: string
-  filterDir: string
-  league: string
-  filterPathPoe1: string
-  filterPathPoe2: string
-  filterDirPoe1: string
-  filterDirPoe2: string
-  leaguePoe1: string
-  leaguePoe2: string
   /** Cached league lists fetched from the trade APIs at app launch. The settings
    *  + onboarding dropdowns prefer these when populated; falls back to the
    *  hardcoded list in shared/game-features.ts if a fetch never succeeded. */
@@ -445,9 +451,6 @@ export interface AppSettings {
   tradeCollapseListings?: boolean
   /** Volume (0.0-1.0) for the filter sound preview button. */
   previewVolume?: number
-  tradePriceOption: TradePriceOption
-  tradePriceOptionPoe1: TradePriceOption
-  tradePriceOptionPoe2: TradePriceOption
   /** Default "Listed" time for price-check searches. Empty string = any time. */
   tradeDefaultListedTime?:
     | ''
@@ -469,9 +472,6 @@ export interface AppSettings {
   tradeNeverAutoSearch?: boolean
   chatCommands: Array<{ hotkey: string; command: string; autoSubmit?: boolean; scope?: MacroScope }>
   appMacros: Array<{ action: string; hotkey: string; tag?: string; scope?: MacroScope }>
-  cheatSheets: CheatSheetsSettings
-  cheatSheetsPoe1: CheatSheetsSettings
-  cheatSheetsPoe2: CheatSheetsSettings
   stashScrollEnabled: boolean
   poeVersion: GameVariant
   /** Regex presets are persisted per game. Each session reads/writes the slot
@@ -498,6 +498,10 @@ export interface AppSettings {
    *  before changing a default; 'off' stops applying learned defaults but keeps
    *  recording so re-enabling is never cold-start. */
   adaptiveDefaultsMode: AdaptiveMode
+  /** Runtime-only: the active profile data, populated from the profile store.
+   *  Never persisted to electron-store. Filter path, league, etc. are
+   *  accessed via activeProfile.* instead of top-level settings fields. */
+  activeProfile?: PoeProfile | null
   /** UUID of the active profile (loaded from profiles/ dir). */
   activeProfileId: string
   /** Last explicitly activated profile for each game. Used when switching games. */

@@ -253,7 +253,7 @@ export function SocketRecolor({ item, priceInfo }: Props): JSX.Element {
         const settings = await window.api.getSettings()
         const prices = await window.api.batchLookupPrices(
           ['Chromatic Orb', "Jeweller's Orb", 'Orb of Fusing'],
-          settings.league,
+          settings.activeProfile?.league ?? '',
         )
         setRates({
           chrom: prices['Chromatic Orb']?.chaosValue ?? 1 / 8,
