@@ -2,6 +2,7 @@ import type { AppSettings } from '../../../../shared/types'
 import { PoeLoginButton } from './PoeLoginButton'
 import { HotkeyField } from './HotkeyField'
 import {
+  ADAPTIVE_MODE_OPTIONS,
   LISTED_TIME_OPTIONS,
   getPriceOptions,
   RESULTS_VIEW_OPTIONS,
@@ -90,6 +91,24 @@ export function PriceCheckTab({ settings, update, tryHotkey }: Props): JSX.Eleme
             <span className="text-[13px] font-semibold text-text min-w-[36px] text-right">
               {settings.priceCheckDefaultPercent ?? 90}%
             </span>
+          </div>
+        </section>
+        <SettingSelectBox
+          label="Adaptive defaults"
+          value={settings.adaptiveDefaultsMode ?? 'eager'}
+          options={ADAPTIVE_MODE_OPTIONS}
+          onChange={(v) => update('adaptiveDefaultsMode', v as AppSettings['adaptiveDefaultsMode'])}
+        />
+        <section>
+          <label>Reset learned preferences</label>
+          <div className="setting-box mt-[2px] min-h-[40px] flex items-center">
+            <button
+              type="button"
+              className="text-[13px] font-semibold text-text px-[10px] py-[4px] rounded-[4px] bg-[rgba(255,255,255,0.08)] hover:bg-[rgba(255,255,255,0.16)]"
+              onClick={() => void window.api.resetLearning('all')}
+            >
+              Reset everything
+            </button>
           </div>
         </section>
       </div>

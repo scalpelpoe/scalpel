@@ -459,9 +459,10 @@ export interface AppSettings {
   themeId: string
   /** User's saved custom palette, used only when themeId === 'custom'. */
   customThemePalette: ThemePalette | null
-  /** Controls the adaptive price-check defaults learning engine.
-   *  'eager' = apply learned defaults immediately; 'conservative' = require
-   *  confirmation; 'off' = disable the engine entirely. */
+  /** Controls the adaptive price-check defaults learning engine. 'eager' applies
+   *  learned defaults after a little evidence; 'conservative' needs more evidence
+   *  before changing a default; 'off' stops applying learned defaults but keeps
+   *  recording so re-enabling is never cold-start. */
   adaptiveDefaultsMode: 'eager' | 'conservative' | 'off'
 }
 
