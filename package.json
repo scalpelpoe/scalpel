@@ -10,7 +10,7 @@
     "url": "https://github.com/scalpelpoe/scalpel.git"
   },
   "engines": {
-    "node": "^20 || ^22"
+    "node": "^22"
   },
   "main": "out/main/index.js",
   "scripts": {
@@ -21,7 +21,7 @@
     "sync-prefabs": "node scripts/sync-prefabs.js",
     "dist:win": "npm run build && electron-builder --win --x64",
     "dist:linux": "npm run build && electron-builder --linux AppImage --x64",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json",
     "postinstall": "node scripts/postinstall.js",
     "lint": "biome lint src",
     "format": "biome format --write src",
@@ -80,7 +80,7 @@
     "vitest": "^4.1.4"
   },
   "lint-staged": {
-    "src/**/*.{ts,tsx,jsx,css}": [
+    "{src/**/*.{ts,tsx,jsx,css},tests/**/*.ts,playwright.electron.config.ts}": [
       "biome check --write --no-errors-on-unmatched"
     ]
   },

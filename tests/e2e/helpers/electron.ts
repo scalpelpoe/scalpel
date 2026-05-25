@@ -12,25 +12,31 @@ export interface ScalpelE2EApp {
 
 export async function launchScalpelE2E(): Promise<ScalpelE2EApp> {
   const userDataDir = await mkdtemp(join(tmpdir(), 'scalpel-e2e-'))
-  const app = await electron.launch({
-    args: [join(process.cwd(), 'out/main/index.js')],
-    env: {
-      ...process.env,
-      NODE_ENV: 'test',
-      SCALPEL_E2E: '1',
-      SCALPEL_E2E_USER_DATA: userDataDir,
-    },
-  })
-  const window = await app.firstWindow()
-  await window.waitForLoadState('domcontentloaded')
+  try {
+    const app = await electron.launch({
+      args: [join(process.cwd(), 'out/main/index.js')],
+      env: {
+        ...process.env,
+        NODE_ENV: 'test',
+        SCALPEL_E2E: '1',
+        SCALPEL_E2E_USER_DATA: userDataDir,
+      },
+    })
+    const window = await app.firstWindow()
+    await window.waitForLoadState('domcontentloaded')
 
-  return {
-    app,
-    window,
-    userDataDir,
-    cleanup: async () => {
-      await app.close().catch(() => undefined)
-      await rm(userDataDir, { recursive: true, force: true })
-    },
+    return {
+      app,
+      window,
+      userDataDir,
+      cleanup: async () => {
+        await app.close().catch(() => undefined)
+        await rm(userDataDir, { recursive: true, force: true })
+      },
+    }
+  } catch (err) {
+    // Launch failed before we could hand back a cleanup fn - don't leak the temp dir.
+    await rm(userDataDir, { recursive: true, force: true })
+    throw err
   }
 }

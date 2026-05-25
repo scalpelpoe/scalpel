@@ -6,7 +6,12 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["src/**/*.{ts,tsx,jsx,css}", "!src/shared/data/regex/vendor"]
+    "includes": [
+      "src/**/*.{ts,tsx,jsx,css}",
+      "tests/**/*.ts",
+      "playwright.electron.config.ts",
+      "!src/shared/data/regex/vendor"
+    ]
   },
   "formatter": {
     "enabled": true,

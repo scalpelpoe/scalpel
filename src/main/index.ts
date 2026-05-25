@@ -24,7 +24,10 @@ import {
 // Note: this only covers exceptions Node routes to uncaughtException. A throw
 // inside a uiohook/overlay-window event listener is dispatched from native code
 // and does NOT reach here -- those listeners are wrapped with guardNativeListener.
-const IS_E2E = process.env.SCALPEL_E2E === '1'
+// The e2e harness boots a gutted app (no overlay, hotkeys, tray, or network).
+// Gate on !app.isPackaged so a shipped release ignores SCALPEL_E2E entirely and
+// only the unpacked dev/CI binary the harness launches honors it.
+const IS_E2E = process.env.SCALPEL_E2E === '1' && !app.isPackaged
 if (IS_E2E && process.env.SCALPEL_E2E_USER_DATA) {
   app.setPath('userData', process.env.SCALPEL_E2E_USER_DATA)
 }
@@ -359,6 +362,75 @@ if (!gotLock) {
 
 const installDir = IS_E2E ? process.cwd() : applyPendingUpdate()
 
+// Live services skipped under the e2e harness (SCALPEL_E2E): game-focus handlers,
+// background network refreshers, the updater, devtools, and online filter sync.
+// Each needs native/network access the harness deliberately avoids. Called once
+// after the app window and IPC handlers are wired.
+function startLiveServices(): void {
+  setGameFocusHandlers(
+    () => {
+      resumeHotkeys()
+      restoreAllOnPoeFocus()
+    },
+    () => {
+      // PoE blurred. If focus moved to any Scalpel window (main or secondary),
+      // it's an in-app interaction - keep hotkeys armed and leave overlays up.
+      // Only treat it as "user left the app" when focus is somewhere else.
+      if (isAnyScalpelWindowFocused()) return
+      suspendHotkeys()
+      hideAllOnPoeBlur()
+    },
+  )
+
+  // Start with hotkeys suspended until PoE actually gains focus.
+  // Without this, hotkeys fire globally (e.g. in other games) before PoE opens.
+  suspendHotkeys()
+
+  // Fetch manifest in background; bundled copy is the offline fallback
+  refreshManifest().catch(() => {})
+
+  // Fetch prices in background, refresh every 10 minutes
+  refreshPrices(store.get('league'))
+  setInterval(() => refreshPrices(store.get('league')), 10 * 60 * 1000)
+
+  // After the OS wakes from sleep, Electron's network stack often bails on pending
+  // requests with ERR_NETWORK_IO_SUSPENDED. Invalidate the price cache and re-fetch so
+  // we don't sit on stale/empty prices for up to 10 minutes.
+  powerMonitor.on('resume', () => {
+    invalidatePriceCache()
+    refreshPrices(store.get('league'))
+  })
+
+  // Wire the updater unconditionally so broadcasts (update-available, update-rescinded)
+  // can fire in dev for fake-update testing. The periodic GitHub check and destructive
+  // install actions internally bail when ELECTRON_RENDERER_URL is set so a dev session
+  // doesn't overwrite source with a packaged ASAR.
+  const overlayWin = getOverlayWindow()
+  if (overlayWin)
+    initUpdater([getOverlayWindow, getAppWindow], installDir, store.get('updateChannel'), () => showOverlay())
+
+  if (process.env.NODE_ENV === 'development') {
+    const ow = getOverlayWindow()
+    ow?.webContents.openDevTools({ mode: 'detach' })
+    ow?.webContents.on('context-menu', (_e, params) => {
+      ow.webContents.inspectElement(params.x, params.y)
+    })
+  }
+
+  // Start online filter sync
+  const filterDir = store.get('filterDir')
+  if (filterDir) {
+    startOnlineSync(filterDir, () => {
+      const wins: BrowserWindow[] = []
+      const ow = getOverlayWindow()
+      const aw = getAppWindow()
+      if (ow) wins.push(ow)
+      if (aw) wins.push(aw)
+      return wins
+    })
+  }
+}
+
 app.whenReady().then(() => {
   // Seed the overlay with the last-known game version so attachByTitle waits for
   // that window. The hotkey handler re-detects the focused PoE on every fire and
@@ -527,72 +599,8 @@ app.whenReady().then(() => {
 
   // Apply close-on-click-outside setting
   setCloseOnClickOutside(store.get('closeOnClickOutside'))
-  if (!IS_E2E)
-    setGameFocusHandlers(
-      () => {
-        resumeHotkeys()
-        restoreAllOnPoeFocus()
-      },
-      () => {
-        // PoE blurred. If focus moved to any Scalpel window (main or secondary),
-        // it's an in-app interaction - keep hotkeys armed and leave overlays up.
-        // Only treat it as "user left the app" when focus is somewhere else.
-        if (isAnyScalpelWindowFocused()) return
-        suspendHotkeys()
-        hideAllOnPoeBlur()
-      },
-    )
 
-  // Start with hotkeys suspended until PoE actually gains focus.
-  // Without this, hotkeys fire globally (e.g. in other games) before PoE opens.
-  if (!IS_E2E) suspendHotkeys()
-
-  // Fetch manifest in background; bundled copy is the offline fallback
-  if (!IS_E2E) refreshManifest().catch(() => {})
-
-  // Fetch prices in background, refresh every 10 minutes
-  if (!IS_E2E) {
-    refreshPrices(store.get('league'))
-    setInterval(() => refreshPrices(store.get('league')), 10 * 60 * 1000)
-  }
-
-  // After the OS wakes from sleep, Electron's network stack often bails on pending
-  // requests with ERR_NETWORK_IO_SUSPENDED. Invalidate the price cache and re-fetch so
-  // we don't sit on stale/empty prices for up to 10 minutes.
-  if (!IS_E2E)
-    powerMonitor.on('resume', () => {
-      invalidatePriceCache()
-      refreshPrices(store.get('league'))
-    })
-
-  // Wire the updater unconditionally so broadcasts (update-available, update-rescinded)
-  // can fire in dev for fake-update testing. The periodic GitHub check and destructive
-  // install actions internally bail when ELECTRON_RENDERER_URL is set so a dev session
-  // doesn't overwrite source with a packaged ASAR.
-  const overlayWin = getOverlayWindow()
-  if (!IS_E2E && overlayWin)
-    initUpdater([getOverlayWindow, getAppWindow], installDir, store.get('updateChannel'), () => showOverlay())
-
-  if (!IS_E2E && process.env.NODE_ENV === 'development') {
-    const ow = getOverlayWindow()
-    ow?.webContents.openDevTools({ mode: 'detach' })
-    ow?.webContents.on('context-menu', (_e, params) => {
-      ow.webContents.inspectElement(params.x, params.y)
-    })
-  }
-
-  // Start online filter sync
-  const filterDir = store.get('filterDir')
-  if (!IS_E2E && filterDir) {
-    startOnlineSync(filterDir, () => {
-      const wins: BrowserWindow[] = []
-      const ow = getOverlayWindow()
-      const aw = getAppWindow()
-      if (ow) wins.push(ow)
-      if (aw) wins.push(aw)
-      return wins
-    })
-  }
+  if (!IS_E2E) startLiveServices()
 
   // Show onboarding on first launch, otherwise stay in tray
   if (IS_E2E || !filterPath) {
