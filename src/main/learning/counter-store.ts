@@ -38,7 +38,7 @@ export class CounterStore {
 
   resetByPrefix(prefix: string): void {
     for (const key of Object.keys(this.buckets)) {
-      if (key.startsWith(prefix)) delete this.buckets[key]
+      if (key === prefix || key.startsWith(`${prefix}|`)) delete this.buckets[key]
     }
     this.persist()
   }

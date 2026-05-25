@@ -45,6 +45,15 @@ describe('CounterStore', () => {
     expect(store.sample('g', 'explicit.move', 1000).shownWeight).toBe(1) // global preserved
   })
 
+  it('resetByPrefix does not over-match a sibling whose key shares the prefix string', () => {
+    const store = new CounterStore(fakePersistence())
+    store.recordObservation(['Rare|Boots'], 'explicit.move', true, 1000)
+    store.recordObservation(['Rare|BootsXYZ'], 'explicit.move', true, 1000)
+    store.resetByPrefix('Rare|Boots')
+    expect(store.sample('Rare|Boots', 'explicit.move', 1000).shownWeight).toBe(0)
+    expect(store.sample('Rare|BootsXYZ', 'explicit.move', 1000).shownWeight).toBe(1) // sibling preserved
+  })
+
   it('reset clears everything', () => {
     const store = new CounterStore(fakePersistence())
     store.recordObservation(['g'], 'explicit.move', true, 1000)
