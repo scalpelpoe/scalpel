@@ -95,13 +95,17 @@ export function PriceCheck({
 
   const [filters, setFilters] = useState<StatFilter[]>(initialFilters)
   const filtersRef = useRef(filters)
+  const sessionIdRef = useRef(sessionId)
   useEffect(() => {
     filtersRef.current = filters
   }, [filters])
+  useEffect(() => {
+    sessionIdRef.current = sessionId
+  }, [sessionId])
   useEffect(
     () => () => {
       window.api.recordPrefObservation(
-        sessionId,
+        sessionIdRef.current,
         filtersRef.current.map((f) => ({ id: f.id, type: f.type, enabled: f.enabled })),
       )
     },
