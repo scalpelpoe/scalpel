@@ -27,6 +27,7 @@ import { ListingRowsSkeleton } from './PriceCheckSkeleton'
 import { RateLimitBar } from './RateLimitBar'
 import { DismissibleTip } from '../../shared/DismissibleTip'
 import { BASE_DEFAULT_ITEM_CLASSES, applyBaseModeToFilters, shouldIncludeImplicitsInBase } from './base-mode'
+import { applyLearnedDecisions } from './learned-decisions'
 import type { ListedTime, PriceOption, ResultsView, StatusOption } from './search-settings'
 import { LISTED_TIME_OPTIONS, getPriceOptions, primaryCurrencySwap, STATUS_OPTIONS } from './search-settings'
 import { SearchSettingDropdown } from './SearchSettingDropdown'
@@ -42,6 +43,7 @@ export function PriceCheck({
   chaosPerDivine,
   unidCandidates,
   sessionId,
+  learnedDecisions,
   onClose: _onClose,
   onOpenWiki,
   onOpenPoeDb,
@@ -203,13 +205,18 @@ export function PriceCheck({
       const isClassDefault = BASE_DEFAULT_ITEM_CLASSES.has(item.itemClass)
       const isUnique = item.rarity === 'Unique'
       const keepRowsVisible = isUnique || !!s.tradeDefaultToBase
-      if (isClassDefault || keepRowsVisible) {
-        if (keepRowsVisible) {
-          // Snapshot indices of filters that were enabled pre-Base so they stay visible after a search
-          baseModeExpandedIndices.current = new Set(filters.map((f, i) => (f.enabled ? i : -1)).filter((i) => i >= 0))
-        }
-        applyBaseMode()
+      const useBaseMode = isClassDefault || keepRowsVisible
+      if (keepRowsVisible) {
+        // Keep rows visible that are enabled pre-Base OR that learning will enable.
+        baseModeExpandedIndices.current = new Set(
+          filters.map((f, i) => (f.enabled || learnedDecisions[f.id] === true ? i : -1)).filter((i) => i >= 0),
+        )
       }
+      // Learning is the final layer: apply it on top of the (optionally base-moded) defaults.
+      setFilters((prev) => {
+        const based = useBaseMode ? applyBaseModeToFilters(prev, item.rarity, item.corrupted) : prev
+        return applyLearnedDecisions(based, learnedDecisions)
+      })
       baseModeApplied.current = true
     })
   }, [])

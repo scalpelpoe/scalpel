@@ -974,6 +974,7 @@ export default function App(): JSX.Element {
                     chaosPerDivine={priceCheckData.chaosPerDivine}
                     unidCandidates={priceCheckData.unidCandidates}
                     sessionId={priceCheckData.sessionId}
+                    learnedDecisions={priceCheckData.learnedDecisions}
                     onClose={close}
                     onOpenWiki={externalLinkHandler('wiki', priceCheckData?.item)}
                     onOpenPoeDb={externalLinkHandler('poedb', priceCheckData?.item)}
