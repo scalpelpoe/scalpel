@@ -5,7 +5,7 @@ import { evaluateAndSend } from '../evaluation'
 import { getCurrentFilter, loadFilter } from '../filter-state'
 import { clearHistory, getHistory, undoLast } from '../history'
 import { reloadFilterInGame } from '../overlay'
-import { getProfileBackedSetting } from '../profile-settings'
+import { getProfileBackedSetting } from '../profiles/profile-settings'
 import { deleteVersion, listVersions, restoreVersion, saveVersion } from '../update/versions'
 
 export function register(store: Store<AppSettings>): void {

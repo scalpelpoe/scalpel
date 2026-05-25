@@ -13,7 +13,7 @@ import type {
 } from '../shared/types'
 import { getCurrentZone } from './client-log'
 import { snapshotClipboard } from './clipboard-preserve'
-import { getProfileBackedSetting } from './profile-settings'
+import { getProfileBackedSetting } from './profiles/profile-settings'
 import {
   evaluateBlock,
   findMatchingBlocks,

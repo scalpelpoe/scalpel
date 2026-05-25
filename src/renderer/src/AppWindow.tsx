@@ -27,22 +27,18 @@ import {
 } from './app-window/onboarding-steps'
 import { AppSettingsWrapper } from './app-window/AppSettingsWrapper'
 import { AppUpdateBanner } from './app-window/AppUpdateBanner'
-import { ProfileManagerStep } from './app-window/ProfileManagerStep'
 import { GameSwitchModal } from './components/GameSwitchModal'
 
 type ImportedOnline = { poe1: string | null; poe2: string | null }
 
 export function AppWindow(): JSX.Element {
   const [settings, setSettings] = useState<RuntimeSettings | null>(null)
-  const [step, setStep] = useState<Step>('profiles')
+  const [step, setStep] = useState<Step>('welcome')
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [importedOnline, setImportedOnline] = useState<ImportedOnline>({ poe1: null, poe2: null })
   const [gameSwitchTarget, setGameSwitchTarget] = useState<1 | 2 | null>(null)
   const [selectedGames, setSelectedGames] = useState<SelectedGames>({ poe1: false, poe2: false })
   const [settingsTabRequest, setSettingsTabRequest] = useState<{ tab: string; n: number } | null>(null)
-  // Set when the user opens Manage Profiles from settings so the focus-bounce
-  // effect below doesn't yank them back to settings on every focus event.
-  const [revisitingOnboarding, setRevisitingOnboarding] = useState(false)
 
   const goTo = (next: Step, resumeGames = selectedGames): void => {
     const curIdx = STEP_ORDER.indexOf(step)
@@ -72,7 +68,7 @@ export function AppWindow(): JSX.Element {
       if (s.onboardingCompleted) {
         goTo('settings')
       } else if (s.onboardingStep) {
-        setStep((s.onboardingStep === 'welcome' ? 'profiles' : s.onboardingStep) as Step)
+        setStep((s.onboardingStep === 'profiles' ? 'welcome' : s.onboardingStep) as Step)
         if (s.onboardingSelectedGames) setSelectedGames(s.onboardingSelectedGames)
         if (s.onboardingImportedOnline) setImportedOnline(s.onboardingImportedOnline)
       }
@@ -95,11 +91,11 @@ export function AppWindow(): JSX.Element {
 
   useEffect(() => {
     const onFocus = (): void => {
-      if (settings?.onboardingCompleted && step !== 'settings' && !revisitingOnboarding) goTo('settings')
+      if (settings?.onboardingCompleted && step !== 'settings') goTo('settings')
     }
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
-  }, [settings, step, revisitingOnboarding])
+  }, [settings, step])
 
   const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]): void => {
     if (!settings) return
@@ -113,23 +109,10 @@ export function AppWindow(): JSX.Element {
 
   if (!settings) return <div />
 
-  const showBackToSettings = revisitingOnboarding
-  const onBackToSettings = (): void => {
-    setRevisitingOnboarding(false)
-    goTo('settings')
-  }
-
   const total = totalOnboardingSteps(selectedGames)
   const sharedBase = sharedStepBase(selectedGames)
   const orderedGames = selectedGameOrder(selectedGames)
   const showGameLabel = orderedGames.length === 2
-
-  const finishProfileManager = (): void => {
-    window.api.setSetting('onboardingCompleted', true)
-    window.api.setSetting('onboardingStep', '')
-    setRevisitingOnboarding(false)
-    goTo('settings')
-  }
 
   const editProfile = async (profile: PoeProfileSummary): Promise<void> => {
     const result = await window.api.setActiveProfile(profile.id)
@@ -181,23 +164,11 @@ export function AppWindow(): JSX.Element {
       <div
         className="flex-1 overflow-y-auto overflow-x-hidden flex justify-center"
         style={{
-          alignItems: step !== 'settings' && step !== 'profiles' ? 'center' : undefined,
-          marginTop: step !== 'settings' && step !== 'profiles' ? -10 : undefined,
+          alignItems: step !== 'settings' ? 'center' : undefined,
+          marginTop: step !== 'settings' ? -10 : undefined,
         }}
       >
         <div className={`w-full max-w-[480px] px-6 py-8 ${step !== 'settings' ? 'select-none' : ''}`}>
-          {step === 'profiles' && (
-            <SlideIn stepKey="profiles" direction={direction}>
-              <ProfileManagerStep
-                settings={settings}
-                onSettingsChange={setSettings}
-                onEditProfile={(profile) => {
-                  void editProfile(profile)
-                }}
-                onFinish={finishProfileManager}
-              />
-            </SlideIn>
-          )}
           {step === 'welcome' && (
             <SlideIn stepKey="welcome" direction={direction}>
               <WelcomeStep
@@ -206,7 +177,6 @@ export function AppWindow(): JSX.Element {
                 onNext={() => {
                   void startFilterFlowFor(orderedGames[0] ?? 1)
                 }}
-                onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
               />
             </SlideIn>
           )}
@@ -238,7 +208,6 @@ export function AppWindow(): JSX.Element {
                       game={showGameLabel ? game : null}
                       stepNum={filterStepNum(selectedGames, game, 'folder')}
                       totalSteps={total}
-                      onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
                     />
                   </SlideIn>
                 )}
@@ -260,7 +229,6 @@ export function AppWindow(): JSX.Element {
                       game={showGameLabel ? game : null}
                       stepNum={filterStepNum(selectedGames, game, 'filter')}
                       totalSteps={total}
-                      onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
                     />
                   </SlideIn>
                 )}
@@ -282,7 +250,6 @@ export function AppWindow(): JSX.Element {
                       }}
                       stepNum={filterStepNum(selectedGames, game, 'filter') + 1}
                       totalSteps={total + 1}
-                      onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
                     />
                   </SlideIn>
                 )}
@@ -299,7 +266,6 @@ export function AppWindow(): JSX.Element {
                 onBack={() => goTo(backStepFromHotkey(selectedGames, importedOnline))}
                 stepNum={sharedBase + 1}
                 totalSteps={total}
-                onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
               />
             </SlideIn>
           )}
@@ -312,7 +278,6 @@ export function AppWindow(): JSX.Element {
                 onBack={() => goTo('hotkey')}
                 stepNum={sharedBase + 2}
                 totalSteps={total}
-                onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
               />
             </SlideIn>
           )}
@@ -323,7 +288,6 @@ export function AppWindow(): JSX.Element {
                 onBack={() => goTo('pricecheck-hotkey')}
                 stepNum={sharedBase + 3}
                 totalSteps={total}
-                onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
               />
             </SlideIn>
           )}
@@ -338,7 +302,6 @@ export function AppWindow(): JSX.Element {
                 onBack={() => goTo('trade-login')}
                 stepNum={sharedBase + 4}
                 totalSteps={total}
-                onBackToSettings={showBackToSettings ? onBackToSettings : undefined}
               />
             </SlideIn>
           )}
@@ -348,7 +311,6 @@ export function AppWindow(): JSX.Element {
                 onFinish={() => {
                   window.api.setSetting('onboardingCompleted', true)
                   window.api.setSetting('onboardingStep', '')
-                  setRevisitingOnboarding(false)
                   goTo('settings')
                 }}
               />
@@ -359,9 +321,8 @@ export function AppWindow(): JSX.Element {
               settings={settings}
               onSettingsChange={setSettings}
               tabRequest={settingsTabRequest}
-              onManageProfiles={() => {
-                setRevisitingOnboarding(true)
-                goTo('profiles')
+              onEditProfile={(profile) => {
+                void editProfile(profile)
               }}
             />
           )}

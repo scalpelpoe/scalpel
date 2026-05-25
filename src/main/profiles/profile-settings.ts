@@ -8,8 +8,8 @@ import type {
   ProfileSettingValue,
   RegexPreset,
   RuntimeSettings,
-} from '../shared/types'
-import { getProfileStore, type ProfileStore } from './profiles/store'
+} from '../../shared/types'
+import { getProfileStore, type ProfileStore } from './store'
 
 export type ProfileChangedSetting =
   | { key: 'activeProfile'; value: PoeProfile | null; reason: 'activation' | 'edit' | 'migration' }

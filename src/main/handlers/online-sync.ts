@@ -11,7 +11,7 @@ import { loadFilter } from '../filter-state'
 import { switchFilterInGame } from '../overlay'
 import { saveVersion } from '../update/versions'
 import { checkOnlineSyncNow } from '../online-sync'
-import { getProfileBackedSetting } from '../profile-settings'
+import { getProfileBackedSetting } from '../profiles/profile-settings'
 
 /** Look up the online filter name and path for the currently active local filter */
 function findOnlineFilter(

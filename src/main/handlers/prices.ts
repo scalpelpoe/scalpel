@@ -10,7 +10,7 @@ import { evaluateAndSend, preloadPriceCheck, runPriceCheck } from '../evaluation
 import { findMatchingBlocks } from '../filter/matcher'
 import { getCurrentFilter, onFilterLoaded } from '../filter-state'
 import { getPoeVersion } from '../game-state'
-import { getProfileBackedSetting } from '../profile-settings'
+import { getProfileBackedSetting } from '../profiles/profile-settings'
 import { loadIconCache } from '../trade/icon-cache'
 import {
   getGemNames,

@@ -4,7 +4,7 @@ import { join } from 'path'
 import type Store from 'electron-store'
 import { describe, expect, it } from 'vitest'
 import type { AppSettings } from '../../shared/types'
-import { ACTIVE_PROFILE_ID_KEY, LAST_PROFILE_ID_POE1_KEY, PROFILE_VERSION_KEY } from '../profile-settings'
+import { ACTIVE_PROFILE_ID_KEY, LAST_PROFILE_ID_POE1_KEY, PROFILE_VERSION_KEY } from '../profiles/profile-settings'
 import { initProfileStore } from '../profiles/store'
 import { migrateLeague, refreshLeagues } from './leagues'
 

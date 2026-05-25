@@ -514,9 +514,9 @@ export interface AppSettings {
   /** Last explicitly activated profile for each game. Used when switching games. */
   lastProfileIdPoe1: string
   lastProfileIdPoe2: string
-  /** True once the user clicks Finish in first-run profile management. */
+  /** True once the user completes the first-run onboarding wizard. */
   onboardingCompleted: boolean
-  /** First-run/profile-management resume: current step key (saved on every step transition). */
+  /** First-run onboarding resume: current step key (saved on every step transition). */
   onboardingStep?: string
   /** Legacy first-run resume: which games the user selected in the old setup flow. */
   onboardingSelectedGames?: { poe1: boolean; poe2: boolean }

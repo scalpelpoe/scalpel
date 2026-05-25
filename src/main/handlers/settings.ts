@@ -19,7 +19,7 @@ import {
   type ProfileChangedSetting,
   type ProfileSettingKey,
   type ProfileSettingValue,
-} from '../profile-settings'
+} from '../profiles/profile-settings'
 
 export function register(store: Store<AppSettings>): void {
   ipcMain.handle('get-settings', () => getEffectiveSettings(store))

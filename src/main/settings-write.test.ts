@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
 import { getPoeVersion, setPoeVersion } from './game-state'
-import { PROFILE_VERSION_KEY, type ProfileChangedSetting } from './profile-settings'
+import { PROFILE_VERSION_KEY, type ProfileChangedSetting } from './profiles/profile-settings'
 import type { AppSettings, PoeProfile } from '../shared/types'
 
 vi.mock('./filter-state', () => ({

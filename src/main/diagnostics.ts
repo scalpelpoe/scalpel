@@ -7,7 +7,7 @@ import type { BugReportResult, RendererDiagnosticPayload, SerializedDiagnosticEr
 import { serializeDiagnosticError } from '../shared/diagnostics'
 import { DISCORD_INVITE_URL, GITHUB_NEW_ISSUE_URL } from '../shared/endpoints'
 import type { AppSettings } from '../shared/types'
-import { getActiveProfile } from './profile-settings'
+import { getActiveProfile } from './profiles/profile-settings'
 
 // Tail of the log embedded in a generated bug report.
 const MAX_LOG_BYTES = 256 * 1024

@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { GameVariant, PoeProfileSummary, RuntimeSettings } from '../../../shared/types'
-import { DismissibleTip } from '../shared/DismissibleTip'
-import { StepHeader } from './StepHeader'
+import type { GameVariant, PoeProfileSummary, RuntimeSettings } from '../../../../shared/types'
+import { DismissibleTip } from '../../shared/DismissibleTip'
 
 function filterName(profile: PoeProfileSummary): string {
   return profile.filterPath ? profile.filterPath.replace(/^.*[\\/]/, '') : 'No filter selected'
@@ -16,16 +15,14 @@ function defaultProfileName(variant: GameVariant): string {
   return variant === 2 ? 'PoE2 profile' : 'PoE1 profile'
 }
 
-export function ProfileManagerStep({
+export function ProfileManagerTab({
   settings,
   onSettingsChange,
   onEditProfile,
-  onFinish,
 }: {
   settings: RuntimeSettings
   onSettingsChange: (settings: RuntimeSettings) => void
   onEditProfile: (profile: PoeProfileSummary) => void
-  onFinish: () => void
 }): JSX.Element {
   const [profiles, setProfiles] = useState<PoeProfileSummary[]>([])
   const [switchedFilterName, setSwitchedFilterName] = useState<string | null>(null)
@@ -125,11 +122,11 @@ export function ProfileManagerStep({
   ]
 
   return (
-    <div>
-      <StepHeader
-        title="Manage Profiles"
-        subtitle="Create a named setup for each league, character, or filter context you want to switch back to later."
-      />
+    <>
+      <div className="settings-section-title mt-3">Profiles</div>
+      <p className="text-[11px] text-text-dim m-0 -mt-2">
+        Create a named setup for each league, character, or filter context you want to switch back to later.
+      </p>
 
       <div className="flex flex-col gap-5">
         {switchedFilterName && (
@@ -234,13 +231,6 @@ export function ProfileManagerStep({
           )
         })}
       </div>
-
-      <div className="flex gap-[10px] mt-8">
-        <div className="flex-1" />
-        <button className="primary px-6 py-[10px] text-[13px] font-semibold" onClick={onFinish}>
-          Finish
-        </button>
-      </div>
-    </div>
+    </>
   )
 }

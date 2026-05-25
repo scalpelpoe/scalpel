@@ -13,7 +13,7 @@ import {
 import { getCurrentFilter, loadFilter } from '../filter-state'
 import { captureSnapshot } from '../history'
 import { reloadFilterInGame } from '../overlay'
-import { getProfileBackedSetting } from '../profile-settings'
+import { getProfileBackedSetting } from '../profiles/profile-settings'
 
 // ---- History description helpers -------------------------------------------
 

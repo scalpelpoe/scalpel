@@ -2,7 +2,7 @@ import { net } from 'electron'
 import type Store from 'electron-store'
 import { getTradeUrls } from '../../shared/endpoints'
 import { getProfileStore } from '../profiles/store'
-import { listProfilesByGameVariant, type ProfileChangedSetting } from '../profile-settings'
+import { listProfilesByGameVariant, type ProfileChangedSetting } from '../profiles/profile-settings'
 import { getGameFeatures } from '../../shared/game-features'
 import type { AppSettings } from '../../shared/types'
 

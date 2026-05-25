@@ -24,7 +24,7 @@ import {
   type ProfileChangedSetting,
   type ProfileSettingKey,
   type SettingChangeKey,
-} from './profile-settings'
+} from './profiles/profile-settings'
 
 export function broadcastSettingUpdate(sender: WebContents | null, key: SettingChangeKey, value: unknown): void {
   const csWin = getCheatSheetsOverlay()?.getWindow() ?? null

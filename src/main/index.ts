@@ -123,7 +123,7 @@ import {
   getProfileBackedSetting,
   hydrateActiveProfileSettings,
   writeActiveProfileSetting,
-} from './profile-settings'
+} from './profiles/profile-settings'
 
 // ---- Linux display-server setup --------------------------------------------
 

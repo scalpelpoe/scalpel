@@ -1,17 +1,17 @@
 import { useState } from 'react'
-import type { RuntimeSettings } from '../../../shared/types'
+import type { PoeProfileSummary, RuntimeSettings } from '../../../shared/types'
 import { OnlineFilterModal } from '../components/OnlineFilterModal'
 import { SettingsPanel } from '../components/SettingsPanel'
 
 export function AppSettingsWrapper({
   settings,
   onSettingsChange,
-  onManageProfiles,
+  onEditProfile,
   tabRequest,
 }: {
   settings: RuntimeSettings
   onSettingsChange: (s: RuntimeSettings) => void
-  onManageProfiles: () => void
+  onEditProfile: (profile: PoeProfileSummary) => void
   tabRequest?: { tab: string; n: number } | null
 }): JSX.Element {
   const [onlineImportName, setOnlineImportName] = useState<string | null>(null)
@@ -22,7 +22,7 @@ export function AppSettingsWrapper({
         settings={settings}
         onSettingsChange={onSettingsChange}
         mode="app"
-        onManageProfiles={onManageProfiles}
+        onEditProfile={onEditProfile}
         onOnlineImport={setOnlineImportName}
         tabRequest={tabRequest}
       />

@@ -3,7 +3,7 @@ import type Store from 'electron-store'
 import { getTradeUrls, POE_WEBSITE } from '../../shared/endpoints'
 import type { AppSettings, AuthResult } from '../../shared/types'
 import { getPoeVersion } from '../game-state'
-import { getProfileBackedSetting } from '../profile-settings'
+import { getProfileBackedSetting } from '../profiles/profile-settings'
 import type { BulkExchangeResult, StatFilter, TradeResult } from '../trade/trade'
 import {
   searchNeedsLogin,
