@@ -67,7 +67,10 @@ export function DustExplorer({
           return
         }
         setPrices(result)
-        const currPrices = await window.api.batchLookupPrices(['Divine Orb', 'Mirror of Kalandra'], settings.activeProfile?.league ?? '')
+        const currPrices = await window.api.batchLookupPrices(
+          ['Divine Orb', 'Mirror of Kalandra'],
+          settings.activeProfile?.league ?? '',
+        )
         const divPrice = currPrices['Divine Orb']?.chaosValue ?? 0
         const mirPrice = currPrices['Mirror of Kalandra']?.chaosValue ?? 0
         if (divPrice > 0) setDivineRate(divPrice)
