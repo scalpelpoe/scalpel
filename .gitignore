@@ -4,6 +4,8 @@ node_modules/
 # Build output
 out/
 dist/
+playwright-report/
+test-results/
 
 # TypeScript accidental in-place emits
 /src/**/*.js

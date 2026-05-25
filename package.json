@@ -28,6 +28,8 @@
     "format:check": "biome format src",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:e2e": "npm run build && playwright test -c playwright.electron.config.ts",
+    "test:e2e:headed": "npm run build && playwright test -c playwright.electron.config.ts --headed",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
     "prepare": "husky"
@@ -47,6 +49,7 @@
     "@biomejs/biome": "^2.4.15",
     "@electron/asar": "^4.1.1",
     "@icon-park/react": "^1.4.2",
+    "@playwright/test": "^1.60.0",
     "@storybook/react-vite": "^10.3.6",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

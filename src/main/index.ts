@@ -24,6 +24,11 @@ import {
 // Note: this only covers exceptions Node routes to uncaughtException. A throw
 // inside a uiohook/overlay-window event listener is dispatched from native code
 // and does NOT reach here -- those listeners are wrapped with guardNativeListener.
+const IS_E2E = process.env.SCALPEL_E2E === '1'
+if (IS_E2E && process.env.SCALPEL_E2E_USER_DATA) {
+  app.setPath('userData', process.env.SCALPEL_E2E_USER_DATA)
+}
+
 installEarlyDiagnostics()
 
 // Capture native aborts (the tsfn proxy calling napi_fatal_error, etc.) as local
@@ -196,16 +201,17 @@ if (store.get('themeId') === undefined) store.set('themeId', 'default')
 if (store.get('customThemePalette') === undefined) store.set('customThemePalette', null)
 
 // Auto-detect overlay scale on first run (deferred until app ready since screen API requires it)
-app.whenReady().then(() => {
-  if (store.get('overlayScale') === 1 && !store.get('overlayScaleSet' as keyof AppSettings)) {
-    const height = screen.getPrimaryDisplay().workAreaSize.height
-    if (height >= 2160)
-      store.set('overlayScale', 2) // 4K
-    else if (height >= 1440) store.set('overlayScale', 1.5) // 1440p
-    // 1080p and below stays at 1
-    store.set('overlayScaleSet' as keyof AppSettings, true)
-  }
-})
+if (!IS_E2E)
+  app.whenReady().then(() => {
+    if (store.get('overlayScale') === 1 && !store.get('overlayScaleSet' as keyof AppSettings)) {
+      const height = screen.getPrimaryDisplay().workAreaSize.height
+      if (height >= 2160)
+        store.set('overlayScale', 2) // 4K
+      else if (height >= 1440) store.set('overlayScale', 1.5) // 1440p
+      // 1080p and below stays at 1
+      store.set('overlayScaleSet' as keyof AppSettings, true)
+    }
+  })
 
 // Migrate: derive filterDir from existing filterPath for users upgrading
 if (!store.get('filterDir') && store.get('filterPath')) {
@@ -250,11 +256,12 @@ if (!store.get('tradePriceOptionPoe1')) store.set('tradePriceOptionPoe1', store.
 // until app-ready since electron's net.request requires it. `force: true`
 // bypasses the cooldown gate so a long-running app picks up new leagues each
 // time it's relaunched.
-app.whenReady().then(() => {
-  refreshLeagues(store, undefined, { force: true }).catch((err) =>
-    console.error('[leagues] launch refresh failed:', err),
-  )
-})
+if (!IS_E2E)
+  app.whenReady().then(() => {
+    refreshLeagues(store, undefined, { force: true }).catch((err) =>
+      console.error('[leagues] launch refresh failed:', err),
+    )
+  })
 
 setEvaluationStore(store)
 initAppMacrosRefresh(() => store.get('appMacros') ?? [])
@@ -343,29 +350,29 @@ registerScalpelPluginSchemePrivileges()
 
 // ---- App lifecycle ---------------------------------------------------------
 
-const gotLock = app.requestSingleInstanceLock()
+const gotLock = IS_E2E || app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
 } else {
   app.on('second-instance', () => showAppWindow())
 }
 
-const installDir = applyPendingUpdate()
+const installDir = IS_E2E ? process.cwd() : applyPendingUpdate()
 
 app.whenReady().then(() => {
   // Seed the overlay with the last-known game version so attachByTitle waits for
   // that window. The hotkey handler re-detects the focused PoE on every fire and
   // relaunches to swap versions if needed (ensureCorrectGameForHotkey).
-  createOverlayWindow(store.get('poeVersion') ?? 1)
+  if (!IS_E2E) createOverlayWindow(store.get('poeVersion') ?? 1)
   // Let the secondary-overlay system know about the main overlay window so its
   // isAnyScalpelWindowFocused predicate can include it.
   setMainOverlayGetter(getOverlayWindow)
   // When focus leaves Scalpel via the PoE -> overlay -> other-app path
   // (which the PoE-blur handler can't catch), suspend hotkeys so they don't
   // fire in the destination app.
-  setOnLeaveScalpel(() => suspendHotkeys())
+  if (!IS_E2E) setOnLeaveScalpel(() => suspendHotkeys())
   createAppWindow()
-  createTray()
+  if (!IS_E2E) createTray()
 
   // Serve plugin-facing built-in modules (React, SDK) via a custom scheme so
   // plugins can import them without bundling their own copies.
@@ -384,18 +391,20 @@ app.whenReady().then(() => {
   })
 
   const filterPath = store.get('filterPath')
-  if (filterPath) loadFilter(filterPath, 'App Launch')
+  if (!IS_E2E && filterPath) loadFilter(filterPath, 'App Launch')
 
   // Start low-level keyboard hook
   const onHotkeyFired = createHotkeyHandler(store, isElevated)
   const onPriceCheckFired = createPriceCheckHandler(store, isElevated)
   const hotkey = store.get('hotkey')
-  startHotkeyListener(onHotkeyFired)
-  setHotkey(hotkey)
-  setPriceCheckHandler(onPriceCheckFired)
-  setPriceCheckHotkey(store.get('priceCheckHotkey'))
-  setEscapeHandler(() => hideOverlay())
-  setChatCommands(store.get('chatCommands') ?? [])
+  if (!IS_E2E) {
+    startHotkeyListener(onHotkeyFired)
+    setHotkey(hotkey)
+    setPriceCheckHandler(onPriceCheckFired)
+    setPriceCheckHotkey(store.get('priceCheckHotkey'))
+    setEscapeHandler(() => hideOverlay())
+    setChatCommands(store.get('chatCommands') ?? [])
+  }
   let currentRegex = ''
   ipcMain.on('report-regex', (_event, regex: string) => {
     currentRegex = regex
@@ -518,49 +527,53 @@ app.whenReady().then(() => {
 
   // Apply close-on-click-outside setting
   setCloseOnClickOutside(store.get('closeOnClickOutside'))
-  setGameFocusHandlers(
-    () => {
-      resumeHotkeys()
-      restoreAllOnPoeFocus()
-    },
-    () => {
-      // PoE blurred. If focus moved to any Scalpel window (main or secondary),
-      // it's an in-app interaction - keep hotkeys armed and leave overlays up.
-      // Only treat it as "user left the app" when focus is somewhere else.
-      if (isAnyScalpelWindowFocused()) return
-      suspendHotkeys()
-      hideAllOnPoeBlur()
-    },
-  )
+  if (!IS_E2E)
+    setGameFocusHandlers(
+      () => {
+        resumeHotkeys()
+        restoreAllOnPoeFocus()
+      },
+      () => {
+        // PoE blurred. If focus moved to any Scalpel window (main or secondary),
+        // it's an in-app interaction - keep hotkeys armed and leave overlays up.
+        // Only treat it as "user left the app" when focus is somewhere else.
+        if (isAnyScalpelWindowFocused()) return
+        suspendHotkeys()
+        hideAllOnPoeBlur()
+      },
+    )
 
   // Start with hotkeys suspended until PoE actually gains focus.
   // Without this, hotkeys fire globally (e.g. in other games) before PoE opens.
-  suspendHotkeys()
+  if (!IS_E2E) suspendHotkeys()
 
   // Fetch manifest in background; bundled copy is the offline fallback
-  refreshManifest().catch(() => {})
+  if (!IS_E2E) refreshManifest().catch(() => {})
 
   // Fetch prices in background, refresh every 10 minutes
-  refreshPrices(store.get('league'))
-  setInterval(() => refreshPrices(store.get('league')), 10 * 60 * 1000)
+  if (!IS_E2E) {
+    refreshPrices(store.get('league'))
+    setInterval(() => refreshPrices(store.get('league')), 10 * 60 * 1000)
+  }
 
   // After the OS wakes from sleep, Electron's network stack often bails on pending
   // requests with ERR_NETWORK_IO_SUSPENDED. Invalidate the price cache and re-fetch so
   // we don't sit on stale/empty prices for up to 10 minutes.
-  powerMonitor.on('resume', () => {
-    invalidatePriceCache()
-    refreshPrices(store.get('league'))
-  })
+  if (!IS_E2E)
+    powerMonitor.on('resume', () => {
+      invalidatePriceCache()
+      refreshPrices(store.get('league'))
+    })
 
   // Wire the updater unconditionally so broadcasts (update-available, update-rescinded)
   // can fire in dev for fake-update testing. The periodic GitHub check and destructive
   // install actions internally bail when ELECTRON_RENDERER_URL is set so a dev session
   // doesn't overwrite source with a packaged ASAR.
   const overlayWin = getOverlayWindow()
-  if (overlayWin)
+  if (!IS_E2E && overlayWin)
     initUpdater([getOverlayWindow, getAppWindow], installDir, store.get('updateChannel'), () => showOverlay())
 
-  if (process.env.NODE_ENV === 'development') {
+  if (!IS_E2E && process.env.NODE_ENV === 'development') {
     const ow = getOverlayWindow()
     ow?.webContents.openDevTools({ mode: 'detach' })
     ow?.webContents.on('context-menu', (_e, params) => {
@@ -570,7 +583,7 @@ app.whenReady().then(() => {
 
   // Start online filter sync
   const filterDir = store.get('filterDir')
-  if (filterDir) {
+  if (!IS_E2E && filterDir) {
     startOnlineSync(filterDir, () => {
       const wins: BrowserWindow[] = []
       const ow = getOverlayWindow()
@@ -582,7 +595,7 @@ app.whenReady().then(() => {
   }
 
   // Show onboarding on first launch, otherwise stay in tray
-  if (!filterPath) {
+  if (IS_E2E || !filterPath) {
     showAppWindow()
   }
 })
