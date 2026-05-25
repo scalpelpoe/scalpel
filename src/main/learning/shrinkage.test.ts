@@ -31,17 +31,16 @@ describe('blendEnableRate', () => {
 })
 
 describe('decide', () => {
-  it('eager flips only after EAGER_MIN_OBS (3) consistent observations', () => {
-    expect(decide({ rate: 0.8, specificObs: 3 }, 'eager')).toBe(true)
-    expect(decide({ rate: 0.2, specificObs: 3 }, 'eager')).toBe(false)
-    expect(decide({ rate: 0.8, specificObs: 2 }, 'eager')).toBeNull() // too few observations
+  it('eager flips only after EAGER_MIN_OBS (2) consistent observations', () => {
+    expect(decide({ rate: 0.8, specificObs: 2 }, 'eager')).toBe(true)
+    expect(decide({ rate: 0.2, specificObs: 2 }, 'eager')).toBe(false)
     expect(decide({ rate: 0.8, specificObs: 1 }, 'eager')).toBeNull() // a single enable must not flip
     expect(decide({ rate: 0.52, specificObs: 9 }, 'eager')).toBeNull() // inside the rate margin
   })
 
   it('rounds the observation count so within-session decay does not delay the flip', () => {
-    expect(decide({ rate: 0.8, specificObs: 2.97 }, 'eager')).toBe(true) // 3 obs lightly decayed
-    expect(decide({ rate: 0.8, specificObs: 2.0 }, 'eager')).toBeNull() // genuinely only 2
+    expect(decide({ rate: 0.8, specificObs: 1.97 }, 'eager')).toBe(true) // 2 obs lightly decayed
+    expect(decide({ rate: 0.8, specificObs: 1.0 }, 'eager')).toBeNull() // genuinely only 1
   })
 
   it('conservative needs a decisive rate and more observations', () => {

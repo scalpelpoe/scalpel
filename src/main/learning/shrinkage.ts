@@ -6,8 +6,10 @@ export const SHIPPED_PRIOR_ENABLED = 0.6
 export const SHIPPED_PRIOR_DISABLED = 0.4
 export const EAGER_PIVOT = 0.5
 export const EAGER_MARGIN = 0.05
-/** Eager flips a default after this many consistent observations of the item's context. */
-export const EAGER_MIN_OBS = 3
+/** Eager flips a default after this many consistent observations of the item's context.
+ *  Set to 2 (not 3) to offset the capture-recording lag: a session's choice isn't reflected
+ *  until ~2 re-checks later, so 2 here surfaces around the 3rd-4th re-check of the same item. */
+export const EAGER_MIN_OBS = 2
 export const CONSERVATIVE_HI = 0.7
 export const CONSERVATIVE_LO = 0.3
 /** Conservative needs more specific-context evidence before changing a default. */
