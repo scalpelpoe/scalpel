@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { app, ipcMain } from 'electron'
 import type Store from 'electron-store'
 import type { AppSettings, GameVariant, RegexPreset } from '../../shared/types'
 import { getColorFrequencies } from '../filter-state'
@@ -8,7 +8,9 @@ import { applyProfileHydrationSideEffects, applySetting, broadcastSettingUpdate 
 import {
   createProfile,
   deleteProfileAndChooseFallback,
+  getProfileById,
   listProfileSummaries,
+  persistProfileSwitchForRestart,
   renameProfile,
   writeActiveRegexPresetsByGameVariant,
 } from '../profile-settings'
@@ -66,9 +68,28 @@ export function register(store: Store<AppSettings>): void {
     }
   })
 
-  ipcMain.handle('set-active-profile', async (event, id: string) => {
+  ipcMain.handle('set-active-profile', async (event, id: string, restartIfNeeded = false) => {
+    const profile = getProfileById(id)
+    if (!profile) return { ok: false as const, error: 'Profile not found' }
+
+    const current = store.get('poeVersion') === 2 ? 2 : 1
+    if (profile.gameVariant !== current) {
+      if (!restartIfNeeded) {
+        return { ok: false as const, requiresRestart: true as const, targetGame: profile.gameVariant }
+      }
+
+      persistProfileSwitchForRestart(store, profile)
+      if (!app.isPackaged) {
+        console.warn(`[profile-switch] target=PoE${profile.gameVariant}; restart dev to re-attach`)
+        return { ok: true as const, restarting: true as const, devRestartRequired: true as const }
+      }
+      app.relaunch()
+      app.quit()
+      return { ok: true as const, restarting: true as const }
+    }
+
     applySetting(store, 'activeProfileId', id, event.sender)
-    return store.store
+    return { ok: true as const, settings: store.store }
   })
 
   ipcMain.handle('refresh-leagues', async (event) => {

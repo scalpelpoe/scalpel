@@ -150,6 +150,16 @@ export function switchActiveProfileById(store: Store<AppSettings>, id: string): 
   return profile ? hydrateProfileSettings(store, profile) : []
 }
 
+export function getProfileById(id: string): PoeProfile | null {
+  return profileStore().getProfile(id)
+}
+
+export function persistProfileSwitchForRestart(store: Store<AppSettings>, profile: PoeProfile): void {
+  store.set(ACTIVE_PROFILE_ID_KEY, profile.id)
+  store.set(lastProfileIdKey(profile.gameVariant), profile.id)
+  store.set(PROFILE_VERSION_KEY, profile.gameVariant)
+}
+
 export function switchActiveProfileByGameVariant(
   store: Store<AppSettings>,
   variant: GameVariant,

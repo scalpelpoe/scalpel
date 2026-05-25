@@ -35,7 +35,15 @@ export const api = {
   duplicateProfile: (id: string, name: string): Promise<PoeProfileSummary> =>
     ipcRenderer.invoke('duplicate-profile', id, name),
   deleteProfile: (id: string): Promise<void> => ipcRenderer.invoke('delete-profile', id),
-  setActiveProfile: (id: string): Promise<AppSettings> => ipcRenderer.invoke('set-active-profile', id),
+  setActiveProfile: (
+    id: string,
+    restartIfNeeded = false,
+  ): Promise<
+    | { ok: true; settings: AppSettings }
+    | { ok: true; restarting: true; devRestartRequired?: true }
+    | { ok: false; requiresRestart: true; targetGame: GameVariant }
+    | { ok: false; error: string }
+  > => ipcRenderer.invoke('set-active-profile', id, restartIfNeeded),
   refreshLeagues: (): Promise<{
     leaguesPoe1: string[]
     leaguesPoe2: string[]

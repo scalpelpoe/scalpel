@@ -46,7 +46,28 @@ export function ProfileManagerStep({
 
   const activate = async (profile: PoeProfileSummary): Promise<void> => {
     setError(null)
-    onSettingsChange(await window.api.setActiveProfile(profile.id))
+    const result = await window.api.setActiveProfile(profile.id)
+    if (!result.ok && 'requiresRestart' in result) {
+      const confirmed = window.confirm(
+        `Switching to a PoE${result.targetGame} profile requires restarting Scalpel so the overlay can attach to the correct game. Restart now?`,
+      )
+      if (!confirmed) return
+      const restartResult = await window.api.setActiveProfile(profile.id, true)
+      if (!restartResult.ok) {
+        setError('Could not switch profile.')
+        return
+      }
+      if ('devRestartRequired' in restartResult) {
+        setError('Profile selected. Restart the dev app to attach to the selected game.')
+      }
+      return
+    }
+    if (!result.ok) {
+      setError(result.error)
+      return
+    }
+    if (!('settings' in result)) return
+    onSettingsChange(result.settings)
     setSwitchedFilterName(inGameFilterName(profile))
     await reloadProfiles()
   }
@@ -159,43 +180,46 @@ export function ProfileManagerStep({
               {matching.length === 0 ? (
                 <p className="text-[11px] text-text-dim m-0">No profiles yet.</p>
               ) : (
-                matching.map((profile) => (
-                  <div
-                    key={profile.id}
-                    className="rounded border border-border bg-black/20 px-3 py-2 flex flex-col gap-2"
-                  >
-                    <div className="flex items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="text-[13px] font-semibold text-text truncate">{profile.name}</div>
-                        <div className="text-[11px] text-text-dim truncate">
-                          {profile.league || 'No league'} - {filterName(profile)}
+                matching.map((profile) => {
+                  const needsRestart = profile.gameVariant !== settings.poeVersion
+                  return (
+                    <div
+                      key={profile.id}
+                      className="rounded border border-border bg-black/20 px-3 py-2 flex flex-col gap-2"
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 min-w-0">
+                          <div className="text-[13px] font-semibold text-text truncate">{profile.name}</div>
+                          <div className="text-[11px] text-text-dim truncate">
+                            {profile.league || 'No league'} - {filterName(profile)}
+                          </div>
                         </div>
+                        {profile.id === settings.activeProfileId && (
+                          <span className="text-[10px] text-accent font-semibold shrink-0">Active</span>
+                        )}
                       </div>
-                      {profile.id === settings.activeProfileId && (
-                        <span className="text-[10px] text-accent font-semibold shrink-0">Active</span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {profile.id !== settings.activeProfileId && (
-                        <button className="primary text-[11px] px-3 py-1.5" onClick={() => void activate(profile)}>
-                          Switch
+                      <div className="flex flex-wrap gap-1.5">
+                        {profile.id !== settings.activeProfileId && (
+                          <button className="primary text-[11px] px-3 py-1.5" onClick={() => void activate(profile)}>
+                            {needsRestart ? 'Restart to Switch' : 'Switch'}
+                          </button>
+                        )}
+                        <button className="text-[11px] px-3 py-1.5" onClick={() => onEditProfile(profile)}>
+                          {needsRestart ? 'Restart to Edit' : 'Edit'}
                         </button>
-                      )}
-                      <button className="text-[11px] px-3 py-1.5" onClick={() => onEditProfile(profile)}>
-                        Edit
-                      </button>
-                      <button className="text-[11px] px-3 py-1.5" onClick={() => void duplicate(profile)}>
-                        Duplicate
-                      </button>
-                      <button className="text-[11px] px-3 py-1.5" onClick={() => void rename(profile)}>
-                        Rename
-                      </button>
-                      <button className="text-[11px] px-3 py-1.5 text-text-dim" onClick={() => void remove(profile)}>
-                        Delete
-                      </button>
+                        <button className="text-[11px] px-3 py-1.5" onClick={() => void duplicate(profile)}>
+                          Duplicate
+                        </button>
+                        <button className="text-[11px] px-3 py-1.5" onClick={() => void rename(profile)}>
+                          Rename
+                        </button>
+                        <button className="text-[11px] px-3 py-1.5 text-text-dim" onClick={() => void remove(profile)}>
+                          Delete
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  )
+                })
               )}
             </section>
           )
