@@ -11,14 +11,13 @@ import {
   getEffectiveSettings,
   getProfileBackedSetting,
   getProfileById,
-  isProfileBackedKey,
   listProfileSummaries,
   persistProfileSwitchForRestart,
   renameProfile,
   writeActiveRegexPresetsByGameVariant,
   writeLastUsedProfileSettingByGameVariant,
-  type ProfileBackedKey,
-  type ProfileBackedValue,
+  type ProfileSettingKey,
+  type ProfileSettingValue,
 } from '../profile-settings'
 
 export function register(store: Store<AppSettings>): void {
@@ -41,12 +40,10 @@ export function register(store: Store<AppSettings>): void {
 
   ipcMain.handle(
     'set-profile-setting-for-game',
-    (event, variant: GameVariant, key: ProfileBackedKey, value: ProfileBackedValue) => {
-      const previous = getEffectiveSettings(store)
+    (event, variant: GameVariant, key: ProfileSettingKey, value: ProfileSettingValue<typeof key>) => {
       const changes = writeLastUsedProfileSettingByGameVariant(store, variant, key, value)
-      applyProfileHydrationSideEffects(changes, previous)
-      for (const change of changes) {
-        broadcastSettingUpdate(event.sender, change.key, change.value)
+      if (changes.length > 0) {
+        broadcastSettingUpdate(event.sender, 'activeProfile', getEffectiveSettings(store).activeProfile)
       }
       return getEffectiveSettings(store)
     },
@@ -57,7 +54,7 @@ export function register(store: Store<AppSettings>): void {
   ipcMain.handle(
     'create-profile',
     (_event, input: { name: string; gameVariant: GameVariant; cloneFromId?: string }) => {
-      const profile = createProfile(store, input)
+      const profile = createProfile(input)
       return listProfileSummaries(store).find((summary) => summary.id === profile.id)!
     },
   )
@@ -68,7 +65,7 @@ export function register(store: Store<AppSettings>): void {
   })
 
   ipcMain.handle('duplicate-profile', (_event, id: string, name: string) => {
-    const profile = createProfile(store, { name, gameVariant: 1, cloneFromId: id })
+    const profile = createProfile({ name, gameVariant: 1, cloneFromId: id })
     return listProfileSummaries(store).find((summary) => summary.id === profile.id)!
   })
 
@@ -109,11 +106,7 @@ export function register(store: Store<AppSettings>): void {
     const changed = await refreshLeagues(store)
     const settings = getEffectiveSettings(store)
     for (const key of changed) {
-      if (isProfileBackedKey(key)) {
-        broadcastSettingUpdate(event.sender, key, getProfileBackedSetting(store, key))
-      } else {
-        broadcastSettingUpdate(event.sender, key, settings[key])
-      }
+      broadcastSettingUpdate(event.sender, key, settings[key])
     }
     return {
       leaguesPoe1: store.get('leaguesPoe1'),

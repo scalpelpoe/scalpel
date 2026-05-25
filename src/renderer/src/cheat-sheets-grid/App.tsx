@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { GridFour, GridNine, GridSixteen } from '@icon-park/react'
-import type { CheatSheetsSettings, CheatSheetCategory } from '../../../shared/types'
+import type { CheatSheetsSettings, CheatSheetCategory, RuntimeSettings } from '../../../shared/types'
 import { CHEAT_SHEET_MINIMIZED_HEIGHT, CHEAT_SHEET_MINIMIZED_SLACK } from '../../../shared/cheat-sheet-window'
 import { Chrome } from '../secondary-overlay/Chrome'
 import { useStickyZone } from '../shared/use-current-zone'
@@ -37,6 +37,7 @@ function loadThumbSize(): ThumbSize {
 export function App(): JSX.Element {
   const [settings, setSettings] = useState<CheatSheetsSettings | null>(null)
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null)
+  const [poeVersion, setPoeVersion] = useState<1 | 2>(1)
   const [thumbSize, setThumbSize] = useState<ThumbSize>(loadThumbSize)
   // Derive collapsed state from the live window height so the icon stays
   // correct across drag-resizes and app restarts (where react state would
@@ -52,11 +53,16 @@ export function App(): JSX.Element {
 
   useEffect(() => {
     void window.api.getSettings().then((s) => {
-      setSettings(s.cheatSheets)
-      setActiveCategoryId(s.cheatSheets.categories[0]?.id ?? null)
+      const cs = s.activeProfile?.cheatSheets ?? { globalHotkey: '', categories: [], pinned: false }
+      setSettings(cs)
+      setActiveCategoryId(cs.categories[0]?.id ?? null)
+      setPoeVersion(s.poeVersion === 2 ? 2 : 1)
     })
     return window.api.onSettingUpdated((key, value) => {
-      if (key === 'cheatSheets') setSettings(value as CheatSheetsSettings)
+      if (key === 'activeProfile') {
+        const next = (value as RuntimeSettings['activeProfile'])?.cheatSheets
+        if (next) setSettings(next)
+      }
     })
   }, [])
 
@@ -91,7 +97,7 @@ export function App(): JSX.Element {
     // never get our own echo back. Update local state immediately, then persist.
     const next: CheatSheetsSettings = { ...settings, pinned: !pinned }
     setSettings(next)
-    void window.api.setSetting('cheatSheets', next)
+    void window.api.setProfileSettingForGame(poeVersion, 'cheatSheets', next)
   }
   const sizeControls = (
     <SizeControls value={thumbSize} onChange={setThumbSize} pinned={pinned} onTogglePin={togglePin} />

@@ -19,7 +19,7 @@ import {
   writeLastUsedProfileSettingByGameVariant,
 } from './profile-settings'
 
-function makeStore(initial: Partial<AppSettings>): Store<AppSettings> {
+function makeStore(initial: Record<string, unknown>): Store<AppSettings> {
   const data: Record<string, unknown> = { ...initial }
   return {
     get: (key: string) => data[key],
@@ -35,7 +35,7 @@ function setupProfiles(): ReturnType<typeof initProfileStore> {
 }
 
 describe('profile-settings', () => {
-  it('writes active profile-backed settings to the profile file without persisting flat config', () => {
+  it('writes active profile-backed settings to the profile file with edit reason', () => {
     const profiles = setupProfiles()
     const poe1 = profiles.createDefault(1)
     profiles.saveProfile(poe1)
@@ -43,16 +43,17 @@ describe('profile-settings', () => {
     const store = makeStore({
       [PROFILE_VERSION_KEY]: 1,
       [ACTIVE_PROFILE_ID_KEY]: poe1.id,
-      league: 'Mirage',
-      leaguePoe1: 'Mirage',
     })
 
     const changes = writeActiveProfileSetting(store, 'league', 'Return of the Settlers')
 
-    expect(changes).toContainEqual({ key: 'league', value: 'Return of the Settlers' })
-    expect(store.get('league')).toBe('Mirage')
-    expect(store.get('leaguePoe1')).toBe('Mirage')
-    expect(getEffectiveSettings(store).league).toBe('Return of the Settlers')
+    expect(changes).toHaveLength(1)
+    const change = changes[0]
+    expect(change.key).toBe('activeProfile')
+    if (change.key === 'activeProfile') {
+      expect(change.reason).toBe('edit')
+    }
+    expect(getEffectiveSettings(store).activeProfile?.league).toBe('Return of the Settlers')
     expect(profiles.getProfile(poe1.id)?.league).toBe('Return of the Settlers')
   })
 
@@ -66,16 +67,17 @@ describe('profile-settings', () => {
     const store = makeStore({
       [PROFILE_VERSION_KEY]: 1,
       [ACTIVE_PROFILE_ID_KEY]: ssf.id,
-      league: 'Standard',
-      leaguePoe1: 'Standard',
     })
 
     const changes = writeActiveProfileSetting(store, 'league', 'Return of the Settlers')
 
-    expect(changes).toContainEqual({ key: 'league', value: 'Return of the Settlers' })
-    expect(store.get('league')).toBe('Standard')
-    expect(store.get('leaguePoe1')).toBe('Standard')
-    expect(getEffectiveSettings(store).league).toBe('Return of the Settlers')
+    expect(changes).toHaveLength(1)
+    const change2 = changes[0]
+    expect(change2.key).toBe('activeProfile')
+    if (change2.key === 'activeProfile') {
+      expect(change2.reason).toBe('edit')
+    }
+    expect(getEffectiveSettings(store).activeProfile?.league).toBe('Return of the Settlers')
     expect(profiles.getProfile(ssf.id)?.league).toBe('Return of the Settlers')
     expect(profiles.getProfile(trade.id)?.league).toBe('Mirage')
   })
@@ -106,7 +108,7 @@ describe('profile-settings', () => {
     expect(profiles.getProfile(trade.id)?.regexPresets).toEqual([])
   })
 
-  it('writes inactive profile settings to the last-used profile for that game', () => {
+  it('writes inactive profile settings to the last-used profile without affecting active', () => {
     const profiles = setupProfiles()
     const poe1 = profiles.createDefault(1)
     const poe2 = { ...profiles.createDefault(2), league: 'Fate of the Vaal' }
@@ -117,19 +119,37 @@ describe('profile-settings', () => {
       [PROFILE_VERSION_KEY]: 1,
       [ACTIVE_PROFILE_ID_KEY]: poe1.id,
       [LAST_PROFILE_ID_POE2_KEY]: poe2.id,
-      league: 'Mirage',
-      leaguePoe2: 'Fate of the Vaal',
     })
 
     const changes = writeLastUsedProfileSettingByGameVariant(store, 2, 'league', 'Standard')
 
     expect(changes).toEqual([])
-    expect(store.get('leaguePoe2')).toBe('Fate of the Vaal')
-    expect(store.get('league')).toBe('Mirage')
     expect(profiles.getProfile(poe2.id)?.league).toBe('Standard')
   })
 
-  it('switches game variant from the target profile instead of stale mirror settings', () => {
+  it('returns edit event when writing to the active profile via last-used', () => {
+    const profiles = setupProfiles()
+    const poe1 = { ...profiles.createDefault(1), league: 'Mirage' }
+    profiles.saveProfile(poe1)
+
+    const store = makeStore({
+      [PROFILE_VERSION_KEY]: 1,
+      [ACTIVE_PROFILE_ID_KEY]: poe1.id,
+      [LAST_PROFILE_ID_POE1_KEY]: poe1.id,
+    })
+
+    const changes = writeLastUsedProfileSettingByGameVariant(store, 1, 'league', 'Standard')
+
+    expect(changes).toHaveLength(1)
+    const change3 = changes[0]
+    expect(change3.key).toBe('activeProfile')
+    if (change3.key === 'activeProfile') {
+      expect(change3.reason).toBe('edit')
+    }
+    expect(profiles.getProfile(poe1.id)?.league).toBe('Standard')
+  })
+
+  it('switches game variant with activation reason from target profile', () => {
     const profiles = setupProfiles()
     const poe1 = profiles.createDefault(1)
     const poe2 = { ...profiles.createDefault(2), filterPath: 'C:\\filters\\poe2.filter', league: 'Fate of the Vaal' }
@@ -140,21 +160,20 @@ describe('profile-settings', () => {
       [PROFILE_VERSION_KEY]: 1,
       [ACTIVE_PROFILE_ID_KEY]: poe1.id,
       [LAST_PROFILE_ID_POE2_KEY]: poe2.id,
-      filterPath: 'C:\\filters\\poe1.filter',
-      filterPathPoe2: 'C:\\stale\\mirror.filter',
-      leaguePoe2: 'Stale League',
     })
 
     const changes = switchActiveProfileByGameVariant(store, 2)
 
     expect(store.get(ACTIVE_PROFILE_ID_KEY)).toBe(poe2.id)
     expect(store.get(PROFILE_VERSION_KEY)).toBe(2)
-    expect(store.get('filterPath')).toBe('C:\\filters\\poe1.filter')
-    expect(store.get('filterPathPoe2')).toBe('C:\\stale\\mirror.filter')
-    expect(changes).toContainEqual({ key: 'filterPath', value: 'C:\\filters\\poe2.filter' })
-    expect(changes).toContainEqual({ key: 'league', value: 'Fate of the Vaal' })
-    expect(getEffectiveSettings(store).filterPath).toBe('C:\\filters\\poe2.filter')
-    expect(getEffectiveSettings(store).league).toBe('Fate of the Vaal')
+    const activeChange = changes.find((c) => c.key === 'activeProfile')
+    expect(activeChange).toBeDefined()
+    if (activeChange && activeChange.key === 'activeProfile') {
+      expect(activeChange.reason).toBe('activation')
+      expect(activeChange.value).toEqual(poe2)
+    }
+    expect(getEffectiveSettings(store).activeProfile?.filterPath).toBe('C:\\filters\\poe2.filter')
+    expect(getEffectiveSettings(store).activeProfile?.league).toBe('Fate of the Vaal')
   })
 
   it('switches games to the explicit last-used profile instead of the newest touched profile', () => {
@@ -180,16 +199,18 @@ describe('profile-settings', () => {
       [PROFILE_VERSION_KEY]: 1,
       [ACTIVE_PROFILE_ID_KEY]: poe1.id,
       [LAST_PROFILE_ID_POE2_KEY]: olderChoice.id,
-      filterPath: 'C:\\filters\\poe1.filter',
     })
 
     const changes = switchActiveProfileByGameVariant(store, 2)
 
     expect(store.get(ACTIVE_PROFILE_ID_KEY)).toBe(olderChoice.id)
     expect(store.get(LAST_PROFILE_ID_POE2_KEY)).toBe(olderChoice.id)
-    expect(store.get('filterPath')).toBe('C:\\filters\\poe1.filter')
-    expect(changes).toContainEqual({ key: 'filterPath', value: 'C:\\filters\\bossing.filter' })
-    expect(getEffectiveSettings(store).filterPath).toBe('C:\\filters\\bossing.filter')
+    const activeChange = changes.find((c) => c.key === 'activeProfile')
+    expect(activeChange).toBeDefined()
+    if (activeChange && activeChange.key === 'activeProfile') {
+      expect(activeChange.reason).toBe('activation')
+    }
+    expect(getEffectiveSettings(store).activeProfile?.filterPath).toBe('C:\\filters\\bossing.filter')
   })
 
   it('discovers multiple profiles per game and marks the active one', () => {
@@ -218,16 +239,18 @@ describe('profile-settings', () => {
       [ACTIVE_PROFILE_ID_KEY]: ssf.id,
       [LAST_PROFILE_ID_POE1_KEY]: ssf.id,
       [PROFILE_VERSION_KEY]: 1,
-      league: ssf.league,
     })
 
     const changes = deleteProfileAndChooseFallback(store, ssf.id)
 
     expect(store.get(ACTIVE_PROFILE_ID_KEY)).toBe(trade.id)
     expect(store.get(LAST_PROFILE_ID_POE1_KEY)).toBe(trade.id)
-    expect(store.get('league')).toBe('Standard')
-    expect(changes).toContainEqual({ key: 'league', value: 'Mirage' })
-    expect(getEffectiveSettings(store).league).toBe('Mirage')
+    const activeChange = changes.find((c) => c.key === 'activeProfile')
+    expect(activeChange).toBeDefined()
+    if (activeChange && activeChange.key === 'activeProfile') {
+      expect(activeChange.reason).toBe('activation')
+    }
+    expect(getEffectiveSettings(store).activeProfile?.league).toBe('Mirage')
     expect(profiles.getProfile(ssf.id)).toBeNull()
   })
 
@@ -242,7 +265,6 @@ describe('profile-settings', () => {
       [ACTIVE_PROFILE_ID_KEY]: poe2.id,
       [LAST_PROFILE_ID_POE2_KEY]: poe2.id,
       [PROFILE_VERSION_KEY]: 2,
-      league: poe2.league,
     })
 
     deleteProfileAndChooseFallback(store, poe2.id)
@@ -265,7 +287,6 @@ describe('profile-settings', () => {
       [ACTIVE_PROFILE_ID_KEY]: poe1.id,
       [LAST_PROFILE_ID_POE2_KEY]: poe2.id,
       [PROFILE_VERSION_KEY]: 1,
-      league: poe1.league,
     })
 
     deleteProfileAndChooseFallback(store, poe2.id)
@@ -274,7 +295,6 @@ describe('profile-settings', () => {
     expect(store.get(ACTIVE_PROFILE_ID_KEY)).toBe(poe1.id)
     expect(store.get(LAST_PROFILE_ID_POE2_KEY)).toBe('')
     expect(store.get(PROFILE_VERSION_KEY)).toBe(1)
-    expect(store.get('league')).toBe('Mirage')
   })
 
   it('normalizes legacy profile files that are missing metadata', () => {

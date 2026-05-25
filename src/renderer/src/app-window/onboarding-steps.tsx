@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useAuth } from '../shared/use-auth'
 import appIcon from '../../../../resources/icon.png'
 import { getGameFeatures } from '../../../shared/game-features'
-import type { AppSettings, PoeProfileSummary } from '../../../shared/types'
+import type { AppSettings, PoeProfileSummary, RuntimeSettings } from '../../../shared/types'
 import poeFilterSettingImg from '../assets/other/poe-filter-setting.png'
 import poe1Logo from '../assets/other/poe1-logo.png'
 import poe2Logo from '../assets/other/poe2-logo.png'
@@ -123,8 +123,8 @@ export function FilterFolderStep({
   totalSteps,
   onBackToSettings,
 }: {
-  settings: AppSettings
-  onSettingsChange: (s: AppSettings) => void
+  settings: RuntimeSettings
+  onSettingsChange: (s: RuntimeSettings) => void
   onNext: () => void
   onBack?: () => void
   game: 1 | 2 | null
@@ -159,8 +159,8 @@ export function FilterStep({
   totalSteps,
   onBackToSettings,
 }: {
-  settings: AppSettings
-  onSettingsChange: (s: AppSettings) => void
+  settings: RuntimeSettings
+  onSettingsChange: (s: RuntimeSettings) => void
   onNext: () => void
   onBack: () => void
   onOnlineImport?: (name: string) => void
@@ -378,7 +378,7 @@ export function PreferencesStep({
   totalSteps,
   onBackToSettings,
 }: {
-  settings: AppSettings
+  settings: RuntimeSettings
   selectedGames: SelectedGames
   onUpdate: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
   onProfileUpdateForGame: (game: 1 | 2, key: 'league', value: string) => Promise<void>
@@ -399,13 +399,19 @@ export function PreferencesStep({
   const leagueForGame = (game: 1 | 2): string => {
     if (!both) return settings.activeProfile?.league ?? ''
     const lastId = game === 2 ? settings.lastProfileIdPoe2 : settings.lastProfileIdPoe1
-    return profiles.find((profile) => profile.id === lastId)?.league ?? profiles.find((profile) => profile.gameVariant === game)?.league ?? ''
+    return (
+      profiles.find((profile) => profile.id === lastId)?.league ??
+      profiles.find((profile) => profile.gameVariant === game)?.league ??
+      ''
+    )
   }
 
   const updateLeagueForGame = (game: 1 | 2, league: string): void => {
     setProfiles((prev) =>
       prev.map((profile) =>
-        profile.id === (game === 2 ? settings.lastProfileIdPoe2 : settings.lastProfileIdPoe1) ? { ...profile, league } : profile,
+        profile.id === (game === 2 ? settings.lastProfileIdPoe2 : settings.lastProfileIdPoe1)
+          ? { ...profile, league }
+          : profile,
       ),
     )
     void onProfileUpdateForGame(game, 'league', league).then(() => window.api.listProfiles().then(setProfiles))

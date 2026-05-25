@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
-import type { AppSettings, PoeProfileSummary } from '../../shared/types'
+import type { AppSettings, PoeProfileSummary, RuntimeSettings } from '../../shared/types'
 import { type Step, STEP_ORDER, type SelectedGames, totalOnboardingSteps } from './app-window/constants'
 import {
   backStepFromFilterFolder,
@@ -33,7 +33,7 @@ import { GameSwitchModal } from './components/GameSwitchModal'
 type ImportedOnline = { poe1: string | null; poe2: string | null }
 
 export function AppWindow(): JSX.Element {
-  const [settings, setSettings] = useState<AppSettings | null>(null)
+  const [settings, setSettings] = useState<RuntimeSettings | null>(null)
   const [step, setStep] = useState<Step>('profiles')
   const [direction, setDirection] = useState<'forward' | 'back'>('forward')
   const [importedOnline, setImportedOnline] = useState<ImportedOnline>({ poe1: null, poe2: null })
@@ -106,7 +106,7 @@ export function AppWindow(): JSX.Element {
     setSettings({ ...settings, [key]: value })
   }
 
-  const updateProfileSettingForGame = async (game: 1 | 2, key: 'league', value: unknown): Promise<void> => {
+  const updateProfileSettingForGame = async (game: 1 | 2, key: 'league', value: string): Promise<void> => {
     setSettings(await window.api.setProfileSettingForGame(game, key, value))
   }
 

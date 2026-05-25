@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AppSettings, GameVariant, PoeProfileSummary } from '../../../shared/types'
+import type { GameVariant, PoeProfileSummary, RuntimeSettings } from '../../../shared/types'
 import { DismissibleTip } from '../shared/DismissibleTip'
 import { StepHeader } from './StepHeader'
 
@@ -22,8 +22,8 @@ export function ProfileManagerStep({
   onEditProfile,
   onFinish,
 }: {
-  settings: AppSettings
-  onSettingsChange: (settings: AppSettings) => void
+  settings: RuntimeSettings
+  onSettingsChange: (settings: RuntimeSettings) => void
   onEditProfile: (profile: PoeProfileSummary) => void
   onFinish: () => void
 }): JSX.Element {

@@ -5,7 +5,7 @@ import {
   CHEAT_SHEET_MINIMIZED_SLACK,
   CHEAT_SHEET_MINIMIZED_WIDTH,
 } from '../shared/cheat-sheet-window'
-import type { AppSettings, CheatSheetsSettings, OverlayAnchor } from '../shared/types'
+import type { CheatSheetsSettings, OverlayAnchor } from '../shared/types'
 import { forwardZoneChangesTo, sendCurrentZoneTo } from './client-log'
 import { setSecondaryOverlayHotkeys } from './hotkeys'
 import { moveCanvasTop, type Rect, registerSecondaryOverlay, type SecondaryOverlay, sendCanvasIpc } from './windowing'

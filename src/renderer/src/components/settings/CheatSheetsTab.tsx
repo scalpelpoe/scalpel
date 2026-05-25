@@ -1,5 +1,5 @@
 import { ReactSortable } from 'react-sortablejs'
-import type { AppSettings, CheatSheetCategory } from '../../../../shared/types'
+import type { AppSettings, CheatSheetCategory, ProfileSettingValue, RuntimeSettings } from '../../../../shared/types'
 import { HotkeyField } from './HotkeyField'
 import { generateClientCategoryId } from './utils'
 import type { HotkeySlot } from './hotkey-collisions'
@@ -7,9 +7,9 @@ import { CategoryCard } from './cheatsheets/CategoryCard'
 import { PrefabPicker } from './cheatsheets/PrefabPicker'
 
 interface Props {
-  settings: AppSettings
+  settings: RuntimeSettings
   update: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
-  updateProfile: (key: 'cheatSheets', value: unknown) => Promise<void>
+  updateProfile: <K extends 'cheatSheets'>(key: K, value: ProfileSettingValue<K>) => Promise<void>
   tryHotkey: (hotkey: string, slot: HotkeySlot) => boolean
   /** Shows a banner error message via the parent SettingsPanel. Called for
    *  URL-paste failures and other transient operations the user should know

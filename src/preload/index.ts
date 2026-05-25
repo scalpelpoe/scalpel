@@ -4,7 +4,6 @@ import type { ExternalLinkTarget } from '../shared/external-link'
 import type {
   AppSettings,
   AuthResult,
-  CheatSheetsSettings,
   FilterBlock,
   FilterListEntry,
   FilterVersion,
@@ -13,27 +12,26 @@ import type {
   Manifest,
   OverlayData,
   PoeProfileSummary,
-  TradePriceOption,
+  ProfileSettingKey,
+  ProfileSettingValue,
+  RuntimeSettings,
   Zone,
 } from '../shared/types'
 import type { BoardLibrary, BoardSnapshot, BoardState } from '../shared/whiteboard-types'
-
-type ProfileBackedSettingKey = 'league' | 'filterPath' | 'filterDir' | 'tradePriceOption' | 'cheatSheets'
-type ProfileBackedValue = string | TradePriceOption | CheatSheetsSettings
 
 export const api = {
   // Manifest
   getManifest: (): Promise<Manifest> => ipcRenderer.invoke('get-manifest'),
 
   // Settings
-  getSettings: (): Promise<AppSettings> => ipcRenderer.invoke('get-settings'),
+  getSettings: (): Promise<RuntimeSettings> => ipcRenderer.invoke('get-settings'),
   setSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]): Promise<void> =>
     ipcRenderer.invoke('set-setting', key, value),
   setProfileSettingForGame: (
     variant: GameVariant,
-    key: ProfileBackedSettingKey,
-    value: ProfileBackedValue,
-  ): Promise<AppSettings> => ipcRenderer.invoke('set-profile-setting-for-game', variant, key, value),
+    key: ProfileSettingKey,
+    value: ProfileSettingValue<typeof key>,
+  ): Promise<RuntimeSettings> => ipcRenderer.invoke('set-profile-setting-for-game', variant, key, value),
   listProfiles: (): Promise<PoeProfileSummary[]> => ipcRenderer.invoke('list-profiles'),
   createProfile: (input: {
     name: string
@@ -49,7 +47,7 @@ export const api = {
     id: string,
     restartIfNeeded = false,
   ): Promise<
-    | { ok: true; settings: AppSettings }
+    | { ok: true; settings: RuntimeSettings }
     | { ok: true; restarting: true; devRestartRequired?: true }
     | { ok: false; requiresRestart: true; targetGame: GameVariant }
     | { ok: false; error: string }

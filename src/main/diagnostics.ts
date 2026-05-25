@@ -45,13 +45,18 @@ function redact(text: string): string {
   } catch {
     // app paths may be unavailable during early process errors.
   }
-  const settings = storeRef?.store
-  const legacyStore = storeRef as unknown as Store<AppSettings & import('../shared/types').LegacyAppSettings> | null
+  const _settings = storeRef?.store
+  const legacyData = ((storeRef as unknown as { store: Record<string, unknown> } | null)?.store ?? {}) as Record<
+    string,
+    unknown
+  >
   for (const value of [
-    legacyStore?.get('filterPathPoe1'),
-    legacyStore?.get('filterPathPoe2'),
-    legacyStore?.get('filterDirPoe1'),
-    legacyStore?.get('filterDirPoe2'),
+    legacyData['filterPathPoe1'],
+    legacyData['filterPathPoe2'],
+    legacyData['filterDirPoe1'],
+    legacyData['filterDirPoe2'],
+    legacyData['filterPath'],
+    legacyData['filterDir'],
   ]) {
     if (typeof value === 'string' && value.length > 0) out = out.split(value).join('<path>')
   }

@@ -32,6 +32,14 @@ export interface PoeProfileSummary {
   active: boolean
 }
 
+export type ProfileSettingKey = 'league' | 'filterPath' | 'filterDir' | 'tradePriceOption' | 'cheatSheets'
+
+export type ProfileSettingValue<K extends ProfileSettingKey> = PoeProfile[K]
+
+export interface RuntimeSettings extends AppSettings {
+  activeProfile: PoeProfile | null
+}
+
 export type Visibility = 'Show' | 'Hide' | 'Minimal'
 export type ComparisonOperator = '>' | '>=' | '=' | '==' | '<=' | '<'
 
@@ -501,7 +509,6 @@ export interface AppSettings {
   /** Runtime-only: the active profile data, populated from the profile store.
    *  Never persisted to electron-store. Filter path, league, etc. are
    *  accessed via activeProfile.* instead of top-level settings fields. */
-  activeProfile?: PoeProfile | null
   /** UUID of the active profile (loaded from profiles/ dir). */
   activeProfileId: string
   /** Last explicitly activated profile for each game. Used when switching games. */

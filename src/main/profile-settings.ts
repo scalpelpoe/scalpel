@@ -1,47 +1,22 @@
 import Store from 'electron-store'
-import type { AppSettings, CheatSheetsSettings, GameVariant, PoeProfile, PoeProfileSummary, RegexPreset, TradePriceOption } from '../shared/types'
+import type {
+  AppSettings,
+  GameVariant,
+  PoeProfile,
+  PoeProfileSummary,
+  ProfileSettingKey,
+  ProfileSettingValue,
+  RegexPreset,
+} from '../shared/types'
 import { getProfileStore, type ProfileStore } from './profiles/store'
 
-export type ProfileBackedKey = 'league' | 'filterPath' | 'filterDir' | 'tradePriceOption' | 'cheatSheets'
-export type SettingChangeKey = keyof AppSettings | ProfileBackedKey
-
-/** Map a SettingChangeKey to its settable value type. */
-export type SettingValue<K extends SettingChangeKey> =
-  K extends keyof AppSettings ? AppSettings[K]
-  : K extends ProfileBackedKey ? PoeProfile[typeof PROFILE_FIELD_BY_KEY[K]]
-  : never
-
-/** A single setting change with its fully-resolved value type. */
 export type ProfileChangedSetting =
-  | ({ [K in keyof AppSettings]: { key: K; value: AppSettings[K] } })[keyof AppSettings]
-  | ({ [K in ProfileBackedKey]: { key: K; value: PoeProfile[typeof PROFILE_FIELD_BY_KEY[K]] } })[ProfileBackedKey]
+  | { key: 'activeProfile'; value: PoeProfile | null; reason: 'activation' | 'edit' | 'migration' }
+  | { key: keyof AppSettings; value: unknown }
 
-/** The union of all profile-backed value types (useful at IPC boundaries). */
-export type ProfileBackedValue = SettingValue<ProfileBackedKey>
+export type SettingChangeKey = keyof AppSettings | 'activeProfile'
 
-const PROFILE_BACKED_KEYS = [
-  'league',
-  'filterPath',
-  'filterDir',
-  'tradePriceOption',
-  'cheatSheets',
-] as const satisfies readonly ProfileBackedKey[]
-
-const PROFILE_FIELD_BY_KEY = {
-  league: 'league',
-  filterPath: 'filterPath',
-  filterDir: 'filterDir',
-  tradePriceOption: 'tradePriceOption',
-  cheatSheets: 'cheatSheets',
-} as const satisfies Record<ProfileBackedKey, keyof PoeProfile>
-
-const PROFILE_BACKED_DEFAULTS = {
-  league: '',
-  filterPath: '',
-  filterDir: '',
-  tradePriceOption: 'chaos_divine' as TradePriceOption,
-  cheatSheets: { globalHotkey: '', categories: [], pinned: false } as CheatSheetsSettings,
-} satisfies { [K in ProfileBackedKey]: SettingValue<K> }
+export type { ProfileSettingKey, ProfileSettingValue }
 
 export const ACTIVE_PROFILE_ID_KEY = 'activeProfileId' satisfies keyof AppSettings
 export const PROFILE_VERSION_KEY = 'poeVersion' satisfies keyof AppSettings
@@ -76,25 +51,8 @@ function rememberChange<K extends keyof AppSettings>(
 ): void {
   if (store.get(key) === value) return
   store.set(key, value)
-  changed.push({ key, value })
-}
-
-function rememberRuntimeChange<K extends SettingChangeKey>(changed: ProfileChangedSetting[], key: K, value: SettingValue<K>): void {
   changed.push({ key, value } as ProfileChangedSetting)
 }
-
-function rememberActiveProfileChange(
-  store: Store<AppSettings>,
-  changed: ProfileChangedSetting[],
-): void {
-  const profile = getActiveProfile(store)
-  changed.push({ key: 'activeProfile', value: profile })
-}
-
-export function isProfileBackedKey(key: string): key is ProfileBackedKey {
-  return (PROFILE_BACKED_KEYS as readonly string[]).includes(key)
-}
-
 export function findLastUsedProfileByGameVariant(store: Store<AppSettings>, variant: GameVariant): PoeProfile | null {
   const profiles =
     maybeProfileStore()
@@ -109,16 +67,19 @@ export function getActiveProfile(store: Store<AppSettings>): PoeProfile | null {
   return id ? (maybeProfileStore()?.getProfile(id) ?? null) : null
 }
 
-export function getProfileBackedSetting<K extends ProfileBackedKey>(store: Store<AppSettings>, key: K): PoeProfile[typeof PROFILE_FIELD_BY_KEY[K]] {
+export function getProfileBackedSetting<K extends ProfileSettingKey>(
+  store: Store<AppSettings>,
+  key: K,
+): ProfileSettingValue<K> {
   const active = getActiveProfile(store)
-  if (active) return active[PROFILE_FIELD_BY_KEY[key]]
-  return PROFILE_BACKED_DEFAULTS[key]
+  if (active) return active[key]
+  return (active?.[key] ??
+    (key === 'cheatSheets' ? { globalHotkey: '', categories: [], pinned: false } : '')) as ProfileSettingValue<K>
 }
 
-export function getEffectiveSettings(store: Store<AppSettings>): AppSettings {
+export function getEffectiveSettings(store: Store<AppSettings>): AppSettings & { activeProfile: PoeProfile | null } {
   const settings = { ...store.store } as AppSettings
-  settings.activeProfile = getActiveProfile(store)
-  return settings
+  return { ...settings, activeProfile: getActiveProfile(store) }
 }
 
 export function listProfilesByGameVariant(variant: GameVariant): PoeProfile[] {
@@ -152,12 +113,7 @@ export function hydrateProfileSettings(store: Store<AppSettings>, profile: PoePr
   rememberChange(store, changed, ACTIVE_PROFILE_ID_KEY, profile.id)
   rememberChange(store, changed, lastProfileIdKey(profile.gameVariant), profile.id)
   rememberChange(store, changed, PROFILE_VERSION_KEY, profile.gameVariant)
-  rememberRuntimeChange(changed, 'league', profile.league)
-  rememberRuntimeChange(changed, 'filterPath', profile.filterPath)
-  rememberRuntimeChange(changed, 'filterDir', profile.filterDir)
-  rememberRuntimeChange(changed, 'tradePriceOption', profile.tradePriceOption)
-  rememberRuntimeChange(changed, 'cheatSheets', profile.cheatSheets)
-  rememberActiveProfileChange(store, changed)
+  changed.push({ key: 'activeProfile', value: profile, reason: 'activation' })
   rememberChange(store, changed, regexKey(profile.gameVariant), profile.regexPresets)
 
   return changed
@@ -197,12 +153,8 @@ export function switchActiveProfileByGameVariant(
   return hydrateProfileSettings(store, profile)
 }
 
-export function createProfile(
-  store: Store<AppSettings>,
-  input: { name: string; gameVariant: GameVariant; cloneFromId?: string },
-): PoeProfile {
-  const profile = profileStore().createProfile(input)
-  return profile
+export function createProfile(input: { name: string; gameVariant: GameVariant; cloneFromId?: string }): PoeProfile {
+  return profileStore().createProfile(input)
 }
 
 export function renameProfile(id: string, name: string): PoeProfile | null {
@@ -235,54 +187,44 @@ export function deleteProfileAndChooseFallback(store: Store<AppSettings>, id: st
   return changed
 }
 
-export function writeActiveProfileSetting<K extends ProfileBackedKey>(
+export function writeActiveProfileSetting<K extends ProfileSettingKey>(
   store: Store<AppSettings>,
   key: K,
-  value: PoeProfile[typeof PROFILE_FIELD_BY_KEY[K]],
+  value: ProfileSettingValue<K>,
 ): ProfileChangedSetting[] {
-  const changed: ProfileChangedSetting[] = []
-  const variant = store.get(PROFILE_VERSION_KEY) === 2 ? 2 : 1
-
   const activeId = store.get(ACTIVE_PROFILE_ID_KEY)
   const profile = activeId ? profileStore().getProfile(activeId) : null
-  if (profile && profile.gameVariant === variant) {
-    profile[PROFILE_FIELD_BY_KEY[key] as keyof PoeProfile] = value as PoeProfile[keyof PoeProfile]
+  if (profile) {
+    profile[key] = value
     profile.updatedAt = new Date().toISOString()
     profileStore().saveProfile(profile)
   }
-
-  rememberRuntimeChange(changed, key, value)
-  rememberActiveProfileChange(store, changed)
-
-  return changed
+  return [{ key: 'activeProfile', value: getActiveProfile(store), reason: 'edit' }]
 }
 
-export function writeLastUsedProfileSettingByGameVariant<K extends ProfileBackedKey>(
+export function writeLastUsedProfileSettingByGameVariant<K extends ProfileSettingKey>(
   store: Store<AppSettings>,
   variant: GameVariant,
   key: K,
-  value: PoeProfile[typeof PROFILE_FIELD_BY_KEY[K]],
+  value: ProfileSettingValue<K>,
 ): ProfileChangedSetting[] {
-  const changed: ProfileChangedSetting[] = []
-
   let profile = findLastUsedProfileByGameVariant(store, variant)
   if (!profile) {
     profile = profileStore().createProfile({ name: `Path of Exile ${variant}`, gameVariant: variant })
-    rememberChange(store, changed, lastProfileIdKey(variant), profile.id)
-    if (!store.get(ACTIVE_PROFILE_ID_KEY)) rememberChange(store, changed, ACTIVE_PROFILE_ID_KEY, profile.id)
+    store.set(lastProfileIdKey(variant), profile.id)
+    if (!store.get(ACTIVE_PROFILE_ID_KEY)) store.set(ACTIVE_PROFILE_ID_KEY, profile.id)
   }
   if (profile) {
-    profile[PROFILE_FIELD_BY_KEY[key] as keyof PoeProfile] = value as PoeProfile[keyof PoeProfile]
+    profile[key] = value
     profile.updatedAt = new Date().toISOString()
     profileStore().saveProfile(profile)
   }
 
-  if (store.get(PROFILE_VERSION_KEY) === variant) {
-    rememberRuntimeChange(changed, key, value)
-    rememberActiveProfileChange(store, changed)
+  const activeId = store.get(ACTIVE_PROFILE_ID_KEY)
+  if (activeId && profile && profile.id === activeId) {
+    return [{ key: 'activeProfile', value: getActiveProfile(store), reason: 'edit' }]
   }
-
-  return changed
+  return []
 }
 
 export function writeActiveRegexPresetsByGameVariant(

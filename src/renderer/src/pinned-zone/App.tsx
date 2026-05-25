@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { AppSettings, CheatSheetCategory } from '../../../shared/types'
+import type { CheatSheetCategory, RuntimeSettings } from '../../../shared/types'
 import { useStickyZone } from '../shared/use-current-zone'
 
 export function App(): JSX.Element | null {
@@ -7,16 +7,13 @@ export function App(): JSX.Element | null {
   const currentZone = useStickyZone()
   const rootRef = useRef<HTMLDivElement>(null)
 
-  // Load categories from settings, subscribe to updates. The flat cheatSheets
-  // field always mirrors the active game's per-version slot (see MIRROR_KEYS
-  // in settings-write.ts), so we read it for both initial load and updates.
   useEffect(() => {
-    void window.api.getSettings().then((s: AppSettings) => {
-      setCategories(s.cheatSheets.categories)
+    void window.api.getSettings().then((s: RuntimeSettings) => {
+      setCategories(s.activeProfile?.cheatSheets.categories ?? [])
     })
     return window.api.onSettingUpdated((key, value) => {
-      if (key === 'cheatSheets') {
-        setCategories((value as AppSettings['cheatSheets']).categories)
+      if (key === 'activeProfile') {
+        setCategories((value as RuntimeSettings['activeProfile'])?.cheatSheets.categories ?? [])
       }
     })
   }, [])

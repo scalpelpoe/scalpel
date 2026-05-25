@@ -1,4 +1,4 @@
-import type { AppSettings, PoeItem } from '../../../../shared/types'
+import type { AppSettings, ProfileSettingValue, PoeItem, RuntimeSettings } from '../../../../shared/types'
 import { getGameFeatures } from '../../../../shared/game-features'
 import { FilterPicker } from '../FilterPicker'
 import { HistoryPanel } from '../HistoryPanel'
@@ -6,13 +6,13 @@ import { HotkeyField } from './HotkeyField'
 import { SettingToggleBox } from './SettingToggleBox'
 
 interface Props {
-  settings: AppSettings
+  settings: RuntimeSettings
   update: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
-  updateProfile: (key: 'filterPath' | 'filterDir', value: unknown) => Promise<void>
+  updateProfile: <K extends 'filterPath' | 'filterDir'>(key: K, value: ProfileSettingValue<K>) => Promise<void>
   isOverlay: boolean
   onOnlineFilterUpdated?: (name: string) => void
   onOnlineImport?: (name: string) => void
-  onSettingsChange: (s: AppSettings) => void
+  onSettingsChange: (s: RuntimeSettings) => void
   tryHotkey: (hotkey: string, slot: { kind: 'filter' }) => boolean
   currentItem?: PoeItem
 }

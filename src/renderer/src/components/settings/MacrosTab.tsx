@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AppSettings, RegexPreset } from '../../../../shared/types'
+import type { AppSettings, RegexPreset, RuntimeSettings } from '../../../../shared/types'
 import { Toggle } from '../Toggle'
 import { RemoveButton } from '../RemoveButton'
 import { HotkeyRecorder } from './HotkeyRecorder'
@@ -28,7 +28,7 @@ function getMacroTags(presets: RegexPreset[]): string[] {
 }
 
 interface Props {
-  settings: AppSettings
+  settings: RuntimeSettings
   update: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
   tryHotkey: (hotkey: string, slot: { kind: 'chat'; index: number } | { kind: 'appmacro'; index: number }) => boolean
 }

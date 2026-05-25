@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { CloseSmall, Info } from '@icon-park/react'
-import type { AppSettings, FilterListEntry, GameVariant } from '../../../shared/types'
+import type { FilterListEntry, GameVariant, RuntimeSettings } from '../../../shared/types'
 
 interface Props {
-  settings: AppSettings
-  onSettingsChange: (s: AppSettings) => void
+  settings: RuntimeSettings
+  onSettingsChange: (s: RuntimeSettings) => void
   /** Called when an online filter is imported and the user needs instructions */
   onOnlineImport?: (filterName: string) => void
   /** When true, automatically send /itemfilter command to PoE after importing */
@@ -48,13 +48,6 @@ export function FilterPicker({
   const fDir = settings.activeProfile?.filterDir ?? ''
   const fPath = settings.activeProfile?.filterPath ?? ''
   const gameVariant = (settings.poeVersion === 2 ? 2 : 1) as GameVariant
-
-  const updateLocalProfile = (patch: Partial<{ filterPath: string; filterDir: string }>): void => {
-    onSettingsChange({
-      ...settings,
-      activeProfile: settings.activeProfile ? { ...settings.activeProfile, ...patch } : null,
-    })
-  }
 
   // Listen for online filter changes
   useEffect(() => {
@@ -144,10 +137,7 @@ export function FilterPicker({
 
     if (autoSwitchInGame) {
       setSwitching(true)
-      const currentFilter =
-        freshImport && fPath
-          ? fPath.replace(/^.*[\\/]/, '').replace(/\.filter$/i, '')
-          : undefined
+      const currentFilter = freshImport && fPath ? fPath.replace(/^.*[\\/]/, '').replace(/\.filter$/i, '') : undefined
       await window.api.switchIngameFilter(filterName, currentFilter)
       setSwitching(false)
     }
@@ -189,9 +179,7 @@ export function FilterPicker({
     await scanDir(dir)
     if (autoSwitchInGame) {
       setSwitching(true)
-      const currentFilter = fPath
-        ? fPath.replace(/^.*[\\/]/, '').replace(/\.filter$/i, '')
-        : undefined
+      const currentFilter = fPath ? fPath.replace(/^.*[\\/]/, '').replace(/\.filter$/i, '') : undefined
       await window.api.switchIngameFilter(localName, currentFilter)
       setSwitching(false)
     }
@@ -212,9 +200,7 @@ export function FilterPicker({
     const filterName = entry.name.replace(/[<>:"/\\|?*]/g, '_') + '-local'
     if (autoSwitchInGame) {
       setSwitching(true)
-      const currentFilter = fPath
-        ? fPath.replace(/^.*[\\/]/, '').replace(/\.filter$/i, '')
-        : undefined
+      const currentFilter = fPath ? fPath.replace(/^.*[\\/]/, '').replace(/\.filter$/i, '') : undefined
       await window.api.switchIngameFilter(filterName, currentFilter)
       setSwitching(false)
     } else {

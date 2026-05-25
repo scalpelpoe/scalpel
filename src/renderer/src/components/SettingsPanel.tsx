@@ -1,5 +1,11 @@
 import { useEffect, useState } from 'react'
-import type { AppSettings, PoeItem } from '../../../shared/types'
+import type {
+  AppSettings,
+  PoeItem,
+  ProfileSettingKey,
+  ProfileSettingValue,
+  RuntimeSettings,
+} from '../../../shared/types'
 import {
   GeneralTab,
   ViewTab,
@@ -17,8 +23,8 @@ import { findHotkeyCollision, type HotkeySlot } from './settings/hotkey-collisio
 import { usePoeVersion } from '../shared/poe-version-context'
 
 interface Props {
-  settings: AppSettings
-  onSettingsChange: (s: AppSettings) => void
+  settings: RuntimeSettings
+  onSettingsChange: (s: RuntimeSettings) => void
   mode: 'overlay' | 'app'
   onDone?: () => void
   onOnlineFilterUpdated?: (name: string) => void
@@ -96,7 +102,7 @@ export function SettingsPanel({
     onSettingsChange({ ...settings, [key]: value })
   }
 
-  const updateProfile = async (key: 'league' | 'filterPath' | 'filterDir' | 'tradePriceOption' | 'cheatSheets', value: unknown): Promise<void> => {
+  const updateProfile = async <K extends ProfileSettingKey>(key: K, value: ProfileSettingValue<K>): Promise<void> => {
     const variant = settings.poeVersion === 2 ? 2 : 1
     const updated = await window.api.setProfileSettingForGame(variant, key, value)
     onSettingsChange(updated)
@@ -173,7 +179,13 @@ export function SettingsPanel({
       {tab === 'view' && <ViewTab settings={settings} update={update} updateMany={updateMany} />}
       {tab === 'macros' && <MacrosTab settings={settings} update={update} tryHotkey={tryHotkey} />}
       {tab === 'cheatsheets' && (
-        <CheatSheetsTab settings={settings} update={update} updateProfile={updateProfile} tryHotkey={tryHotkey} onError={showError} />
+        <CheatSheetsTab
+          settings={settings}
+          update={update}
+          updateProfile={updateProfile}
+          tryHotkey={tryHotkey}
+          onError={showError}
+        />
       )}
       {tab === 'filter' && (
         <FilterTab
@@ -188,7 +200,9 @@ export function SettingsPanel({
           currentItem={currentItem}
         />
       )}
-      {tab === 'pricecheck' && <PriceCheckTab settings={settings} update={update} updateProfile={updateProfile} tryHotkey={tryHotkey} />}
+      {tab === 'pricecheck' && (
+        <PriceCheckTab settings={settings} update={update} updateProfile={updateProfile} tryHotkey={tryHotkey} />
+      )}
       {tab === 'plugins' && <PluginsSection onError={showError} />}
       {tab === 'faq' && <FaqTab />}
       {tab === 'developer' && <DeveloperSection settings={settings} update={update} onError={showError} />}

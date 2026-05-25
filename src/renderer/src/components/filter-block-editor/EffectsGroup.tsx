@@ -67,9 +67,9 @@ function AlertSoundEditor({
   useEffect(() => {
     window.api.getSettings().then((s) => {
       if (typeof s.previewVolume === 'number') previewVolumeRef.current = s.previewVolume
-      if (s.filterDir) {
-        filterDirRef.current = s.filterDir
-        window.api.scanSoundFiles(s.filterDir).then(setSoundFiles)
+      if (s.activeProfile?.filterDir) {
+        filterDirRef.current = s.activeProfile.filterDir
+        window.api.scanSoundFiles(s.activeProfile.filterDir).then(setSoundFiles)
       }
     })
   }, [])

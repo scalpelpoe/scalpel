@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { PluginHost } from '../plugins/PluginHost'
 import { PluginTabHost } from '../plugins/PluginTabHost'
 import type { RegisteredTab } from '../plugins/PluginHost'
-import type { AppSettings, OverlayData, PoeItem, PriceInfo } from '../../../shared/types'
+import type { RuntimeSettings, OverlayData, PoeItem, PriceInfo } from '../../../shared/types'
 import { isHideableTabKey } from '../../../shared/types'
 import type { ExternalLinkTarget } from '../../../shared/external-link'
 import { externalLinkUrl, ninjaLinkUrl } from '../../../shared/external-link'
@@ -78,7 +78,7 @@ export default function App(): JSX.Element {
   const showAnimDone = useRef(false)
   const [overlayData, setOverlayData] = useState<OverlayData | null>(null)
   const [searchId, setSearchId] = useState(0)
-  const [settings, setSettings] = useState<AppSettings | null>(null)
+  const [settings, setSettings] = useState<RuntimeSettings | null>(null)
   const [gameBounds, setGameBounds] = useState<{ gameWidth: number; gameHeight: number; sidebarWidth: number } | null>(
     null,
   )
@@ -739,7 +739,7 @@ export default function App(): JSX.Element {
           itemClass={tierSisterData?.itemClass ?? overlayData.item.itemClass}
           currentBaseType={overlayData.item.baseType}
           currentRarity={overlayData.item.rarity}
-          league={settings?.league ?? ''}
+          league={settings?.activeProfile?.league ?? ''}
           uniqueTier={tierSisterData?.uniqueTier}
           left={sisterLeft}
           top={PANEL_TOP + SISTER_NAV_OFFSET}
@@ -1038,7 +1038,7 @@ export default function App(): JSX.Element {
       <PluginHost
         ready={poeVersion !== null}
         poeVersion={poeVersion ?? 1}
-        league={settings?.league ?? ''}
+        league={settings?.activeProfile?.league ?? ''}
         currentItem={overlayData?.item ?? null}
         currentZone={currentZone}
         onSubscribeCurrentItem={onSubscribeCurrentItem}

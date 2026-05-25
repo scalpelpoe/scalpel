@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { AppSettings } from '../../../shared/types'
+import type { RuntimeSettings } from '../../../shared/types'
 import { OnlineFilterModal } from '../components/OnlineFilterModal'
 import { SettingsPanel } from '../components/SettingsPanel'
 
@@ -8,8 +8,8 @@ export function AppSettingsWrapper({
   onSettingsChange,
   onManageProfiles,
 }: {
-  settings: AppSettings
-  onSettingsChange: (s: AppSettings) => void
+  settings: RuntimeSettings
+  onSettingsChange: (s: RuntimeSettings) => void
   onManageProfiles: () => void
 }): JSX.Element {
   const [onlineImportName, setOnlineImportName] = useState<string | null>(null)

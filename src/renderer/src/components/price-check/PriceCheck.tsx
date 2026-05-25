@@ -203,7 +203,7 @@ export function PriceCheck({
       // sees a real exchange rate (PoE1: chaos<->divine, PoE2: exalted<->divine).
       const crossCurrency = primaryCurrencySwap(item.name, poeVersion)
       if (crossCurrency) setPriceOption(crossCurrency)
-      else if (s.tradePriceOption) setPriceOption(s.tradePriceOption as PriceOption)
+      else if (s.activeProfile?.tradePriceOption) setPriceOption(s.activeProfile.tradePriceOption as PriceOption)
       if (s.tradeStatus) setStatusOption(s.tradeStatus as StatusOption)
       if (s.tradeDefaultListedTime !== undefined) setListedTime(s.tradeDefaultListedTime as ListedTime)
       if (s.tradeResultsView) setResultsView(s.tradeResultsView)

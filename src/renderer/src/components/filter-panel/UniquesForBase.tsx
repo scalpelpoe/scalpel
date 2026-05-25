@@ -29,7 +29,7 @@ export function UniquesForBase({ baseType, itemClass }: { baseType: string; item
   }, [baseType])
 
   useEffect(() => {
-    window.api.getSettings().then((s) => setLeague(s.league ?? ''))
+    window.api.getSettings().then((s) => setLeague(s.activeProfile?.league ?? ''))
   }, [])
 
   useEffect(() => {

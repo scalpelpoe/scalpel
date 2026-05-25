@@ -1,15 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import { findHotkeyCollision, narrowScopeForCrossGameConflict } from './hotkey-collisions'
-import type { AppSettings } from '../../../../shared/types'
+import type { RuntimeSettings } from '../../../../shared/types'
 
-function makeSettings(overrides: Partial<AppSettings> = {}): AppSettings {
+function makeSettings(overrides: Partial<RuntimeSettings> = {}): RuntimeSettings {
   return {
     hotkey: '',
     priceCheckHotkey: '',
     chatCommands: [],
     appMacros: [],
+    activeProfile: null,
     ...overrides,
-  } as AppSettings
+  } as RuntimeSettings
 }
 
 describe('findHotkeyCollision - scope-aware', () => {

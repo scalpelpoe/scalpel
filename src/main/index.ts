@@ -39,7 +39,7 @@ installEarlyDiagnostics()
 // uncaughtException handler, so this is the only trace it leaves on Windows.
 crashReporter.start({ uploadToServer: false })
 
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
 import { execSync } from 'node:child_process'
 import { uIOhook, UiohookKey } from 'uiohook-napi'
 import Store from 'electron-store'
@@ -227,24 +227,8 @@ if (!IS_E2E)
     }
   })
 
-// Migrate: derive filterDir from existing filterPath for users upgrading.
-// Uses legacy key reads via cast — these keys no longer exist on AppSettings
-// but may still be present in the electron-store JSON from a prior version.
-{
-  const legacyStore = store as unknown as Store<AppSettings & LegacyAppSettings>
-  if (!legacyStore.get('filterDir') && legacyStore.get('filterPath')) {
-    legacyStore.set('filterDir', dirname(legacyStore.get('filterPath')!))
-  } else if (!legacyStore.get('filterDir')) {
-    legacyStore.set('filterDir', '')
-  }
-
-  // Seed per-version mirror fields from the pre-existing flat values so
-  // migrateFromLegacy can read them. Guarded by empty-check (runs once).
-  if (!legacyStore.get('leaguePoe1')) legacyStore.set('leaguePoe1', legacyStore.get('league'))
-  if (!legacyStore.get('filterPathPoe1')) legacyStore.set('filterPathPoe1', legacyStore.get('filterPath'))
-  if (!legacyStore.get('filterDirPoe1')) legacyStore.set('filterDirPoe1', legacyStore.get('filterDir'))
-  if (!legacyStore.get('tradePriceOptionPoe1')) legacyStore.set('tradePriceOptionPoe1', legacyStore.get('tradePriceOption'))
-}
+// Legacy profile-backed settings are read once by migrateFromLegacy(). After
+// profiles exist, only active-profile references remain in electron-store.
 
 // Migrate: regex presets used to be a single flat `regexPresets` array. Now
 // they're per-version. Existing users only ever ran PoE1 (regex tool was off
@@ -268,7 +252,9 @@ if (!store.get(ACTIVE_PROFILE_ID_KEY)) {
   store.set(LAST_PROFILE_ID_POE1_KEY, profiles.find((profile) => profile.gameVariant === 1)?.id ?? '')
   store.set(LAST_PROFILE_ID_POE2_KEY, profiles.find((profile) => profile.gameVariant === 2)?.id ?? '')
   const legacyStore = store as unknown as Store<AppSettings & LegacyAppSettings>
-  const hadFilter = (legacyStore.get('filterPathPoe1') ?? '') !== '' || (legacyStore.get('filterPathPoe2') ?? '') !== ''
+  const hadFilter = Boolean(
+    legacyStore.get('filterPathPoe1') || legacyStore.get('filterPathPoe2') || legacyStore.get('filterPath'),
+  )
   store.set('onboardingCompleted', hadFilter)
 }
 
@@ -285,8 +271,9 @@ if (!store.get(ACTIVE_PROFILE_ID_KEY)) {
   }
 }
 
-// On every startup, hydrate flat + per-version mirror fields from the active
-// profile. The profile file is the source of truth for per-game settings.
+// On every startup, hydrate store keys from the active profile (lastProfileId,
+// poeVersion, regexPresets). Profile-backed fields (league, filterPath, etc.)
+// live only in the profile JSON files and are read via getProfileBackedSetting.
 hydrateActiveProfileSettings(store)
 
 // Fire-and-forget league refresh on launch. Updates persist + auto-migrate the
