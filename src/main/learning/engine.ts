@@ -13,17 +13,22 @@ export function isLearnable(f: { type: string }): boolean {
   return LEARNABLE_TYPES.has(f.type)
 }
 
-/** Mutates statFilters in place; returns the ids of chips whose default it overrode. */
-export function applyLearnedDefaults(
+/**
+ * Returns the engine's confident enable/disable opinion per learnable chip
+ * (chipId -> desired enabled state). Chips with no confident decision are omitted.
+ * Pure read - does NOT mutate statFilters. The renderer applies these on top of
+ * the (post-base-mode) default and marks chips it actually changes as learned.
+ */
+export function computeLearnedDecisions(
   statFilters: StatFilter[],
   item: PoeItem,
   mode: AdaptiveMode,
   store: CounterStore,
   now: number,
-): string[] {
-  if (mode === 'off') return []
+): Record<string, boolean> {
+  const decisions: Record<string, boolean> = {}
+  if (mode === 'off') return decisions
   const ctx = deriveLearningContext(item)
-  const learned: string[] = []
   for (const f of statFilters) {
     if (!isLearnable(f)) continue
     const samples: RungSample[] = ctx.rungKeys.map((k) => ({
@@ -32,13 +37,9 @@ export function applyLearnedDefaults(
     }))
     const blend = blendEnableRate(samples, f.enabled)
     const decision = decide(blend, mode)
-    if (decision !== null && decision !== f.enabled) {
-      f.enabled = decision
-      f.learned = true
-      learned.push(f.id)
-    }
+    if (decision !== null) decisions[f.id] = decision
   }
-  return learned
+  return decisions
 }
 
 /** Records one session's final chip states. Runs in ALL modes (including off). */

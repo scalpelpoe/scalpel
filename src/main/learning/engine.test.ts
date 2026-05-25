@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { defaultPoeItem } from '../../shared/poe-item'
 import { CounterStore, type LearningPersistence } from './counter-store'
 import type { CounterRecord } from './types'
-import { applyLearnedDefaults, captureObservation, isLearnable } from './engine'
+import { computeLearnedDecisions, captureObservation, isLearnable } from './engine'
 import type { StatFilter } from '../trade/trade'
 
 function newStore(): CounterStore {
@@ -41,7 +41,7 @@ describe('isLearnable', () => {
   })
 })
 
-describe('captureObservation + applyLearnedDefaults round trip', () => {
+describe('captureObservation + computeLearnedDecisions round trip', () => {
   it('learns to disable a chip the user repeatedly turns off (eager)', () => {
     const store = newStore()
     const item = defaultPoeItem({ rarity: 'Rare', itemClass: 'Boots', evasion: 300 })
@@ -49,30 +49,23 @@ describe('captureObservation + applyLearnedDefaults round trip', () => {
     for (let i = 0; i < 3; i++) {
       captureObservation(item, [chip('explicit.coldres', 'explicit', false)], store, 1000 + i)
     }
-    const filters = [chip('explicit.coldres', 'explicit', true)] // shipped default = enabled
-    const learned = applyLearnedDefaults(filters, item, 'eager', store, 2000)
-    expect(filters[0].enabled).toBe(false)
-    expect(filters[0].learned).toBe(true)
-    expect(learned).toEqual(['explicit.coldres'])
+    const decisions = computeLearnedDecisions([chip('explicit.coldres', 'explicit', true)], item, 'eager', store, 2000)
+    expect(decisions['explicit.coldres']).toBe(false)
   })
 
-  it('does nothing in off mode but still no apply', () => {
+  it('does nothing in off mode', () => {
     const store = newStore()
     const item = defaultPoeItem({ rarity: 'Rare', itemClass: 'Boots', evasion: 300 })
     for (let i = 0; i < 5; i++) captureObservation(item, [chip('explicit.coldres', 'explicit', false)], store, 1000 + i)
-    const filters = [chip('explicit.coldres', 'explicit', true)]
-    const learned = applyLearnedDefaults(filters, item, 'off', store, 2000)
-    expect(filters[0].enabled).toBe(true)
-    expect(learned).toEqual([])
+    expect(computeLearnedDecisions([chip('explicit.coldres', 'explicit', true)], item, 'off', store, 2000)).toEqual({})
   })
 
-  it('ignores non-learnable chips on both paths', () => {
+  it('ignores non-learnable chips', () => {
     const store = newStore()
     const item = defaultPoeItem({ rarity: 'Rare', itemClass: 'Boots', evasion: 300 })
     for (let i = 0; i < 5; i++) captureObservation(item, [chip('misc.corrupted', 'misc', false)], store, 1000 + i)
-    const filters = [chip('misc.corrupted', 'misc', true)]
-    applyLearnedDefaults(filters, item, 'eager', store, 2000)
-    expect(filters[0].enabled).toBe(true) // untouched
-    expect(filters[0].learned).toBeUndefined()
+    expect(
+      'misc.corrupted' in computeLearnedDecisions([chip('misc.corrupted', 'misc', true)], item, 'eager', store, 2000),
+    ).toBe(false)
   })
 })

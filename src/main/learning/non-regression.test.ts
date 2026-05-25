@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { defaultPoeItem } from '../../shared/poe-item'
 import { CounterStore, type LearningPersistence } from './counter-store'
 import type { CounterRecord } from './types'
-import { applyLearnedDefaults } from './engine'
+import { computeLearnedDecisions } from './engine'
 import type { StatFilter } from '../trade/trade'
 
 function emptyStore(): CounterStore {
@@ -26,8 +26,7 @@ describe('non-regression', () => {
       { id: 'pseudo.totalres', type: 'pseudo', text: 'total res', value: 100, min: 90, max: null, enabled: true },
     ]
     const before = JSON.parse(JSON.stringify(filters))
-    const learned = applyLearnedDefaults(filters, item, 'eager', emptyStore(), Date.now())
-    expect(learned).toEqual([])
+    expect(computeLearnedDecisions(filters, item, 'eager', emptyStore(), Date.now())).toEqual({})
     expect(filters).toEqual(before)
   })
 })
