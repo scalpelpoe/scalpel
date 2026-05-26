@@ -12,7 +12,7 @@ import { applyPinnedZoneEnabled, getPinnedZoneOverlay } from './pinned-zone'
 import { updateOnlineSyncDir } from './online-sync'
 import { refreshPrices } from './trade/prices'
 import { setUpdateChannel } from './update/updater'
-import type { AppSettings, GameVariant, PoeProfile, RuntimeSettings } from '../shared/types'
+import type { AppSettings, CheatSheetsSettings, GameVariant, PoeProfile, RuntimeSettings } from '../shared/types'
 import {
   ACTIVE_PROFILE_ID_KEY,
   PROFILE_VERSION_KEY,
@@ -20,9 +20,10 @@ import {
   hydrateActiveProfileSettings,
   switchActiveProfileByGameVariant,
   switchActiveProfileById,
-  writeActiveProfileSetting,
+  writeLastUsedProfileSettingByGameVariant,
   type ProfileChangedSetting,
   type ProfileSettingKey,
+  type ProfileSettingValue,
   type SettingChangeKey,
 } from './profiles/profile-settings'
 
@@ -167,13 +168,45 @@ export function applySetting<K extends keyof AppSettings>(
   broadcastSettingUpdates(sender, changes, previous, getEffectiveSettings(store))
 }
 
-export function applyProfileBackedSetting<K extends ProfileSettingKey>(
+/** Dispatch the imperative main-process side effect for a single profile-backed
+ *  field edit. This is what applySetting() used to do for the old flat keys:
+ *  a filter pick reloads the in-memory filter, a folder change re-points online
+ *  sync, and cheat-sheet edits re-register hotkeys + the pinned-zone overlay.
+ *  league/tradePriceOption need no eager effect (consumers read them lazily). */
+export function applyProfileEditSideEffect<K extends ProfileSettingKey>(key: K, value: ProfileSettingValue<K>): void {
+  if (key === 'filterPath') {
+    const path = value as string
+    if (path) loadFilter(path, 'Switched Filters')
+    else clearFilterState()
+  } else if (key === 'filterDir') {
+    updateOnlineSyncDir(value as string)
+  } else if (key === 'cheatSheets') {
+    const cs = value as CheatSheetsSettings
+    applyCheatSheetHotkeys(cs)
+    applyPinnedZoneEnabled(cs?.pinned === true)
+  } else if (key === 'league') {
+    refreshPrices(value as string)
+  }
+}
+
+/** Write a profile-backed setting to the given game's last-used profile, then --
+ *  only when that edit targeted the *active* profile -- run the field side effect
+ *  and broadcast. The set-profile-setting-for-game IPC handler delegates here so
+ *  a filter/dir/cheat-sheet change takes effect immediately rather than waiting
+ *  for the next profile activation. Editing the inactive game's profile (the
+ *  onboarding "both games" league step) writes silently with no side effect. */
+export function applyProfileSettingForGame<K extends ProfileSettingKey>(
   store: Store<AppSettings>,
+  variant: GameVariant,
   key: K,
-  value: Parameters<typeof writeActiveProfileSetting<K>>[2],
+  value: ProfileSettingValue<K>,
   sender: WebContents | null,
-): void {
+): RuntimeSettings {
   const previous = capturePreviousSettings(store)
-  const changes = writeActiveProfileSetting(store, key, value)
-  broadcastSettingUpdates(sender, changes, previous, getEffectiveSettings(store))
+  const changes = writeLastUsedProfileSettingByGameVariant(store, variant, key, value)
+  if (changes.length > 0) {
+    applyProfileEditSideEffect(key, value)
+    broadcastSettingUpdates(sender, changes, previous, getEffectiveSettings(store))
+  }
+  return getEffectiveSettings(store)
 }

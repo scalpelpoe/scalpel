@@ -4,7 +4,12 @@ import type { AppSettings, GameVariant, RegexPreset } from '../../shared/types'
 import { getColorFrequencies } from '../filter-state'
 import { refreshPrices } from '../trade/prices'
 import { refreshLeagues } from '../trade/leagues'
-import { applyProfileHydrationSideEffects, applySetting, broadcastSettingUpdates } from '../settings-write'
+import {
+  applyProfileHydrationSideEffects,
+  applyProfileSettingForGame,
+  applySetting,
+  broadcastSettingUpdates,
+} from '../settings-write'
 import {
   createProfile,
   deleteProfileAndChooseFallback,
@@ -15,7 +20,6 @@ import {
   persistProfileSwitchForRestart,
   renameProfile,
   writeActiveRegexPresetsByGameVariant,
-  writeLastUsedProfileSettingByGameVariant,
   type ProfileChangedSetting,
   type ProfileSettingKey,
   type ProfileSettingValue,
@@ -40,14 +44,8 @@ export function register(store: Store<AppSettings>): void {
 
   ipcMain.handle(
     'set-profile-setting-for-game',
-    (event, variant: GameVariant, key: ProfileSettingKey, value: ProfileSettingValue<typeof key>) => {
-      const previous = getEffectiveSettings(store)
-      const changes = writeLastUsedProfileSettingByGameVariant(store, variant, key, value)
-      if (changes.length > 0) {
-        broadcastSettingUpdates(event.sender, changes, previous, getEffectiveSettings(store))
-      }
-      return getEffectiveSettings(store)
-    },
+    (event, variant: GameVariant, key: ProfileSettingKey, value: ProfileSettingValue<typeof key>) =>
+      applyProfileSettingForGame(store, variant, key, value, event.sender),
   )
 
   ipcMain.handle('list-profiles', () => listProfileSummaries(store))
