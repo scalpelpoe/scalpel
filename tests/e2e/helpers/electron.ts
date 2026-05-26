@@ -2,6 +2,7 @@ import { _electron as electron, type ElectronApplication, type Page } from '@pla
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { writeFileSync } from 'node:fs'
 
 export interface ScalpelE2EApp {
   app: ElectronApplication
@@ -10,9 +11,19 @@ export interface ScalpelE2EApp {
   cleanup: () => Promise<void>
 }
 
-export async function launchScalpelE2E(): Promise<ScalpelE2EApp> {
+export interface ScalpelE2EOptions {
+  /** Pre-seeded electron-store config values written to config.json before launch. */
+  seedConfig?: Record<string, unknown>
+}
+
+const CONFIG_FILE = 'config.json'
+
+export async function launchScalpelE2E(opts?: ScalpelE2EOptions): Promise<ScalpelE2EApp> {
   const userDataDir = await mkdtemp(join(tmpdir(), 'scalpel-e2e-'))
   try {
+    if (opts?.seedConfig) {
+      writeFileSync(join(userDataDir, CONFIG_FILE), JSON.stringify(opts.seedConfig))
+    }
     const app = await electron.launch({
       args: [join(process.cwd(), 'out/main/index.js')],
       env: {
