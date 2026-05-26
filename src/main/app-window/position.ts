@@ -89,6 +89,12 @@ export function validateWindowPosition(stored: PositionRect, workAreas: WorkArea
     height: Math.min(TITLE_BAR_HEIGHT, stored.height),
   }
 
+  // We score each display independently and keep the single best one. A window
+  // straddling the seam between two adjacent displays is therefore judged by
+  // whichever side it overlaps most, not the combined visible region; in the
+  // rare case its titlebar is split below the threshold on every display it
+  // would be re-clamped even though it's visible across the seam. Acceptable
+  // since contiguous monitors keep such a window fully reachable anyway.
   let bestIntersection: WorkArea | null = null
   let bestArea = 0
   let bestTitlebarArea = 0
