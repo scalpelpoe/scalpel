@@ -1,15 +1,21 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { app, BrowserWindow, ipcMain, nativeImage } from 'electron'
+import type Store from 'electron-store'
+import type { AppSettings } from '../shared/types'
+import { validateWindowPosition, persistAppWindowPosition } from './app-window-position'
 
 let appWindow: BrowserWindow | null = null
 let quitting = false
+let store: Store<AppSettings> | null = null
 
 app.on('before-quit', () => {
   quitting = true
 })
 
-export function createAppWindow(): BrowserWindow {
+export function createAppWindow(_store: Store<AppSettings>): BrowserWindow {
+  store = _store
+
   const devIcon = join(__dirname, '../../resources/icon.ico')
   const prodIcon = join(process.resourcesPath, 'icon.ico')
   const iconPath = existsSync(prodIcon) ? prodIcon : devIcon
@@ -48,11 +54,35 @@ export function createAppWindow(): BrowserWindow {
     }
   })
 
+  // Persist window position on user move so next launch restores it.
+  appWindow.on('moved', () => {
+    if (!appWindow || appWindow.isDestroyed()) return
+    persistAppWindowPosition(appWindow, store!)
+  })
+
   return appWindow
 }
 
 export function showAppWindow(): void {
   if (!appWindow) return
+
+  // Restore saved position if we have one, validating against current displays.
+  if (store) {
+    const saved = store.get('appWindowPosition')
+    if (saved) {
+      const bounds = appWindow.getBounds()
+      const { x, y } = validateWindowPosition({
+        x: saved.x,
+        y: saved.y,
+        width: bounds.width,
+        height: bounds.height,
+      })
+      appWindow.setPosition(x, y)
+    }
+  }
+
+  // If the window was minimized, restore() brings it back; otherwise it's a no-op.
+  if (appWindow.isMinimized()) appWindow.restore()
   appWindow.show()
   appWindow.focus()
 }
@@ -76,4 +106,14 @@ ipcMain.on('app-window-mode', (_event, mode: 'onboarding' | 'settings') => {
     appWindow.setMinimumSize(420, 350)
     appWindow.setSize(520, 600)
   }
+  // The mode change can resize the window, which could push the bottom edge
+  // off the work area if the saved y was near the lower boundary.
+  const bounds = appWindow.getBounds()
+  const { x, y } = validateWindowPosition({
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+  })
+  appWindow.setPosition(x, y)
 })

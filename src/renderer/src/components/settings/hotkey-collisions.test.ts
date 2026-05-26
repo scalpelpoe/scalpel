@@ -8,6 +8,7 @@ function makeSettings(overrides: Partial<RuntimeSettings> = {}): RuntimeSettings
     priceCheckHotkey: '',
     chatCommands: [],
     appMacros: [],
+    startInTray: true,
     activeProfile: null,
     ...overrides,
   } as RuntimeSettings

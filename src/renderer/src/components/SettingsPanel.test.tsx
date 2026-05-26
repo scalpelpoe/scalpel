@@ -41,6 +41,7 @@ function settings(input: Partial<RuntimeSettings> = {}): RuntimeSettings {
     overlayOpacity: 0.95,
     overlayScale: 1,
     openSide: 'both',
+    startInTray: true,
     closeOnClickOutside: false,
     useCurrentZoneAreaLevel: false,
     reloadOnSave: true,

@@ -195,6 +195,8 @@ const store = new Store<AppSettings>({
     themeId: 'default',
     customThemePalette: null,
     pluginRegistryUrl: undefined,
+    startInTray: true,
+    appWindowPosition: undefined,
     [ACTIVE_PROFILE_ID_KEY]: '',
     [LAST_PROFILE_ID_POE1_KEY]: '',
     [LAST_PROFILE_ID_POE2_KEY]: '',
@@ -211,6 +213,7 @@ if ((store.get('tradeStatus') as string) === 'any') store.set('tradeStatus', 'av
 if (store.get('themeId') === undefined) store.set('themeId', 'default')
 if (store.get('customThemePalette') === undefined) store.set('customThemePalette', null)
 if (store.get('adaptiveDefaultsMode') === undefined) store.set('adaptiveDefaultsMode', 'eager')
+if (store.get('startInTray') === undefined) store.set('startInTray', true)
 
 const profileStore = initProfileStore(app.getPath('userData'))
 
@@ -473,7 +476,7 @@ app.whenReady().then(() => {
   // (which the PoE-blur handler can't catch), suspend hotkeys so they don't
   // fire in the destination app.
   if (!IS_E2E) setOnLeaveScalpel(() => suspendHotkeys())
-  createAppWindow()
+  createAppWindow(store)
   if (!IS_E2E) createTray()
 
   // Serve plugin-facing built-in modules (React, SDK) via a custom scheme so
@@ -635,8 +638,9 @@ app.whenReady().then(() => {
 
   if (!IS_E2E) startLiveServices()
 
-  // Show onboarding on first launch, otherwise stay in tray
-  if (IS_E2E || !store.get('onboardingCompleted')) {
+  // Show onboarding/settings on first launch, otherwise respect startInTray.
+  // E2E harness always shows the window so the Playwright test can interact.
+  if (IS_E2E || !store.get('onboardingCompleted') || !store.get('startInTray')) {
     showAppWindow()
   }
 })

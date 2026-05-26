@@ -1,3 +1,4 @@
+import { Toggle } from '../Toggle'
 import { useState } from 'react'
 import type { AppSettings, ProfileSettingValue, RuntimeSettings } from '../../../../shared/types'
 import { getGameFeatures } from '../../../../shared/game-features'
@@ -40,6 +41,13 @@ export function GeneralTab({ settings, update, updateProfile, onShowOnboarding }
   return (
     <>
       <div className="settings-section-title mt-3">General</div>
+
+      <section>
+        <label>Start in tray</label>
+        <div className="mt-[6px]">
+          <Toggle checked={settings.startInTray} onChange={(val) => update('startInTray', val)} />
+        </div>
+      </section>
 
       {/* League */}
       {(() => {

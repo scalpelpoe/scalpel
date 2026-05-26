@@ -514,6 +514,14 @@ export interface AppSettings {
   /** Last explicitly activated profile for each game. Used when switching games. */
   lastProfileIdPoe1: string
   lastProfileIdPoe2: string
+  /** When true, the app starts hidden in the system tray instead of opening
+   *  the settings window. Ignored when onboarding hasn't been completed yet --
+   *  first-run always shows the window so the user can configure the app. */
+  startInTray: boolean
+  /** Saved app-window position (top-left DIP coordinates). Written after the
+   *  user moves the window so the next session can restore it. Invalid or
+   *  off-screen positions are clamped to the nearest display. */
+  appWindowPosition?: { x: number; y: number }
   /** True once the user completes the first-run onboarding wizard. */
   onboardingCompleted: boolean
   /** First-run onboarding resume: current step key (saved on every step transition). */
