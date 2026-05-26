@@ -156,6 +156,10 @@ export function GeneralTab({ settings, update, updateProfile, onShowOnboarding }
           <button onClick={reportBug} disabled={reporting} className="self-start text-[11px] px-3 py-1.5 text-text-dim">
             {reporting ? 'Creating report...' : 'Report a bug'}
           </button>
+          <p className="text-[10px] text-text-dim">
+            Creates a local diagnostics file with app version, OS/runtime info, selected non-sensitive settings, and
+            recent redacted logs. Nothing is uploaded automatically. Review it before attaching.
+          </p>
           {reportMessage && <div className="text-[10px] text-text-dim break-all">{reportMessage}</div>}
         </div>
       </section>

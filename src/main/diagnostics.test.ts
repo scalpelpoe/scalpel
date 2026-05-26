@@ -7,16 +7,27 @@ import type { AppSettings } from '../shared/types'
 
 const HOME = '/home/exile'
 
+const STORE_GET_MOCK = vi.fn().mockReturnValue(null)
+
 vi.mock('electron', () => ({
   app: {
     isReady: () => true,
     getPath: (key: string) => (key === 'home' ? HOME : '/tmp/userData'),
+    getVersion: () => '0.9.9-rc1',
+    isPackaged: true,
   },
   ipcMain: { on: vi.fn(), handle: vi.fn() },
   shell: { openExternal: vi.fn(), showItemInFolder: vi.fn() },
 }))
 
-import { _redactForTests as redact, _trimLogToTailForTests as trimLogToTail, registerDiagnostics } from './diagnostics'
+import {
+  _redactForTests as redact,
+  _trimLogToTailForTests as trimLogToTail,
+  _environmentSummaryForTests as environmentSummary,
+  _settingsSummaryForTests as settingsSummary,
+  _githubIssueUrlForTests as githubIssueUrl,
+  registerDiagnostics,
+} from './diagnostics'
 
 const SETTINGS = {
   filterPath: 'D:\\poe\\filters\\strict.filter',
@@ -25,8 +36,10 @@ const SETTINGS = {
 } as Partial<AppSettings>
 
 beforeAll(() => {
+  ;(process.versions as Record<string, string>).electron = '31.0.0'
+  ;(process.versions as Record<string, string>).chrome = '126.0.6478.234'
   registerDiagnostics({
-    store: { store: SETTINGS } as unknown as Store<AppSettings>,
+    store: { store: SETTINGS, get: STORE_GET_MOCK } as unknown as Store<AppSettings>,
     getAppWindow: () => null,
     showAppWindow: () => {},
   })
@@ -96,5 +109,83 @@ describe('trimLogToTail', () => {
 
   it('is a no-op when the file does not exist', () => {
     expect(() => trimLogToTail(join(tmpdir(), 'scalpel-missing.log'), 500)).not.toThrow()
+  })
+})
+
+describe('environmentSummary', () => {
+  it('returns expected environment keys', () => {
+    const env = environmentSummary()
+    expect(env).toHaveProperty('appVersion')
+    expect(env).toHaveProperty('electron')
+    expect(env).toHaveProperty('chrome')
+    expect(env).toHaveProperty('node')
+    expect(env).toHaveProperty('platform')
+    expect(env).toHaveProperty('arch')
+    expect(env).toHaveProperty('osRelease')
+    expect(env).toHaveProperty('packaged')
+    expect(env).toHaveProperty('devRuntime')
+  })
+
+  it('returns truthy version strings', () => {
+    const env = environmentSummary() as unknown as Record<string, string>
+    expect(typeof env.appVersion).toBe('string')
+    expect(env.appVersion.length).toBeGreaterThan(0)
+    expect(typeof env.electron).toBe('string')
+    expect(env.electron.length).toBeGreaterThan(0)
+    expect(typeof env.chrome).toBe('string')
+    expect(env.chrome.length).toBeGreaterThan(0)
+    expect(typeof env.node).toBe('string')
+    expect(env.node.length).toBeGreaterThan(0)
+  })
+})
+
+describe('settingsSummary', () => {
+  it('includes the league field (not a configure boolean)', () => {
+    const summary = settingsSummary()
+    expect(summary).toHaveProperty('league')
+    expect(summary).not.toHaveProperty('leagueConfigured')
+  })
+
+  it('does not expose raw configured filter paths', () => {
+    const summary = settingsSummary()
+    expect(typeof summary.filterConfigured).toBe('boolean')
+    expect(typeof summary.filterDirConfigured).toBe('boolean')
+    expect(JSON.stringify(summary)).not.toContain('D:\\\\poe\\\\filters')
+    expect(JSON.stringify(summary)).not.toContain('E:\\\\poe2\\\\filters')
+  })
+})
+
+describe('githubIssueUrl', () => {
+  const fakePath = '/tmp/scalpel-report.txt'
+
+  it('includes environment fields in the body', () => {
+    const url = githubIssueUrl(fakePath)
+    const body = decodeURIComponent(url)
+    expect(body).toContain('Environment:')
+    expect(body).toContain('appVersion')
+    expect(body).toContain('electron')
+    expect(body).toContain('node')
+    expect(body).toContain('platform')
+    expect(body).toContain('arch')
+    expect(body).toContain('osRelease')
+  })
+
+  it('says nothing is uploaded automatically', () => {
+    const url = githubIssueUrl(fakePath)
+    const body = decodeURIComponent(url)
+    expect(body).toContain('It is not uploaded automatically')
+  })
+
+  it('does not include raw configured filter paths', () => {
+    const url = githubIssueUrl(fakePath)
+    const body = decodeURIComponent(url)
+    expect(body).not.toContain('strict.filter')
+    expect(body).not.toContain('loot.filter')
+  })
+
+  it('includes league field in settings summary', () => {
+    const url = githubIssueUrl(fakePath)
+    const body = decodeURIComponent(url)
+    expect(body).toContain('"league"')
   })
 })

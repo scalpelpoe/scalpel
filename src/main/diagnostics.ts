@@ -25,6 +25,20 @@ function isDevRuntime(): boolean {
   return !app.isPackaged
 }
 
+function environmentSummary(): Record<string, unknown> {
+  return {
+    appVersion: app.getVersion(),
+    electron: process.versions.electron,
+    chrome: process.versions.chrome,
+    node: process.versions.node,
+    platform: process.platform,
+    arch: process.arch,
+    osRelease: release(),
+    packaged: app.isPackaged,
+    devRuntime: isDevRuntime(),
+  }
+}
+
 function diagnosticsDir(): string | null {
   if (!app.isReady()) return null
   const dir = join(app.getPath('userData'), 'diagnostics')
@@ -183,7 +197,7 @@ function settingsSummary(): Record<string, unknown> {
 
 function githubIssueUrl(reportPath: string): string {
   const title = encodeURIComponent('Bug report')
-  const body = encodeURIComponent(
+  const body = redact(
     [
       'Describe what happened:',
       '',
@@ -191,13 +205,24 @@ function githubIssueUrl(reportPath: string): string {
       '',
       'Steps to reproduce:',
       '',
-      `Diagnostics report generated at: ${redact(reportPath)}`,
-      'Please attach the generated report file.',
+      'Environment:',
+      '```json',
+      JSON.stringify(environmentSummary(), null, 2),
+      '```',
+      '',
+      'Settings summary:',
+      '```json',
+      JSON.stringify(settingsSummary(), null, 2),
+      '```',
+      '',
+      `Diagnostics report:`,
+      `A local diagnostics report was generated at: ${reportPath}`,
+      'Please review it before attaching. It is not uploaded automatically.',
       '',
       `Join Aer0's & Fred's Discord to help Scalpel Development and/or help debug this issue: ${DISCORD_INVITE_URL}`,
     ].join('\n'),
   )
-  return `${GITHUB_NEW_ISSUE_URL}?title=${title}&body=${body}`
+  return `${GITHUB_NEW_ISSUE_URL}?title=${title}&body=${encodeURIComponent(body)}`
 }
 
 function createBugReport(): BugReportResult {
@@ -209,13 +234,9 @@ function createBugReport(): BugReportResult {
     [
       'Scalpel diagnostics report',
       `Created: ${createdAt}`,
-      `Version: ${app.getVersion()}`,
-      `Electron: ${process.versions.electron}`,
-      `Chrome: ${process.versions.chrome}`,
-      `Node: ${process.versions.node}`,
-      `Platform: ${process.platform} ${process.arch} ${release()}`.trim(),
-      `Packaged: ${app.isPackaged}`,
-      `Dev runtime: ${isDevRuntime()}`,
+      '',
+      'Environment:',
+      JSON.stringify(environmentSummary(), null, 2),
       '',
       'Settings summary:',
       JSON.stringify(settingsSummary(), null, 2),
@@ -276,3 +297,12 @@ export const _redactForTests = redact
 
 /** Test-only: trims a log file to its most recent tail when it exceeds maxBytes. */
 export const _trimLogToTailForTests = trimLogToTail
+
+/** Test-only: returns the depersonalized environment summary object. */
+export const _environmentSummaryForTests = environmentSummary
+
+/** Test-only: returns the depersonalized settings summary object. */
+export const _settingsSummaryForTests = settingsSummary
+
+/** Test-only: builds the GitHub issue URL from a local report path. */
+export const _githubIssueUrlForTests = githubIssueUrl
