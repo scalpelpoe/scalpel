@@ -49,9 +49,45 @@ export interface ImageElement extends BaseElement {
   src: string
 }
 
-export type WhiteboardElement = StrokeElement | ShapeElement | TextElement | ImageElement
+/** A two-point distance measurement. `a`/`b` are GROUND-PLANE world coords
+ *  (game units), not normalized screen coords - the renderer projects them
+ *  with the active camera each frame so the measurement is aspect-correct. */
+export interface RulerElement extends BaseElement {
+  type: 'ruler'
+  a: Pt
+  b: Pt
+  stroke: string
+  strokeWidth: number
+}
 
-export const ELEMENT_TYPES: ReadonlyArray<WhiteboardElement['type']> = ['stroke', 'shape', 'text', 'image']
+/** A skill-radius circle. `center` is a GROUND-PLANE world coord; `radius` is
+ *  in world units. Rendered as the perspective projection of that ground
+ *  circle. */
+export interface RadiusRingElement extends BaseElement {
+  type: 'radiusRing'
+  center: Pt
+  radius: number
+  stroke: string
+  strokeWidth: number
+  fill: string | null
+}
+
+export type WhiteboardElement =
+  | StrokeElement
+  | ShapeElement
+  | TextElement
+  | ImageElement
+  | RulerElement
+  | RadiusRingElement
+
+export const ELEMENT_TYPES: ReadonlyArray<WhiteboardElement['type']> = [
+  'stroke',
+  'shape',
+  'text',
+  'image',
+  'ruler',
+  'radiusRing',
+]
 
 export interface BoardState {
   schemaVersion: typeof CURRENT_SCHEMA_VERSION
@@ -142,6 +178,26 @@ function validateImage(v: RawObj): boolean {
   return true
 }
 
+function validatePt(v: unknown): boolean {
+  return isObj(v) && typeof v.x === 'number' && typeof v.y === 'number'
+}
+
+function validateRuler(v: RawObj): boolean {
+  if (!validatePt(v.a) || !validatePt(v.b)) return false
+  if (typeof v.stroke !== 'string') return false
+  if (typeof v.strokeWidth !== 'number') return false
+  return true
+}
+
+function validateRadiusRing(v: RawObj): boolean {
+  if (!validatePt(v.center)) return false
+  if (typeof v.radius !== 'number') return false
+  if (typeof v.stroke !== 'string') return false
+  if (typeof v.strokeWidth !== 'number') return false
+  if (v.fill !== null && typeof v.fill !== 'string') return false
+  return true
+}
+
 /** Per-kind validators for the type-specific fields. Base fields (id, z,
  *  rotation, locked) are checked by `validateElement` before dispatching here.
  *  Adding a new element kind: extend `WhiteboardElement`, list it in
@@ -151,6 +207,8 @@ export const ELEMENT_VALIDATORS: Record<WhiteboardElement['type'], (v: RawObj) =
   shape: validateShape,
   text: validateText,
   image: validateImage,
+  ruler: validateRuler,
+  radiusRing: validateRadiusRing,
 }
 
 function validateElement(value: unknown): value is WhiteboardElement {

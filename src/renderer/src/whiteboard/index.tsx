@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { Stage } from './canvas/Stage'
 import { Toolbar } from './toolbar/Toolbar'
 import { useWhiteboardStore } from './state/store'
@@ -7,7 +7,8 @@ import { useReportInputFocus } from '../shared/use-report-input-focus'
 import type { BoardState } from '../../../shared/whiteboard-types'
 
 export function Whiteboard(): JSX.Element {
-  const [version, setVersion] = useState<1 | 2 | null>(null)
+  const poeVersion = useWhiteboardStore((s) => s.poeVersion)
+  const setPoeVersion = useWhiteboardStore((s) => s.setPoeVersion)
   const replaceAll = useWhiteboardStore((s) => s.replaceAll)
   const markClean = useWhiteboardStore((s) => s.markClean)
   const mode = useWhiteboardStore((s) => s.mode)
@@ -22,15 +23,15 @@ export function Whiteboard(): JSX.Element {
   useEffect(() => {
     window.api
       .getOverlayState()
-      .then((s) => setVersion(s.poeVersion))
-      .catch(() => setVersion(1))
-  }, [])
+      .then((s) => setPoeVersion(s.poeVersion))
+      .catch(() => setPoeVersion(1))
+  }, [setPoeVersion])
 
   // Load active canvas once we know the version.
   useEffect(() => {
-    if (version === null) return
+    if (poeVersion === null) return
     window.api.whiteboard
-      .load(version, { w: window.innerWidth, h: window.innerHeight })
+      .load(poeVersion, { w: window.innerWidth, h: window.innerHeight })
       .then((lib) => {
         replaceAll(lib.active.elements)
         markClean()
@@ -39,13 +40,13 @@ export function Whiteboard(): JSX.Element {
         // If load fails, start with an empty canvas.
         markClean()
       })
-  }, [version, replaceAll, markClean])
+  }, [poeVersion, replaceAll, markClean])
 
   // Subscribe to dirty -> debounced save + listen for explicit flush IPC.
   useEffect(() => {
-    if (version === null) return
+    if (poeVersion === null) return
     const saver = createDebouncedSaver<BoardState>((state) => {
-      window.api.whiteboard.saveActive(version, state)
+      window.api.whiteboard.saveActive(poeVersion, state)
       useWhiteboardStore.getState().markClean()
     }, 500)
 
@@ -76,14 +77,14 @@ export function Whiteboard(): JSX.Element {
       unsubPleaseFlush()
       saver.cancel()
     }
-  }, [version])
+  }, [poeVersion])
 
-  if (version === null) return <></>
+  if (poeVersion === null) return <></>
 
   return (
     <div className="w-full h-full relative bg-transparent">
       <Stage />
-      <Toolbar version={version} />
+      <Toolbar version={poeVersion} />
     </div>
   )
 }

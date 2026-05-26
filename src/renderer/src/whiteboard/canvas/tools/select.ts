@@ -1,6 +1,7 @@
 import type Konva from 'konva'
 import type { WhiteboardElement } from '../../../../../shared/whiteboard-types'
 import type { GameSize } from '../coords'
+import { groundToScreen, projectCircle } from '../poe-projection'
 
 interface RectPx {
   x: number
@@ -57,8 +58,10 @@ function rotatedAabb(bbox: RectPx, rotationRad: number): RectPx {
 }
 
 /** AABB of an element in stage pixels, accounting for stored rotation. Strokes
- *  bake their transform into points so they have no rotation field to apply. */
-export function elementAabbPx(el: WhiteboardElement, size: GameSize): RectPx {
+ *  bake their transform into points so they have no rotation field to apply.
+ *  `version` is required only for the projection-based kinds (ruler/radiusRing);
+ *  omit it (or pass null) and those return a zero box - i.e. not marquee-hittable. */
+export function elementAabbPx(el: WhiteboardElement, size: GameSize, version?: 1 | 2 | null): RectPx {
   if (el.type === 'stroke') {
     if (el.points.length === 0) return { x: 0, y: 0, w: 0, h: 0 }
     let xMin = el.points[0].x
@@ -87,6 +90,35 @@ export function elementAabbPx(el: WhiteboardElement, size: GameSize): RectPx {
     }
     return rotatedAabb(bbox, el.rotation)
   }
+  if (el.type === 'ruler') {
+    if (version == null) return { x: 0, y: 0, w: 0, h: 0 }
+    const a = groundToScreen(version, el.a, size)
+    const b = groundToScreen(version, el.b, size)
+    if (!a || !b) return { x: 0, y: 0, w: 0, h: 0 }
+    const ax = a.x * size.w
+    const ay = a.y * size.h
+    const bx = b.x * size.w
+    const by = b.y * size.h
+    return { x: Math.min(ax, bx), y: Math.min(ay, by), w: Math.abs(bx - ax), h: Math.abs(by - ay) }
+  }
+  if (el.type === 'radiusRing') {
+    if (version == null) return { x: 0, y: 0, w: 0, h: 0 }
+    const pts = projectCircle(version, el.center, el.radius, size)
+    if (pts.length === 0) return { x: 0, y: 0, w: 0, h: 0 }
+    let xMin = Infinity
+    let yMin = Infinity
+    let xMax = -Infinity
+    let yMax = -Infinity
+    for (const p of pts) {
+      const px = p.x * size.w
+      const py = p.y * size.h
+      if (px < xMin) xMin = px
+      if (px > xMax) xMax = px
+      if (py < yMin) yMin = py
+      if (py > yMax) yMax = py
+    }
+    return { x: xMin, y: yMin, w: xMax - xMin, h: yMax - yMin }
+  }
   return { x: 0, y: 0, w: 0, h: 0 }
 }
 
@@ -97,10 +129,15 @@ function aabbIntersects(a: RectPx, b: RectPx): boolean {
 /** Figma-style marquee hit test: any element whose axis-aligned bounding box
  *  overlaps the marquee rect is included. The marquee rect's w/h are assumed
  *  non-negative (caller normalizes anchor-vs-cursor). */
-export function elementsInMarquee(elements: readonly WhiteboardElement[], marqueePx: RectPx, size: GameSize): string[] {
+export function elementsInMarquee(
+  elements: readonly WhiteboardElement[],
+  marqueePx: RectPx,
+  size: GameSize,
+  version?: 1 | 2 | null,
+): string[] {
   const ids: string[] = []
   for (const el of elements) {
-    if (aabbIntersects(elementAabbPx(el, size), marqueePx)) ids.push(el.id)
+    if (aabbIntersects(elementAabbPx(el, size, version), marqueePx)) ids.push(el.id)
   }
   return ids
 }

@@ -4,6 +4,7 @@ import { ToolButton } from './ToolButton'
 import { ColorPalette } from './ColorPalette'
 import { PenTipPicker } from './PenTipPicker'
 import { ShapeVariantPicker } from './ShapeVariantPicker'
+import { DistanceVariantPicker } from './DistanceVariantPicker'
 import { PlayToggle } from './PlayToggle'
 import { OpacitySlider } from './OpacitySlider'
 import { PANEL_CHROME } from './panel-chrome'
@@ -13,7 +14,18 @@ import { SnapshotLibrary } from '../snapshots/SnapshotLibrary'
 import { useDismissOnOutside } from '../state/use-dismiss-on-outside'
 import { UnifiedPillArrow } from './pill-arrow'
 import { ToolMarker, ToolHighlighter, ToolEraser } from './tool-icons'
-import { IconCursor, IconShape, IconText, IconUndo, IconRedo, IconTrash, IconLayers, IconOpacity } from './icons'
+import {
+  IconCursor,
+  IconShape,
+  IconText,
+  IconUndo,
+  IconRedo,
+  IconTrash,
+  IconLayers,
+  IconOpacity,
+  IconRuler,
+} from './icons'
+import { CAMERA_CONSTANTS } from '../canvas/poe-projection'
 import type { BoardSnapshot, BoardState } from '../../../../shared/whiteboard-types'
 
 interface ToolbarProps {
@@ -90,6 +102,7 @@ export function Toolbar({ version }: ToolbarProps): JSX.Element {
   const mode = useWhiteboardStore((s) => s.mode)
   const [pos] = useState({ left: '50%', bottom: 24 })
   const containerRef = useRef<HTMLDivElement>(null)
+  const distanceSupported = CAMERA_CONSTANTS[version] !== null
 
   // Only report toolbar rects in Play mode. (See longer note on the panel
   // hit-testing contract previously in this file.)
@@ -158,6 +171,7 @@ export function Toolbar({ version }: ToolbarProps): JSX.Element {
   const penAnchorRef = useRef<HTMLButtonElement | null>(null)
   const shapeAnchorRef = useRef<HTMLButtonElement | null>(null)
   const textAnchorRef = useRef<HTMLButtonElement | null>(null)
+  const distanceAnchorRef = useRef<HTMLButtonElement | null>(null)
   const snapshotsAnchorRef = useRef<HTMLButtonElement | null>(null)
   const opacityAnchorRef = useRef<HTMLButtonElement | null>(null)
 
@@ -228,6 +242,7 @@ export function Toolbar({ version }: ToolbarProps): JSX.Element {
   const showInkRow = isPenFamily(tool) && !popoverOpen
   const showShapeRow = tool === 'shape' && !popoverOpen
   const showTextRow = tool === 'text' && !popoverOpen
+  const showDistanceRow = (tool === 'ruler' || tool === 'radiusRing') && !popoverOpen
 
   /** Body of the tool's contextual pill, or null if none is visible. The pill
    *  chrome (panel bg + padding + pop-in animation) is rendered once at the
@@ -267,6 +282,14 @@ export function Toolbar({ version }: ToolbarProps): JSX.Element {
           <ColorPalette />
         </>
       )
+    if (showDistanceRow)
+      return (
+        <>
+          <DistanceVariantPicker />
+          <div className="w-px bg-border self-stretch" />
+          <ColorPalette />
+        </>
+      )
     return null
   })()
 
@@ -279,6 +302,7 @@ export function Toolbar({ version }: ToolbarProps): JSX.Element {
     if (showInkRow) return penAnchorRef
     if (showShapeRow) return shapeAnchorRef
     if (showTextRow) return textAnchorRef
+    if (showDistanceRow) return distanceAnchorRef
     return null
   })()
 
@@ -421,6 +445,11 @@ export function Toolbar({ version }: ToolbarProps): JSX.Element {
     if (!isPenFamily(tool)) setTool('pen')
   }
 
+  const onDistanceSlotClick = (): void => {
+    closePopovers()
+    if (tool !== 'ruler' && tool !== 'radiusRing') setTool('radiusRing')
+  }
+
   return (
     <div
       ref={containerRef}
@@ -488,6 +517,15 @@ export function Toolbar({ version }: ToolbarProps): JSX.Element {
           title="Text"
           active={tool === 'text'}
           onClick={() => pickTool('text')}
+          dismissAnchor
+        />
+        <ToolButton
+          ref={distanceAnchorRef}
+          icon={<IconRuler />}
+          title={distanceSupported ? 'Distance (ruler / radius)' : 'Distance - PoE2 support coming'}
+          active={tool === 'ruler' || tool === 'radiusRing'}
+          disabled={!distanceSupported}
+          onClick={onDistanceSlotClick}
           dismissAnchor
         />
         <div className="w-px bg-border mx-1 self-stretch" />

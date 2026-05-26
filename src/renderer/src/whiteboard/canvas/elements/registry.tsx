@@ -1,6 +1,8 @@
 import type {
   ImageElement as ImageEl,
   Pt,
+  RadiusRingElement as RingEl,
+  RulerElement as RulerEl,
   ShapeElement as ShapeEl,
   StrokeElement as StrokeEl,
   TextElement as TextEl,
@@ -16,6 +18,8 @@ import {
   type StrokeTransformResult,
 } from '../tools/transform'
 import { ImageElement } from './ImageElement'
+import { RadiusRingElement } from './RadiusRingElement'
+import { RulerElement } from './RulerElement'
 import { ShapeElement } from './ShapeElement'
 import { StrokeElement } from './StrokeElement'
 import { TextElement } from './TextElement'
@@ -25,6 +29,9 @@ import { TextElement } from './TextElement'
  *  (Stage doesn't capture a stale element reference in a closure). */
 export interface ElementRenderContext {
   size: GameSize
+  /** Active PoE version, or null until resolved. The distance kinds (ruler,
+   *  radiusRing) need it to project and render nothing when null. */
+  version: 1 | 2 | null
   draggable: boolean
   editingTextId: string | null
   onDragEnd: (id: string, delta: Pt) => void
@@ -117,12 +124,26 @@ const imageKind: ElementKindDef<ImageEl, BboxTransformResult> = {
   ),
 }
 
+const rulerKind: ElementKindDef<RulerEl, BboxTransformResult> = {
+  applyDragDelta: (el) => el,
+  bakeTransform: (el) => el,
+  render: (el, ctx) => <RulerElement key={el.id} element={el} size={ctx.size} version={ctx.version} />,
+}
+
+const radiusRingKind: ElementKindDef<RingEl, BboxTransformResult> = {
+  applyDragDelta: (el) => el,
+  bakeTransform: (el) => el,
+  render: (el, ctx) => <RadiusRingElement key={el.id} element={el} size={ctx.size} version={ctx.version} />,
+}
+
 // biome-ignore lint/suspicious/noExplicitAny: heterogeneous element-kind registry
 export const ELEMENT_KINDS: Record<WhiteboardElement['type'], ElementKindDef<any, any>> = {
   stroke: strokeKind,
   shape: shapeKind,
   text: textKind,
   image: imageKind,
+  ruler: rulerKind,
+  radiusRing: radiusRingKind,
 }
 
 /** Dispatch render to the right kind. The cast at the boundary is safe

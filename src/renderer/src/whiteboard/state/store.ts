@@ -2,7 +2,7 @@ import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import type { WhiteboardElement } from '../../../../shared/whiteboard-types'
 import { createHistory, type History } from './history'
 
-export type Tool = 'select' | 'pen' | 'highlighter' | 'eraser' | 'shape' | 'text'
+export type Tool = 'select' | 'pen' | 'highlighter' | 'eraser' | 'shape' | 'text' | 'ruler' | 'radiusRing'
 
 export type Mode = 'edit' | 'play'
 
@@ -19,6 +19,10 @@ export interface WhiteboardState {
   selectedIds: string[]
   tool: Tool
   mode: Mode
+  /** Active PoE version (1 or 2), or null until resolved. Distance tools need
+   *  it to project; null disables them. */
+  poeVersion: 1 | 2 | null
+  setPoeVersion: (v: 1 | 2 | null) => void
   color: string
   /** Stroke width normalized to game height. */
   width: number
@@ -129,6 +133,7 @@ export function createWhiteboardStore(): WhiteboardStore {
       selectedIds: [],
       tool: 'select',
       mode: 'edit',
+      poeVersion: null,
       color: DEFAULT_COLOR,
       width: DEFAULT_WIDTH,
       drawingsOpacity: 1,
@@ -142,6 +147,7 @@ export function createWhiteboardStore(): WhiteboardStore {
 
       setTool: (t) => set({ tool: t }),
       setMode: (m) => set({ mode: m }),
+      setPoeVersion: (v) => set({ poeVersion: v }),
       setColor: (c) => set({ color: c }),
       setWidth: (w) => set({ width: w }),
       setDrawingsOpacity: (o) => set({ drawingsOpacity: o }),

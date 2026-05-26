@@ -217,3 +217,19 @@ describe('whiteboard store', () => {
     expect(store.getState().elements).toHaveLength(4)
   })
 })
+
+describe('poeVersion + new tools', () => {
+  it('defaults poeVersion to null and stores a set value', () => {
+    const store = createWhiteboardStore()
+    expect(store.getState().poeVersion).toBeNull()
+    store.getState().setPoeVersion(1)
+    expect(store.getState().poeVersion).toBe(1)
+  })
+  it('accepts the ruler and radiusRing tools', () => {
+    const store = createWhiteboardStore()
+    store.getState().setTool('ruler')
+    expect(store.getState().tool).toBe('ruler')
+    store.getState().setTool('radiusRing')
+    expect(store.getState().tool).toBe('radiusRing')
+  })
+})

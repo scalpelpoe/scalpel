@@ -27,6 +27,13 @@ import {
   updateShapeEnd,
   type ShapeSession,
 } from './tools/shape'
+import { commitRuler, startRuler, updateRulerEnd, type RulerSession } from './tools/ruler'
+import { commitRadius, startRadius, updateRadiusEnd, type RadiusSession } from './tools/radius'
+import { RulerElement } from './elements/RulerElement'
+import { RadiusRingElement } from './elements/RadiusRingElement'
+import { applyRingEdit, applyRulerEdit, type RingEdit, type RulerEdit } from './tools/distance-edit'
+import { DistanceEditHandles, DISTANCE_HANDLE } from './elements/DistanceEditHandles'
+import { screenToGround } from './poe-projection'
 
 const SHAPE_STROKE_WIDTH_NORM = 0.0035
 /** Per-step stagger applied when pasting via keyboard. Each successive paste
@@ -215,6 +222,8 @@ function cssEscape(id: string): string {
   return id.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`)
 }
 
+type EditSession = { id: string; el: 'radiusRing'; edit: RingEdit } | { id: string; el: 'ruler'; edit: RulerEdit }
+
 export function Stage(): JSX.Element {
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight })
   const stageRef = useRef<Konva.Stage>(null)
@@ -242,6 +251,10 @@ export function Stage(): JSX.Element {
   const editingTextId = useWhiteboardStore((s) => s.editingTextId)
   const bringToFront = useWhiteboardStore((s) => s.bringToFront)
   const sendToBack = useWhiteboardStore((s) => s.sendToBack)
+  const rulerSessionRef = useRef<RulerSession | null>(null)
+  const radiusSessionRef = useRef<RadiusSession | null>(null)
+  const editSessionRef = useRef<EditSession | null>(null)
+  const poeVersion = useWhiteboardStore((s) => s.poeVersion)
   const erasingRef = useRef(false)
   const erasedThisPassRef = useRef(false)
   const [contextMenu, setContextMenu] = useState<{ hitId: string | null; x: number; y: number } | null>(null)
@@ -263,7 +276,13 @@ export function Stage(): JSX.Element {
     const stage = stageRef.current
     const tr = transformerRef.current
     if (!stage || !tr) return
-    const nodes = selectedIds.map((id) => stage.findOne(`#${cssEscape(id)}`)).filter((n): n is Konva.Node => !!n)
+    const nodes = selectedIds
+      .filter((id) => {
+        const el = elements.find((e2) => e2.id === id)
+        return el?.type !== 'ruler' && el?.type !== 'radiusRing'
+      })
+      .map((id) => stage.findOne(`#${cssEscape(id)}`))
+      .filter((n): n is Konva.Node => !!n)
     tr.nodes(nodes)
     tr.getLayer()?.batchDraw()
   }, [selectedIds, elements])
@@ -364,10 +383,47 @@ export function Stage(): JSX.Element {
       }
       const pt = getStagePointer(stage)
       if (!pt) return
+      // Distance-edit routing: when exactly one ring/ruler is selected, a press
+      // on its handle starts a resize/endpoint drag; a press on its body starts
+      // a world-space move. Everything else falls through to normal selection.
+      const selId = selectedIds.length === 1 ? selectedIds[0] : null
+      const selEl = selId ? elements.find((e2) => e2.id === selId) : null
       const hit = pickTopElement(stage, pt)
-      // If the user clicked an already-selected element, leave the selection
-      // alone so drag/transform-on-press isn't torn down by a re-bind.
-      if (hit && useWhiteboardStore.getState().selectedIds.includes(hit)) return
+      if (selEl && (selEl.type === 'radiusRing' || selEl.type === 'ruler') && poeVersion !== null) {
+        const cursorNorm = { x: pt.x / size.w, y: pt.y / size.h }
+        const handleName = typeof e?.target?.name === 'function' ? e.target.name() : ''
+        if (selEl.type === 'radiusRing' && handleName === DISTANCE_HANDLE.ringRadius) {
+          editSessionRef.current = { id: selEl.id, el: 'radiusRing', edit: { kind: 'ring-radius' } }
+          return
+        }
+        if (selEl.type === 'ruler' && handleName === DISTANCE_HANDLE.rulerA) {
+          editSessionRef.current = { id: selEl.id, el: 'ruler', edit: { kind: 'ruler-a' } }
+          return
+        }
+        if (selEl.type === 'ruler' && handleName === DISTANCE_HANDLE.rulerB) {
+          editSessionRef.current = { id: selEl.id, el: 'ruler', edit: { kind: 'ruler-b' } }
+          return
+        }
+        if (hit === selEl.id) {
+          const grab = screenToGround(poeVersion, cursorNorm, size)
+          if (grab) {
+            editSessionRef.current =
+              selEl.type === 'radiusRing'
+                ? {
+                    id: selEl.id,
+                    el: 'radiusRing',
+                    edit: { kind: 'ring-move', grabGround: grab, startCenter: selEl.center },
+                  }
+                : {
+                    id: selEl.id,
+                    el: 'ruler',
+                    edit: { kind: 'ruler-move', grabGround: grab, startA: selEl.a, startB: selEl.b },
+                  }
+            return
+          }
+        }
+      }
+      if (hit && selectedIds.includes(hit)) return
       if (hit) {
         setSelectedIds([hit])
         return
@@ -427,6 +483,32 @@ export function Stage(): JSX.Element {
       }
       return
     }
+    if (tool === 'ruler' || tool === 'radiusRing') {
+      if (poeVersion === null) return
+      const stage = stageRef.current
+      if (!stage) return
+      const pt = getStagePointer(stage)
+      if (!pt) return
+      if (tool === 'ruler') {
+        rulerSessionRef.current = startRuler({
+          version: poeVersion,
+          color,
+          strokeWidth: SHAPE_STROKE_WIDTH_NORM,
+          anchorPx: pt,
+          size,
+        })
+      } else {
+        radiusSessionRef.current = startRadius({
+          version: poeVersion,
+          color,
+          strokeWidth: SHAPE_STROKE_WIDTH_NORM,
+          anchorPx: pt,
+          size,
+        })
+      }
+      forceRender((n) => n + 1)
+      return
+    }
     if (tool !== 'pen' && tool !== 'highlighter') return
     const stage = stageRef.current
     if (!stage) return
@@ -443,6 +525,25 @@ export function Stage(): JSX.Element {
   }
 
   function onPointerMove(e?: KonvaEventObject<MouseEvent | TouchEvent>): void {
+    if (editSessionRef.current) {
+      const stage = stageRef.current
+      if (!stage) return
+      const pt = getStagePointer(stage)
+      if (!pt) return
+      const cursorNorm = { x: pt.x / size.w, y: pt.y / size.h }
+      const s = editSessionRef.current
+      const curr = useWhiteboardStore.getState().elements.find((e2) => e2.id === s.id)
+      if (!curr) return
+      let next = curr
+      if (s.el === 'radiusRing' && curr.type === 'radiusRing')
+        next = applyRingEdit(curr, s.edit, cursorNorm, size, poeVersion)
+      else if (s.el === 'ruler' && curr.type === 'ruler')
+        next = applyRulerEdit(curr, s.edit, cursorNorm, size, poeVersion)
+      if (next === curr) return
+      updateElement(s.id, () => next, { history: false })
+      forceRender((n) => n + 1)
+      return
+    }
     if (marqueeSessionRef.current) {
       const stage = stageRef.current
       if (!stage) return
@@ -458,6 +559,24 @@ export function Stage(): JSX.Element {
       const pt = getStagePointer(stage)
       if (!pt) return
       updateShapeEnd(shapeSessionRef.current, pt, size, e?.evt?.shiftKey ?? false)
+      forceRender((n) => n + 1)
+      return
+    }
+    if (rulerSessionRef.current) {
+      const stage = stageRef.current
+      if (!stage) return
+      const pt = getStagePointer(stage)
+      if (!pt) return
+      updateRulerEnd(rulerSessionRef.current, pt)
+      forceRender((n) => n + 1)
+      return
+    }
+    if (radiusSessionRef.current) {
+      const stage = stageRef.current
+      if (!stage) return
+      const pt = getStagePointer(stage)
+      if (!pt) return
+      updateRadiusEnd(radiusSessionRef.current, pt)
       forceRender((n) => n + 1)
       return
     }
@@ -485,6 +604,12 @@ export function Stage(): JSX.Element {
   }
 
   function onPointerUp(): void {
+    if (editSessionRef.current) {
+      editSessionRef.current = null
+      useWhiteboardStore.getState().snapshotForHistory()
+      forceRender((n) => n + 1)
+      return
+    }
     if (marqueeSessionRef.current) {
       const m = marqueeSessionRef.current
       marqueeSessionRef.current = null
@@ -504,7 +629,7 @@ export function Stage(): JSX.Element {
         w: Math.abs(dx),
         h: Math.abs(dy),
       }
-      const ids = elementsInMarquee(elements, rect, size)
+      const ids = elementsInMarquee(elements, rect, size, poeVersion)
       setSelectedIds(ids)
       forceRender((n) => n + 1)
       return
@@ -512,6 +637,20 @@ export function Stage(): JSX.Element {
     if (shapeSessionRef.current) {
       const finished = commitShape(shapeSessionRef.current, size)
       shapeSessionRef.current = null
+      if (finished) addElement(finished)
+      forceRender((n) => n + 1)
+      return
+    }
+    if (rulerSessionRef.current) {
+      const finished = commitRuler(rulerSessionRef.current, size)
+      rulerSessionRef.current = null
+      if (finished) addElement(finished)
+      forceRender((n) => n + 1)
+      return
+    }
+    if (radiusSessionRef.current) {
+      const finished = commitRadius(radiusSessionRef.current, size)
+      radiusSessionRef.current = null
       if (finished) addElement(finished)
       forceRender((n) => n + 1)
       return
@@ -589,6 +728,12 @@ export function Stage(): JSX.Element {
       })()
     : null
 
+  const inProgressRuler =
+    rulerSessionRef.current && poeVersion !== null ? commitRuler(rulerSessionRef.current, size) : null
+
+  const inProgressRing =
+    radiusSessionRef.current && poeVersion !== null ? commitRadius(radiusSessionRef.current, size) : null
+
   return (
     <>
       <KonvaStage
@@ -607,6 +752,7 @@ export function Stage(): JSX.Element {
           {elements.map((el) =>
             renderElement(el, {
               size,
+              version: poeVersion,
               draggable: tool === 'select',
               editingTextId,
               onDragEnd: (id, delta) => updateElement(id, (curr) => applyDragDelta(curr, delta, size)),
@@ -618,6 +764,12 @@ export function Stage(): JSX.Element {
         <Layer listening={false}>
           {inProgressEl && <StrokeElement element={inProgressEl} size={size} listening={false} />}
           {inProgressShape && <ShapeElement element={inProgressShape} size={size} listening={false} />}
+          {inProgressRuler && (
+            <RulerElement element={inProgressRuler} size={size} version={poeVersion} listening={false} />
+          )}
+          {inProgressRing && (
+            <RadiusRingElement element={inProgressRing} size={size} version={poeVersion} listening={false} />
+          )}
           {marquee && (
             <KonvaRect
               x={marquee.x}
@@ -641,6 +793,16 @@ export function Stage(): JSX.Element {
             rotateAnchorCursor={ROTATE_CURSOR}
           />
         </Layer>
+        {(() => {
+          if (selectedIds.length !== 1) return null
+          const el = elements.find((e2) => e2.id === selectedIds[0])
+          if (!el || (el.type !== 'ruler' && el.type !== 'radiusRing')) return null
+          return (
+            <Layer>
+              <DistanceEditHandles element={el} size={size} version={poeVersion} />
+            </Layer>
+          )
+        })()}
       </KonvaStage>
       <TextEditor ref={textEditorRef} size={size} />
       {contextMenu &&

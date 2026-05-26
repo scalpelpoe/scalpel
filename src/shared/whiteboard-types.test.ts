@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { emptyBoardLibrary, validateBoardLibrary, CURRENT_SCHEMA_VERSION } from './whiteboard-types'
+import {
+  emptyBoardLibrary,
+  validateBoardLibrary,
+  CURRENT_SCHEMA_VERSION,
+  ELEMENT_VALIDATORS,
+  ELEMENT_TYPES,
+} from './whiteboard-types'
 
 describe('emptyBoardLibrary', () => {
   it('returns an empty library at the current schema version', () => {
@@ -160,5 +166,47 @@ describe('validateBoardLibrary', () => {
       bbox: { x: 0.1, y: 0.1, w: 0.3, h: 0.2 },
     } as never)
     expect(validateBoardLibrary(lib)).toBe(false)
+  })
+})
+
+describe('ruler / radiusRing validators', () => {
+  it('lists the new kinds in ELEMENT_TYPES', () => {
+    expect(ELEMENT_TYPES).toContain('ruler')
+    expect(ELEMENT_TYPES).toContain('radiusRing')
+  })
+
+  it('accepts a well-formed ruler', () => {
+    expect(
+      ELEMENT_VALIDATORS.ruler({
+        a: { x: 1, y: 2 },
+        b: { x: 3, y: 4 },
+        stroke: '#fff',
+        strokeWidth: 0.0035,
+      }),
+    ).toBe(true)
+  })
+
+  it('rejects a ruler with a bad point', () => {
+    expect(ELEMENT_VALIDATORS.ruler({ a: { x: 1 }, b: { x: 3, y: 4 }, stroke: '#fff', strokeWidth: 0.0035 })).toBe(
+      false,
+    )
+  })
+
+  it('accepts a well-formed radiusRing (null and string fill)', () => {
+    const base = { center: { x: 0, y: 0 }, radius: 20, stroke: '#fff', strokeWidth: 0.0035 }
+    expect(ELEMENT_VALIDATORS.radiusRing({ ...base, fill: null })).toBe(true)
+    expect(ELEMENT_VALIDATORS.radiusRing({ ...base, fill: '#ffffff40' })).toBe(true)
+  })
+
+  it('rejects a radiusRing with a non-number radius', () => {
+    expect(
+      ELEMENT_VALIDATORS.radiusRing({
+        center: { x: 0, y: 0 },
+        radius: 'big',
+        stroke: '#fff',
+        strokeWidth: 0.0035,
+        fill: null,
+      }),
+    ).toBe(false)
   })
 })
