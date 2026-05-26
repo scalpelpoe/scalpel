@@ -74,8 +74,14 @@ import { requestGameSwitch } from './game-switch'
 import { startOnlineSync, stopOnlineSync } from './online-sync'
 import { initUpdater } from './update/updater'
 import { applyPendingUpdate } from './update/update-swap'
-import { loadFilter } from './filter-state'
-import { createHotkeyHandler, createPriceCheckHandler, setOpenSide, setEvaluationStore } from './evaluation'
+import { getCurrentFilter, loadFilter, onFilterLoaded } from './filter-state'
+import {
+  createHotkeyHandler,
+  createPriceCheckHandler,
+  reEvaluateLastItem,
+  setOpenSide,
+  setEvaluationStore,
+} from './evaluation'
 import { initLearning } from './learning'
 import { snapshotClipboard } from './clipboard-preserve'
 import * as tradeHandlers from './handlers/trade'
@@ -484,6 +490,16 @@ app.whenReady().then(() => {
   // Broadcast rate limit state to overlay
   onRateLimitUpdate((state) => {
     getOverlayWindow()?.webContents.send('rate-limit', state)
+  })
+
+  // Keep open overlay views (item view, dust/div explorers) in sync whenever the
+  // filter reloads -- filter switch, online update, version restore -- without a
+  // fresh hotkey press. reEvaluateLastItem is a no-op until an item is analyzed,
+  // and re-sending the same item never switches the view or pops the overlay, so
+  // this is non-intrusive.
+  onFilterLoaded(() => {
+    getOverlayWindow()?.webContents.send('filter-changed')
+    if (getCurrentFilter()) reEvaluateLastItem()
   })
 
   const filterPath = getProfileBackedSetting(store, 'filterPath')

@@ -33,6 +33,7 @@ export function DustExplorer({
   const [loading, setLoading] = useState(true)
   const [filters, setFiltersState] = useState<ActiveFilter[]>(persistedState.filters)
   const [visibility, setVisibility] = useState<Record<string, 'Show' | 'Hide'>>({})
+  const [filterVersion, setFilterVersion] = useState(0)
 
   const setFilters = (fn: ActiveFilter[] | ((prev: ActiveFilter[]) => ActiveFilter[])) => {
     setFiltersState((prev) => {
@@ -90,6 +91,8 @@ export function DustExplorer({
     }
   }, [baseEntries])
 
+  useEffect(() => window.api.onFilterChanged(() => setFilterVersion((v) => v + 1)), [])
+
   useEffect(() => {
     let cancelled = false
     window.api
@@ -101,7 +104,7 @@ export function DustExplorer({
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [filterVersion])
 
   const entries: DustEntry[] = useMemo(() => {
     return baseEntries

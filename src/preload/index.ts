@@ -598,6 +598,11 @@ export const api = {
     ipcRenderer.on('online-filter-changed', handler)
     return () => ipcRenderer.removeListener('online-filter-changed', handler)
   },
+  onFilterChanged: (cb: () => void): (() => void) => {
+    const handler = (): void => cb()
+    ipcRenderer.on('filter-changed', handler)
+    return () => ipcRenderer.removeListener('filter-changed', handler)
+  },
 
   // Auto-update
   downloadUpdate: (): Promise<void> => ipcRenderer.invoke('download-update'),

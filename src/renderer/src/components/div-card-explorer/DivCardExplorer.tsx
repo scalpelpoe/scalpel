@@ -17,6 +17,7 @@ export function DivCardExplorer({ onSelectItem }: Props): JSX.Element {
   const [tierStyles, setTierStyles] = useState<Record<string, TierStyle>>({})
   const [cardTiers, setCardTiers] = useState<Record<string, string>>({})
   const [hiddenCards, setHiddenCards] = useState<Record<string, boolean>>({})
+  const [filterVersion, setFilterVersion] = useState(0)
   const [manualFlags, setManualFlags] = useState<Record<string, boolean>>(() => {
     try {
       return JSON.parse(localStorage.getItem('div-outlier-flags') || '{}')
@@ -25,13 +26,19 @@ export function DivCardExplorer({ onSelectItem }: Props): JSX.Element {
     }
   })
 
-  // Fetch live prices and tier data
+  useEffect(() => window.api.onFilterChanged(() => setFilterVersion((v) => v + 1)), [])
+
+  // Filter-derived tier/visibility data -- refetched when the filter reloads.
   useEffect(() => {
     window.api.getDivCardTiers().then(({ tierStyles: ts, cardTiers: ct, hiddenCards: hc }) => {
       setTierStyles(ts)
       setCardTiers(ct)
       setHiddenCards(hc)
     })
+  }, [filterVersion])
+
+  // Fetch live prices
+  useEffect(() => {
     let cancelled = false
     const fetchPrices = async (attempt = 0): Promise<void> => {
       try {
