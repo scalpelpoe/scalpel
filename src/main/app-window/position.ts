@@ -51,24 +51,31 @@ function distToCenter(wa: WorkArea, px: number, py: number): number {
   return Math.hypot(px - (wa.x + wa.width / 2), py - (wa.y + wa.height / 2))
 }
 
+/** Wrap Electron's screen.getAllDisplays() so the pure validation function
+ *  doesn't need to know about Electron. */
+export function getCurrentWorkAreas(): WorkArea[] {
+  return screen.getAllDisplays().map((d) => ({
+    x: d.workArea.x,
+    y: d.workArea.y,
+    width: d.workArea.width,
+    height: d.workArea.height,
+  }))
+}
+
 /** Validate and clamp a stored window position so it always lands on a real
  *  display. Returns the rect to use as-is when the position is valid; otherwise
  *  returns a clamped rect on the best display.
+ *
+ *  This function is pure — it only does geometry and does not access Electron
+ *  APIs directly. Pass workAreas from getCurrentWorkAreas() (or from a mock in
+ *  tests).
  *
  *  Handles:
  *   - Removed/missing monitors (stored position lands in empty space)
  *   - Negative-coordinate monitors (secondary to the left/above primary)
  *   - Deadzones between L-shaped monitor arrangements
  *   - Partial off-screen positions (clamped back into work area) */
-export function validateWindowPosition(stored: PositionRect): { x: number; y: number } {
-  const displays = screen.getAllDisplays()
-  const workAreas: WorkArea[] = displays.map((d) => ({
-    x: d.workArea.x,
-    y: d.workArea.y,
-    width: d.workArea.width,
-    height: d.workArea.height,
-  }))
-
+export function validateWindowPosition(stored: PositionRect, workAreas: WorkArea[]): { x: number; y: number } {
   if (workAreas.length === 0) return { x: stored.x, y: stored.y }
 
   const windowArea = stored.width * stored.height
@@ -161,4 +168,24 @@ export function persistAppWindowPosition(
   } catch {
     // getBounds on a destroyed window can throw; ignore.
   }
+}
+
+/**
+ * Restore a previously-persisted window position onto the given window,
+ * validating against current displays. Safe to call at any time — does nothing
+ * if no position is stored.
+ */
+export function restoreAppWindowPosition(
+  win: { getBounds(): Rectangle; setPosition(x: number, y: number): void },
+  store: { get(key: string): unknown },
+): void {
+  const saved = store.get('appWindowPosition') as { x: number; y: number } | undefined
+  if (!saved) return
+  const bounds = win.getBounds()
+  const workAreas = getCurrentWorkAreas()
+  const { x, y } = validateWindowPosition(
+    { x: saved.x, y: saved.y, width: bounds.width, height: bounds.height },
+    workAreas,
+  )
+  win.setPosition(x, y)
 }
