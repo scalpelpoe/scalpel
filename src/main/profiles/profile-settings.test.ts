@@ -11,6 +11,7 @@ import {
   LAST_PROFILE_ID_POE2_KEY,
   PROFILE_VERSION_KEY,
   deleteProfileAndChooseFallback,
+  ensureProfileForGame,
   getEffectiveSettings,
   getProfileBackedSetting,
   listProfileSummaries,
@@ -363,5 +364,54 @@ describe('profile-settings', () => {
     const store = makeStore({ [ACTIVE_PROFILE_ID_KEY]: '' })
 
     expect(getProfileBackedSetting(store, 'league')).toBe('')
+  })
+
+  it('ensureProfileForGame creates a default profile when none exist', () => {
+    const profiles = setupProfiles()
+    const store = makeStore({
+      [LAST_PROFILE_ID_POE1_KEY]: '',
+      [ACTIVE_PROFILE_ID_KEY]: '',
+    })
+
+    const profile = ensureProfileForGame(store, 1)
+
+    expect(profile.gameVariant).toBe(1)
+    expect(profile.filterDir).toBe('')
+    expect(profile.filterPath).toBe('')
+    expect(store.get(LAST_PROFILE_ID_POE1_KEY)).toBe(profile.id)
+    // verify it actually landed in the profile store
+    expect(profiles.getProfile(profile.id)).not.toBeNull()
+  })
+
+  it('ensureProfileForGame returns existing profile without creating a duplicate', () => {
+    const profiles = setupProfiles()
+    const poe1 = profiles.createDefault(1)
+    profiles.saveProfile(poe1)
+
+    const store = makeStore({
+      [LAST_PROFILE_ID_POE1_KEY]: poe1.id,
+      [ACTIVE_PROFILE_ID_KEY]: poe1.id,
+    })
+
+    const profile = ensureProfileForGame(store, 1)
+
+    expect(profile.id).toBe(poe1.id)
+    expect(profiles.listProfiles().filter((p) => p.gameVariant === 1)).toHaveLength(1)
+  })
+
+  it('ensureProfileForGame sets the correct lastProfileId per variant', () => {
+    const profiles = setupProfiles()
+    const store = makeStore({
+      [LAST_PROFILE_ID_POE1_KEY]: '',
+      [LAST_PROFILE_ID_POE2_KEY]: '',
+      [ACTIVE_PROFILE_ID_KEY]: '',
+    })
+
+    const poe1 = ensureProfileForGame(store, 1)
+    const poe2 = ensureProfileForGame(store, 2)
+
+    expect(store.get(LAST_PROFILE_ID_POE1_KEY)).toBe(poe1.id)
+    expect(store.get(LAST_PROFILE_ID_POE2_KEY)).toBe(poe2.id)
+    expect(profiles.listProfiles()).toHaveLength(2)
   })
 })

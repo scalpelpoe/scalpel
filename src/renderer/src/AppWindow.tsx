@@ -57,6 +57,10 @@ export function AppWindow(): JSX.Element {
 
   const switchOnboardingGame = async (target: 1 | 2): Promise<void> => {
     if (!settings) return
+    // Ensure a default profile exists for the target game before switching to
+    // it, so onboarding steps always operate against a real (possibly empty)
+    // profile rather than a null activeProfile.
+    await window.api.ensureProfileForGame(target)
     await window.api.setSetting('poeVersion', target)
     setSettings(await window.api.getSettings())
   }

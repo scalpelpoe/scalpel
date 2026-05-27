@@ -44,6 +44,7 @@ export const api = {
   duplicateProfile: (id: string, name: string): Promise<PoeProfileSummary> =>
     ipcRenderer.invoke('duplicate-profile', id, name),
   deleteProfile: (id: string): Promise<void> => ipcRenderer.invoke('delete-profile', id),
+  ensureProfileForGame: (variant: GameVariant): Promise<void> => ipcRenderer.invoke('ensure-profile-for-game', variant),
   setActiveProfile: (
     id: string,
     restartIfNeeded = false,

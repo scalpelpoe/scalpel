@@ -141,19 +141,16 @@ export function FilterFolderStep({
         stepNum={stepNum}
         totalSteps={totalSteps}
         title={prefix ? `Point to your ${prefix} filter folder` : 'Point to your filter folder'}
-        subtitle={`Choose your filter folder, generally ${folderHint}, so Scalpel can find your filters.`}
+        subtitle={`Choose your filter folder, generally ${folderHint}, so Scalpel can find your filters. You can skip this and set it up later from settings.`}
       />
       <FilterPicker settings={settings} onSettingsChange={onSettingsChange} mode="folder" />
-      <p className="text-[10px] text-text-dim flex items-start gap-1 m-0 ml-1 mt-1.5">
-        <Info
-          size={12}
-          theme="two-tone"
-          fill={['currentColor', 'rgba(255,255,255,0.2)']}
-          className="flex shrink-0 mt-[2px]"
-        />
-        <span>Use online filters? You still need to do this step - online filters live here too.</span>
-      </p>
-      <NavButtons onBack={onBack} onNext={onNext} onBackToSettings={onBackToSettings} />
+      <NavButtons
+        onBack={onBack}
+        onNext={onNext}
+        secondaryLabel="Skip for now"
+        onSecondary={onNext}
+        onBackToSettings={onBackToSettings}
+      />
     </div>
   )
 }

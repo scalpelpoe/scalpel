@@ -162,6 +162,21 @@ export function createProfile(input: { name: string; gameVariant: GameVariant; c
   return profileStore().createProfile(input)
 }
 
+/** Create a default profile for `variant` if none exists yet. Returns the
+ *  existing profile when one is already present, so callers can use it as an
+ *  idempotent "ensure" before entering per-game setup steps. */
+export function ensureProfileForGame(store: Store<AppSettings>, variant: GameVariant): PoeProfile {
+  const existing = listProfilesByGameVariant(variant)
+  if (existing.length > 0) return existing[0]!
+
+  const profile = profileStore().createProfile({
+    name: `Path of Exile ${variant === 2 ? '2' : '1'}`,
+    gameVariant: variant,
+  })
+  store.set(lastProfileIdKey(variant), profile.id)
+  return profile
+}
+
 export function renameProfile(id: string, name: string): PoeProfile | null {
   return profileStore().renameProfile(id, name)
 }

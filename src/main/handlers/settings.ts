@@ -13,6 +13,7 @@ import {
 import {
   createProfile,
   deleteProfileAndChooseFallback,
+  ensureProfileForGame,
   getEffectiveSettings,
   getProfileBackedSetting,
   getProfileById,
@@ -47,6 +48,10 @@ export function register(store: Store<AppSettings>): void {
     (event, variant: GameVariant, key: ProfileSettingKey, value: ProfileSettingValue<typeof key>) =>
       applyProfileSettingForGame(store, variant, key, value, event.sender),
   )
+
+  ipcMain.handle('ensure-profile-for-game', (_event, variant: GameVariant) => {
+    ensureProfileForGame(store, variant)
+  })
 
   ipcMain.handle('list-profiles', () => listProfileSummaries(store))
 
