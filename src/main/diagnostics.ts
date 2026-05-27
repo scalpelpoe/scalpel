@@ -1,7 +1,7 @@
-import { appendFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { release } from 'node:os'
 import { join } from 'node:path'
-import { app, type BrowserWindow, ipcMain, shell } from 'electron'
+import { app, type BrowserWindow, ipcMain, screen, shell } from 'electron'
 import type Store from 'electron-store'
 import type { BugReportResult, RendererDiagnosticPayload, SerializedDiagnosticError } from '../shared/diagnostics'
 import { serializeDiagnosticError } from '../shared/diagnostics'
@@ -15,6 +15,26 @@ const MAX_LOG_BYTES = 256 * 1024
 // recent half so the file never grows without bound.
 const MAX_LOG_FILE_BYTES = 4 * 1024 * 1024
 const EARLY_LOGS: string[] = []
+
+// Provider-based diagnostics: each module registers a stateless getter.
+// runtimeDiagnosticsSummary() calls every provider and merges their output.
+const providers = new Map<string, () => Record<string, unknown>>()
+
+export function registerDiagnosticProvider(name: string, provider: () => Record<string, unknown>): void {
+  providers.set(name, provider)
+}
+
+export function runtimeDiagnosticsSummary(): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+  for (const [name, provider] of providers) {
+    try {
+      result[name] = provider()
+    } catch (err) {
+      result[name] = { error: String(err) }
+    }
+  }
+  return result
+}
 
 let initialized = false
 let storeRef: Store<AppSettings> | null = null
@@ -195,6 +215,95 @@ function settingsSummary(): Record<string, unknown> {
   }
 }
 
+function collectPlatformDiagnostics(): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+
+  if (process.platform === 'linux') {
+    result.sessionType = process.env.XDG_SESSION_TYPE
+    result.desktopSession = process.env.XDG_CURRENT_DESKTOP || process.env.DESKTOP_SESSION
+    result.waylandDisplayPresent = Boolean(process.env.WAYLAND_DISPLAY)
+    result.x11DisplayPresent = Boolean(process.env.DISPLAY)
+  }
+
+  try {
+    const ozonePlatform = app.commandLine?.getSwitchValue?.('ozone-platform')
+    if (ozonePlatform) result.ozonePlatform = ozonePlatform
+  } catch {
+    /* app.commandLine unavailable (e.g. early startup or test) */
+  }
+
+  try {
+    const displays = screen.getAllDisplays()
+    result.displayCount = displays.length
+    result.displays = displays.map((d) => ({
+      size: { width: d.size.width, height: d.size.height },
+      workAreaSize: { width: d.workAreaSize.width, height: d.workAreaSize.height },
+      scaleFactor: d.scaleFactor,
+      rotation: d.rotation,
+    }))
+  } catch {
+    /* screen API unavailable */
+  }
+
+  try {
+    const gpuStatus = app.getGPUFeatureStatus?.()
+    if (gpuStatus) result.gpuFeatureStatus = gpuStatus
+  } catch {
+    /* app.getGPUFeatureStatus unavailable */
+  }
+
+  return result
+}
+
+function collectLogDiagnostics(): Record<string, unknown> {
+  const result: Record<string, unknown> = {
+    crashReporterUploadEnabled: false,
+  }
+
+  const path = logPath()
+  if (path && existsSync(path)) {
+    try {
+      const size = statSync(path).size
+      result.logFileBytes = size
+      result.logTailBytesIncluded = Math.min(size, MAX_LOG_BYTES)
+      result.logTruncatedInReport = size > MAX_LOG_BYTES
+    } catch {
+      /* permission error reading log */
+    }
+  } else {
+    result.logFileBytes = 0
+    result.logTailBytesIncluded = 0
+    result.logTruncatedInReport = false
+  }
+
+  try {
+    const crashDir = app.getPath('crashDumps')
+    if (crashDir && existsSync(crashDir)) {
+      const dmpFiles = readdirSync(crashDir).filter((f) => f.endsWith('.dmp'))
+      result.recentCrashDumpCount = dmpFiles.length
+      if (dmpFiles.length > 0) {
+        const now = Date.now()
+        let newest = 0
+        for (const f of dmpFiles) {
+          try {
+            const mtime = statSync(join(crashDir, f)).mtimeMs
+            if (mtime > newest) newest = mtime
+          } catch {
+            /* individual file stat failure */
+          }
+        }
+        if (newest > 0) {
+          result.newestCrashDumpAgeHours = Math.round(((now - newest) / (1000 * 60 * 60)) * 10) / 10
+        }
+      }
+    }
+  } catch {
+    /* crash dumps unavailable */
+  }
+
+  return result
+}
+
 function githubIssueUrl(reportPath: string): string {
   const title = encodeURIComponent('Bug report')
   const body = redact(
@@ -213,6 +322,11 @@ function githubIssueUrl(reportPath: string): string {
       'Settings summary:',
       '```json',
       JSON.stringify(settingsSummary(), null, 2),
+      '```',
+      '',
+      'Runtime diagnostics:',
+      '```json',
+      JSON.stringify(runtimeDiagnosticsSummary(), null, 2),
       '```',
       '',
       `Diagnostics report:`,
@@ -240,6 +354,9 @@ function createBugReport(): BugReportResult {
       '',
       'Settings summary:',
       JSON.stringify(settingsSummary(), null, 2),
+      '',
+      'Runtime diagnostics:',
+      JSON.stringify(runtimeDiagnosticsSummary(), null, 2),
       '',
       'Recent diagnostics log:',
       recentLog() || '<empty>',
@@ -290,6 +407,9 @@ export function registerDiagnostics(deps: {
   ipcMain.handle('diagnostics:show-report', (_event, reportPath: string) => {
     shell.showItemInFolder(reportPath)
   })
+
+  registerDiagnosticProvider('platformDiagnostics', collectPlatformDiagnostics)
+  registerDiagnosticProvider('logDiagnostics', collectLogDiagnostics)
 }
 
 /** Test-only: the redaction pass that scrubs report and log content. */
@@ -306,3 +426,6 @@ export const _settingsSummaryForTests = settingsSummary
 
 /** Test-only: builds the GitHub issue URL from a local report path. */
 export const _githubIssueUrlForTests = githubIssueUrl
+
+/** Test-only: returns the aggregated runtime diagnostics summary. */
+export const _runtimeDiagnosticsSummaryForTests = runtimeDiagnosticsSummary

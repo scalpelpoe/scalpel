@@ -26,6 +26,7 @@ import {
   _environmentSummaryForTests as environmentSummary,
   _settingsSummaryForTests as settingsSummary,
   _githubIssueUrlForTests as githubIssueUrl,
+  _runtimeDiagnosticsSummaryForTests as runtimeDiagnosticsSummary,
   registerDiagnostics,
 } from './diagnostics'
 
@@ -187,5 +188,44 @@ describe('githubIssueUrl', () => {
     const url = githubIssueUrl(fakePath)
     const body = decodeURIComponent(url)
     expect(body).toContain('"league"')
+  })
+
+  it('includes Runtime diagnostics section', () => {
+    const url = githubIssueUrl(fakePath)
+    const body = decodeURIComponent(url)
+    expect(body).toContain('Runtime diagnostics:')
+    expect(body).toContain('platformDiagnostics')
+    expect(body).toContain('logDiagnostics')
+  })
+
+  it('does not include raw configured filter paths in Runtime diagnostics', () => {
+    const url = githubIssueUrl(fakePath)
+    const body = decodeURIComponent(url)
+    // The Runtime diagnostics section is JSON after the Settings summary block.
+    // Filter paths should not appear anywhere in the body.
+    expect(body).not.toContain('strict.filter')
+    expect(body).not.toContain('loot.filter')
+  })
+})
+
+describe('runtimeDiagnosticsSummary', () => {
+  it('returns an object with registered provider keys', () => {
+    const summary = runtimeDiagnosticsSummary()
+    expect(summary).toHaveProperty('platformDiagnostics')
+    expect(summary).toHaveProperty('logDiagnostics')
+  })
+
+  it('logDiagnostics reports crash upload as disabled', () => {
+    const summary = runtimeDiagnosticsSummary()
+    const logDiag = summary.logDiagnostics as Record<string, unknown>
+    expect(logDiag.crashReporterUploadEnabled).toBe(false)
+  })
+
+  it('logDiagnostics includes the expected shape', () => {
+    const summary = runtimeDiagnosticsSummary()
+    const logDiag = summary.logDiagnostics as Record<string, unknown>
+    expect(logDiag).toHaveProperty('logFileBytes')
+    expect(logDiag).toHaveProperty('logTailBytesIncluded')
+    expect(logDiag).toHaveProperty('logTruncatedInReport')
   })
 })

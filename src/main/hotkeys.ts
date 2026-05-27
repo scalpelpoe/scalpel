@@ -8,7 +8,12 @@ import {
   scopeAppliesTo,
 } from '../shared/macro-scope'
 import { snapshotClipboard } from './clipboard-preserve'
-import { guardNativeListener, recordMainBreadcrumb, recordMainDiagnostic } from './diagnostics'
+import {
+  guardNativeListener,
+  recordMainBreadcrumb,
+  recordMainDiagnostic,
+  registerDiagnosticProvider,
+} from './diagnostics'
 import { getPoeVersion } from './game-state'
 import { focusGameWindow, getOverlayWindow, isTypingInOverlay } from './overlay'
 import { hideFocusedOrAnyVisibleSecondaryOverlay } from './windowing'
@@ -88,6 +93,8 @@ let hookStarted = false
 let hookSuspended = false
 let injecting = false
 let stashScrollEnabled = false
+let lastHookStartError: string | null = null
+let lastHookStopError: string | null = null
 let hookResumeTimer: ReturnType<typeof setTimeout> | null = null
 
 /** globalShortcut is suppressed when the non-attached PoE has focus (Windows blocks
@@ -196,8 +203,14 @@ export function startHotkeyListener(handler: () => void): void {
   )
 
   if (!hookStarted) {
-    uIOhook.start()
-    hookStarted = true
+    try {
+      uIOhook.start()
+      hookStarted = true
+      lastHookStartError = null
+    } catch (e) {
+      lastHookStartError = String(e)
+      recordMainDiagnostic('uiohook-start', e)
+    }
 
     ipcMain.handle('screen-pick:suspend-hook', () => {
       if (hookSuspended) return
@@ -213,8 +226,11 @@ export function startHotkeyListener(handler: () => void): void {
         if (hookSuspended) {
           try {
             uIOhook.start()
-          } catch {}
-          hookSuspended = false
+            hookSuspended = false
+          } catch (e) {
+            lastHookStartError = String(e)
+            /* best-effort auto-resume */
+          }
         }
       }, 60000)
     })
@@ -226,8 +242,12 @@ export function startHotkeyListener(handler: () => void): void {
       if (hookSuspended) {
         try {
           uIOhook.start()
-        } catch {}
-        hookSuspended = false
+          hookSuspended = false
+          lastHookStartError = null
+        } catch (e) {
+          lastHookStartError = String(e)
+          /* best-effort resume */
+        }
       }
     })
   }
@@ -550,7 +570,9 @@ export function stopHotkeyListener(): void {
     recordMainBreadcrumb('uIOhook.stop() calling')
     try {
       uIOhook.stop()
+      lastHookStopError = null
     } catch (e) {
+      lastHookStopError = String(e)
       recordMainDiagnostic('uiohook-stop', e)
     }
     recordMainBreadcrumb('uIOhook.stop() returned')
@@ -631,3 +653,21 @@ export function sendCtrlCToPoE(): Promise<void> {
     }, 100),
   )
 }
+
+function getHotkeyDiagnostics(): Record<string, unknown> {
+  return {
+    hookStarted,
+    hookSuspended,
+    suspendDepth,
+    triggerHotkeyConfigured: currentAccelerator !== null,
+    priceCheckHotkeyConfigured: priceCheckAccelerator !== null,
+    chatCommandHotkeyCount: chatCommandHotkeys.length,
+    appMacroHotkeyCount: appMacroAccelerators.length,
+    secondaryOverlayHotkeyCount: secondaryOverlayHotkeys.length,
+    stashScrollEnabled,
+    lastHookStartError,
+    lastHookStopError,
+  }
+}
+
+registerDiagnosticProvider('hotkeyDiagnostics', getHotkeyDiagnostics)

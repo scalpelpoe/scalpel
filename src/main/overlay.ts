@@ -3,7 +3,7 @@ import { BrowserWindow, ipcMain, screen, webContents } from 'electron'
 import { OVERLAY_WINDOW_OPTS, OverlayController } from 'electron-overlay-window'
 import { uIOhook } from 'uiohook-napi'
 import { startClientLogWatcher } from './client-log'
-import { guardNativeListener } from './diagnostics'
+import { guardNativeListener, registerDiagnosticProvider } from './diagnostics'
 import { getPoeVersion, setPoeVersion } from './game-state'
 import { closeAllOverlaysOnPoeExit, isAnyScalpelWindowFocused, isInsideAnySecondaryOverlay } from './windowing'
 
@@ -13,6 +13,10 @@ let mouseOverPanel = false
 let closeOnClickOutside = false
 let interactiveLocked = false
 let lastShowTime = 0
+let lastAttachAt = 0
+let lastDetachAt = 0
+let lastMoveResizeAt = 0
+let lastOverlayError: string | null = null
 let onGameFocus: (() => void) | null = null
 let onGameBlur: (() => void) | null = null
 
@@ -327,6 +331,7 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
   OverlayController.attachByTitle(overlayWindow, POE_WINDOW_TITLES[getPoeVersion()])
 
   OverlayController.events.on('attach', (ev) => {
+    lastAttachAt = Date.now()
     try {
       if (overlayWindow && !overlayWindow.isDestroyed()) {
         overlayWindow.webContents.send('poe-version', getPoeVersion())
@@ -340,10 +345,12 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
         overlayWindow.webContents.send('skip-animation')
       }
     } catch (err) {
+      lastOverlayError = String(err)
       console.error('[overlay] Error in attach handler:', err)
     }
   })
   OverlayController.events.on('detach', () => {
+    lastDetachAt = Date.now()
     try {
       // PoE window was destroyed (player quit / crashed). The library
       // already hides the main overlay's BrowserWindow; we still need to
@@ -352,6 +359,7 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
       hideOverlay()
       closeAllOverlaysOnPoeExit()
     } catch (err) {
+      lastOverlayError = String(err)
       console.error('[overlay] Error in detach handler:', err)
     }
   })
@@ -385,9 +393,11 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
     }),
   )
   OverlayController.events.on('moveresize', (ev) => {
+    lastMoveResizeAt = Date.now()
     try {
       sendGameBounds(ev.width, ev.height)
     } catch (err) {
+      lastOverlayError = String(err)
       console.error('[overlay] Error in moveresize handler:', err)
     }
   })
@@ -427,6 +437,7 @@ export function showOverlay(): void {
     if (tb?.width) sendGameBounds(tb.width, tb.height)
     overlayWindow.webContents.send('poe-version', getPoeVersion())
   } catch (err) {
+    lastOverlayError = String(err)
     console.error('[overlay] Error in showOverlay:', err)
   }
 }
@@ -540,3 +551,33 @@ export function isTypingInOverlay(): boolean {
   if (!focused || focused.isDestroyed()) return false
   return inputFocusedWebContents.has(focused.webContents.id)
 }
+
+function getOverlayDiagnostics(): Record<string, unknown> {
+  const tb = OverlayController.targetBounds
+  const sf = ((): number => {
+    try {
+      if (tb?.width) {
+        return screen.getDisplayNearestPoint({ x: tb.x + tb.width / 2, y: tb.y + tb.height / 2 }).scaleFactor
+      }
+      return screen.getPrimaryDisplay().scaleFactor
+    } catch {
+      return 1
+    }
+  })()
+  return {
+    overlayWindowCreated: overlayWindow !== null,
+    overlayVisible,
+    targetHasFocus: OverlayController.targetHasFocus,
+    targetBounds: tb?.width ? { width: tb.width, height: tb.height } : null,
+    targetDisplayScaleFactor: sf,
+    attachedPoeVersion: getPoeVersion(),
+    lastAttachAt: lastAttachAt || null,
+    lastDetachAt: lastDetachAt || null,
+    lastMoveResizeAt: lastMoveResizeAt || null,
+    lastOverlayError,
+    panelRectCount: panelRectsBySender.size,
+    currentInteractiveWindowPresent: currentInteractiveWindow !== null,
+  }
+}
+
+registerDiagnosticProvider('overlayDiagnostics', getOverlayDiagnostics)

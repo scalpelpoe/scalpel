@@ -1,12 +1,21 @@
 import { createHash } from 'node:crypto'
 import { execSync, spawn } from 'node:child_process'
-import { createWriteStream, existsSync, mkdirSync, readFileSync, rmSync, unlinkSync, writeFileSync } from 'node:fs'
+import {
+  createWriteStream,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs'
 import { dirname, join } from 'node:path'
 import { app, type BrowserWindow, ipcMain } from 'electron'
 import { ELECTRON_RELEASES, GITHUB_RELEASES_API } from '../../shared/endpoints'
 import type { InstallManifest } from '../../shared/types'
 import { findBrickedMatch } from '../../shared/version-match'
-import { recordMainBreadcrumb } from '../diagnostics'
+import { recordMainBreadcrumb, registerDiagnosticProvider } from '../diagnostics'
 import { stopHotkeyListener } from '../hotkeys'
 
 const CHECK_DELAY = 5000
@@ -31,6 +40,7 @@ let pendingRemote: InstallManifest | null = null
 let updateAvailableVersion: string | null = null
 let updateReady = false
 let brickedReleaseInfo: { version: string; message: string | null } | null = null
+let updaterInitialized = false
 
 function broadcast(channel: string, ...args: unknown[]): void {
   for (const getWin of targetWindows) {
@@ -333,6 +343,7 @@ export function initUpdater(
   targetWindows = windows
   installDir = dir
   currentChannel = channel
+  updaterInitialized = true
 
   // Check if we just updated and notify renderer
   const justUpdatedPath = join(app.getPath('userData'), 'just-updated.json')
@@ -527,3 +538,29 @@ ipcMain.handle('install-update', () => {
   stopHotkeyListener()
   app.exit(0)
 })
+
+function getUpdateDiagnostics(): Record<string, unknown> {
+  const local = readLocalManifest()
+  let stagingUpdatePresent = false
+  try {
+    const stagingDir = getStagingDir()
+    stagingUpdatePresent =
+      existsSync(stagingDir) && readdirSync(stagingDir).filter((f) => !f.startsWith('.')).length > 0
+  } catch {
+    /* staging dir unavailable */
+  }
+  return {
+    updaterInitialized,
+    currentChannel,
+    updateAvailableVersion,
+    updateReady,
+    pendingRemoteVersion: pendingRemote?.version ?? null,
+    brickedReleaseVersion: brickedReleaseInfo?.version ?? null,
+    localManifestVersion: local?.version ?? null,
+    localManifestElectronVersion: local?.electronVersion ?? null,
+    localManifestNativeModules: local?.nativeModules ?? {},
+    stagingUpdatePresent,
+  }
+}
+
+registerDiagnosticProvider('updateDiagnostics', getUpdateDiagnostics)
