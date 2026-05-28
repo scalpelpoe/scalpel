@@ -75,8 +75,8 @@ let triggerCombo: KeyCombo | null = null
 let priceCheckCombo: KeyCombo | null = null
 let chatCommandHotkeys: Array<{ accelerator: string; command: string; autoSubmit: boolean; scope?: MacroScope }> = []
 let appMacroAccelerators: string[] = []
-let lastAppMacros: Array<{ action: string; hotkey: string; tag?: string; scope?: MacroScope }> = []
-let onAppMacro: ((action: string, tag?: string) => void) | null = null
+let lastAppMacros: Array<{ action: string; hotkey: string; tag?: string; presetId?: string; scope?: MacroScope }> = []
+let onAppMacro: ((action: string, tag?: string, presetId?: string) => void) | null = null
 // Secondary-overlay hotkeys (cheat-sheets today, more later). Stored as a
 // flat list of (accelerator, handler) pairs so each consumer composes its own
 // shape (e.g. cheat-sheet sends one for the global toggle and one per
@@ -376,7 +376,7 @@ export function setChatCommands(
   }
 }
 
-export function setAppMacroHandler(handler: (action: string, tag?: string) => void): void {
+export function setAppMacroHandler(handler: (action: string, tag?: string, presetId?: string) => void): void {
   onAppMacro = handler
 }
 
@@ -413,7 +413,7 @@ export function setSecondaryOverlayHotkeys(hotkeys: OverlayHotkey[]): void {
 }
 
 export function setAppMacros(
-  macros: Array<{ action: string; hotkey: string; tag?: string; scope?: MacroScope }>,
+  macros: Array<{ action: string; hotkey: string; tag?: string; presetId?: string; scope?: MacroScope }>,
 ): void {
   lastAppMacros = macros
   if (suspendDepth === 0) {
@@ -433,7 +433,7 @@ export function setAppMacros(
     try {
       globalShortcut.register(m.hotkey, () => {
         if (injecting || isTypingInOverlay() || !onAppMacro) return
-        onAppMacro(m.action, m.tag)
+        onAppMacro(m.action, m.tag, m.presetId)
       })
       appMacroAccelerators.push(m.hotkey)
     } catch (e) {

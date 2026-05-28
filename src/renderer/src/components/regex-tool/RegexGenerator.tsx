@@ -85,6 +85,7 @@ export function RegexGenerator(): JSX.Element {
   }, [presetTags, generator, key])
 
   const [customTagInput, setCustomTagInput] = useState('')
+  const [presetName, setPresetName] = useState('')
   const [presets, setPresets] = useState<RegexPreset[]>([])
   const [copied, setCopied] = useState(false)
   // Save/Load panels persist their open state. Save defaults open so new users discover
@@ -124,6 +125,7 @@ export function RegexGenerator(): JSX.Element {
     localStorage.setItem(key('presetTagsByGenerator'), JSON.stringify(savedTagsByGenerator.current))
     setPresetTags(savedTagsByGenerator.current[g] ?? [])
     setCustomTagInput('')
+    setPresetName('')
     // Editing context belongs to one generator; switching tabs starts fresh so a stray
     // Update doesn't overwrite a preset that lives on a different generator.
     setEditingPresetId(null)
@@ -256,6 +258,7 @@ export function RegexGenerator(): JSX.Element {
     const id = editingPresetId ?? findMatchingPreset()?.id ?? crypto.randomUUID()
     const preset: RegexPreset = {
       id,
+      name: presetName.trim() || undefined,
       generator,
       tags,
       avoid: [],
@@ -277,6 +280,7 @@ export function RegexGenerator(): JSX.Element {
 
   const loadPreset = (preset: RegexPreset): void => {
     setPresetTags((preset.tags || []).map((t, i) => ({ ...t, id: Date.now() + i })))
+    setPresetName(preset.name ?? '')
     setEditingPresetId(preset.id)
     const targetGenerator = (preset.generator ?? defaultGenerator) as GeneratorKey
     if (targetGenerator !== generator) _setGenerator(targetGenerator)
@@ -307,6 +311,7 @@ export function RegexGenerator(): JSX.Element {
     })
     setPresetTags([])
     setCustomTagInput('')
+    setPresetName('')
     setEditingPresetId(null)
   }
 
@@ -336,9 +341,23 @@ export function RegexGenerator(): JSX.Element {
   const sharedSavePanel = (
     <div
       className="overflow-hidden transition-all duration-150"
-      style={{ maxHeight: saveOpen ? 300 : 0, marginTop: saveOpen ? 8 : 0, opacity: saveOpen ? 1 : 0 }}
+      style={{ maxHeight: saveOpen ? 400 : 0, marginTop: saveOpen ? 8 : 0, opacity: saveOpen ? 1 : 0 }}
     >
       <div className="flex flex-col gap-2">
+        <input
+          type="text"
+          placeholder="Name (e.g. Vendor rares, High tier waystones)"
+          value={presetName}
+          onChange={(e) => setPresetName(e.target.value)}
+          className="w-full text-[11px] bg-black/30 rounded px-3 py-[6px] text-text outline-none"
+          style={{ border: '1px solid rgba(0,0,0,0.3)' }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.5)'
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.3)'
+          }}
+        />
         <div className="setting-box" style={{ flexWrap: 'wrap', gap: 4, padding: '6px 8px' }}>
           <ReactSortable
             list={presetTags}
@@ -396,7 +415,7 @@ export function RegexGenerator(): JSX.Element {
           </button>
         </div>
         <DismissibleTip id="regex-tool.macro-tag">
-          Tip: Add &quot;macro&quot; to any custom tag to set a hotkey for it in settings
+          Tip: Saved regexes can be assigned hotkeys in Settings &gt; Macros
         </DismissibleTip>
       </div>
     </div>

@@ -81,6 +81,11 @@ export function SavedPresets({
                 </div>
               </div>
               <div className="flex-1 p-2 pl-0 min-w-0">
+                {p.name && (
+                  <div className="text-[10px] font-semibold text-text truncate mb-[3px]" title={p.name}>
+                    {p.name}
+                  </div>
+                )}
                 <div
                   className="flex flex-wrap gap-[3px]"
                   style={{ maxHeight: 68, overflow: 'hidden' }}
