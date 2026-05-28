@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { CloseSmall, Info } from '@icon-park/react'
 import type { FilterListEntry, GameVariant, RuntimeSettings } from '../../../shared/types'
 
@@ -49,6 +49,9 @@ export function FilterPicker({
   const fPath = settings.activeProfile?.filterPath ?? ''
   const gameVariant = (settings.poeVersion === 2 ? 2 : 1) as GameVariant
 
+  const settingsRef = useRef(settings)
+  settingsRef.current = settings
+
   // Listen for online filter changes
   useEffect(() => {
     const unsub = window.api.onOnlineFilterChanged((changed) => {
@@ -57,6 +60,10 @@ export function FilterPicker({
         for (const c of changed) next.add(c.name)
         return next
       })
+      const dir = settingsRef.current.activeProfile?.filterDir
+      if (dir) {
+        void window.api.scanFilterDir(dir).then(setFilters)
+      }
     })
     return unsub
   }, [])

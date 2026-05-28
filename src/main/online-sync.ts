@@ -73,17 +73,12 @@ function checkForChanges(filterDir: string): void {
 
   for (const f of current) {
     const prev = knownHashes.get(f.path)
-    if (prev && prev !== f.hash) {
+    if (!prev) {
+      changed.push({ path: f.path, name: f.name })
+    } else if (prev !== f.hash) {
       changed.push({ path: f.path, name: f.name })
     }
     knownHashes.set(f.path, f.hash)
-  }
-
-  // Also detect new files (not previously tracked)
-  for (const f of current) {
-    if (!knownHashes.has(f.path)) {
-      knownHashes.set(f.path, f.hash)
-    }
   }
 
   if (changed.length > 0) {
@@ -93,21 +88,26 @@ function checkForChanges(filterDir: string): void {
   }
 }
 
-/** Start polling for online filter changes */
+/** Start polling for online filter changes. Safe to call with an empty
+ *  filterDir — the interval runs regardless so a later `updateOnlineSyncDir`
+ *  call can begin watching without the caller needing to restart polling. */
 export function startOnlineSync(filterDir: string, windowProvider: () => BrowserWindow[]): void {
   stopOnlineSync()
-  currentFilterDir = filterDir
+  currentFilterDir = filterDir || null
   getWindows = windowProvider
-  buildInitialHashes(filterDir)
+  if (filterDir) buildInitialHashes(filterDir)
   pollInterval = setInterval(() => {
     if (currentFilterDir) checkForChanges(currentFilterDir)
   }, 5_000)
 }
 
-/** Update the watched directory (e.g. when user changes filter folder) */
+/** Update the watched directory (e.g. when user changes filter folder).
+ *  Clears tracked hashes when `filterDir` is empty so a later re-point
+ *  doesn't treat old files as already known. */
 export function updateOnlineSyncDir(filterDir: string): void {
-  currentFilterDir = filterDir
-  buildInitialHashes(filterDir)
+  currentFilterDir = filterDir || null
+  if (filterDir) buildInitialHashes(filterDir)
+  else knownHashes.clear()
 }
 
 /** Stop polling */
@@ -123,3 +123,6 @@ export function stopOnlineSync(): void {
 export function checkOnlineSyncNow(): void {
   if (currentFilterDir) checkForChanges(currentFilterDir)
 }
+
+// ---- test-only exports (used by unit tests) ---------------------------
+export { checkForChanges, scanOnlineFilters }

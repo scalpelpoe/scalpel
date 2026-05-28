@@ -457,18 +457,18 @@ function startLiveServices(): void {
     })
   }
 
-  // Start online filter sync
+  // Start online filter sync. The poll interval is kept alive regardless of
+  // whether filterDir is set yet so a folder picked after onboarding can begin
+  // watching without requiring a separate poll-start call.
   const filterDir = getProfileBackedSetting(store, 'filterDir') as string
-  if (filterDir) {
-    startOnlineSync(filterDir, () => {
-      const wins: BrowserWindow[] = []
-      const ow = getOverlayWindow()
-      const aw = getAppWindow()
-      if (ow) wins.push(ow)
-      if (aw) wins.push(aw)
-      return wins
-    })
-  }
+  startOnlineSync(filterDir, () => {
+    const wins: BrowserWindow[] = []
+    const ow = getOverlayWindow()
+    const aw = getAppWindow()
+    if (ow) wins.push(ow)
+    if (aw) wins.push(aw)
+    return wins
+  })
 }
 
 app.whenReady().then(() => {
