@@ -147,14 +147,7 @@ export function switchActiveProfileByGameVariant(
   store: Store<AppSettings>,
   variant: GameVariant,
 ): ProfileChangedSetting[] {
-  const profile = findLastUsedProfileByGameVariant(store, variant)
-  if (!profile) {
-    const changed: ProfileChangedSetting[] = []
-    rememberChange(store, changed, PROFILE_VERSION_KEY, variant)
-    rememberChange(store, changed, ACTIVE_PROFILE_ID_KEY, '')
-    changed.push({ key: 'activeProfile', value: null, reason: 'activation' })
-    return changed
-  }
+  const profile = findLastUsedProfileByGameVariant(store, variant) ?? ensureProfileForGame(store, variant)
   return hydrateProfileSettings(store, profile)
 }
 

@@ -322,7 +322,7 @@ describe('profile-settings', () => {
     expect(legacy?.tradePriceOption).toBe('exalted_divine')
   })
 
-  it('switching to a game variant with no profile clears the active profile', () => {
+  it('switching to a game variant with no profile creates a default profile', () => {
     const profiles = setupProfiles()
     const poe1 = profiles.createDefault(1)
     profiles.saveProfile(poe1)
@@ -334,13 +334,14 @@ describe('profile-settings', () => {
 
     const changes = switchActiveProfileByGameVariant(store, 2)
 
-    expect(store.get(ACTIVE_PROFILE_ID_KEY)).toBe('')
+    expect(store.get(ACTIVE_PROFILE_ID_KEY)).toBeTruthy()
     expect(store.get(PROFILE_VERSION_KEY)).toBe(2)
-    const nullChange = changes.find((c) => c.key === 'activeProfile')
-    expect(nullChange).toBeDefined()
-    if (nullChange && nullChange.key === 'activeProfile') {
-      expect(nullChange.reason).toBe('activation')
-      expect(nullChange.value).toBeNull()
+    const activationChange = changes.find((c) => c.key === 'activeProfile')
+    expect(activationChange).toBeDefined()
+    if (activationChange && activationChange.key === 'activeProfile') {
+      expect(activationChange.reason).toBe('activation')
+      expect(activationChange.value).not.toBeNull()
+      expect((activationChange.value as { gameVariant: number }).gameVariant).toBe(2)
     }
   })
 
