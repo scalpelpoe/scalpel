@@ -234,8 +234,8 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
         </>
       )}
 
-      {/* Saved Regex Hotkeys */}
-      <div className="settings-section-title mt-3">Saved Regex Hotkeys</div>
+      {/* Scalpel Hotkeys */}
+      <div className="settings-section-title mt-3">Scalpel Hotkeys</div>
       <section>
         <div className="flex flex-col gap-2">
           {visibleAppMacros.map(({ macro, i }) => {
@@ -334,7 +334,7 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
             }}
             className="text-[11px] text-text-dim self-start px-3 py-1.5"
           >
-            + Add Saved Regex Hotkey
+            + Add Scalpel Hotkey
           </button>
         </div>
       </section>

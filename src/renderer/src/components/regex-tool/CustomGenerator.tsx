@@ -40,6 +40,8 @@ export const CustomGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
       },
       // Custom-generator presets match by the saved regex text.
       matchesPreset: (preset: RegexPreset) => (preset.generator ?? 'maps') === 'custom' && preset.customRegex === value,
+      // The container's output bar is the input for Custom; it writes here.
+      setRegexText: (text: string) => setValue(text),
     }),
     [value],
   )
@@ -56,21 +58,7 @@ export const CustomGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
         {sharedSavePanel}
       </div>
       {sharedSavedPresets}
-      <div className="flex-1 flex flex-col bg-bg-card px-3 py-3">
-        <textarea
-          value={value}
-          onChange={(e) => setValue(e.target.value)}
-          placeholder="Paste or type your custom regex"
-          className="flex-1 w-full text-[12px] font-mono bg-black/30 rounded px-3 py-2 resize-none text-text outline-none"
-          style={{ minHeight: 120, border: '1px solid rgba(0,0,0,0.3)' }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.5)'
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.3)'
-          }}
-        />
-      </div>
+      <div className="flex-1 bg-bg-card" />
     </>
   )
 })

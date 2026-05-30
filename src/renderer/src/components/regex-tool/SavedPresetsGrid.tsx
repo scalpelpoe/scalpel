@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { CloseSmall } from '@icon-park/react'
 import type { RegexPreset } from '../../../../shared/types'
 import { prettyHotkey } from '../settings/utils'
@@ -35,14 +35,28 @@ export function SavedPresetsGrid({
   const [fadeTop, setFadeTop] = useState(false)
   const [fadeBottom, setFadeBottom] = useState(false)
 
-  const updateFades = (): void => {
+  const updateFades = useCallback((): void => {
     const el = scrollRef.current
     if (!el) return
     setFadeTop(el.scrollTop > 1)
     setFadeBottom(el.scrollTop + el.clientHeight < el.scrollHeight - 1)
-  }
-  // Recompute when the preset list changes (rows added/removed change overflow).
-  useEffect(updateFades, [filtered.length])
+  }, [])
+
+  // Measure after layout settles. A bare post-render call races flex/font
+  // layout (overflow not yet known) so the fade was missing until first scroll;
+  // an rAF + ResizeObserver catch the settled size, and the deps re-run it when
+  // the list or active generator changes (tab switch with an equal row count).
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+    const raf = requestAnimationFrame(updateFades)
+    const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(updateFades) : null
+    ro?.observe(el)
+    return () => {
+      cancelAnimationFrame(raf)
+      ro?.disconnect()
+    }
+  }, [filtered.length, generator, updateFades])
 
   if (filtered.length === 0) return null
 

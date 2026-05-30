@@ -321,6 +321,7 @@ export function RegexGenerator({ settings, update, tryHotkey }: Props): JSX.Elem
       style={{ maxHeight: saveOpen ? 400 : 0, marginTop: saveOpen ? 8 : 0, opacity: saveOpen ? 1 : 0 }}
     >
       <div className="flex flex-col gap-2">
+        <span className="text-[9px] text-text-dim font-semibold uppercase tracking-wider">Saved Regex Name</span>
         {/* Name + color row */}
         <div className="flex gap-2 items-center">
           <input
@@ -403,9 +404,24 @@ export function RegexGenerator({ settings, update, tryHotkey }: Props): JSX.Elem
       {/* Regex output bar */}
       <div className="px-3 py-2 bg-bg-card border-b border-border">
         <div className="setting-box">
-          <span className="value select-all" style={{ color: isOverLimit ? '#ef5350' : undefined }}>
-            {regex || <span className="dim">Select mods to generate regex</span>}
-          </span>
+          {generator === 'custom' ? (
+            <input
+              type="text"
+              value={regex}
+              onChange={(e) => {
+                setRegex(e.target.value)
+                activeHandleRef.current?.setRegexText?.(e.target.value)
+              }}
+              placeholder="Paste your custom regex here"
+              spellCheck={false}
+              className="value flex-1 min-w-0 bg-transparent border-none outline-none font-mono placeholder:text-text-dim"
+              style={{ color: isOverLimit ? '#ef5350' : undefined }}
+            />
+          ) : (
+            <span className="value select-all" style={{ color: isOverLimit ? '#ef5350' : undefined }}>
+              {regex || <span className="dim">Select mods to generate regex</span>}
+            </span>
+          )}
           <button
             onClick={(e) => {
               e.stopPropagation()

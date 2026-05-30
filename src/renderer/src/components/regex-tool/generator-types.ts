@@ -14,6 +14,9 @@ export interface GeneratorHandle {
   /** Identify whether a saved preset matches the generator's current state. Used by the
    *  container to decide whether a save is an update vs. a new preset. */
   matchesPreset(preset: RegexPreset): boolean
+  /** Set the generator's regex text directly. Only meaningful for free-text
+   *  generators (Custom), where the container's output bar doubles as the input. */
+  setRegexText?(text: string): void
 }
 
 /** Shared props every regex generator accepts. The container passes `shared*` render
