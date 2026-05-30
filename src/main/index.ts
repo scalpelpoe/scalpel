@@ -43,6 +43,7 @@ import { join } from 'node:path'
 import { execSync } from 'node:child_process'
 import { uIOhook, UiohookKey } from 'uiohook-napi'
 import Store from 'electron-store'
+import { OverlayController } from 'electron-overlay-window'
 import {
   createOverlayWindow,
   hideOverlay,
@@ -114,6 +115,7 @@ import { registerWhiteboardOverlay, toggleWhiteboard } from './whiteboard'
 import { togglePluginOverlay } from './plugin-overlay'
 import { registerPinnedZoneOverlay, applyPinnedZoneEnabled } from './pinned-zone'
 import {
+  getOverlayAnchor,
   hideAllOnPoeBlur,
   restoreAllOnPoeFocus,
   isAnyScalpelWindowFocused,
@@ -123,6 +125,14 @@ import {
 } from './windowing'
 import { initAppMacrosRefresh, withPluginHotkeys } from './app-macros'
 import { runRegexMacroMigration } from './regex-macro-migration'
+import {
+  applyRegexPreset,
+  getRegexRemoteOverlay,
+  leftDockFracX,
+  registerRegexRemoteOverlay,
+  toggleRegexRemote,
+} from './regex-remote'
+import { detectPanelStateOnce, getCurrentPanelState } from './panel-detection'
 import type { AppSettings, CheatSheetsSettings, GameVariant, LegacyAppSettings, RegexPreset } from '../shared/types'
 import { initProfileStore } from './profiles/store'
 import {
@@ -554,6 +564,49 @@ app.whenReady().then(() => {
     setTimeout(restoreClip, 100)
   }
 
+  // The pad renders flush-left (squared left corners, no left border) ONLY when
+  // it's docked against the stash sidebar. The vendor dock floats beside the
+  // Buy/Sell modal, so it stays a rounded card. EPS absorbs integer-pixel
+  // rounding from the snap commit; an unknown anchor / no left panel -> rounded.
+  const REGEX_REMOTE_FLUSH_EPS = 0.01
+  function regexRemoteFlushLeft(anchor: { fracX: number } | null): boolean {
+    if (!anchor || !getCurrentPanelState().leftPanelOpen) return false
+    return Math.abs(anchor.fracX - leftDockFracX(OverlayController.targetBounds)) < REGEX_REMOTE_FLUSH_EPS
+  }
+  // Guards the async toggle path so a rapid double-press during the one-shot
+  // panel capture doesn't queue two show/hide cycles (which would flicker or
+  // leave the pad hidden).
+  let regexRemoteToggleBusy = false
+
+  ipcMain.handle('regex-remote:mount-state', () => regexRemoteFlushLeft(getOverlayAnchor('regex-remote')))
+
+  ipcMain.on('regex-remote:apply', (_event, presetId: string) => {
+    applyRegexPreset(presetId, {
+      getPresets: () => {
+        const key = store.get(PROFILE_VERSION_KEY) === 2 ? 'regexPresetsPoe2' : 'regexPresetsPoe1'
+        return store.get(key) ?? []
+      },
+      focusGame: () => {
+        try {
+          OverlayController.focusTarget()
+        } catch {}
+      },
+      paste: pasteRegexToSearch,
+      // Let focus settle on PoE before synthesizing Ctrl+F / Ctrl+V.
+      defer: (fn) => setTimeout(fn, 50),
+    })
+  })
+  ipcMain.on('regex-remote:close', () => getRegexRemoteOverlay()?.hide())
+  // The pad is always interactive, so clicking/dragging it gives it OS focus.
+  // Hand focus back to PoE when the user is done (cursor leaves the pad) so the
+  // pad doesn't retain focus -- otherwise isAnyScalpelWindowFocused() stays true
+  // and the PoE-blur hide (on minimize/alt-tab) bails, leaving the pad on screen.
+  ipcMain.on('regex-remote:hand-focus', () => {
+    try {
+      OverlayController.focusTarget()
+    } catch {}
+  })
+
   setAppMacroHandler((action, tag, presetId) => {
     if (action === 'pasteRegex') {
       if (currentRegex) pasteRegexToSearch(currentRegex)
@@ -578,6 +631,30 @@ app.whenReady().then(() => {
       if (main && !main.isDestroyed() && main.isVisible()) hideOverlay()
       getCheatSheetsOverlay()?.hide()
       toggleWhiteboard()
+      return
+    }
+    if (action === 'toggleRegexRemote') {
+      if (getRegexRemoteOverlay()?.isVisible()) {
+        toggleRegexRemote() // hide
+        return
+      }
+      if (regexRemoteToggleBusy) return // a capture+show is already in flight
+      regexRemoteToggleBusy = true
+      const main = getOverlayWindow()
+      if (main && !main.isDestroyed() && main.isVisible()) hideOverlay()
+      getCheatSheetsOverlay()?.hide()
+      // Capture fresh panel state so the pad mounts at the stash vs vendor dock,
+      // then show (repositionOnShow re-reads the context anchor) and push the
+      // flush state for the new dock -- the renderer only queries it once on
+      // mount, so a context switch (stash <-> vendor) needs this push.
+      void detectPanelStateOnce().finally(() => {
+        regexRemoteToggleBusy = false
+        toggleRegexRemote()
+        getRegexRemoteOverlay()?.send(
+          'regex-remote:mount-changed',
+          regexRemoteFlushLeft(getOverlayAnchor('regex-remote')),
+        )
+      })
       return
     }
     if (action.startsWith('plugin-overlay:')) {
@@ -624,6 +701,19 @@ app.whenReady().then(() => {
   setCheatSheetsBeforeShow(() => hideOverlay())
   applyCheatSheetHotkeys(getProfileBackedSetting(store, 'cheatSheets'))
   registerWhiteboardOverlay()
+  registerRegexRemoteOverlay({
+    onAnchorChanged: (anchor) => {
+      getRegexRemoteOverlay()?.send('regex-remote:mount-changed', regexRemoteFlushLeft(anchor))
+      // A user drag/resize focuses the pad (and a drag's mouseup never reaches
+      // the renderer, so the cursor-leave handoff can miss it). Hand focus back
+      // to PoE here too so the pad never sits holding OS focus after a move.
+      try {
+        OverlayController.focusTarget()
+      } catch {}
+    },
+    getTargetBounds: () => OverlayController.targetBounds,
+    getPanelState: () => getCurrentPanelState(),
+  })
   registerPinnedZoneOverlay({
     storedAnchor: () => getProfileBackedSetting(store, 'cheatSheets')?.pinnedAnchor,
     onAnchorChanged: (anchor) => patchCheatSheets({ pinnedAnchor: anchor }),

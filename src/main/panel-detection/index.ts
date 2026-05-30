@@ -4,7 +4,7 @@ import type { PanelState } from '../../shared/panel-state'
 import { getPoeVersion } from '../game-state'
 import { getWhiteboardOverlay } from '../whiteboard'
 import { PanelDetector } from './detector'
-import type { BitmapView } from './match'
+import { type BitmapView, matchPatchFuzzy, votePanels } from './match'
 import { PANEL_SAMPLES } from './panel-samples'
 
 let detector: PanelDetector | null = null
@@ -25,11 +25,13 @@ const MAX_CAPTURE_HEIGHT = 1080
 /** Capture the display the game is on and crop to the game-window rect, returning
  *  BGRA pixels with (0,0) at the window top-left. Null when the whiteboard (the
  *  only consumer) is hidden, the game isn't focused, or no usable frame is
- *  available. Physical-pixel assumptions are validated in-game. */
-async function captureGameWindow(): Promise<BitmapView | null> {
+ *  available. Physical-pixel assumptions are validated in-game.
+ *  Pass force=true to bypass the whiteboard-visibility gate (e.g. for on-demand
+ *  detection by other features); the focus and bounds checks are always enforced. */
+async function captureGameWindow(force = false): Promise<BitmapView | null> {
   // The distance overlay is the only consumer; skip the expensive screen grab
   // entirely while the whiteboard is hidden so normal play never pays for it.
-  if (!getWhiteboardOverlay()?.isVisible()) return null
+  if (!force && !getWhiteboardOverlay()?.isVisible()) return null
   if (!OverlayController.targetHasFocus) return null
   const tb = OverlayController.targetBounds
   if (!tb?.width || !tb.height) return null
@@ -103,6 +105,23 @@ export function startPanelDetection(): void {
     },
   })
   detector.start()
+}
+
+/** One-shot panel-state detection, bypassing the whiteboard-visibility gate the
+ *  continuous detector uses. Captures a single frame and fuzzy-matches the
+ *  sample patches (no stabilization fingerprint - this is a cold, on-demand
+ *  read). Updates and returns lastPanelState; returns the previous state
+ *  unchanged when samples are unavailable for the version or no frame could be
+ *  captured (e.g. PoE not focused). Intended for features that need fresh panel
+ *  state at a specific moment (e.g. a hotkey press) rather than continuously. */
+export async function detectPanelStateOnce(): Promise<PanelState> {
+  const samples = PANEL_SAMPLES[getPoeVersion()]
+  if (!samples) return lastPanelState
+  const frame = await captureGameWindow(true)
+  if (!frame) return lastPanelState
+  const matched = samples.map((s) => matchPatchFuzzy(frame, s))
+  lastPanelState = votePanels(samples, matched)
+  return lastPanelState
 }
 
 export function stopPanelDetection(): void {

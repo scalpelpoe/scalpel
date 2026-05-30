@@ -20,6 +20,11 @@ interface ChromeProps {
    *  Body content is always rendered regardless. */
   onMinimize?: () => void
   minimized?: boolean
+  /** When true, squares the left corners and removes the left border so the
+   *  card sits flush against a left dock (e.g. the regex remote pad when
+   *  mounted against PoE's stash sidebar). Existing consumers are unaffected
+   *  because this prop is optional and defaults to false. */
+  flushLeft?: boolean
 }
 
 /** Standard chrome for a secondary overlay window: rounded translucent card
@@ -39,11 +44,16 @@ export function Chrome({
   onClose,
   onMinimize,
   minimized,
+  flushLeft,
 }: ChromeProps): JSX.Element {
   const noDrag = { WebkitAppRegion: 'no-drag' } as React.CSSProperties
   const drag = { WebkitAppRegion: 'drag' } as React.CSSProperties
   return (
-    <div className="flex flex-col h-screen bg-bg-card-translucent rounded overflow-hidden border border-border">
+    <div
+      className={`flex flex-col h-screen bg-bg-card-translucent rounded overflow-hidden border border-border${
+        flushLeft ? ' rounded-l-none border-l-0' : ''
+      }`}
+    >
       <div
         className="flex items-center justify-between gap-2 px-2 py-1 border-b border-border bg-bg-solid-translucent shrink-0"
         style={drag}

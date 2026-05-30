@@ -29,6 +29,10 @@ interface Props {
  *    1. Create a component matching the `GeneratorHandle` / `GeneratorProps` shape
  *    2. Add an entry to the per-version list it should appear in
  *    3. Add a case in the component-switch below (see `renderActiveGenerator`)
+ *    4. Mirror the new entry into `GENERATOR_ORDER` in
+ *       `../../regex-remote/RegexRemote.tsx` (the remote pad keeps its own copy
+ *       of these lists to avoid bundling this component tree; it silently omits
+ *       any generator missing from that copy)
  *  The registry drives the tab strip, localStorage key, and preset scoping.
  *  Generator availability is per-game: PoE1 uses Maps + Flasks + Custom;
  *  PoE2 uses Waystones + Custom (no flasks UI yet, no PoE1 maps). */

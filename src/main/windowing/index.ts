@@ -49,6 +49,11 @@ export interface OverlaySpec {
    *  but couldn't be sent during window creation (renderer wasn't mounted
    *  yet, so webContents.send would silently drop them). */
   onFirstShow?: (win: BrowserWindow) => void
+  /** When true, re-apply the (resolved) anchor bounds on every show, not just at
+   *  window creation. For specs whose `defaultAnchor` is context-dependent and
+   *  must re-evaluate each time the window is shown. Default (false) keeps the
+   *  position the window last had. */
+  repositionOnShow?: boolean
 }
 
 /** Multiply an anchor against a rect, returning a rect in the same coordinate
@@ -325,6 +330,7 @@ function showState(state: OverlayState): void {
   // hold-to-move and re-triggers PoE-blur which causes overlay flicker).
   if (win.webContents.isLoading()) return
   if (win.isVisible()) return
+  if (state.spec.repositionOnShow) applyAnchorBounds(state)
   win.show()
 }
 
@@ -432,6 +438,27 @@ function maybeUpdateSnap(state: OverlayState): void {
   if (wantActive === state.snapGhostActive) return
   state.snapGhostActive = wantActive
   setSnapGhost(state.snapGhostActive ? target : null)
+}
+
+/** The current anchor (fractions of PoE's window) of a registered secondary
+ *  overlay's live window, or null if it doesn't exist yet or PoE isn't
+ *  attached. Lets owning modules detect where their window currently sits
+ *  (e.g. whether it's flush against a dock edge). */
+export function getOverlayAnchor(id: string): OverlayAnchor | null {
+  const state = overlays.get(id)
+  if (!state?.win || state.win.isDestroyed()) return null
+  return boundsToAnchor(state.win)
+}
+
+/** Every registered secondary-overlay window that currently exists (created
+ *  lazily on first show) and isn't destroyed. Used by broadcast/notify paths
+ *  that need to reach secondary overlays in addition to the primary windows. */
+export function getSecondaryOverlayWindows(): BrowserWindow[] {
+  const wins: BrowserWindow[] = []
+  for (const state of overlays.values()) {
+    if (state.win && !state.win.isDestroyed()) wins.push(state.win)
+  }
+  return wins
 }
 
 /** Subscribe to PoE attach/move/resize events and re-anchor every registered

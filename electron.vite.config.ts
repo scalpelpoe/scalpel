@@ -24,6 +24,7 @@ export default defineConfig({
           cheatSheetPreview: resolve(__dirname, 'src/renderer/cheat-sheet-preview.html'),
           secondaryOverlayCanvas: resolve(__dirname, 'src/renderer/secondary-overlay-canvas.html'),
           whiteboard: resolve(__dirname, 'src/renderer/whiteboard.html'),
+          regexRemote: resolve(__dirname, 'src/renderer/regex-remote.html'),
           pinnedZone: resolve(__dirname, 'src/renderer/pinned-zone.html'),
           pluginOverlay: resolve(__dirname, 'src/renderer/plugin-overlay.html'),
         },

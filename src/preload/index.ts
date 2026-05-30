@@ -224,6 +224,15 @@ export const api = {
     ipcRenderer.invoke('delete-regex-preset', id),
   reorderRegexPresets: (ids: string[]): Promise<import('../shared/types').RegexPreset[]> =>
     ipcRenderer.invoke('reorder-regex-presets', ids),
+  regexRemoteApply: (presetId: string): void => ipcRenderer.send('regex-remote:apply', presetId),
+  closeRegexRemote: (): void => ipcRenderer.send('regex-remote:close'),
+  regexRemoteHandFocus: (): void => ipcRenderer.send('regex-remote:hand-focus'),
+  regexRemoteMountState: (): Promise<boolean> => ipcRenderer.invoke('regex-remote:mount-state'),
+  onRegexRemoteMountChanged: (cb: (flush: boolean) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, flush: boolean): void => cb(flush)
+    ipcRenderer.on('regex-remote:mount-changed', handler)
+    return () => ipcRenderer.removeListener('regex-remote:mount-changed', handler)
+  },
 
   // Cheat sheets
   addCheatSheetFromFile: (categoryId: string): Promise<Array<{ id: string; ext: string }>> =>
