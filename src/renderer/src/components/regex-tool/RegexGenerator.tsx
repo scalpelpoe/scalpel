@@ -1,30 +1,29 @@
 import { useEffect, useRef, useState } from 'react'
-import { ReactSortable } from 'react-sortablejs'
-import { CloseSmall, Save } from '@icon-park/react'
+import { Save, Plus, FSevenKey } from '@icon-park/react'
 import { DismissibleTip } from '../../shared/DismissibleTip'
 import { poeRegexMaxLength } from './regex-engine'
-import {
-  TagSourceIcon,
-  loadStorage,
-  tagChipStyle,
-  useRegexKey,
-  ensureLegacyRegexKeysMigrated,
-  usePersistedBool,
-} from './mapmods-helpers'
+import { loadStorage, useRegexKey, ensureLegacyRegexKeysMigrated, usePersistedBool } from './mapmods-helpers'
 import poereIconTight from '../../assets/other/poere-logo-tight.svg'
 import { POE_RE_URL, POE2_RE_URL } from '../../../../shared/endpoints'
 import { FilterChip } from '../price-check/FilterChip'
-import { ErrorBanner } from '../ErrorBanner'
-import { SavedPresets } from './SavedPresets'
+import { SavedPresetsGrid } from './SavedPresetsGrid'
 import { InfoChip } from '../../shared/InfoChip'
-import { CUSTOM_TAG_COLOR } from './preset-tags'
 import { MapsGenerator } from './MapsGenerator'
 import { CustomGenerator } from './CustomGenerator'
 import { FlaskGenerator } from './FlaskGenerator'
 import { WaystonesGenerator } from './WaystonesGenerator'
 import { usePoeVersion } from '../../shared/poe-version-context'
+import { HotkeyField } from '../settings/HotkeyField'
+import { PresetColorPicker } from './PresetColorPicker'
 import type { GeneratorConfig, GeneratorHandle } from './generator-types'
-import type { RegexPreset, RegexPresetTag } from '../../../../shared/types'
+import type { AppSettings, RegexPreset, RegexPresetTag, RuntimeSettings } from '../../../../shared/types'
+import type { HotkeySlot } from '../settings/hotkey-collisions'
+
+interface Props {
+  settings: RuntimeSettings
+  update: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
+  tryHotkey: (hotkey: string, slot: HotkeySlot) => boolean
+}
 
 /** Registered regex generators. Adding a new one (e.g. vendor regex) is:
  *    1. Create a component matching the `GeneratorHandle` / `GeneratorProps` shape
@@ -46,7 +45,7 @@ const GENERATORS_POE2 = [
 
 type GeneratorKey = 'maps' | 'flasks' | 'waystones' | 'custom'
 
-export function RegexGenerator(): JSX.Element {
+export function RegexGenerator({ settings, update, tryHotkey }: Props): JSX.Element {
   // Move legacy unsuffixed regex-tool keys into the poe1: namespace before any
   // child component reads from localStorage. Idempotent + module-flagged.
   ensureLegacyRegexKeysMigrated()
@@ -62,29 +61,6 @@ export function RegexGenerator(): JSX.Element {
     ),
   )
 
-  // Preset-bar tags stored per generator so switching tabs preserves in-progress saves.
-  const savedTagsByGenerator = useRef<Record<string, (RegexPresetTag & { id: number })[]>>(
-    (() => {
-      const byGen = loadStorage(key('presetTagsByGenerator'), {} as Record<string, (RegexPresetTag & { id: number })[]>)
-      // Migrate legacy flat-array key on first run. Reuses the `generator` state
-      // (populated above on the same render) rather than re-running the same
-      // loadStorage lookup.
-      if (Object.keys(byGen).length === 0) {
-        const legacy = loadStorage<(RegexPresetTag & { id: number })[]>(key('presetTags'), [])
-        if (legacy.length > 0) byGen[generator] = legacy
-      }
-      return byGen
-    })(),
-  )
-  const [presetTags, setPresetTags] = useState<(RegexPresetTag & { id: number })[]>(
-    () => savedTagsByGenerator.current[generator] ?? [],
-  )
-  useEffect(() => {
-    savedTagsByGenerator.current[generator] = presetTags
-    localStorage.setItem(key('presetTagsByGenerator'), JSON.stringify(savedTagsByGenerator.current))
-  }, [presetTags, generator, key])
-
-  const [customTagInput, setCustomTagInput] = useState('')
   const [presetName, setPresetName] = useState('')
   const [presets, setPresets] = useState<RegexPreset[]>([])
   const [copied, setCopied] = useState(false)
@@ -92,7 +68,6 @@ export function RegexGenerator(): JSX.Element {
   // preset saving; once they collapse it (or open Load) the choice sticks across launches.
   const [saveOpen, setSaveOpen] = usePersistedBool(key('saveOpen'), true)
   const [loadOpen, setLoadOpen] = usePersistedBool(key('loadOpen'), false)
-  const [macroTagError, setMacroTagError] = useState<string | null>(null)
   /** Active save target. When set, Save updates this preset id instead of dedup-or-creating;
    *  null means "create new". Saves keep it set so further edits keep updating. */
   const [editingPresetId, setEditingPresetId] = useState<string | null>(null)
@@ -100,6 +75,30 @@ export function RegexGenerator(): JSX.Element {
   // Active generator pushes its current regex and auto-tags up here.
   const [regex, setRegex] = useState('')
   const [autoTags, setAutoTags] = useState<RegexPresetTag[] | null>(null)
+
+  const [presetColor, setPresetColor] = useState<string | undefined>(undefined)
+
+  // Save-panel context (name/color/which preset is being edited) stashed per
+  // generator so switching tabs and back doesn't forget what you were editing.
+  // Session-scoped: the generator's own selections already persist to localStorage.
+  const savedEditByGenerator = useRef<
+    Record<string, { editingPresetId: string | null; name: string; color: string | undefined }>
+  >({})
+
+  const deriveName = (): string =>
+    (autoTags ?? [])
+      .map((t) => t.text)
+      .join(' ')
+      .trim()
+
+  // Fallback for presets with no descriptive tags (e.g. the Custom generator):
+  // give them a stable "Custom Regex N" name so they are never saved nameless.
+  const nextCustomName = (): string => {
+    const names = new Set(presets.map((p) => p.name))
+    let n = 1
+    while (names.has(`Custom Regex ${n}`)) n++
+    return `Custom Regex ${n}`
+  }
 
   const mapsRef = useRef<GeneratorHandle>(null)
   const flasksRef = useRef<GeneratorHandle>(null)
@@ -120,29 +119,30 @@ export function RegexGenerator(): JSX.Element {
   const activeHandleRef = refForGenerator(generator)
 
   const setGenerator = (g: GeneratorKey): void => {
-    // Stash current tags, restore target's.
-    savedTagsByGenerator.current[generator] = presetTags
-    localStorage.setItem(key('presetTagsByGenerator'), JSON.stringify(savedTagsByGenerator.current))
-    setPresetTags(savedTagsByGenerator.current[g] ?? [])
-    setCustomTagInput('')
-    setPresetName('')
-    // Editing context belongs to one generator; switching tabs starts fresh so a stray
-    // Update doesn't overwrite a preset that lives on a different generator.
-    setEditingPresetId(null)
+    // Stash the current generator's save-panel context, restore the target's, so
+    // switching tabs preserves the name/color/preset you were editing per tab.
+    savedEditByGenerator.current[generator] = { editingPresetId, name: presetName, color: presetColor }
+    const restored = savedEditByGenerator.current[g]
+    setPresetName(restored?.name ?? '')
+    setPresetColor(restored?.color)
+    setEditingPresetId(restored?.editingPresetId ?? null)
+    pendingIdRef.current = null
     localStorage.setItem(key('generator'), g)
     _setGenerator(g)
   }
 
   useEffect(() => {
     window.api.getRegexPresets().then((loaded) => {
-      // Migrate old presets that used 'name' instead of 'tags'.
-      const migrated = loaded.map((p) =>
-        p.tags
-          ? p
-          : { ...p, tags: [{ text: (p as unknown as { name: string }).name || 'preset', color: CUSTOM_TAG_COLOR }] },
-      )
-      setPresets(migrated)
-      if (migrated.some((p) => (p.generator ?? 'maps') === generator)) setLoadOpen(true)
+      setPresets(loaded)
+      if (loaded.some((p) => (p.generator ?? 'maps') === generator)) setLoadOpen(true)
+    })
+  }, [])
+
+  // Keep presets fresh when another window (Settings > Macros) adds, renames,
+  // recolors, or deletes one. Self-originated saves update state directly.
+  useEffect(() => {
+    return window.api.onRegexPresetsChanged(() => {
+      void window.api.getRegexPresets().then(setPresets)
     })
   }, [])
 
@@ -150,55 +150,12 @@ export function RegexGenerator(): JSX.Element {
     window.api.reportRegex(regex)
   }, [regex])
 
-  // Merge fresh auto-tags from the active generator into presetTags. Generators that
-  // don't produce auto-tags (e.g. Custom) emit `null` and this effect bails.
-  useEffect(() => {
-    if (autoTags == null) return
-    setPresetTags((prev) => {
-      const freshBySourceId = new Map<string | number, RegexPresetTag>()
-      autoTags.forEach((t) => {
-        if (t.sourceId != null) freshBySourceId.set(t.sourceId, t)
-      })
-      const updated = prev
-        .filter((t) => t.source === 'custom' || t.sourceId == null || freshBySourceId.has(t.sourceId))
-        .map((t) => {
-          if (t.source === 'custom' || t.sourceId == null) return t
-          const freshTag = freshBySourceId.get(t.sourceId)
-          if (freshTag && freshTag.text !== t.text) return { ...t, text: freshTag.text, color: freshTag.color }
-          return t
-        })
-      let nextId = Math.max(0, ...prev.map((t) => t.id)) + 1
-      const existingSourceIds = new Set(updated.filter((t) => t.sourceId != null).map((t) => t.sourceId))
-      for (const ft of autoTags) {
-        if (ft.sourceId != null && !existingSourceIds.has(ft.sourceId)) {
-          updated.push({ ...ft, id: nextId++ })
-        }
-      }
-      return updated
-    })
-  }, [autoTags])
-
-  // Seed presetTags from auto tags on first mount if the bar is empty.
-  const seededRef = useRef(false)
-  useEffect(() => {
-    if (seededRef.current) return
-    if (autoTags == null || autoTags.length === 0) return
-    if (presetTags.length > 0) {
-      seededRef.current = true
-      return
-    }
-    setPresetTags(autoTags.map((t, i) => ({ ...t, id: i })))
-    seededRef.current = true
-  }, [autoTags, presetTags])
-
   const isOverLimit = regex.length > maxLength
 
   const copiedTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const macroErrorTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   useEffect(() => {
     return () => {
       if (copiedTimer.current) clearTimeout(copiedTimer.current)
-      if (macroErrorTimer.current) clearTimeout(macroErrorTimer.current)
     }
   }, [])
 
@@ -210,57 +167,28 @@ export function RegexGenerator(): JSX.Element {
     copiedTimer.current = setTimeout(() => setCopied(false), 1500)
   }
 
-  const removePresetTag = (index: number): void => {
-    setPresetTags((prev) => prev.filter((_, i) => i !== index))
-  }
-
   const findMatchingPreset = (): RegexPreset | undefined =>
     presets.find((p) => (p.generator ?? 'maps') === generator && activeHandleRef.current?.matchesPreset(p) === true)
 
-  /** Validate the in-progress input text and build a custom tag from it. Returns null
-   *  for empty input, or for a "macro" tag already claimed by another preset (in which
-   *  case it also surfaces the transient error). Shared by the Enter/Space add path and
-   *  the Save button's commit-before-save path. */
-  const buildPendingTag = (): (RegexPresetTag & { id: number }) | null => {
-    const text = customTagInput.trim()
-    if (!text) return null
-    if (/macro/i.test(text)) {
-      const ownPreset = findMatchingPreset()
-      const inUseByOther = presets.some(
-        (p) => p.id !== ownPreset?.id && p.tags?.some((t) => t.text === text && (!t.source || t.source === 'custom')),
-      )
-      if (inUseByOther) {
-        setMacroTagError('Macro tag is in use')
-        if (macroErrorTimer.current) clearTimeout(macroErrorTimer.current)
-        macroErrorTimer.current = setTimeout(() => setMacroTagError(null), 3000)
-        return null
-      }
-    }
-    return { text, color: CUSTOM_TAG_COLOR, id: Date.now() }
-  }
+  // Bridges the sync gap between two upserts fired in the same tick (e.g. name
+  // blur + color pick) so they reuse one id instead of forking two presets;
+  // editingPresetId state isn't visible yet to the second synchronous caller.
+  const pendingIdRef = useRef<string | null>(null)
 
-  const addCustomTag = (): void => {
-    const tag = buildPendingTag()
-    if (!tag) return
-    setPresetTags((prev) => [...prev, tag])
-    setCustomTagInput('')
-  }
-
-  const savePreset = async (): Promise<void> => {
-    // Commit any in-progress tag text first so users don't have to hit space/enter before
-    // saving. If the typed text is an in-use macro, buildPendingTag surfaces the error --
-    // abort rather than saving without it.
-    const pending = buildPendingTag()
-    if (customTagInput.trim() && !pending) return
-    const tags = pending ? [...presetTags, pending] : presetTags
-    if (tags.length === 0) return
+  const upsertPreset = async (over?: Partial<RegexPreset>): Promise<string> => {
     const payload = activeHandleRef.current?.getPresetPayload() ?? {}
-    const id = editingPresetId ?? findMatchingPreset()?.id ?? crypto.randomUUID()
+    const id = editingPresetId ?? pendingIdRef.current ?? findMatchingPreset()?.id ?? crypto.randomUUID()
+    pendingIdRef.current = id
+    const existing = presets.find((p) => p.id === id)
     const preset: RegexPreset = {
       id,
-      name: presetName.trim() || undefined,
+      name: presetName.trim() || deriveName() || nextCustomName(),
+      color: presetColor,
       generator,
-      tags,
+      // Auto-tags are no longer shown, but generators (Maps/Waystones) still
+      // match-by-tag for save-as-update dedup, so persist them. Fall back to the
+      // existing preset's tags for generators that emit none (e.g. Custom).
+      tags: autoTags ?? existing?.tags,
       avoid: [],
       want: [],
       wantMode: 'any',
@@ -268,19 +196,43 @@ export function RegexGenerator(): JSX.Element {
       nightmare: false,
       regex,
       ...payload,
+      ...over,
     }
     const updated = await window.api.saveRegexPreset(preset)
     setPresets(updated)
-    // Reflect the just-committed pending tag as a chip and clear the input.
-    setPresetTags(tags)
-    // Stay in edit mode for this preset so further tweaks keep updating instead of forking.
     setEditingPresetId(id)
-    setCustomTagInput('')
+    pendingIdRef.current = null
+    return id
+  }
+
+  // Hotkey bind logic
+  const macros = settings.appMacros ?? []
+  const macroIndex = editingPresetId
+    ? macros.findIndex((m) => m.action === 'useSavedRegex' && m.presetId === editingPresetId)
+    : -1
+  const boundHotkey = macroIndex >= 0 ? macros[macroIndex].hotkey : ''
+
+  const bindHotkey = async (hotkey: string): Promise<void> => {
+    const slotIndex = macroIndex >= 0 ? macroIndex : macros.length
+    if (!tryHotkey(hotkey, { kind: 'appmacro', index: slotIndex })) return
+    const id = editingPresetId ?? (await upsertPreset())
+    const next = [...macros]
+    if (macroIndex >= 0) next[macroIndex] = { ...next[macroIndex], hotkey, presetId: id }
+    else next.push({ action: 'useSavedRegex', hotkey, presetId: id })
+    update('appMacros', next)
+  }
+
+  const unbindHotkey = (): void => {
+    if (macroIndex < 0) return
+    update(
+      'appMacros',
+      macros.filter((_, i) => i !== macroIndex),
+    )
   }
 
   const loadPreset = (preset: RegexPreset): void => {
-    setPresetTags((preset.tags || []).map((t, i) => ({ ...t, id: Date.now() + i })))
     setPresetName(preset.name ?? '')
+    setPresetColor(preset.color)
     setEditingPresetId(preset.id)
     const targetGenerator = (preset.generator ?? defaultGenerator) as GeneratorKey
     if (targetGenerator !== generator) _setGenerator(targetGenerator)
@@ -294,6 +246,15 @@ export function RegexGenerator(): JSX.Element {
     const updated = await window.api.deleteRegexPreset(id)
     setPresets(updated)
     if (id === editingPresetId) setEditingPresetId(null)
+    // Drop any hotkey bound to this preset so it doesn't linger as an orphaned
+    // global shortcut that collides on rebind and fires nothing.
+    const macros = settings.appMacros ?? []
+    if (macros.some((m) => m.action === 'useSavedRegex' && m.presetId === id)) {
+      update(
+        'appMacros',
+        macros.filter((m) => !(m.action === 'useSavedRegex' && m.presetId === id)),
+      )
+    }
   }
 
   const clearAll = (): void => {
@@ -309,10 +270,10 @@ export function RegexGenerator(): JSX.Element {
       customRegex: '',
       regex: '',
     })
-    setPresetTags([])
-    setCustomTagInput('')
     setPresetName('')
+    setPresetColor(undefined)
     setEditingPresetId(null)
+    pendingIdRef.current = null
   }
 
   // ---- Shared chrome rendered as render-props slots the active generator composes. --
@@ -320,7 +281,7 @@ export function RegexGenerator(): JSX.Element {
     <FilterChip
       label={
         <>
-          <Save size={12} theme="outline" fill="currentColor" /> Save
+          <FSevenKey size={12} theme="outline" fill="currentColor" /> Save &amp; Bind Macro
         </>
       }
       active={saveOpen}
@@ -338,95 +299,76 @@ export function RegexGenerator(): JSX.Element {
       onClick={() => setLoadOpen((v) => !v)}
     />
   )
+  const sharedNewChip = (
+    <button
+      onClick={clearAll}
+      className="flex items-center gap-1 px-[10px] py-1 rounded-full cursor-pointer text-[11px] font-semibold select-none text-accent"
+      style={{ background: 'rgba(255,255,255,0.08)', border: '2px solid transparent' }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = 'rgba(255,255,255,0.15)'
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+      }}
+    >
+      <Plus size={12} theme="outline" fill="currentColor" /> Start New Regex
+    </button>
+  )
+
   const sharedSavePanel = (
     <div
       className="overflow-hidden transition-all duration-150"
       style={{ maxHeight: saveOpen ? 400 : 0, marginTop: saveOpen ? 8 : 0, opacity: saveOpen ? 1 : 0 }}
     >
       <div className="flex flex-col gap-2">
-        <input
-          type="text"
-          placeholder="Name (e.g. Vendor rares, High tier waystones)"
-          value={presetName}
-          onChange={(e) => setPresetName(e.target.value)}
-          className="w-full text-[11px] bg-black/30 rounded px-3 py-[6px] text-text outline-none"
-          style={{ border: '1px solid rgba(0,0,0,0.3)' }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.5)'
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = 'rgba(0,0,0,0.3)'
-          }}
-        />
-        <div className="setting-box" style={{ flexWrap: 'wrap', gap: 4, padding: '6px 8px' }}>
-          <ReactSortable
-            list={presetTags}
-            setList={setPresetTags}
-            animation={150}
-            className="flex flex-wrap gap-1 flex-1 items-center min-w-0"
-            ghostClass="opacity-30"
-            filter=".no-drag"
-            preventOnFilter={false}
-            onStart={() => document.body.classList.add('dragging')}
-            onEnd={() => document.body.classList.remove('dragging')}
-          >
-            {presetTags.map((tag, i) => (
-              <span
-                key={tag.id}
-                className="flex items-center gap-[5px] px-[6px] py-[2px] rounded text-[10px] font-semibold shrink-0 cursor-grab"
-                style={{ ...tagChipStyle(tag), paddingTop: 1, paddingBottom: 3 }}
-              >
-                <TagSourceIcon source={tag.source} size={12} />
-                {tag.text}
-                <CloseSmall
-                  size={13}
-                  theme="outline"
-                  fill="currentColor"
-                  className="cursor-pointer opacity-60 hover:opacity-100 -mr-[2px] ml-[1px]"
-                  onClick={() => removePresetTag(i)}
-                />
-              </span>
-            ))}
-            <input
-              key="input"
-              type="text"
-              placeholder={presetTags.length === 0 ? 'Add tags to remember what this regex does' : 'Add more tags'}
-              value={customTagInput}
-              onChange={(e) => setCustomTagInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || (e.key === ' ' && customTagInput.trim())) {
-                  e.preventDefault()
-                  addCustomTag()
-                }
-                if (e.key === 'Backspace' && !customTagInput && presetTags.length > 0) {
-                  removePresetTag(presetTags.length - 1)
-                }
-              }}
-              className="no-drag flex-1 min-w-[60px] text-[11px] bg-transparent border-none outline-none text-text"
-              style={{ padding: '2px 0', marginLeft: presetTags.length > 0 ? 4 : 0 }}
-            />
-          </ReactSortable>
-          <button
-            onClick={savePreset}
-            disabled={presetTags.length === 0 && !customTagInput.trim()}
-            className="primary disabled:opacity-30 disabled:cursor-default shrink-0"
-          >
-            {editingPresetId ? 'Update' : 'Save'}
-          </button>
+        {/* Name + color row */}
+        <div className="flex gap-2 items-center">
+          <input
+            type="text"
+            placeholder="Name (e.g. Vendor rares, High tier waystones)"
+            value={presetName}
+            onChange={(e) => setPresetName(e.target.value)}
+            className="flex-1 min-w-0 text-[11px] bg-black/30 rounded px-3 py-[6px] text-text outline-none"
+            style={{ border: '1px solid rgba(0,0,0,0.3)' }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(0,0,0,0.5)'
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = 'rgba(0,0,0,0.3)'
+              if (regex || presetName.trim()) void upsertPreset()
+            }}
+          />
+          <PresetColorPicker
+            value={presetColor}
+            onChange={(c) => {
+              setPresetColor(c)
+              if (editingPresetId || regex) void upsertPreset({ color: c })
+            }}
+          />
         </div>
+
+        {/* Hotkey bind row - reuses the settings HotkeyField (built-in clear). */}
+        <HotkeyField
+          value={boundHotkey}
+          onChange={(h) => void (h ? bindHotkey(h) : unbindHotkey())}
+          placeholder="Set hotkey for this regex (optional)"
+        />
+
         <DismissibleTip id="regex-tool.macro-tag">
-          Tip: Saved regexes can be assigned hotkeys in Settings &gt; Macros
+          Tip: Set a hotkey to paste this regex in-game, and a color to find it faster!
         </DismissibleTip>
       </div>
     </div>
   )
   const sharedSavedPresets = loadOpen ? (
-    <SavedPresets
+    <SavedPresetsGrid
       presets={presets}
-      setPresets={setPresets}
       generator={generator}
       loadPreset={loadPreset}
       deletePreset={deletePreset}
+      boundHotkeyFor={(preset) =>
+        (settings.appMacros ?? []).find((m) => m.action === 'useSavedRegex' && m.presetId === preset.id)?.hotkey
+      }
     />
   ) : null
 
@@ -435,6 +377,7 @@ export function RegexGenerator(): JSX.Element {
     onAutoTagsChange: setAutoTags,
     sharedSaveChip,
     sharedLoadChip,
+    sharedNewChip,
     sharedSavePanel,
     sharedSavedPresets,
   }
@@ -457,8 +400,6 @@ export function RegexGenerator(): JSX.Element {
 
   return (
     <div className="flex flex-col flex-1 min-h-0 relative">
-      <ErrorBanner message={macroTagError} />
-
       {/* Regex output bar */}
       <div className="px-3 py-2 bg-bg-card border-b border-border">
         <div className="setting-box">
@@ -516,7 +457,7 @@ export function RegexGenerator(): JSX.Element {
                 {regex.length} / {maxLength}
                 <button
                   onClick={clearAll}
-                  disabled={!regex && presetTags.length === 0}
+                  disabled={!regex}
                   className="text-[9px] font-semibold text-accent border-none rounded-full cursor-pointer px-2 py-[2px] bg-white/[0.08] disabled:opacity-30 disabled:cursor-default"
                   onMouseEnter={(e) => {
                     if (!e.currentTarget.disabled) e.currentTarget.style.background = 'rgba(255,255,255,0.15)'

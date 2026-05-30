@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { PluginHost } from '../plugins/PluginHost'
 import { PluginTabHost } from '../plugins/PluginTabHost'
 import type { RegisteredTab } from '../plugins/PluginHost'
-import type { RuntimeSettings, OverlayData, PoeItem, PriceInfo } from '../../../shared/types'
+import type { AppSettings, RuntimeSettings, OverlayData, PoeItem, PriceInfo } from '../../../shared/types'
 import { isHideableTabKey } from '../../../shared/types'
 import type { ExternalLinkTarget } from '../../../shared/external-link'
 import { externalLinkUrl, ninjaLinkUrl } from '../../../shared/external-link'
@@ -42,6 +42,7 @@ import {
 } from '../shared/constants'
 import { initManifest, getManifest } from '../shared/manifest'
 import { prettyHotkey } from '../components/settings'
+import { createTryHotkey } from '../components/settings/hotkey-collisions'
 import { PluginErrorBanner } from '../plugins/PluginErrorBanner'
 import type { BrokenPlugin } from '../plugins/PluginErrorBanner'
 import type { View } from './view'
@@ -192,6 +193,12 @@ export default function App(): JSX.Element {
     const ms = tone === 'warn' ? 5000 : 3000
     settingsErrorTimer.current = setTimeout(() => setSettingsError(null), ms)
   }
+
+  const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]): void => {
+    window.api.setSetting(key, value)
+    setSettings((prev) => (prev ? { ...prev, [key]: value } : prev))
+  }
+  const regexTryHotkey = createTryHotkey(() => settings as RuntimeSettings, poeVersion ?? 1, showSettingsError)
 
   // Elevation warning
   const [needsElevation, setNeedsElevation] = useState(false)
@@ -1005,13 +1012,14 @@ export default function App(): JSX.Element {
                     <DivCardExplorer onSelectItem={() => setView('item')} />
                   </div>
                 )}
-                {features.regexTool && poeVersion !== null && (
+                {features.regexTool && poeVersion !== null && settings && (
                   // Gate on poeVersion being resolved -- RegexTool's children read
                   // localStorage in their useState initializers, and those keys are
                   // namespaced by game version. Mounting before poeVersion arrives
                   // hydrates with the PoE1 default, locking in the wrong namespace.
+                  // Also gate on settings so the hotkey bind row has live data.
                   <div className="flex-col flex-1 min-h-0" style={{ display: view === 'regex' ? 'flex' : 'none' }}>
-                    <RegexTool />
+                    <RegexTool settings={settings} update={updateSetting} tryHotkey={regexTryHotkey} />
                   </div>
                 )}
                 {view === 'audit' && overlayData && overlayData.matches.length > 0 && (

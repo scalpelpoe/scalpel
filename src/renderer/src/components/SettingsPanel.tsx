@@ -7,20 +7,11 @@ import type {
   ProfileSettingValue,
   RuntimeSettings,
 } from '../../../shared/types'
-import {
-  GeneralTab,
-  ViewTab,
-  MacrosTab,
-  FilterTab,
-  PriceCheckTab,
-  FaqTab,
-  CheatSheetsTab,
-  prettyHotkey,
-} from './settings'
+import { GeneralTab, ViewTab, MacrosTab, FilterTab, PriceCheckTab, FaqTab, CheatSheetsTab } from './settings'
 import { DeveloperSection } from './settings/DeveloperSection'
 import { PluginsSection } from './settings/PluginsSection'
 import { ErrorBanner } from './ErrorBanner'
-import { findHotkeyCollision, type HotkeySlot } from './settings/hotkey-collisions'
+import { createTryHotkey } from './settings/hotkey-collisions'
 import { usePoeVersion } from '../shared/poe-version-context'
 import { ProfileManagerTab } from '../features/profiles/ProfileManagerTab'
 
@@ -43,9 +34,6 @@ interface Props {
    *  re-request to the same tab still re-applies. */
   tabRequest?: { tab: string; n: number } | null
 }
-
-/** Hotkeys PoE itself uses - warn (don't block) when the user binds one of these. */
-const POE_PROTECTED_HOTKEYS = new Set(['CommandOrControl+F', 'CommandOrControl+Alt+C'])
 
 const TAB_KEYS = [
   'general',
@@ -137,17 +125,7 @@ export function SettingsPanel({
   }
 
   /** Check if a hotkey collides or is a PoE-reserved combo. Collisions block; warnings pass. */
-  const tryHotkey = (hotkey: string, slot: HotkeySlot): boolean => {
-    const collisionLabel = findHotkeyCollision(settings, hotkey, slot, currentGame)
-    if (collisionLabel) {
-      showError(`Hotkey already in use for ${collisionLabel}`)
-      return false
-    }
-    if (POE_PROTECTED_HOTKEYS.has(hotkey)) {
-      showError(`PoE uses ${prettyHotkey(hotkey)} so using it isn't recommended but I'm not your dad`, 'warn')
-    }
-    return true
-  }
+  const tryHotkey = createTryHotkey(() => settings, currentGame, showError)
 
   const isOverlay = mode === 'overlay'
 

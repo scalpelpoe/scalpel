@@ -44,7 +44,15 @@ type WantMode = 'any' | 'all'
 type MapsPanel = 'search' | 'tier' | 'trade' | null
 
 export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(function MapsGenerator(
-  { onRegexChange, onAutoTagsChange, sharedSaveChip, sharedLoadChip, sharedSavePanel, sharedSavedPresets },
+  {
+    onRegexChange,
+    onAutoTagsChange,
+    sharedSaveChip,
+    sharedLoadChip,
+    sharedNewChip,
+    sharedSavePanel,
+    sharedSavedPresets,
+  },
   ref,
 ) {
   // ---- Persisted state -----------------------------------------------------
@@ -330,6 +338,7 @@ export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functio
           SavedPresets (container-owned) get rendered inline below via the shared slots. */}
       <div className="flex flex-col px-3 py-2 border-b border-border bg-bg-card">
         <div className="flex items-center gap-[6px]">
+          {sharedNewChip}
           <FilterChip
             label={
               <>

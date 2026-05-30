@@ -38,7 +38,15 @@ function waystoneRangeHint(id: string | number): string | undefined {
 }
 
 export const WaystonesGenerator = forwardRef<GeneratorHandle, GeneratorProps>(function WaystonesGenerator(
-  { onRegexChange, onAutoTagsChange, sharedSaveChip, sharedLoadChip, sharedSavePanel, sharedSavedPresets },
+  {
+    onRegexChange,
+    onAutoTagsChange,
+    sharedSaveChip,
+    sharedLoadChip,
+    sharedNewChip,
+    sharedSavePanel,
+    sharedSavedPresets,
+  },
   ref,
 ) {
   const key = useRegexKey()
@@ -280,6 +288,7 @@ export const WaystonesGenerator = forwardRef<GeneratorHandle, GeneratorProps>(fu
       {/* Chip-header row (Search + shared Save/Load). No Trade chip in v1. */}
       <div className="flex flex-col px-3 py-2 border-b border-border bg-bg-card">
         <div className="flex items-center gap-[6px]">
+          {sharedNewChip}
           <FilterChip
             label={
               <>

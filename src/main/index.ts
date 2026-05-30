@@ -122,6 +122,7 @@ import {
   subscribeToPoeMoves,
 } from './windowing'
 import { initAppMacrosRefresh, withPluginHotkeys } from './app-macros'
+import { runRegexMacroMigration } from './regex-macro-migration'
 import type { AppSettings, CheatSheetsSettings, GameVariant, LegacyAppSettings, RegexPreset } from '../shared/types'
 import { initProfileStore } from './profiles/store'
 import {
@@ -303,6 +304,7 @@ if (!IS_E2E)
     )
   })
 
+runRegexMacroMigration(store)
 setEvaluationStore(store)
 initLearning(store, store.get('poeVersion'))
 initAppMacrosRefresh(() => store.get('appMacros') ?? [])

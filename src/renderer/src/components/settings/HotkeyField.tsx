@@ -10,7 +10,15 @@ import { keyEventToAccelerator, prettyHotkey } from './utils'
  *  The compact 200px-wide variant used inside macro rows lives in
  *  HotkeyRecorder.tsx - that one omits the Change button so it fits next to
  *  command/select inputs. */
-export function HotkeyField({ value, onChange }: { value: string; onChange: (v: string) => void }): JSX.Element {
+export function HotkeyField({
+  value,
+  onChange,
+  placeholder = 'No Hotkey Set',
+}: {
+  value: string
+  onChange: (v: string) => void
+  placeholder?: string
+}): JSX.Element {
   const [recording, setRecording] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -41,7 +49,7 @@ export function HotkeyField({ value, onChange }: { value: string; onChange: (v: 
     <div ref={ref}>
       <div className="setting-box group" onClick={() => setRecording(true)}>
         <span className={`value ${recording ? 'recording' : ''}`}>
-          {recording ? 'Press your desired key combo...' : prettyHotkey(value) || 'No Hotkey Set'}
+          {recording ? 'Press your desired key combo...' : prettyHotkey(value) || placeholder}
         </span>
         {!recording && (
           // Wrap so the two buttons stay clustered to the right - the

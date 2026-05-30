@@ -46,6 +46,11 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
   useEffect(() => {
     window.api.getRegexPresets().then(setPresets)
   }, [])
+  useEffect(() => {
+    return window.api.onRegexPresetsChanged(() => {
+      void window.api.getRegexPresets().then(setPresets)
+    })
+  }, [])
   const [pluginHotkeys, setPluginHotkeys] = useState<Array<{ action: string; pluginId: string; label: string }>>([])
   useEffect(() => {
     void window.api.pluginListRegisteredHotkeys().then(setPluginHotkeys)

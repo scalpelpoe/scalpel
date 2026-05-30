@@ -1,6 +1,8 @@
 import { app, ipcMain } from 'electron'
 import type Store from 'electron-store'
 import type { AppSettings, GameVariant, RegexPreset } from '../../shared/types'
+import { backfillPresetNames } from './regex-preset-names'
+import { broadcastToWindows } from '../window-broadcast'
 import { getColorFrequencies } from '../filter-state'
 import { refreshPrices } from '../trade/prices'
 import { refreshLeagues } from '../trade/leagues'
@@ -128,10 +130,16 @@ export function register(store: Store<AppSettings>): void {
     store.get('poeVersion') === 2 ? 'regexPresetsPoe2' : 'regexPresetsPoe1'
 
   ipcMain.handle('get-regex-presets', () => {
-    return store.get(regexPresetsKey()) ?? []
+    const stored = store.get(regexPresetsKey()) ?? []
+    const { presets, changed } = backfillPresetNames(stored)
+    if (changed) {
+      const variant: 1 | 2 = regexPresetsKey() === 'regexPresetsPoe2' ? 2 : 1
+      writeActiveRegexPresetsByGameVariant(store, variant, presets)
+    }
+    return presets
   })
 
-  ipcMain.handle('save-regex-preset', (_event, preset: RegexPreset) => {
+  ipcMain.handle('save-regex-preset', (event, preset: RegexPreset) => {
     const key = regexPresetsKey()
     const presets = store.get(key) ?? []
     const existingIdx = presets.findIndex((p) => p.id === preset.id)
@@ -142,25 +150,28 @@ export function register(store: Store<AppSettings>): void {
     }
     const variant: 1 | 2 = key === 'regexPresetsPoe2' ? 2 : 1
     writeActiveRegexPresetsByGameVariant(store, variant, presets)
+    broadcastToWindows('regex-presets-changed', event.sender)
     return presets
   })
 
-  ipcMain.handle('delete-regex-preset', (_event, id: string) => {
+  ipcMain.handle('delete-regex-preset', (event, id: string) => {
     const key = regexPresetsKey()
     const presets = store.get(key) ?? []
     const filtered = presets.filter((p) => p.id !== id)
     const variant: 1 | 2 = key === 'regexPresetsPoe2' ? 2 : 1
     writeActiveRegexPresetsByGameVariant(store, variant, filtered)
+    broadcastToWindows('regex-presets-changed', event.sender)
     return filtered
   })
 
-  ipcMain.handle('reorder-regex-presets', (_event, ids: string[]) => {
+  ipcMain.handle('reorder-regex-presets', (event, ids: string[]) => {
     const key = regexPresetsKey()
     const presets = store.get(key) ?? []
     const byId = new Map(presets.map((p) => [p.id, p]))
     const reordered = ids.map((id) => byId.get(id)).filter(Boolean) as RegexPreset[]
     const variant: 1 | 2 = key === 'regexPresetsPoe2' ? 2 : 1
     writeActiveRegexPresetsByGameVariant(store, variant, reordered)
+    broadcastToWindows('regex-presets-changed', event.sender)
     return reordered
   })
 }

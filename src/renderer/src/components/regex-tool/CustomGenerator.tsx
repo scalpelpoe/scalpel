@@ -6,7 +6,15 @@ import type { GeneratorHandle, GeneratorProps } from './generator-types'
 /** "Custom" regex generator: a free-form textarea. No auto-tags, no qualifier logic,
  *  just a text input whose value is the regex. Persisted to localStorage on change. */
 export const CustomGenerator = forwardRef<GeneratorHandle, GeneratorProps>(function CustomGenerator(
-  { onRegexChange, onAutoTagsChange, sharedSaveChip, sharedLoadChip, sharedSavePanel, sharedSavedPresets },
+  {
+    onRegexChange,
+    onAutoTagsChange,
+    sharedSaveChip,
+    sharedLoadChip,
+    sharedNewChip,
+    sharedSavePanel,
+    sharedSavedPresets,
+  },
   ref,
 ) {
   const key = useRegexKey()
@@ -41,6 +49,7 @@ export const CustomGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
       {/* Chip header -- Custom has no generator-specific chips, just Save/Load. */}
       <div className="flex flex-col px-3 py-2 border-b border-border bg-bg-card">
         <div className="flex items-center gap-[6px]">
+          {sharedNewChip}
           {sharedSaveChip}
           {sharedLoadChip}
         </div>

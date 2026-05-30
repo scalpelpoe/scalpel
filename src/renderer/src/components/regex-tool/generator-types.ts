@@ -32,6 +32,8 @@ export interface GeneratorProps {
   sharedSaveChip: React.ReactNode
   /** Load chip JSX the container wants the generator to inline in its chip row. */
   sharedLoadChip: React.ReactNode
+  /** "Start new regex" chip JSX (clears the current generator + save panel). */
+  sharedNewChip: React.ReactNode
   /** Save tag-editor panel (collapsible), rendered wherever the generator places it. */
   sharedSavePanel: React.ReactNode
   /** SavedPresets strip (collapsible), rendered wherever the generator places it. */

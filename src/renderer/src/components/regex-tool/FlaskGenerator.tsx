@@ -87,7 +87,15 @@ function toggleInSet<T>(setter: React.Dispatch<React.SetStateAction<Set<T>>>, va
 }
 
 export const FlaskGenerator = forwardRef<GeneratorHandle, GeneratorProps>(function FlaskGenerator(
-  { onRegexChange, onAutoTagsChange, sharedSaveChip, sharedLoadChip, sharedSavePanel, sharedSavedPresets },
+  {
+    onRegexChange,
+    onAutoTagsChange,
+    sharedSaveChip,
+    sharedLoadChip,
+    sharedNewChip,
+    sharedSavePanel,
+    sharedSavedPresets,
+  },
   ref,
 ) {
   // ---- Persisted state -------------------------------------------------------
@@ -267,6 +275,7 @@ export const FlaskGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functi
       {/* Chip header row */}
       <div className="flex flex-col px-3 py-2 border-b border-border bg-bg-card">
         <div className="flex items-center gap-[6px]">
+          {sharedNewChip}
           <FilterChip
             label={
               <>

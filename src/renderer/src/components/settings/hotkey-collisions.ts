@@ -5,6 +5,7 @@ import {
   scopeAppliesTo,
   type MacroScope,
 } from '../../../../shared/macro-scope'
+import { prettyHotkey } from './utils'
 
 export type HotkeySlot =
   | { kind: 'filter' }
@@ -116,4 +117,29 @@ export function narrowScopeForCrossGameConflict(
     if (scope === otherGameOnly) return currentGameOnly
   }
   return undefined
+}
+
+/** Hotkeys PoE itself uses - warn (don't block) when bound. */
+export const POE_PROTECTED_HOTKEYS = new Set(['CommandOrControl+F', 'CommandOrControl+Alt+C'])
+
+/** Build a tryHotkey guard shared by Settings tabs and the regex tool. Returns
+ *  false (and shows an error) on a hard collision; true otherwise, warning on a
+ *  PoE-protected combo. getSettings is a getter so the guard always reads fresh
+ *  settings instead of a stale closure. */
+export function createTryHotkey(
+  getSettings: () => RuntimeSettings,
+  currentGame: 1 | 2,
+  showError: (msg: string, tone?: 'error' | 'warn') => void,
+) {
+  return (hotkey: string, slot: HotkeySlot): boolean => {
+    const collisionLabel = findHotkeyCollision(getSettings(), hotkey, slot, currentGame)
+    if (collisionLabel) {
+      showError(`Hotkey already in use for ${collisionLabel}`)
+      return false
+    }
+    if (POE_PROTECTED_HOTKEYS.has(hotkey)) {
+      showError(`PoE uses ${prettyHotkey(hotkey)} so using it isn't recommended but I'm not your dad`, 'warn')
+    }
+    return true
+  }
 }

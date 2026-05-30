@@ -758,6 +758,11 @@ export const api = {
     ipcRenderer.on('plugin-hotkeys-changed', handler)
     return () => ipcRenderer.removeListener('plugin-hotkeys-changed', handler)
   },
+  onRegexPresetsChanged: (cb: () => void): (() => void) => {
+    const handler = (): void => cb()
+    ipcRenderer.on('regex-presets-changed', handler)
+    return () => ipcRenderer.removeListener('regex-presets-changed', handler)
+  },
   onPluginOverlayInit: (cb: (pluginId: string) => void): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, id: string): void => cb(id)
     ipcRenderer.on('plugin-overlay:init', handler)
