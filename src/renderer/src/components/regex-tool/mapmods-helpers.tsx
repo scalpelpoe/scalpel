@@ -29,6 +29,29 @@ export function RegexCheckbox({ checked, color }: { checked: boolean; color: str
   )
 }
 
+/** Thin vertical divider rendered between two adjacent inactive tabs in a tab
+ *  strip. An active tab already reads as its own block, so a separator next to one
+ *  is redundant; this only clarifies the boundary where two low-contrast inactive
+ *  tabs would otherwise run together. Used as a flex child between tab buttons.
+ *
+ *  `inset` (default true) pads the line off the top/bottom -- right for strips
+ *  whose inactive tabs are transparent (the inset blends into them). Pass
+ *  `inset={false}` for strips whose tabs have a filled background, where an inset
+ *  would expose the darker container bg above/below the line and read as a notch. */
+export function TabSeparator({ inset = true }: { inset?: boolean }): JSX.Element {
+  return (
+    <div
+      aria-hidden
+      style={{
+        flex: '0 0 1px',
+        alignSelf: 'stretch',
+        margin: inset ? '6px 0' : 0,
+        background: 'rgba(255,255,255,0.09)',
+      }}
+    />
+  )
+}
+
 /** Canonical display formatter for mod-row text:
  *  - Collapses roll-range numbers to `#` so two rolls of the same mod compare equal.
  *  - Splits multi-line vendor mods (joined with `|` in the source data) onto a single

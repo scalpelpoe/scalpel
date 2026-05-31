@@ -12,7 +12,7 @@ interface SavedPresetsGridProps {
   presets: RegexPreset[]
   /** Active generator tab. Presets with no generator are treated as 'maps'
    *  (legacy default before the per-game split). */
-  generator: 'maps' | 'custom' | 'flasks' | 'waystones'
+  generator: 'maps' | 'custom' | 'flasks' | 'waystones' | 'vendor'
   loadPreset: (preset: RegexPreset) => void
   deletePreset: (id: string) => void
   /** Returns a hotkey accelerator string if the preset has a bound macro, else undefined. */

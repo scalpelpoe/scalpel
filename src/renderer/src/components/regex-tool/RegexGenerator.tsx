@@ -1,8 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 import { Save, Plus, FSevenKey } from '@icon-park/react'
 import { DismissibleTip } from '../../shared/DismissibleTip'
 import { poeRegexMaxLength } from './regex-engine'
-import { loadStorage, useRegexKey, ensureLegacyRegexKeysMigrated, usePersistedBool } from './mapmods-helpers'
+import {
+  loadStorage,
+  useRegexKey,
+  ensureLegacyRegexKeysMigrated,
+  usePersistedBool,
+  TabSeparator,
+} from './mapmods-helpers'
 import poereIconTight from '../../assets/other/poere-logo-tight.svg'
 import { POE_RE_URL, POE2_RE_URL } from '../../../../shared/endpoints'
 import { FilterChip } from '../price-check/FilterChip'
@@ -12,6 +18,7 @@ import { MapsGenerator } from './MapsGenerator'
 import { CustomGenerator } from './CustomGenerator'
 import { FlaskGenerator } from './FlaskGenerator'
 import { WaystonesGenerator } from './WaystonesGenerator'
+import { VendorGenerator } from './VendorGenerator'
 import { usePoeVersion } from '../../shared/poe-version-context'
 import { HotkeyField } from '../settings/HotkeyField'
 import { PresetColorPicker } from './PresetColorPicker'
@@ -44,10 +51,11 @@ const GENERATORS_POE1 = [
 
 const GENERATORS_POE2 = [
   { key: 'waystones', label: 'Waystones' },
+  { key: 'vendor', label: 'Vendor' },
   { key: 'custom', label: 'Custom' },
 ] as const satisfies readonly GeneratorConfig[]
 
-type GeneratorKey = 'maps' | 'flasks' | 'waystones' | 'custom'
+type GeneratorKey = 'maps' | 'flasks' | 'waystones' | 'vendor' | 'custom'
 
 export function RegexGenerator({ settings, update, tryHotkey }: Props): JSX.Element {
   // Move legacy unsuffixed regex-tool keys into the poe1: namespace before any
@@ -108,6 +116,7 @@ export function RegexGenerator({ settings, update, tryHotkey }: Props): JSX.Elem
   const flasksRef = useRef<GeneratorHandle>(null)
   const customRef = useRef<GeneratorHandle>(null)
   const waystonesRef = useRef<GeneratorHandle>(null)
+  const vendorRef = useRef<GeneratorHandle>(null)
   const refForGenerator = (g: GeneratorKey): React.RefObject<GeneratorHandle> => {
     switch (g) {
       case 'maps':
@@ -116,6 +125,8 @@ export function RegexGenerator({ settings, update, tryHotkey }: Props): JSX.Elem
         return flasksRef
       case 'waystones':
         return waystonesRef
+      case 'vendor':
+        return vendorRef
       case 'custom':
         return customRef
     }
@@ -398,6 +409,8 @@ export function RegexGenerator({ settings, update, tryHotkey }: Props): JSX.Elem
         return <FlaskGenerator ref={flasksRef} {...sharedProps} />
       case 'waystones':
         return <WaystonesGenerator ref={waystonesRef} {...sharedProps} />
+      case 'vendor':
+        return <VendorGenerator ref={vendorRef} {...sharedProps} />
       case 'custom':
         return <CustomGenerator ref={customRef} {...sharedProps} />
     }
@@ -496,25 +509,32 @@ export function RegexGenerator({ settings, update, tryHotkey }: Props): JSX.Elem
 
       {/* Generator tabs */}
       <div className="flex border-b border-border bg-bg-card">
-        {GENERATORS.map((g) => (
-          <button
-            key={g.key}
-            onClick={() => setGenerator(g.key)}
-            className="flex-1 text-[11px] py-[6px] border-none cursor-pointer font-semibold rounded-none"
-            style={{
-              background: generator === g.key ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
-              color: generator === g.key ? '#171821' : 'var(--text-dim)',
-            }}
-            onMouseEnter={(e) => {
-              if (generator !== g.key) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
-            }}
-            onMouseLeave={(e) => {
-              if (generator !== g.key) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-            }}
-          >
-            {g.label}
-          </button>
-        ))}
+        {GENERATORS.map((g, i) => {
+          // Separator only between two adjacent inactive tabs.
+          const prev = GENERATORS[i - 1]
+          const showSep = i > 0 && generator !== prev.key && generator !== g.key
+          return (
+            <Fragment key={g.key}>
+              {showSep && <TabSeparator inset={false} />}
+              <button
+                onClick={() => setGenerator(g.key)}
+                className="flex-1 text-[11px] py-[6px] border-none cursor-pointer font-semibold rounded-none"
+                style={{
+                  background: generator === g.key ? 'var(--accent)' : 'rgba(255,255,255,0.05)',
+                  color: generator === g.key ? '#171821' : 'var(--text-dim)',
+                }}
+                onMouseEnter={(e) => {
+                  if (generator !== g.key) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+                }}
+                onMouseLeave={(e) => {
+                  if (generator !== g.key) e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                }}
+              >
+                {g.label}
+              </button>
+            </Fragment>
+          )
+        })}
       </div>
 
       {renderActiveGenerator()}
