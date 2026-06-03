@@ -28,6 +28,7 @@ import {
 import { AppSettingsWrapper } from './app-window/AppSettingsWrapper'
 import { AppUpdateBanner } from './app-window/AppUpdateBanner'
 import { GameSwitchModal } from './components/GameSwitchModal'
+import { PoeVersionProvider } from './shared/poe-version-context'
 
 type ImportedOnline = { poe1: string | null; poe2: string | null }
 
@@ -327,18 +328,20 @@ export function AppWindow(): JSX.Element {
             </SlideIn>
           )}
           {step === 'settings' && (
-            <AppSettingsWrapper
-              settings={settings}
-              onSettingsChange={setSettings}
-              tabRequest={settingsTabRequest}
-              onShowOnboarding={() => {
-                setRevisitingOnboarding(true)
-                goTo('welcome')
-              }}
-              onEditProfile={(profile) => {
-                void editProfile(profile)
-              }}
-            />
+            <PoeVersionProvider version={settings?.poeVersion ?? null}>
+              <AppSettingsWrapper
+                settings={settings}
+                onSettingsChange={setSettings}
+                tabRequest={settingsTabRequest}
+                onShowOnboarding={() => {
+                  setRevisitingOnboarding(true)
+                  goTo('welcome')
+                }}
+                onEditProfile={(profile) => {
+                  void editProfile(profile)
+                }}
+              />
+            </PoeVersionProvider>
           )}
         </div>
       </div>
