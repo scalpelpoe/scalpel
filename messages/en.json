@@ -69,6 +69,8 @@
   "settings_filter_folder": "Filter folder",
   "settings_filter_folder_typically": "Typically:",
   "settings_filter_hotkey": "Filter hotkey",
+  "settings_filter_setup_title": "Set up your filter",
+  "settings_filter_setup_body": "Pick a filter folder and select a .filter file before using the filter overlay.",
   "settings_reload_on_save": "Automatically reload filter when switching an item's tier",
   "settings_dev_mode": "Developer mode",
   "settings_dev_mode_desc": "Enables tools for plugin authors. Don't enable unless you're building a plugin.",

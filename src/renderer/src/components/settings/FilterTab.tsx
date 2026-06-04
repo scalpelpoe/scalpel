@@ -32,6 +32,33 @@ export function FilterTab({
   const features = getGameFeatures(settings.poeVersion)
   const filterPath = settings.activeProfile?.filterPath
 
+  // Overlay filter tab with no configured filter: show only a mandatory setup
+  // panel. No filter hotkey, reload-on-save, or history panel are available
+  // until a filter file is selected. Price check and other non-filter overlay
+  // views should continue to work without a filter.
+  if (isOverlay && !filterPath) {
+    return (
+      <>
+        <div className="settings-section-title mt-3">{m.settings_filter_setup_title()}</div>
+        <p className="text-[12px] text-text-dim mb-2">{m.settings_filter_setup_body()}</p>
+
+        <section>
+          <label>{m.settings_filter_folder()}</label>
+          <div className="mt-[6px]">
+            <FilterPicker
+              settings={settings}
+              onSettingsChange={onSettingsChange}
+              autoSwitchInGame={true}
+              onOnlineFilterUpdated={onOnlineFilterUpdated}
+              onOnlineImport={onOnlineImport}
+              mode={undefined}
+            />
+          </div>
+        </section>
+      </>
+    )
+  }
+
   return (
     <>
       <div className="settings-section-title mt-3">{m.settings_filter_heading()}</div>

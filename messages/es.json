@@ -69,6 +69,8 @@
   "settings_filter_folder": "Carpeta de filtros",
   "settings_filter_folder_typically": "Normalmente:",
   "settings_filter_hotkey": "Tecla de filtro",
+  "settings_filter_setup_title": "Configurar tu filtro",
+  "settings_filter_setup_body": "Elige una carpeta de filtros y selecciona un archivo .filter antes de usar la superposición de filtros.",
   "settings_reload_on_save": "Recargar el filtro automáticamente al cambiar el nivel de un objeto",
   "settings_dev_mode": "Modo desarrollador",
   "settings_dev_mode_desc": "Habilita herramientas para autores de complementos. No lo actives a menos que estés creando un complemento.",

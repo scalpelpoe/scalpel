@@ -69,6 +69,8 @@
   "settings_filter_folder": "Filterordner",
   "settings_filter_folder_typically": "Typischerweise:",
   "settings_filter_hotkey": "Filter-Tastenkürzel",
+  "settings_filter_setup_title": "Filter einrichten",
+  "settings_filter_setup_body": "Wähle einen Filterordner und eine .filter-Datei, bevor du das Filter-Overlay verwendest.",
   "settings_reload_on_save": "Filter automatisch neu laden, wenn die Stufe eines Gegenstands gewechselt wird",
   "settings_dev_mode": "Entwicklermodus",
   "settings_dev_mode_desc": "Aktiviert Werkzeuge für Plugin-Autoren. Nur aktivieren, wenn du ein Plugin entwickelst.",

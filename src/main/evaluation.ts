@@ -22,7 +22,7 @@ import {
   findStrandBreakpoints,
 } from './filter/matcher'
 import { getCurrentFilter } from './filter-state'
-import { detectFocusedPoeVersion } from './game-detector'
+import { detectFocusedPoeVersion, detectOpenPoeVersions } from './game-detector'
 import { getPoeVersion } from './game-state'
 import { requestGameSwitch } from './game-switch'
 import { sendCtrlCToPoE } from './hotkeys'
@@ -382,11 +382,14 @@ async function captureItemFromClipboard(isElevated: () => boolean): Promise<PoeI
  *  PoE version that actually has foreground focus. If the other PoE is focused,
  *  show the restart-prompt modal -- electron-overlay-window can only attach once
  *  per process (its native tracker keeps static globals), so switching games
- *  requires an app relaunch. Fast path hits no OS call when targetHasFocus is true.
+ *  requires an app relaunch.
+ *
+ *  Detect the focused PoE version *before* the targetHasFocus fast path because
+ *  attachByTitle('Path of Exile') may prefix-match 'Path of Exile 2' on Windows,
+ *  making targetHasFocus true even when the overlay is attached to the wrong game.
  *  Always returns false when a switch is needed: the current press is swallowed,
  *  and the user reopens the overlay from the correct game after restart. */
 async function ensureCorrectGameForHotkey(store: Store<AppSettings>): Promise<boolean> {
-  if (OverlayController.targetHasFocus) return true
   // User typing in an overlay text field -- swallow so single-key hotkeys
   // don't stomp the input. Otherwise if the overlay window itself is focused
   // (user clicked into it), refocus PoE so the subsequent Ctrl+C reaches the
@@ -396,10 +399,30 @@ async function ensureCorrectGameForHotkey(store: Store<AppSettings>): Promise<bo
     focusGameWindow()
     return true
   }
+
   const v = await detectFocusedPoeVersion()
-  if (!v) return false
-  if (v === getPoeVersion()) return true
-  requestGameSwitch(store, v).catch((err) => console.error('[game-switch]', err))
+  if (v) {
+    if (v === getPoeVersion()) return true
+    requestGameSwitch(store, v).catch((err) => console.error('[game-switch]', err))
+    return false
+  }
+
+  // No PoE window has foreground focus. If the overlay target has focus, the
+  // game we're attached to is in the foreground, so we can proceed.
+  if (OverlayController.targetHasFocus) return true
+
+  // No PoE window has focus at all. Check if exactly one PoE variant has windows
+  // open anywhere on the desktop. If yes and it differs from the current profile,
+  // that's a strong signal the user is on the wrong game version.
+  const runningVersions = await detectOpenPoeVersions()
+  if (runningVersions.size === 1) {
+    const [runningVersion] = [...runningVersions]
+    if (runningVersion !== getPoeVersion()) {
+      requestGameSwitch(store, runningVersion).catch((err) => console.error('[game-switch]', err))
+      return false
+    }
+  }
+
   return false
 }
 
