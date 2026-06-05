@@ -469,7 +469,7 @@ export interface AppSettings {
    *  in a real drop zone (not town, not hideout). */
   useCurrentZoneAreaLevel: boolean
   reloadOnSave: boolean
-  updateChannel: 'stable' | 'beta'
+  updateChannel: 'stable' | 'beta' | 'experimental'
   tradeStatus: 'securable' | 'online' | 'available'
   /** Maps to PoE trade `trade_filters.collapse.option`. When true, the API groups
    *  multiple listings from the same seller into one row. */
