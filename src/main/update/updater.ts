@@ -15,6 +15,7 @@ import { app, type BrowserWindow, ipcMain } from 'electron'
 import { ELECTRON_RELEASES, GITHUB_RELEASES_API } from '../../shared/endpoints'
 import type { InstallManifest } from '../../shared/types'
 import { findBrickedMatch } from '../../shared/version-match'
+import { selectListRelease } from './select-release'
 import { recordMainBreadcrumb, registerDiagnosticProvider } from '../diagnostics'
 import { stopHotkeyListener } from '../hotkeys'
 
@@ -135,11 +136,11 @@ async function checkForUpdates(channel: string): Promise<void> {
     // Beta channel: fetch all releases (including pre-releases), pick the newest.
     // Stable channel: fetch only the latest non-pre-release.
     let release: { tag_name: string; assets: Array<{ name: string; browser_download_url: string }> }
-    if (channel === 'beta') {
+    if (channel === 'beta' || channel === 'experimental') {
       const releases = await fetchJson<
         Array<{ tag_name: string; prerelease: boolean; assets: Array<{ name: string; browser_download_url: string }> }>
       >(GITHUB_RELEASES_API.replace('/latest', ''))
-      const candidate = releases.find((r) => r.assets.some((a) => a.name === 'manifest.json'))
+      const candidate = selectListRelease(channel, releases)
       if (!candidate) {
         checking = false
         return
