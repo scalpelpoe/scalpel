@@ -35,6 +35,8 @@
   "settings_channel_stable": "Stable",
   "settings_channel_beta": "Beta",
   "settings_beta_warning": "Warning: expect beta releases to break stuff and be generally annoying. Please join discord to tell me what to fix and watch me squirm",
+  "settings_channel_experimental": "Experimental",
+  "settings_experimental_warning": "Warning: Experimental is only for the bravest and most patient of souls. Your shit WILL break.",
   "settings_join_discord": "Join Discord",
   "settings_preview_volume": "Filter sound preview volume",
   "settings_bug_reports": "Bug reports",

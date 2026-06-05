@@ -35,6 +35,8 @@
   "settings_channel_stable": "Stabil",
   "settings_channel_beta": "Beta",
   "settings_beta_warning": "Warnung: Beta-Versionen werden Dinge kaputt machen und allgemein nervig sein. Bitte tritt Discord bei, um mir zu sagen, was ich reparieren soll, und mir beim Leiden zuzusehen",
+  "settings_channel_experimental": "Experimental",
+  "settings_experimental_warning": "Warning: Experimental is only for the bravest and most patient of souls. Your shit WILL break.",
   "settings_join_discord": "Discord beitreten",
   "settings_preview_volume": "Lautstärke der Filterton-Vorschau",
   "settings_bug_reports": "Fehlerberichte",
