@@ -141,7 +141,7 @@ export function GeneralTab({ settings, update, updateProfile, onShowOnboarding }
       <section>
         <label>{m.settings_update_channel()}</label>
         <div className="flex gap-1.5 mt-[6px]">
-          {(['stable', 'beta'] as const).map((ch) => (
+          {(['stable', 'beta', 'experimental'] as const).map((ch) => (
             <button
               key={ch}
               onClick={() => update('updateChannel', ch)}
@@ -149,13 +149,21 @@ export function GeneralTab({ settings, update, updateProfile, onShowOnboarding }
                 settings.updateChannel === ch ? 'bg-accent text-bg-solid' : 'text-text-dim'
               }`}
             >
-              {ch === 'stable' ? m.settings_channel_stable() : m.settings_channel_beta()}
+              {{
+                stable: m.settings_channel_stable,
+                beta: m.settings_channel_beta,
+                experimental: m.settings_channel_experimental,
+              }[ch]()}
             </button>
           ))}
         </div>
-        {settings.updateChannel === 'beta' && (
+        {settings.updateChannel !== 'stable' && (
           <div className="mt-2 flex flex-col gap-1.5">
-            <p className="text-[10px] text-text-dim">{m.settings_beta_warning()}</p>
+            <p className="text-[10px] text-text-dim">
+              {settings.updateChannel === 'experimental'
+                ? m.settings_experimental_warning()
+                : m.settings_beta_warning()}
+            </p>
             <a
               href="https://discord.com/invite/nUNcrmEAP5"
               target="_blank"
