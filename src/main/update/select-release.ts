@@ -6,7 +6,7 @@ const hasManifest = (r: { assets: Array<{ name: string }> }): boolean =>
   r.assets.some((a) => a.name === 'manifest.json')
 
 export function selectListRelease<T extends { tag_name: string; assets: Array<{ name: string }> }>(
-  channel: string,
+  channel: 'beta' | 'experimental',
   releases: T[],
 ): T | undefined {
   if (channel === 'experimental') return releases.find(hasManifest)

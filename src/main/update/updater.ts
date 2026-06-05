@@ -133,7 +133,9 @@ async function checkForUpdates(channel: string): Promise<void> {
 
   try {
     // Fetch release from GitHub API.
-    // Beta channel: fetch all releases (including pre-releases), pick the newest.
+    // Beta/experimental: fetch all releases (including pre-releases) and let
+    // selectListRelease pick (experimental = newest installable of any kind;
+    // beta = same but excludes `-exp`-tagged builds).
     // Stable channel: fetch only the latest non-pre-release.
     let release: { tag_name: string; assets: Array<{ name: string; browser_download_url: string }> }
     if (channel === 'beta' || channel === 'experimental') {
