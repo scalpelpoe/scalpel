@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
-import { TradeListings } from '../price-check/TradeListings'
-import { RateLimitBar } from '../price-check/RateLimitBar'
-import type { Listing } from '../price-check/types'
+import { TradeListings } from '../../components/price-check/TradeListings'
+import { RateLimitBar } from '../../components/price-check/RateLimitBar'
+import type { Listing } from '../../components/price-check/types'
 import { getTradeUrls } from '../../../../shared/endpoints'
 
 /** Above this result count, the in-Scalpel Travel-to-Hideout action gets unreliable:

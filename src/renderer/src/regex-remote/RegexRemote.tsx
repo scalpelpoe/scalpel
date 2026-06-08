@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { RegexPreset, RuntimeSettings } from '../../../shared/types'
 import { Chrome } from '../secondary-overlay/Chrome'
-import { textColorForBg } from '../components/regex-tool/preset-colors'
+import { textColorForBg } from '../features/regex/preset-colors'
 
 /** Generator display order + labels per game, for grouping the chips. This
  *  duplicates the canonical lists in RegexGenerator.tsx (GENERATORS_POE1 /

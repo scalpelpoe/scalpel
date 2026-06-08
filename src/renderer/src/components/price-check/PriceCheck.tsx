@@ -14,7 +14,7 @@ import {
   TERNARY_CHIP_IDS,
   MINMAX_CHIP_IDS,
 } from './constants'
-import { FilterChip } from './FilterChip'
+import { FilterChip } from '../primitives/FilterChip'
 import { FaustusBanner } from './FaustusBanner'
 import { AngeBanner } from './AngeBanner'
 import { TradeTimeoutBanner } from './TradeTimeoutBanner'

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Listing } from '../price-check/types'
+import type { Listing } from '../../components/price-check/types'
 
 export interface RegexTradeResult {
   total: number

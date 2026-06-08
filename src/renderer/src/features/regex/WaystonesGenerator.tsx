@@ -11,7 +11,7 @@ import {
   usePersistedBool,
   usePersistedJSON,
 } from './mapmods-helpers'
-import { FilterChip } from '../price-check/FilterChip'
+import { FilterChip } from '../../components/primitives/FilterChip'
 import { ModList } from './ModList'
 import { ScrubInput } from './ScrubInput'
 import { InfoChip } from '../../shared/InfoChip'

@@ -11,7 +11,7 @@ import {
 } from './mapmods-helpers'
 import poereIconTight from '../../assets/other/poere-logo-tight.svg'
 import { POE_RE_URL, POE2_RE_URL } from '../../../../shared/endpoints'
-import { FilterChip } from '../price-check/FilterChip'
+import { FilterChip } from '../../components/primitives/FilterChip'
 import { SavedPresetsGrid } from './SavedPresetsGrid'
 import { InfoChip } from '../../shared/InfoChip'
 import { MapsGenerator } from './MapsGenerator'
@@ -22,11 +22,11 @@ import { VendorGenerator } from './VendorGenerator'
 import { TabletGenerator } from './TabletGenerator'
 import { RelicGenerator } from './RelicGenerator'
 import { usePoeVersion } from '../../shared/poe-version-context'
-import { HotkeyField } from '../settings/HotkeyField'
+import { HotkeyField } from '../../components/settings/HotkeyField'
 import { PresetColorPicker } from './PresetColorPicker'
 import type { GeneratorConfig, GeneratorHandle, GeneratorKey } from './generator-types'
 import type { AppSettings, RegexPreset, RegexPresetTag, RuntimeSettings } from '../../../../shared/types'
-import type { HotkeySlot } from '../settings/hotkey-collisions'
+import type { HotkeySlot } from '../../components/settings/hotkey-collisions'
 
 interface Props {
   settings: RuntimeSettings

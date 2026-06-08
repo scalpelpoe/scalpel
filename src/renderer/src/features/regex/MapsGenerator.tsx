@@ -22,7 +22,7 @@ import {
   CloseSmall,
 } from '@icon-park/react'
 import { TAB_COLORS, loadSet, loadStorage, useRegexKey } from './mapmods-helpers'
-import { FilterChip } from '../price-check/FilterChip'
+import { FilterChip } from '../../components/primitives/FilterChip'
 import { TradeResults } from './TradeResults'
 import { MAP_TIER_ICONS, ORIGINATOR_TIER_ICONS, TierPicker } from './TierPicker'
 import { ModList } from './ModList'

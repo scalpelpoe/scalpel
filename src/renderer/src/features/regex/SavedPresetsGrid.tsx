@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { CloseSmall } from '@icon-park/react'
 import type { RegexPreset } from '../../../../shared/types'
 import type { GeneratorKey } from './generator-types'
-import { prettyHotkey } from '../settings/utils'
+import { prettyHotkey } from '../../components/settings/utils'
 import { textColorForBg } from './preset-colors'
 
 const FADE = 16

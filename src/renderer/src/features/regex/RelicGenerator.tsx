@@ -8,7 +8,7 @@ import {
   usePersistedString,
   usePersistedJSON,
 } from './mapmods-helpers'
-import { FilterChip } from '../price-check/FilterChip'
+import { FilterChip } from '../../components/primitives/FilterChip'
 import { ModList } from './ModList'
 import { RELIC_MODS } from '../../../../shared/data/regex/relic-mods'
 import { buildRelicRegex, type RelicMatchType, type RelicSelections } from './relic-engine'

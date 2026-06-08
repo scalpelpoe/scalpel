@@ -1,22 +1,5 @@
-import {
-  app,
-  type BrowserWindow,
-  clipboard,
-  crashReporter,
-  ipcMain,
-  Tray,
-  Menu,
-  nativeImage,
-  powerMonitor,
-  screen,
-} from 'electron'
-import {
-  createAndOpenBugReport,
-  installEarlyDiagnostics,
-  recordMainBreadcrumb,
-  recordMainDiagnostic,
-  registerDiagnostics,
-} from './diagnostics'
+import { app, type BrowserWindow, clipboard, crashReporter, ipcMain, screen } from 'electron'
+import { installEarlyDiagnostics, recordMainBreadcrumb, recordMainDiagnostic } from './diagnostics'
 
 // Prevent unhandled JS exceptions from crashing the native overlay thread
 // electron-overlay-window's tsfn_to_js_proxy calls napi_fatal_error if napi_call_function
@@ -46,7 +29,6 @@ installEarlyDiagnostics()
 // uncaughtException handler, so this is the only trace it leaves on Windows.
 crashReporter.start({ uploadToServer: false })
 
-import { join } from 'node:path'
 import { execSync } from 'node:child_process'
 import { uIOhook, UiohookKey } from 'uiohook-napi'
 import Store from 'electron-store'
@@ -57,7 +39,6 @@ import {
   showOverlay,
   getOverlayWindow,
   setCloseOnClickOutside,
-  setGameFocusHandlers,
   setWindowInputFocused,
 } from './overlay'
 import { createAppWindow, showAppWindow, getAppWindow } from './app-window'
@@ -76,12 +57,8 @@ import {
   setStashScrollEnabled,
   setStashScrollModifier,
 } from './hotkeys'
-import { refreshPrices, invalidatePriceCache } from './trade/prices'
-import { onRateLimitUpdate } from './trade/trade'
 import { refreshLeagues } from './trade/leagues'
-import { requestGameSwitch } from './game-switch'
-import { startOnlineSync, stopOnlineSync } from './online-sync'
-import { initUpdater } from './update/updater'
+import { stopOnlineSync } from './online-sync'
 import { applyPendingUpdate } from './update/update-swap'
 import { getCurrentFilter, loadFilter, onFilterLoaded } from './filter-state'
 import {
@@ -93,26 +70,8 @@ import {
 } from './evaluation'
 import { initLearning } from './learning'
 import { initMainLocale } from './locale'
-import { m } from '../shared/paraglide/messages.js'
 import { snapshotClipboard } from './clipboard-preserve'
-import * as tradeHandlers from './handlers/trade'
-import * as settingsHandlers from './handlers/settings'
-import * as learningHandlers from './handlers/learning'
-import * as filesHandlers from './handlers/files'
-import * as editingHandlers from './handlers/editing'
-import * as versionsHandlers from './handlers/versions'
-import * as onlineSyncHandlers from './handlers/online-sync'
-import * as pricesHandlers from './handlers/prices'
-import { register as registerCheatSheets } from './handlers/cheat-sheets'
-import { register as registerWhiteboard } from './handlers/whiteboard'
-import { register as registerClipboard } from './handlers/clipboard'
-import { register as registerManifest } from './handlers/manifest'
-import { register as registerPlugins } from './handlers/plugins'
-import { registerClientLogHandlers } from './handlers/client-log'
-import { registerGameConfigHandlers } from './handlers/game-config'
-import { registerPluginPriceHandlers } from './handlers/plugin-prices'
 import { flushAll as flushPluginStorage } from './plugins/storage'
-import { refreshManifest } from './manifest'
 import { registerCheatSheetProtocol } from './cheat-sheet-protocol'
 import { registerScalpelInternalProtocol, registerScalpelInternalSchemePrivileges } from './plugins/protocol'
 import { registerScalpelPluginProtocol, registerScalpelPluginSchemePrivileges } from './plugins/plugin-protocol'
@@ -155,13 +114,12 @@ import {
   hydrateActiveProfileSettings,
   writeActiveProfileSetting,
 } from './profiles/profile-settings'
+import { registerAllIpc } from './app/register-ipc'
+import { createTray, refreshTrayMenu } from './app/tray'
+import { startLiveServices } from './app/lifecycle'
 
 // ---- Linux display-server setup --------------------------------------------
 
-// Electron defaults to the Wayland Ozone backend on Wayland sessions, but
-// Scalpel's overlay attach (electron-overlay-window) and global input hook
-// (uiohook-napi) are X11-only. Relaunch under XWayland so they work at all,
-// mirroring awakened-poe-trade. Skip when a platform was already forced.
 if (
   process.platform === 'linux' &&
   process.env.WAYLAND_DISPLAY &&
@@ -171,9 +129,6 @@ if (
   app.exit(0)
 }
 
-// Compositor GPU acceleration breaks the transparent click-through overlay on
-// Linux (renders black instead of transparent). Disable it there only --
-// Windows keeps hardware acceleration untouched.
 if (process.platform === 'linux') {
   app.disableHardwareAcceleration()
 }
@@ -246,37 +201,25 @@ if (store.get('adaptiveDefaultsMode') === undefined) store.set('adaptiveDefaults
 if (store.get('startInTray') === undefined) store.set('startInTray', true)
 if (store.get('locale') === undefined) store.set('locale', 'en')
 
-// Install the Paraglide locale override for the main process and rebuild the
-// tray menu when the language changes so its labels stay localized.
 initMainLocale(store, () => refreshTrayMenu())
 
 const profileStore = initProfileStore(app.getPath('userData'))
 
-// Backfill new profile/onboarding keys for existing users
 if (store.get(ACTIVE_PROFILE_ID_KEY) === undefined) store.set(ACTIVE_PROFILE_ID_KEY, '')
 if (store.get(LAST_PROFILE_ID_POE1_KEY) === undefined) store.set(LAST_PROFILE_ID_POE1_KEY, '')
 if (store.get(LAST_PROFILE_ID_POE2_KEY) === undefined) store.set(LAST_PROFILE_ID_POE2_KEY, '')
 if (store.get('onboardingCompleted') === undefined) store.set('onboardingCompleted', false)
 
-// Auto-detect overlay scale on first run (deferred until app ready since screen API requires it)
 if (!IS_E2E)
   app.whenReady().then(() => {
     if (store.get('overlayScale') === 1 && !store.get('overlayScaleSet' as keyof AppSettings)) {
       const height = screen.getPrimaryDisplay().workAreaSize.height
-      if (height >= 2160)
-        store.set('overlayScale', 2) // 4K
-      else if (height >= 1440) store.set('overlayScale', 1.5) // 1440p
-      // 1080p and below stays at 1
+      if (height >= 2160) store.set('overlayScale', 2)
+      else if (height >= 1440) store.set('overlayScale', 1.5)
       store.set('overlayScaleSet' as keyof AppSettings, true)
     }
   })
 
-// Legacy profile-backed settings are read once by migrateFromLegacy(). After
-// profiles exist, only active-profile references remain in electron-store.
-
-// Migrate: regex presets used to be a single flat `regexPresets` array. Now
-// they're per-version. Existing users only ever ran PoE1 (regex tool was off
-// for PoE2), so seed the PoE1 slot with whatever's in the legacy key.
 {
   const legacyStore = store as Store<AppSettings & { regexPresets?: RegexPreset[] }>
   const legacy = legacyStore.get('regexPresets')
@@ -284,10 +227,6 @@ if (!IS_E2E)
   if (legacy && legacy.length > 0 && poe1Empty) store.set('regexPresetsPoe1', legacy)
 }
 
-// Migrate: seed profiles from per-version mirror keys. Creates one profile per
-// game in the profiles/ directory under userData. Determines whether onboarding
-// was already completed (any legacy filter path set). Sets activeProfileId to
-// match the current poeVersion. Runs once -- guarded by empty activeProfileId.
 if (!store.get(ACTIVE_PROFILE_ID_KEY)) {
   const profiles = profileStore.migrateFromLegacy(store)
   const version = store.get(PROFILE_VERSION_KEY)
@@ -315,16 +254,8 @@ if (!store.get(ACTIVE_PROFILE_ID_KEY)) {
   }
 }
 
-// On every startup, hydrate store keys from the active profile (lastProfileId,
-// poeVersion, regexPresets). Profile-backed fields (league, filterPath, etc.)
-// live only in the profile JSON files and are read via getProfileBackedSetting.
 hydrateActiveProfileSettings(store)
 
-// Fire-and-forget league refresh on launch. Updates persist + auto-migrate the
-// user's selected league if their old challenge league rotated out. Deferred
-// until app-ready since electron's net.request requires it. `force: true`
-// bypasses the cooldown gate so a long-running app picks up new leagues each
-// time it's relaunched.
 if (!IS_E2E)
   app.whenReady().then(() => {
     refreshLeagues(store, undefined, { force: true }).catch((err) =>
@@ -339,94 +270,10 @@ initAppMacrosRefresh(() => store.get('appMacros') ?? [])
 
 // ---- Register IPC handlers -------------------------------------------------
 
-tradeHandlers.register(store)
-settingsHandlers.register(store)
-filesHandlers.register(store)
-editingHandlers.register(store)
-versionsHandlers.register(store)
-onlineSyncHandlers.register(store)
-pricesHandlers.register(store)
-registerCheatSheets()
-registerWhiteboard()
-registerClipboard()
-registerManifest()
-registerPlugins(store, isElevated)
-learningHandlers.register()
-registerClientLogHandlers()
-registerGameConfigHandlers()
-registerPluginPriceHandlers(store)
-registerDiagnostics({ store, getAppWindow, showAppWindow })
+registerAllIpc({ store, isElevated, getAppWindow, showAppWindow, hideOverlay })
 
-ipcMain.on('close-overlay', () => hideOverlay())
-ipcMain.on('open-devtools', (event) => {
-  // Only open devtools on the app window (overlay devtools breaks the transparent overlay)
-  const app = getAppWindow()
-  if (app && !app.isDestroyed()) {
-    app.webContents.openDevTools({ mode: 'detach' })
-  } else {
-    event.sender.openDevTools({ mode: 'detach' })
-  }
-})
+// ---- Protocol scheme privileges (must run before app ready) ----------------
 
-// ---- System tray -----------------------------------------------------------
-
-let tray: Tray | null = null
-
-function getAppIcon(): Electron.NativeImage {
-  // In packaged app, resources/ is at process.resourcesPath; in dev, it's at project root
-  const iconExt = process.platform === 'win32' ? 'icon.ico' : 'icon.png'
-  const devPath = join(__dirname, '../../resources', iconExt)
-  const prodPath = join(process.resourcesPath, iconExt)
-  const iconPath = app.isPackaged ? prodPath : devPath
-  return nativeImage.createFromPath(iconPath)
-}
-
-function buildTrayContextMenu(): Menu {
-  const current = store.get(PROFILE_VERSION_KEY) === 2 ? 2 : 1
-  const other: GameVariant = current === 1 ? 2 : 1
-
-  return Menu.buildFromTemplate([
-    { label: m.tray_current_game({ game: current }), enabled: false },
-    {
-      label: m.tray_switch_game({ game: other }),
-      click: () => {
-        // requestGameSwitch shows the app window and sends the prompt; the
-        // renderer's GameSwitchModal handles the user's response.
-        requestGameSwitch(store, other)
-      },
-    },
-    { type: 'separator' },
-    {
-      label: m.tray_settings(),
-      click: () => showAppWindow(),
-    },
-    {
-      label: m.tray_report_bug(),
-      click: () => {
-        createAndOpenBugReport().catch((err) => recordMainDiagnostic('bug-report', err))
-      },
-    },
-    { type: 'separator' },
-    { label: m.tray_quit(), click: () => app.quit() },
-  ])
-}
-
-/** Re-apply the tray menu with current strings (e.g. after a language change). */
-function refreshTrayMenu(): void {
-  tray?.setContextMenu(buildTrayContextMenu())
-}
-
-function createTray(): void {
-  const icon = getAppIcon()
-  tray = new Tray(icon)
-  tray.setToolTip('Scalpel')
-  tray.setContextMenu(buildTrayContextMenu())
-
-  // Left-click opens app window
-  tray.on('click', () => showAppWindow())
-}
-
-// Must run before app is ready -- registers scheme privileges with Chromium
 registerScalpelInternalSchemePrivileges()
 registerScalpelPluginSchemePrivileges()
 
@@ -441,111 +288,17 @@ if (!gotLock) {
 
 const installDir = IS_E2E ? process.cwd() : applyPendingUpdate()
 
-// Live services skipped under the e2e harness (SCALPEL_E2E): game-focus handlers,
-// background network refreshers, the updater, devtools, and online filter sync.
-// Each needs native/network access the harness deliberately avoids. Called once
-// after the app window and IPC handlers are wired.
-function startLiveServices(): void {
-  setGameFocusHandlers(
-    () => {
-      resumeHotkeys()
-      restoreAllOnPoeFocus()
-    },
-    () => {
-      // PoE blurred. If focus moved to any Scalpel window (main or secondary),
-      // it's an in-app interaction - keep hotkeys armed and leave overlays up.
-      // Only treat it as "user left the app" when focus is somewhere else.
-      if (isAnyScalpelWindowFocused()) return
-      suspendHotkeys()
-      hideAllOnPoeBlur()
-    },
-  )
-
-  // Start with hotkeys suspended until PoE actually gains focus.
-  // Without this, hotkeys fire globally (e.g. in other games) before PoE opens.
-  suspendHotkeys()
-
-  // Fetch manifest in background; bundled copy is the offline fallback
-  refreshManifest().catch(() => {})
-
-  // Fetch prices in background, refresh every 10 minutes
-  refreshPrices(getProfileBackedSetting(store, 'league'))
-  setInterval(() => refreshPrices(getProfileBackedSetting(store, 'league')), 10 * 60 * 1000)
-
-  // After the OS wakes from sleep, Electron's network stack often bails on pending
-  // requests with ERR_NETWORK_IO_SUSPENDED. Invalidate the price cache and re-fetch so
-  // we don't sit on stale/empty prices for up to 10 minutes.
-  powerMonitor.on('resume', () => {
-    invalidatePriceCache()
-    refreshPrices(getProfileBackedSetting(store, 'league'))
-  })
-
-  // Wire the updater unconditionally so broadcasts (update-available, update-rescinded)
-  // can fire in dev for fake-update testing. The periodic GitHub check and destructive
-  // install actions internally bail when ELECTRON_RENDERER_URL is set so a dev session
-  // doesn't overwrite source with a packaged ASAR.
-  const overlayWin = getOverlayWindow()
-  if (overlayWin)
-    initUpdater([getOverlayWindow, getAppWindow], installDir, store.get('updateChannel'), () => showOverlay())
-
-  if (process.env.NODE_ENV === 'development') {
-    const ow = getOverlayWindow()
-    ow?.webContents.openDevTools({ mode: 'detach' })
-    ow?.webContents.on('context-menu', (_e, params) => {
-      ow.webContents.inspectElement(params.x, params.y)
-    })
-  }
-
-  // Start online filter sync. The poll interval is kept alive regardless of
-  // whether filterDir is set yet so a folder picked after onboarding can begin
-  // watching without requiring a separate poll-start call.
-  const filterDir = getProfileBackedSetting(store, 'filterDir') as string
-  startOnlineSync(filterDir, () => {
-    const wins: BrowserWindow[] = []
-    const ow = getOverlayWindow()
-    const aw = getAppWindow()
-    if (ow) wins.push(ow)
-    if (aw) wins.push(aw)
-    return wins
-  })
-}
-
 app.whenReady().then(() => {
-  // Seed the overlay with the last-known game version so attachByTitle waits for
-  // that window. The hotkey handler re-detects the focused PoE on every fire and
-  // relaunches to swap versions if needed (ensureCorrectGameForHotkey).
   if (!IS_E2E) createOverlayWindow((store.get(PROFILE_VERSION_KEY) as GameVariant) ?? 1)
-  // Let the secondary-overlay system know about the main overlay window so its
-  // isAnyScalpelWindowFocused predicate can include it.
   setMainOverlayGetter(getOverlayWindow)
-  // When focus leaves Scalpel via the PoE -> overlay -> other-app path
-  // (which the PoE-blur handler can't catch), suspend hotkeys so they don't
-  // fire in the destination app.
   if (!IS_E2E) setOnLeaveScalpel(() => suspendHotkeys())
   createAppWindow(store)
-  if (!IS_E2E) createTray()
+  if (!IS_E2E) createTray({ store, showAppWindow })
 
-  // Serve plugin-facing built-in modules (React, SDK) via a custom scheme so
-  // plugins can import them without bundling their own copies.
   registerScalpelInternalProtocol()
-
-  // Serve installed plugin entry files via a custom scheme. Required so the
-  // overlay renderer can dynamic-import() them in dev (where the renderer
-  // lives on http://localhost and Chromium blocks file:// resource loads).
   registerScalpelPluginProtocol()
-
   registerCheatSheetProtocol()
 
-  // Broadcast rate limit state to overlay
-  onRateLimitUpdate((state) => {
-    getOverlayWindow()?.webContents.send('rate-limit', state)
-  })
-
-  // Keep open overlay views (item view, dust/div explorers) in sync whenever the
-  // filter reloads -- filter switch, online update, version restore -- without a
-  // fresh hotkey press. reEvaluateLastItem is a no-op until an item is analyzed,
-  // and re-sending the same item never switches the view or pops the overlay, so
-  // this is non-intrusive.
   onFilterLoaded(() => {
     getOverlayWindow()?.webContents.send('filter-changed')
     if (getCurrentFilter()) reEvaluateLastItem()
@@ -554,7 +307,6 @@ app.whenReady().then(() => {
   const filterPath = getProfileBackedSetting(store, 'filterPath')
   if (!IS_E2E && filterPath) loadFilter(filterPath, 'App Launch')
 
-  // Start low-level keyboard hook
   const onHotkeyFired = createHotkeyHandler(store, isElevated)
   const onPriceCheckFired = createPriceCheckHandler(store, isElevated)
   const hotkey = store.get('hotkey')
@@ -579,30 +331,20 @@ app.whenReady().then(() => {
   const pasteRegexToSearch = (regex: string): void => {
     const restoreClip = snapshotClipboard()
     clipboard.writeText(regex)
-    // Open search box first (Ctrl+F)
     uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
     uIOhook.keyTap(UiohookKey.F)
     uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
-    // Paste the regex
     uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
     uIOhook.keyTap(UiohookKey.V)
     uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
-    // Restore the user's previous clipboard after PoE consumes the paste
     setTimeout(restoreClip, 100)
   }
 
-  // The pad renders flush-left (squared left corners, no left border) ONLY when
-  // it's docked against the stash sidebar. The vendor dock floats beside the
-  // Buy/Sell modal, so it stays a rounded card. EPS absorbs integer-pixel
-  // rounding from the snap commit; an unknown anchor / no left panel -> rounded.
   const REGEX_REMOTE_FLUSH_EPS = 0.01
   function regexRemoteFlushLeft(anchor: { fracX: number } | null): boolean {
     if (!anchor || !getCurrentPanelState().leftPanelOpen) return false
     return Math.abs(anchor.fracX - leftDockFracX(OverlayController.targetBounds)) < REGEX_REMOTE_FLUSH_EPS
   }
-  // Guards the async toggle path so a rapid double-press during the one-shot
-  // panel capture doesn't queue two show/hide cycles (which would flicker or
-  // leave the pad hidden).
   let regexRemoteToggleBusy = false
 
   ipcMain.handle('regex-remote:mount-state', () => regexRemoteFlushLeft(getOverlayAnchor('regex-remote')))
@@ -619,15 +361,10 @@ app.whenReady().then(() => {
         } catch {}
       },
       paste: pasteRegexToSearch,
-      // Let focus settle on PoE before synthesizing Ctrl+F / Ctrl+V.
       defer: (fn) => setTimeout(fn, 50),
     })
   })
   ipcMain.on('regex-remote:close', () => getRegexRemoteOverlay()?.hide())
-  // The pad is always interactive, so clicking/dragging it gives it OS focus.
-  // Hand focus back to PoE when the user is done (cursor leaves the pad) so the
-  // pad doesn't retain focus -- otherwise isAnyScalpelWindowFocused() stays true
-  // and the PoE-blur hide (on minimize/alt-tab) bails, leaving the pad on screen.
   ipcMain.on('regex-remote:hand-focus', () => {
     try {
       OverlayController.focusTarget()
@@ -662,18 +399,14 @@ app.whenReady().then(() => {
     }
     if (action === 'toggleRegexRemote') {
       if (getRegexRemoteOverlay()?.isVisible()) {
-        toggleRegexRemote() // hide
+        toggleRegexRemote()
         return
       }
-      if (regexRemoteToggleBusy) return // a capture+show is already in flight
+      if (regexRemoteToggleBusy) return
       regexRemoteToggleBusy = true
       const main = getOverlayWindow()
       if (main && !main.isDestroyed() && main.isVisible()) hideOverlay()
       getCheatSheetsOverlay()?.hide()
-      // Capture fresh panel state so the pad mounts at the stash vs vendor dock,
-      // then show (repositionOnShow re-reads the context anchor) and push the
-      // flush state for the new dock -- the renderer only queries it once on
-      // mount, so a context switch (stash <-> vendor) needs this push.
       void detectPanelStateOnce().finally(() => {
         regexRemoteToggleBusy = false
         toggleRegexRemote()
@@ -710,10 +443,7 @@ app.whenReady().then(() => {
     }
   })
   setAppMacros(withPluginHotkeys((store.get('appMacros') as AppSettings['appMacros']) ?? []))
-  // Register the cheat-sheets overlay with the secondary-overlay system. The
-  // anchor persists into the active profile's cheatSheets.windowAnchor; the
-  // system handles window lifecycle, snap, alt-tab guard, etc. and the helper
-  // below feeds global + per-category hotkeys into the shared system.
+
   const patchCheatSheets = (patch: Partial<CheatSheetsSettings>): void => {
     const cs = getProfileBackedSetting(store, 'cheatSheets') ?? { globalHotkey: '', categories: [], pinned: false }
     const next: CheatSheetsSettings = { ...cs, ...patch }
@@ -723,17 +453,12 @@ app.whenReady().then(() => {
     storedAnchor: () => getProfileBackedSetting(store, 'cheatSheets')?.windowAnchor,
     onAnchorChanged: (anchor) => patchCheatSheets({ windowAnchor: anchor }),
   })
-  // Hide the main overlay before showing the cheat sheet (keeps things tidy if
-  // the user hotkeys the cheat sheet while the main overlay was open).
   setCheatSheetsBeforeShow(() => hideOverlay())
   applyCheatSheetHotkeys(getProfileBackedSetting(store, 'cheatSheets'))
   registerWhiteboardOverlay()
   registerRegexRemoteOverlay({
     onAnchorChanged: (anchor) => {
       getRegexRemoteOverlay()?.send('regex-remote:mount-changed', regexRemoteFlushLeft(anchor))
-      // A user drag/resize focuses the pad (and a drag's mouseup never reaches
-      // the renderer, so the cursor-leave handoff can miss it). Hand focus back
-      // to PoE here too so the pad never sits holding OS focus after a move.
       try {
         OverlayController.focusTarget()
       } catch {}
@@ -751,28 +476,19 @@ app.whenReady().then(() => {
   setStashScrollModifier(store.get('stashScrollModifier') ?? 'Ctrl')
   setOpenSide(store.get('openSide') ?? 'both')
 
-  // Suspend/resume hotkeys while the hotkey recorder is active
   ipcMain.on('suspend-hotkeys', () => suspendHotkeys())
   ipcMain.on('resume-hotkeys', () => resumeHotkeys())
 
-  // Renderer pushes whether an editable element inside the overlay has focus.
-  // Suspend globalShortcut while typing so the keystroke reaches the input
-  // (otherwise registered single-key hotkeys consume the key OS-side and the
-  // text field never sees it). The flag also lets uIOhook-routed hotkeys gate
-  // themselves via isTypingInOverlay() since uIOhook isn't suspended.
   ipcMain.on('overlay-input-focused', (e, focused: boolean) => {
     setWindowInputFocused(e.sender.id, focused)
     if (focused) suspendHotkeys()
     else resumeHotkeys()
   })
 
-  // Apply close-on-click-outside setting
   setCloseOnClickOutside(store.get('closeOnClickOutside'))
 
-  if (!IS_E2E) startLiveServices()
+  if (!IS_E2E) startLiveServices({ store, installDir })
 
-  // Show onboarding/settings on first launch, otherwise respect startInTray.
-  // E2E harness always shows the window so the Playwright test can interact.
   if (IS_E2E || !store.get('onboardingCompleted') || !store.get('startInTray')) {
     showAppWindow()
   }
@@ -780,10 +496,6 @@ app.whenReady().then(() => {
 
 app.on('before-quit', () => {
   recordMainBreadcrumb('before-quit')
-  // Release the single-instance lock before will-quit runs the blocking
-  // uIOhook.stop() join. If that join wedges and this process lingers, a
-  // manually relaunched instance can still acquire the lock and start, instead
-  // of silently quitting at the gotLock check above.
   try {
     app.releaseSingleInstanceLock()
   } catch (err) {
@@ -801,16 +513,9 @@ app.on('will-quit', () => {
   stopHotkeyListener()
   stopOnlineSync()
   recordMainBreadcrumb('will-quit complete')
-  // electron-overlay-window never releases its ref'd threadsafe function or
-  // stops its X11 thread (empty AddonCleanUp, no stop API), which keeps the
-  // Linux process alive after an otherwise-clean quit -- the app appears to
-  // hang on close. Our own teardown is done here (uiohook stopped above, plugin
-  // storage flushed in before-quit, electron-store writes synchronously), so a
-  // forced exit loses nothing. Linux-only: Windows closes cleanly without it.
   if (process.platform === 'linux') app.exit(0)
 })
 
-// Keep app alive even with no windows (overlay hides, not closes)
 app.on('window-all-closed', () => {
   /* intentional - overlay is hidden, not destroyed */
 })

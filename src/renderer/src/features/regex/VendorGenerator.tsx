@@ -1,7 +1,7 @@
 import { Fragment, forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { Search, CloseSmall, Magic, ListView, Level, Plus } from '@icon-park/react'
 import { TAB_COLORS, RegexCheckbox, TabSeparator, useRegexKey, usePersistedJSON } from './mapmods-helpers'
-import { FilterChip } from '../price-check/FilterChip'
+import { FilterChip } from '../../components/primitives/FilterChip'
 import { ScrubInput } from './ScrubInput'
 import { InfoChip } from '../../shared/InfoChip'
 import { DismissibleTip } from '../../shared/DismissibleTip'

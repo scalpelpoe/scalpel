@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { AppSettings, HideableTabKey } from '../../../../shared/types'
-import { ScrubInput } from '../regex-tool/ScrubInput'
+import { ScrubInput } from '../../features/regex/ScrubInput'
 import { SettingToggleBox } from './SettingToggleBox'
 import { ThemeSettings } from './ThemeSettings'
 import { Setting, CloseSmall, Buy, Filter, AllApplication } from '@icon-park/react'
