@@ -1,6 +1,6 @@
 import socketRunePoe2 from '../../assets/sockets/socket-rune-poe2.png'
 import { isSkillGem } from '../../../../shared/poe-item'
-import { getItemSize } from '../price-check/constants'
+import { getItemSize } from '../../features/price-check/constants'
 
 /**
  * PoE2 rune-socket grid rendered on top of an item art tile. Consumers in

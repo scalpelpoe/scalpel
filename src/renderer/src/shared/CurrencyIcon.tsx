@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react'
-import { getCurrencyIconMap } from '../components/price-check/constants'
+import { getCurrencyIconMap } from './currency-icons'
 import { usePoeVersion } from './poe-version-context'
 import { useCurrencyLabelsAsText } from './currency-labels-context'
 import { getCurrencyShortLabel } from './currency-short-labels'

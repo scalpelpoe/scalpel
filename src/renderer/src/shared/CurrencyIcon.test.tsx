@@ -5,11 +5,11 @@ import { PoeVersionProvider } from './poe-version-context'
 import { CurrencyLabelsProvider } from './currency-labels-context'
 
 // Currency icon URLs come from imported PNGs; in vitest the imports resolve
-// to path strings. Mock the constants module wholesale - the component only
+// to path strings. Mock the currency-icons module wholesale - the component only
 // uses getCurrencyIconMap from it, so a partial mock is sufficient and avoids
 // having to resolve the influence-icon PNGs and item-icons JSON during the
 // real import.
-vi.mock('../components/price-check/constants', () => ({
+vi.mock('./currency-icons', () => ({
   getCurrencyIconMap: () => ({
     chaos: 'chaos.png',
     divine: 'divine.png',

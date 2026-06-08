@@ -3,7 +3,7 @@
  *  Style: lowercase, no "Orb" suffix, trade-site shorthand where one exists
  *  (e.g. "ex" for Exalted Orb, "trans" for Transmutation).
  *
- *  KEEP IN SYNC with getCurrencyIconMap() in components/price-check/constants.ts.
+ *  KEEP IN SYNC with getCurrencyIconMap() in shared/currency-icons.ts.
  *  The unit test enforces that every key in the icon map has a label here, so
  *  adding a new currency without updating this map will fail CI. */
 export const CURRENCY_SHORT_LABELS: Record<string, string> = {

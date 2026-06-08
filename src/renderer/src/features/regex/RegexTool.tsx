@@ -1,6 +1,6 @@
 import { RegexGenerator } from './RegexGenerator'
 import type { AppSettings, RuntimeSettings } from '../../../../shared/types'
-import type { HotkeySlot } from '../../components/settings/hotkey-collisions'
+import type { HotkeySlot } from '../../components/primitives/hotkey-collisions'
 
 interface Props {
   settings: RuntimeSettings

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { getCurrencyShortLabel, CURRENCY_SHORT_LABELS, formatPriceTooltip } from './currency-short-labels'
-import { getCurrencyIconMap } from '../components/price-check/constants'
+import { getCurrencyIconMap } from './currency-icons'
 
 describe('getCurrencyShortLabel', () => {
   it('returns short labels for common currencies', () => {

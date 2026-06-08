@@ -22,11 +22,11 @@ import { VendorGenerator } from './VendorGenerator'
 import { TabletGenerator } from './TabletGenerator'
 import { RelicGenerator } from './RelicGenerator'
 import { usePoeVersion } from '../../shared/poe-version-context'
-import { HotkeyField } from '../../components/settings/HotkeyField'
+import { HotkeyField } from '../../components/primitives/HotkeyField'
 import { PresetColorPicker } from './PresetColorPicker'
 import type { GeneratorConfig, GeneratorHandle, GeneratorKey } from './generator-types'
 import type { AppSettings, RegexPreset, RegexPresetTag, RuntimeSettings } from '../../../../shared/types'
-import type { HotkeySlot } from '../../components/settings/hotkey-collisions'
+import type { HotkeySlot } from '../../components/primitives/hotkey-collisions'
 
 interface Props {
   settings: RuntimeSettings

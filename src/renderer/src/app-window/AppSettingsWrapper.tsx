@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { PoeProfileSummary, RuntimeSettings } from '../../../shared/types'
 import { OnlineFilterModal } from '../components/OnlineFilterModal'
-import { SettingsPanel } from '../components/SettingsPanel'
+import { SettingsPanel } from '../features/settings/SettingsPanel'
 
 export function AppSettingsWrapper({
   settings,
