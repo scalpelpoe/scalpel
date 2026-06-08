@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { FilterAction } from '../../../../shared/types'
+import type { FilterAction } from '../../../../../shared/types'
 import {
   ALERT_SOUNDS,
   BEAM_COLORS,
@@ -9,9 +9,9 @@ import {
   POE_COLOR_HEX,
   getShapeIconUrl,
   getMinimapIconUrl,
-} from '../../../../shared/data/filter/filter-actions'
-import { Toggle } from '../Toggle'
-import { CollapsibleSection } from '../../shared/CollapsibleSection'
+} from '../../../../../shared/data/filter/filter-actions'
+import { Toggle } from '../../../components/Toggle'
+import { CollapsibleSection } from '../../../shared/CollapsibleSection'
 
 export function ActionBox({ title, children }: { title: string; children: React.ReactNode }): JSX.Element {
   return (

@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { iconFor, RARITY_COLORS } from '../../shared/constants'
-import { ItemRowContent } from '../../shared/ItemRowContent'
-import { Skeleton } from '../../shared/Skeleton'
-import { createMomentumScrollHandler } from '../../shared/momentumScroll'
+import { iconFor, RARITY_COLORS } from '../../../shared/constants'
+import { ItemRowContent } from '../../../shared/ItemRowContent'
+import { Skeleton } from '../../../shared/Skeleton'
+import { createMomentumScrollHandler } from '../../../shared/momentumScroll'
 
 type PriceMap = Record<string, { chaosValue: number; divineValue?: number } | null>
 

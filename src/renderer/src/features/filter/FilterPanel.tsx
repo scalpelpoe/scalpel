@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from 'react'
-import { getActiveMatch } from '../shared/activeMatch'
-import { ItemSummary } from './ItemSummary'
+import { getActiveMatch } from '../../shared/activeMatch'
+import { ItemSummary } from '../../components/ItemSummary'
 import { FilterBlockEditor, type SaveState } from './filter-block-editor'
 import { TierNavigator } from './TierNavigator'
 import { getItemIconUrl, RARITY_COLORS } from './filter-panel/constants'
