@@ -7,7 +7,7 @@ import {
   getPriceOptions,
   RESULTS_VIEW_OPTIONS,
   STATUS_OPTIONS,
-} from '../../price-check/search-settings'
+} from '../../../shared/trade-settings'
 import { SettingSelectBox } from '../../../components/primitives/SettingSelectBox'
 import { SettingToggleBox } from '../../../components/primitives/SettingToggleBox'
 import { m } from '../../../../../shared/paraglide/messages.js'

@@ -1,8 +1,9 @@
 /**
  * Renderer API adapter for filter file operations, editing, history, and versions.
  *
- * Prefer importing from this module in new feature code rather than calling
- * window.api directly.
+ * Preparatory wrappers around window.api. Existing renderer code still calls the
+ * preload bridge directly; migrate call sites incrementally when touching filter
+ * screens.
  */
 
 import type { FilterBlock, FilterListEntry } from '../../../../../shared/contracts/items'

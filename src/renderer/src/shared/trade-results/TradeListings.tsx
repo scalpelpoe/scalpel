@@ -1,14 +1,14 @@
 import { Down, Up } from '@icon-park/react'
-import type { Listing } from './types'
+import type { Listing } from '../trade-types'
 import { ExpandedListing } from './ExpandedListing'
 import { SOCKET_IMGS, formatTimeAgo, socketLink, socketWhite } from './constants'
 import { RuneSocketOverlayPoe2 } from '../../components/sockets/RuneSocketOverlay.poe2'
-import { usePoeVersion } from '../../shared/poe-version-context'
-import type { ResultsView } from './search-settings'
-import { zebraRowBg } from '../../shared/utils'
-import { CurrencyIcon } from '../../shared/CurrencyIcon'
-import { formatPriceTooltip } from '../../shared/currency-short-labels'
-import { HoverTooltip } from '../../shared/HoverTooltip'
+import { usePoeVersion } from '../poe-version-context'
+import type { ResultsView } from '../trade-settings'
+import { zebraRowBg } from '../utils'
+import { CurrencyIcon } from '../CurrencyIcon'
+import { formatPriceTooltip } from '../currency-short-labels'
+import { HoverTooltip } from '../HoverTooltip'
 
 export function TradeListings({
   listings,

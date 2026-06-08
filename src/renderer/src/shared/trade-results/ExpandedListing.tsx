@@ -1,10 +1,10 @@
 import { Star } from '@icon-park/react'
-import type { Listing } from './types'
+import type { Listing } from '../trade-types'
 import { ATZOATL_KEY_ROOMS } from '../../../../shared/data/trade/atzoatl'
 import { ModLine } from './ModLine'
 import { SOCKET_IMGS, RARITY_COLORS, MOD_COLORS, getItemSize, socketLink, socketWhite } from './constants'
 import { RuneSocketOverlayPoe2 } from '../../components/sockets/RuneSocketOverlay.poe2'
-import { usePoeVersion } from '../../shared/poe-version-context'
+import { usePoeVersion } from '../poe-version-context'
 import { isSkillGem } from '../../../../shared/poe-item'
 
 const MOD_SEPARATOR = {

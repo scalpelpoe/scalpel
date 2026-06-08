@@ -1,7 +1,7 @@
 import { Down, Right } from '@icon-park/react'
 import { InfoChip } from '../../shared/InfoChip'
 import { formatModText, RegexCheckbox } from './mapmods-helpers'
-import { ScrubInput } from './ScrubInput'
+import { ScrubInput } from '../../components/primitives/ScrubInput'
 import { zebraRowBg } from '../../shared/utils'
 
 export interface ModListMod {

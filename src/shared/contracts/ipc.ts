@@ -1,10 +1,9 @@
-/** Typed IPC channel name registry. All channel strings used by ipcMain.handle,
- *  ipcMain.on, ipcRenderer.invoke, and ipcRenderer.send should reference these
- *  constants rather than bare string literals.
+/** Typed IPC channel name registry.
  *
- *  Channels NOT listed here are still handled at runtime -- the registry is
- *  exhaustive now for the channels exposed by the preload bridge, and will grow
- *  to cover main-internal channels as the refactor progresses.
+ *  This is preparatory infrastructure for replacing bare channel string
+ *  literals in ipcMain/ipcRenderer call sites. Runtime code does not enforce
+ *  this registry yet; migrate call sites incrementally when touching an IPC
+ *  domain so channel names and bridge typings converge over time.
  */
 
 export const IPC_CHANNELS = {

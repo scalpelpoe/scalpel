@@ -1,8 +1,9 @@
 /**
  * Renderer API adapter for price check, trade search, and bulk exchange.
  *
- * Prefer importing from this module in new feature code rather than calling
- * window.api directly.
+ * Preparatory wrappers around window.api. Existing renderer code still calls the
+ * preload bridge directly; migrate call sites incrementally when touching price
+ * check or trade screens.
  */
 
 import type { PoeItem } from '../../../../../shared/contracts/items'

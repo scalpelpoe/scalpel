@@ -1,8 +1,9 @@
 /**
  * Renderer API adapter for regex presets and remote overlay.
  *
- * Prefer importing from this module in new feature code rather than calling
- * window.api directly.
+ * Preparatory wrappers around window.api. Existing renderer code still calls the
+ * preload bridge directly; migrate call sites incrementally when touching regex
+ * screens.
  */
 
 import type { RegexPreset } from '../../../../../shared/contracts/regex'

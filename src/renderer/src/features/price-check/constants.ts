@@ -1,15 +1,7 @@
-import { RARITY_COLORS, iconMap, baseToClass, classSizes } from '../../shared/constants'
+import { RARITY_COLORS, iconMap } from '../../shared/constants'
 import { formatPrice, getItemIcon } from '../../shared/utils'
 import { getCurrencyIconMap } from '../../shared/currency-icons'
-import baseToUniques from '../../../../shared/data/items/unique-info.json'
-import elderIcon from '../../assets/influences/Elder-item-symbol.png'
-import shaperIcon from '../../assets/influences/Shaper-item-symbol.png'
-import crusaderIcon from '../../assets/influences/Crusader-item-symbol.png'
-import redeemerIcon from '../../assets/influences/Redeemer-item-symbol.png'
-import hunterIcon from '../../assets/influences/Hunter-item-symbol.png'
-import warlordIcon from '../../assets/influences/Warlord-item-symbol.png'
-import searingExarchIcon from '../../assets/influences/SearingExarch-item-symbol.png'
-import eaterOfWorldsIcon from '../../assets/influences/EaterOfWorlds-item-symbol.png'
+import { INFLUENCE_ICONS_BY_NAME, uniqueToBase, getItemSize } from '../../shared/item-display'
 import socketRed from '../../assets/sockets/socket-red.png'
 import socketGreen from '../../assets/sockets/socket-green.png'
 import socketBlue from '../../assets/sockets/socket-blue.png'
@@ -20,35 +12,19 @@ export { RARITY_COLORS, iconMap }
 export { formatPrice, getItemIcon }
 export { socketWhite }
 export { getCurrencyIconMap }
+export { INFLUENCE_ICONS_BY_NAME, uniqueToBase, getItemSize }
 export { default as ninjaIcon } from '../../assets/other/poe-ninja.png'
 export { default as socketLink } from '../../assets/sockets/socket-link.png'
 
 export const INFLUENCE_ICONS: Record<string, string> = {
-  'misc.influence_elder': elderIcon,
-  'misc.influence_shaper': shaperIcon,
-  'misc.influence_crusader': crusaderIcon,
-  'misc.influence_redeemer': redeemerIcon,
-  'misc.influence_hunter': hunterIcon,
-  'misc.influence_warlord': warlordIcon,
-  'misc.influence_searing_exarch': searingExarchIcon,
-  'misc.influence_eater_of_worlds': eaterOfWorldsIcon,
-}
-
-export const INFLUENCE_ICONS_BY_NAME: Record<string, string> = {
-  Elder: elderIcon,
-  Shaper: shaperIcon,
-  Crusader: crusaderIcon,
-  Redeemer: redeemerIcon,
-  Hunter: hunterIcon,
-  Warlord: warlordIcon,
-  'Searing Exarch': searingExarchIcon,
-  'Eater of Worlds': eaterOfWorldsIcon,
-}
-
-const _baseToUniques = baseToUniques as Record<string, string[]>
-export const uniqueToBase: Record<string, string> = {}
-for (const [base, uniques] of Object.entries(_baseToUniques)) {
-  for (const name of uniques) uniqueToBase[name] = base
+  'misc.influence_elder': Object.values(INFLUENCE_ICONS_BY_NAME)[0],
+  'misc.influence_shaper': Object.values(INFLUENCE_ICONS_BY_NAME)[1],
+  'misc.influence_crusader': Object.values(INFLUENCE_ICONS_BY_NAME)[2],
+  'misc.influence_redeemer': Object.values(INFLUENCE_ICONS_BY_NAME)[3],
+  'misc.influence_hunter': Object.values(INFLUENCE_ICONS_BY_NAME)[4],
+  'misc.influence_warlord': Object.values(INFLUENCE_ICONS_BY_NAME)[5],
+  'misc.influence_searing_exarch': Object.values(INFLUENCE_ICONS_BY_NAME)[6],
+  'misc.influence_eater_of_worlds': Object.values(INFLUENCE_ICONS_BY_NAME)[7],
 }
 
 export const SOCKET_IMGS: Record<string, string> = {
@@ -58,17 +34,6 @@ export const SOCKET_IMGS: Record<string, string> = {
   W: socketWhite,
   A: socketAbyss,
   Ab: socketAbyss,
-}
-
-export function getItemSize(itemClass: string, name?: string): [number, number] {
-  if (name) {
-    const base = uniqueToBase[name]
-    if (base) {
-      const cls = baseToClass[base]
-      if (cls && classSizes[cls]) return classSizes[cls]
-    }
-  }
-  return classSizes[itemClass] ?? [2, 2]
 }
 
 export const MOD_COLORS: Record<string, string> = {

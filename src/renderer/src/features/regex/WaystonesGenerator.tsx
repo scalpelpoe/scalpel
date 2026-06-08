@@ -13,7 +13,7 @@ import {
 } from './mapmods-helpers'
 import { FilterChip } from '../../components/primitives/FilterChip'
 import { ModList } from './ModList'
-import { ScrubInput } from './ScrubInput'
+import { ScrubInput } from '../../components/primitives/ScrubInput'
 import { InfoChip } from '../../shared/InfoChip'
 import { WAYSTONE_MODS } from '../../../../shared/data/regex/waystone-mods'
 import {

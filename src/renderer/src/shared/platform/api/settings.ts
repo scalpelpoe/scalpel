@@ -1,10 +1,9 @@
 /**
  * Renderer API adapter for settings, profiles, and onboarding.
  *
- * Re-exports the preload bridge's settings/profile methods grouped by domain.
- * Prefer importing from this module in new feature code rather than calling
- * window.api directly -- it documents the settings/profiles surface and keeps
- * the preload bridge shape from leaking into feature components.
+ * Preparatory wrappers around the preload bridge's settings/profile methods.
+ * Existing renderer code still calls window.api directly; migrate code to these
+ * wrappers incrementally when touching a settings/profile screen.
  */
 
 import type { AppSettings, RuntimeSettings } from '../../../../../shared/contracts/settings'

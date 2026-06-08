@@ -1,8 +1,9 @@
 /**
  * Renderer API adapter for cheat sheets operations.
  *
- * Prefer importing from this module in new feature code rather than calling
- * window.api directly.
+ * Preparatory wrappers around window.api. Existing renderer code still calls the
+ * preload bridge directly; migrate call sites incrementally when touching cheat
+ * sheet screens.
  */
 
 export function addCheatSheetFromFile(categoryId: string): Promise<Array<{ id: string; ext: string }>> {

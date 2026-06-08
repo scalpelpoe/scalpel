@@ -22,10 +22,10 @@ import { ItemHeader } from './ItemHeader'
 import { getDustInfo } from '../../shared/dust'
 import { CurrencyIcon } from '../../shared/CurrencyIcon'
 import { StatFilterRow } from './StatFilterRow'
-import { TradeListings } from './TradeListings'
+import { TradeListings } from '../../shared/trade-results/TradeListings'
 import { BulkListings } from './BulkListings'
 import { ListingRowsSkeleton } from './PriceCheckSkeleton'
-import { RateLimitBar } from './RateLimitBar'
+import { RateLimitBar } from '../../components/primitives/RateLimitBar'
 import { DismissibleTip } from '../../shared/DismissibleTip'
 import {
   BASE_DEFAULT_ITEM_CLASSES,

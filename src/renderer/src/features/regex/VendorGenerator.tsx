@@ -2,7 +2,7 @@ import { Fragment, forwardRef, useEffect, useImperativeHandle, useRef, useState 
 import { Search, CloseSmall, Magic, ListView, Level, Plus } from '@icon-park/react'
 import { TAB_COLORS, RegexCheckbox, TabSeparator, useRegexKey, usePersistedJSON } from './mapmods-helpers'
 import { FilterChip } from '../../components/primitives/FilterChip'
-import { ScrubInput } from './ScrubInput'
+import { ScrubInput } from '../../components/primitives/ScrubInput'
 import { InfoChip } from '../../shared/InfoChip'
 import { DismissibleTip } from '../../shared/DismissibleTip'
 import { buildVendorGroupsRegex, type VendorSettings } from './vendor-engine'
