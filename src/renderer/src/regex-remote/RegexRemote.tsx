@@ -1,7 +1,18 @@
 import { useEffect, useState } from 'react'
 import type { RegexPreset, RuntimeSettings } from '../../../shared/types'
 import { Chrome } from '../secondary-overlay/Chrome'
-import { textColorForBg } from '../features/regex/preset-colors'
+import { textColorForBg } from '../shared/regex-preset-colors'
+import { getOverlayState } from '../shared/platform/api/overlay'
+import { getSettings } from '../shared/platform/api/settings'
+import {
+  closeRegexRemote,
+  getRegexPresets,
+  onRegexPresetsChanged,
+  onRegexRemoteMountChanged,
+  regexRemoteApply,
+  regexRemoteHandFocus,
+  regexRemoteMountState,
+} from '../shared/platform/api/regex'
 
 /** Generator display order + labels per game, for grouping the chips. This
  *  duplicates the canonical lists in RegexGenerator.tsx (GENERATORS_POE1 /
@@ -30,21 +41,21 @@ export function RegexRemote(): JSX.Element {
   const [mounted, setMounted] = useState(true)
 
   useEffect(() => {
-    void window.api.getOverlayState().then((s) => {
+    void getOverlayState().then((s) => {
       if (s.poeVersion === 1 || s.poeVersion === 2) setVersion(s.poeVersion)
     })
-    void window.api.getSettings().then((s) => setMacros(s.appMacros ?? []))
+    void getSettings().then((s) => setMacros(s.appMacros ?? []))
   }, [])
 
   useEffect(() => {
-    const load = (): void => void window.api.getRegexPresets().then(setPresets)
+    const load = (): void => void getRegexPresets().then(setPresets)
     load()
-    return window.api.onRegexPresetsChanged(load)
+    return onRegexPresetsChanged(load)
   }, [])
 
   useEffect(() => {
-    void window.api.regexRemoteMountState().then(setMounted)
-    return window.api.onRegexRemoteMountChanged(setMounted)
+    void regexRemoteMountState().then(setMounted)
+    return onRegexRemoteMountChanged(setMounted)
   }, [])
 
   // Clicking the pad gives it OS focus; hand focus back to PoE when the cursor
@@ -52,7 +63,7 @@ export function RegexRemote(): JSX.Element {
   // or alt-tabbing PoE won't hide the pad (the PoE-blur hide bails while a
   // Scalpel window is focused), unlike the other secondary overlays.
   useEffect(() => {
-    const handBack = (): void => window.api.regexRemoteHandFocus()
+    const handBack = (): void => regexRemoteHandFocus()
     document.addEventListener('mouseleave', handBack)
     return () => document.removeEventListener('mouseleave', handBack)
   }, [])
@@ -70,7 +81,7 @@ export function RegexRemote(): JSX.Element {
   return (
     <Chrome
       headerContent={<span className="text-text text-xs font-semibold">Regex Remote</span>}
-      onClose={() => window.api.closeRegexRemote()}
+      onClose={() => closeRegexRemote()}
       flushLeft={mounted}
     >
       {groups.length === 0 ? (
@@ -88,7 +99,7 @@ export function RegexRemote(): JSX.Element {
                 return (
                   <button
                     key={p.id}
-                    onClick={() => window.api.regexRemoteApply(p.id)}
+                    onClick={() => regexRemoteApply(p.id)}
                     className={`flex items-center justify-between gap-2 w-full text-left px-2 py-[6px] rounded text-[11px] font-medium cursor-pointer border-none${tinted ? '' : ' text-text'}`}
                     style={{
                       background: p.color ?? 'rgba(255,255,255,0.08)',

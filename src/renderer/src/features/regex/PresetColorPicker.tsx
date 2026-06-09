@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Down } from '@icon-park/react'
-import { PRESET_COLORS } from './preset-colors'
+import { PRESET_COLORS } from '../../shared/regex-preset-colors'
 
 /** Compact color field for the save panel: a dropdown-styled trigger showing
  *  the current swatch plus a chevron, with the swatch menu rendered through a
