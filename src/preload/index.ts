@@ -855,6 +855,10 @@ export const api = {
     entry: import('../shared/plugin-registry-types').RegistryEntry,
   ): Promise<{ ok: true; id: string } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:install-from-registry', entry),
+  pluginUpdateFromRegistry: (
+    entry: import('../shared/plugin-registry-types').RegistryEntry,
+  ): Promise<{ ok: true; id: string } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('plugins:update-from-registry', entry),
   pluginUninstall: (pluginId: string): Promise<{ ok: true } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:uninstall', pluginId),
   pluginUnregisterHotkey: (pluginId: string): Promise<void> =>
@@ -873,6 +877,16 @@ export const api = {
     ): void => handler(entry)
     ipcRenderer.on('plugin-installed', listener)
     return () => ipcRenderer.off('plugin-installed', listener)
+  },
+  onPluginUpdated: (
+    handler: (entry: { manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string }) => void,
+  ): (() => void) => {
+    const listener = (
+      _: Electron.IpcRendererEvent,
+      entry: { manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string },
+    ): void => handler(entry)
+    ipcRenderer.on('plugin-updated', listener)
+    return () => ipcRenderer.off('plugin-updated', listener)
   },
   onPluginUninstalled: (handler: (pluginId: string) => void): (() => void) => {
     const listener = (_: Electron.IpcRendererEvent, pluginId: string): void => handler(pluginId)

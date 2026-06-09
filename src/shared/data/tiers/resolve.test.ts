@@ -18,8 +18,15 @@ const data: TierDataset = {
       ],
       t: '',
     }, // 3
+    {
+      n: 'of the Parched',
+      l: 1,
+      g: 'ManaLeech',
+      s: [['om_physical_attack_damage_permyriad', 500, 590]],
+      t: 'Leech (5-5.9)% of Physical Attack Damage as Mana',
+    }, // 4
   ],
-  pools: [{ IncreasedLife: [0, 1, 2], PhysicalDamage: [3] }],
+  pools: [{ IncreasedLife: [0, 1, 2], PhysicalDamage: [3], ManaLeech: [4] }],
   bases: { 'Iron Ring': 0 },
 }
 
@@ -37,6 +44,9 @@ describe('computeTierRange', () => {
         true,
       ),
     ).toEqual({ min: 6, max: 8.5 })
+  })
+  it('permyriad stat divides by 100 to get displayed value', () => {
+    expect(computeTierRange([['om_x_permyriad', 500, 590]], false)).toEqual({ min: 5, max: 5.9 })
   })
 })
 
@@ -88,6 +98,13 @@ describe('resolveTierLadder', () => {
   it('returns null for an unknown base or no range match', () => {
     expect(resolveTierLadder(data, 'Gold Ring', [{ min: 10, max: 19 }], 5, false)).toBeNull()
     expect(resolveTierLadder(data, 'Iron Ring', [{ min: 999, max: 1000 }], 5, false)).toBeNull()
+  })
+
+  it('resolves a permyriad stat using displayed value-space (divide by 100)', () => {
+    const ladder = resolveTierLadder(data, 'Iron Ring', [{ min: 5, max: 5.9 }], 4, false)
+    expect(ladder).not.toBeNull()
+    expect(ladder!.group).toBe('ManaLeech')
+    expect(ladder!.tiers[0].range).toEqual({ min: 5, max: 5.9 })
   })
 })
 

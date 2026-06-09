@@ -8,6 +8,21 @@ export function isClusterJewel(item: { itemClass: string; baseType: string }): b
   return item.itemClass === 'Jewels' && item.baseType.endsWith('Cluster Jewel')
 }
 
+/** PoE2 runeforging/runemastering upgrades a base into a distinct trade `type`
+ *  (e.g. "Faithful Leggings" -> "Runeforged Faithful Leggings"). The clipboard
+ *  keeps the prefix on `baseType`. Splits that prefix off so callers can choose
+ *  the prefixed (premium rune market) or bare base for the trade search. The
+ *  gem/map/currency exclusion lives at the call site, not here -- this is a pure
+ *  string split. */
+export function splitRuneTier(baseType: string): {
+  tier: 'Runeforged' | 'Runemastered' | null
+  bare: string
+} {
+  const m = baseType.match(/^(Runeforged|Runemastered)\s+(.+)$/)
+  if (!m) return { tier: null, bare: baseType }
+  return { tier: m[1] as 'Runeforged' | 'Runemastered', bare: m[2] }
+}
+
 /** All item-class strings that identify skill gems, across PoE1 and PoE2. The
  *  PoE1 clipboard emits "Gems"; PoE2 uses the more granular "Active Skill Gems"
  *  / "Support Skill Gems" strings. "Skill Gems" and "Support Gems" appear in

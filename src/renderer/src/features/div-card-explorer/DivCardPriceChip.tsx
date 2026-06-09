@@ -1,13 +1,13 @@
-import { formatPrice } from './utils'
+import { formatDivCardPrice } from './utils'
 import { CurrencyIcon } from '../../shared/CurrencyIcon'
 
-interface PriceChipProps {
+interface DivCardPriceChipProps {
   value: number
   divineRate: number
 }
 
-export function PriceChip({ value, divineRate }: PriceChipProps): JSX.Element {
-  const { text, currencyKey } = formatPrice(value, divineRate)
+export function DivCardPriceChip({ value, divineRate }: DivCardPriceChipProps): JSX.Element {
+  const { text, currencyKey } = formatDivCardPrice(value, divineRate)
   return (
     <span className="inline-flex items-center gap-[2px]">
       {text}

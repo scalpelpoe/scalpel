@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeSettings } from '../../../../shared/types'
 import { SettingsPanel } from './SettingsPanel'
 
-vi.mock('./settings', () => ({
+vi.mock('./tabs', () => ({
   GeneralTab: () => <div>General Tab</div>,
   ViewTab: () => <div>View Tab</div>,
   MacrosTab: () => <div>Macros Tab</div>,
@@ -16,11 +16,11 @@ vi.mock('./settings', () => ({
   prettyHotkey: (hotkey: string) => hotkey,
 }))
 
-vi.mock('./settings/DeveloperSection', () => ({
+vi.mock('./tabs/DeveloperSection', () => ({
   DeveloperSection: () => <div>Developer Tab</div>,
 }))
 
-vi.mock('./settings/PluginsSection', () => ({
+vi.mock('./tabs/PluginsSection', () => ({
   PluginsSection: () => <div>Plugins Tab</div>,
 }))
 
@@ -68,6 +68,11 @@ describe('SettingsPanel tab routing', () => {
     ;(window as unknown as { api: Partial<typeof window.api> }).api = {
       setSetting: vi.fn(),
       setProfileSettingForGame: vi.fn(),
+      listInstalledPlugins: vi.fn(async () => []),
+      pluginFetchRegistry: vi.fn(async () => ({ ok: false as const, error: 'x' })),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
     }
   })
 

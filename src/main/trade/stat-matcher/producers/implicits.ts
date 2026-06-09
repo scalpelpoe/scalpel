@@ -6,7 +6,7 @@ import { accumulatePseudo, PSEUDO_CONTRIBUTIONS } from '../pseudo'
 import { dropFragmentDuplicates } from './explicits'
 
 export function processImplicits(ctx: MatchContext): StatFilter[] {
-  const { implicits, itemInfo, advancedMods, isWeapon, pseudoAccumulator } = ctx
+  const { implicits, itemInfo, advancedMods, isWeapon, isTablet, pseudoAccumulator } = ctx
   const out: StatFilter[] = []
 
   for (const mod of implicits) {
@@ -42,7 +42,11 @@ export function processImplicits(ctx: MatchContext): StatFilter[] {
           !!itemInfo?.corrupted ||
           !!itemInfo?.synthesised ||
           (!!matched.option && itemInfo?.itemClass !== 'Expedition Logbooks') ||
-          itemInfo?.itemClass === 'Maps',
+          itemInfo?.itemClass === 'Maps' ||
+          // A tablet's sole implicit ("Adds X to a Map / # uses remaining") is its
+          // defining property and what buyers filter on, so default it on with the
+          // parsed uses count as the min.
+          isTablet,
         type: 'implicit',
         option: matched.option,
         aggregated: matched.aggregated,

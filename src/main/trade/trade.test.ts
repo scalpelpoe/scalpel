@@ -395,6 +395,29 @@ describe('searchTrade filter-group dispatch', () => {
     expect(body.query.filters.type_filters.filters.rarity).toEqual({ option: 'unique' })
   })
 
+  it('unidentified unique with a known name (clicked from the uniques list) searches by name', async () => {
+    setPoeVersion(2)
+    // Clicking a specific unique in the UniquesForBase list builds an unidentified
+    // synthetic whose name is the real unique name (name != baseType). The unid chip
+    // is on, but we DO know which unique it is, so the search must filter by name --
+    // not fall back to the base + rarity:unique catch-all.
+    const clickedUnique = {
+      name: 'Gifts from Above',
+      baseType: 'Prismatic Ring',
+      itemClass: 'Rings',
+      rarity: 'Unique',
+    }
+    const filters: StatFilter[] = [
+      { id: 'misc.identified', text: 'Unidentified', type: 'misc', enabled: true, value: null, min: null, max: null },
+    ]
+    await searchTrade('Runes of Aldur', clickedUnique, filters, { tradeStatus: 'any' })
+    const req = capturedRequests.find((r) => r.url.includes('/search/'))
+    const body = parseCapturedBody(req)
+    expect(body.query.name).toBe('Gifts from Above')
+    expect(body.query.type).toBe('Prismatic Ring')
+    expect(body.query.filters?.type_filters?.filters?.rarity).toBeUndefined()
+  })
+
   it('unidentified item still sends enchant filters (cluster jewel passive count survives id)', async () => {
     setPoeVersion(1)
     const unidCluster = {
@@ -1187,5 +1210,103 @@ describe('searchTabletsByRegex', () => {
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     const body = parseCapturedBody(req)
     expect(body.query.filters.type_filters.filters.rarity).toBeUndefined()
+  })
+})
+
+describe('searchTrade rune-base handling', () => {
+  beforeEach(() => {
+    capturedRequests.length = 0
+    _resetRateLimitsForTests()
+    setPoeVersion(2)
+  })
+
+  it('runemastered unique with rune chip enabled sends type as discriminator object', async () => {
+    const runedUnique = {
+      name: 'Eventide Petals',
+      baseType: 'Runemastered Veridical Chain',
+      itemClass: 'Amulets',
+      rarity: 'Unique',
+    }
+    const filters: StatFilter[] = [
+      { id: 'misc.rune_base', text: 'Runemastered', type: 'misc', enabled: true, value: null, min: null, max: null },
+    ]
+    await searchTrade('Runes of Aldur', runedUnique, filters, {
+      tradeStatus: 'any',
+      tradePriceOption: 'exalted_divine',
+    })
+    const req = capturedRequests.find((r) => r.url.includes('/search/'))
+    const body = parseCapturedBody(req)
+    expect(body.query.name).toBe('Eventide Petals')
+    expect(body.query.type).toEqual({ option: 'Runemastered Veridical Chain', discriminator: 'legacy' })
+  })
+
+  it('runemastered unique with rune chip disabled sends the bare base as a plain string', async () => {
+    const runedUnique = {
+      name: 'Eventide Petals',
+      baseType: 'Runemastered Veridical Chain',
+      itemClass: 'Amulets',
+      rarity: 'Unique',
+    }
+    const filters: StatFilter[] = [
+      { id: 'misc.rune_base', text: 'Runemastered', type: 'misc', enabled: false, value: null, min: null, max: null },
+    ]
+    await searchTrade('Runes of Aldur', runedUnique, filters, {
+      tradeStatus: 'any',
+      tradePriceOption: 'exalted_divine',
+    })
+    const req = capturedRequests.find((r) => r.url.includes('/search/'))
+    const body = parseCapturedBody(req)
+    expect(body.query.name).toBe('Eventide Petals')
+    expect(body.query.type).toBe('Veridical Chain')
+  })
+
+  // For rares the basetype chip carries the BARE base; the rune chip composes the
+  // prefix back on at query time (orthogonal chips). The rune chip only takes
+  // effect while the basetype chip is on.
+  const runedRare = {
+    name: 'Runeforged Faithful Leggings',
+    baseType: 'Runeforged Faithful Leggings',
+    itemClass: 'Body Armours',
+    rarity: 'Rare',
+  }
+  const bareBaseChip: StatFilter = {
+    id: 'misc.basetype',
+    text: 'Faithful Leggings',
+    type: 'misc',
+    enabled: true,
+    value: null,
+    min: null,
+    max: null,
+  }
+
+  it('runeforged rare composes the rune prefix when both chips are on', async () => {
+    const filters: StatFilter[] = [
+      { ...bareBaseChip },
+      { id: 'misc.rune_base', text: 'Runeforged', type: 'misc', enabled: true, value: null, min: null, max: null },
+    ]
+    await searchTrade('Runes of Aldur', runedRare, filters, { tradeStatus: 'any', tradePriceOption: 'exalted_divine' })
+    const body = parseCapturedBody(capturedRequests.find((r) => r.url.includes('/search/')))
+    expect(body.query.type).toBe('Runeforged Faithful Leggings')
+  })
+
+  it('runeforged rare sends the bare base when the rune chip is off', async () => {
+    const filters: StatFilter[] = [
+      { ...bareBaseChip },
+      { id: 'misc.rune_base', text: 'Runeforged', type: 'misc', enabled: false, value: null, min: null, max: null },
+    ]
+    await searchTrade('Runes of Aldur', runedRare, filters, { tradeStatus: 'any', tradePriceOption: 'exalted_divine' })
+    const body = parseCapturedBody(capturedRequests.find((r) => r.url.includes('/search/')))
+    expect(body.query.type).toBe('Faithful Leggings')
+  })
+
+  it('rune chip is inert when the basetype chip is off (category search)', async () => {
+    const filters: StatFilter[] = [
+      { ...bareBaseChip, enabled: false },
+      { id: 'misc.rune_base', text: 'Runeforged', type: 'misc', enabled: true, value: null, min: null, max: null },
+    ]
+    await searchTrade('Runes of Aldur', runedRare, filters, { tradeStatus: 'any', tradePriceOption: 'exalted_divine' })
+    const body = parseCapturedBody(capturedRequests.find((r) => r.url.includes('/search/')))
+    expect(body.query.type).toBeUndefined()
+    expect(body.query.filters.type_filters.filters.category).toBeDefined()
   })
 })

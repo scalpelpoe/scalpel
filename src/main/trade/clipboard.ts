@@ -519,6 +519,17 @@ export function parseItemText(text: string): PoeItem | null {
     }
   }
 
+  // Parse Grants Skill lines (PoE2 uniques/rune-corrupted items).
+  // Scan every section for lines matching "Grants Skill: Level N <SkillName>".
+  // Multiple granted skills on one item are all captured.
+  const grantedSkills: string[] = []
+  const GRANTS_SKILL_RE = /^Grants Skill: Level \d+ /
+  for (const section of sections) {
+    for (const line of section.split('\n').map((l) => l.trim())) {
+      if (GRANTS_SKILL_RE.test(line)) grantedSkills.push(line)
+    }
+  }
+
   // Parse enchant and imbue lines
   const imbues: string[] = []
   for (const section of sections) {
@@ -617,6 +628,7 @@ export function parseItemText(text: string): PoeItem | null {
     implicits,
     enchants,
     imbues,
+    ...(grantedSkills.length > 0 ? { grantedSkills } : {}),
     ...(memoryStrands != null ? { memoryStrands } : {}),
     ...(advancedMods.length > 0 ? { advancedMods } : {}),
     ...(mapQuantity != null ? { mapQuantity } : {}),

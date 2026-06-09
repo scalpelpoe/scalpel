@@ -148,30 +148,50 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
   })
 
   ipcMain.handle('plugins:fetch-registry', async () => {
-    const overrideUrl = (store.get('pluginRegistryUrl') as AppSettings['pluginRegistryUrl']) ?? undefined
+    // Dev-only override (local test harness) takes precedence over the
+    // self-host setting; never set SCALPEL_PLUGIN_REGISTRY_URL in production.
+    const overrideUrl =
+      process.env.SCALPEL_PLUGIN_REGISTRY_URL ??
+      (store.get('pluginRegistryUrl') as AppSettings['pluginRegistryUrl']) ??
+      undefined
     return fetchRegistry(overrideUrl)
   })
 
-  ipcMain.handle('plugins:install-from-registry', async (_evt, entry: unknown) => {
-    // Defensive shape check; the renderer should only pass entries it got
-    // back from `plugins:fetch-registry`, but trusting the IPC boundary is
-    // the same posture we take everywhere else.
+  // Install and update share the same download/validate/write path; they differ
+  // only in the event the renderer reacts to (fresh-load vs unload-then-reload).
+  const installOrUpdate = async (
+    entry: unknown,
+    channel: 'plugin-installed' | 'plugin-updated',
+  ): Promise<import('../plugins/install-types').InstallResult> => {
     if (!entry || typeof entry !== 'object') {
       return { ok: false as const, error: 'invalid registry entry' }
     }
-    const registryResult = await installFromRegistry(
-      entry as import('../../shared/plugin-registry-types').RegistryEntry,
-    )
-    if (registryResult.ok) {
-      const installed = getInstalledPlugins().find((p) => p.manifest.id === registryResult.id)
+    const result = await installFromRegistry(entry as import('../../shared/plugin-registry-types').RegistryEntry)
+    if (result.ok) {
+      const installed = getInstalledPlugins().find((p) => p.manifest.id === result.id)
       if (installed) {
-        getOverlayWindow()?.webContents.send('plugin-installed', {
+        getOverlayWindow()?.webContents.send(channel, {
           manifest: installed.manifest,
           entryUrl: `${pluginEntryUrl(installed.manifest.id)}?v=${installed.manifest.version}`,
         })
       }
     }
-    return registryResult
+    return result
+  }
+
+  ipcMain.handle('plugins:install-from-registry', async (_evt, entry: unknown) => {
+    // Defensive shape check; the renderer should only pass entries it got
+    // back from `plugins:fetch-registry`, but trusting the IPC boundary is
+    // the same posture we take everywhere else.
+    return installOrUpdate(entry, 'plugin-installed')
+  })
+
+  ipcMain.handle('plugins:update-from-registry', async (_evt, entry: unknown) => {
+    // Distinct from `plugin-installed`: the renderer must take the
+    // unload-then-reload path, not the fresh-load path (which no-ops when a
+    // tab for this id already exists). Cache-bust the entry URL with the new
+    // version so importPluginModule fetches the new code.
+    return installOrUpdate(entry, 'plugin-updated')
   })
 
   ipcMain.handle(

@@ -1567,4 +1567,96 @@ describe('parseItemText', () => {
       expect(item.wingsTotal).toBe(3)
     })
   })
+
+  // ---------------------------------------------------------------------------
+  // Grants Skill parsing (PoE2 unique/corrupted items)
+  // ---------------------------------------------------------------------------
+
+  describe('grantedSkills parsing', () => {
+    it('parses a single Grants Skill line from the Serles Grit clipboard', () => {
+      const text = [
+        'Item Class: One Hand Maces',
+        'Rarity: Unique',
+        "Serle's Grit",
+        'Kalguuran Forgehammer',
+        '--------',
+        'Physical Damage: 58-104 (augmented)',
+        'Critical Hit Chance: 5.00%',
+        'Attacks per Second: 1.45',
+        '--------',
+        'Requires: Level 64 (unmet), 100 (unmet) Str',
+        '--------',
+        'Sockets: S S S ',
+        '--------',
+        'Item Level: 68',
+        '--------',
+        '{ Implicit Modifier }',
+        'Has 3 Sockets',
+        '--------',
+        'Grants Skill: Level 15 Runic Tempering',
+        '--------',
+        '{ Unique Modifier }',
+        'Maximum Quality is 40%',
+        '{ Unique Modifier — Damage, Physical, Attack }',
+        'Adds 25(23-30) to 49(35-55) Physical Damage',
+        '{ Unique Modifier — Attribute }',
+        '+29(20-30) to Strength',
+        '{ Unique Modifier }',
+        'Skills which Empower an Attack have 11(10-20)% chance to not count that Attack',
+        '{ Unique Modifier — Damage, Physical }',
+        '44(40-50) to 91(80-100) added Physical Thorns damage per Runic Plate',
+        '--------',
+        'A common soldier from a common family kept hammering into the night',
+        'after each grueling march, his eyes afire with starlight and determination.',
+        'Few suspected that he would one day become the greatest among them.',
+        '--------',
+        'Note: ~b/o 1 exalted',
+      ].join('\n')
+
+      const item = parseItemText(text)!
+      expect(item.grantedSkills).toBeDefined()
+      expect(item.grantedSkills).toHaveLength(1)
+      expect(item.grantedSkills![0]).toBe('Grants Skill: Level 15 Runic Tempering')
+    })
+
+    it('captures multiple Grants Skill lines on one item', () => {
+      const text = [
+        'Item Class: One Hand Maces',
+        'Rarity: Unique',
+        'Test Hammer',
+        'Kalguuran Forgehammer',
+        '--------',
+        'Item Level: 68',
+        '--------',
+        'Grants Skill: Level 15 Runic Tempering',
+        '--------',
+        'Grants Skill: Level 10 Frost Shield',
+        '--------',
+        '+20 to Strength',
+      ].join('\n')
+
+      const item = parseItemText(text)!
+      expect(item.grantedSkills).toHaveLength(2)
+      expect(item.grantedSkills).toContain('Grants Skill: Level 15 Runic Tempering')
+      expect(item.grantedSkills).toContain('Grants Skill: Level 10 Frost Shield')
+    })
+
+    it('omits grantedSkills when no Grants Skill lines are present', () => {
+      const text = [
+        'Item Class: Rings',
+        'Rarity: Unique',
+        'Praxis',
+        'Paua Ring',
+        '--------',
+        'Item Level: 68',
+        '--------',
+        '+30 to maximum Mana (implicit)',
+        '--------',
+        '+25 to maximum Mana',
+      ].join('\n')
+
+      const item = parseItemText(text)!
+      expect(item.grantedSkills).toBeUndefined()
+    })
+  })
 })

@@ -116,7 +116,15 @@ export const POE2_RE_URL = 'https://poe2.re'
 export const PLUGIN_REGISTRY_URL =
   'https://raw.githubusercontent.com/scalpelpoe/scalpel-plugins-registry/main/registry.json'
 
-/** Construct the download URL for a plugin release asset on GitHub. */
+/** Construct the download URL for a plugin release asset on GitHub.
+ *
+ *  Dev-only override: when SCALPEL_PLUGIN_ASSET_BASE is set (unpackaged dev /
+ *  local test harness), assets are fetched flat from `<base>/<file>` instead of
+ *  GitHub releases. The registry's sha256 pin is still enforced against whatever
+ *  bytes come back, so this loosens only the host, not the trust check. Never
+ *  set in production. */
 export function pluginReleaseAssetUrl(repo: string, version: string, file: string): string {
+  const base = typeof process !== 'undefined' ? process.env?.SCALPEL_PLUGIN_ASSET_BASE : undefined
+  if (base) return `${base}/${file}`
   return `https://github.com/${repo}/releases/download/v${version}/${file}`
 }

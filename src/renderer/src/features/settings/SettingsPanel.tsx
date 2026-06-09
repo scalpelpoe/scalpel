@@ -7,14 +7,15 @@ import type {
   ProfileSettingValue,
   RuntimeSettings,
 } from '../../../../shared/types'
-import { GeneralTab, ViewTab, MacrosTab, FilterTab, PriceCheckTab, FaqTab, CheatSheetsTab } from './settings'
-import { DeveloperSection } from './settings/DeveloperSection'
-import { PluginsSection } from './settings/PluginsSection'
+import { GeneralTab, ViewTab, MacrosTab, FilterTab, PriceCheckTab, FaqTab, CheatSheetsTab } from './tabs'
+import { DeveloperSection } from './tabs/DeveloperSection'
+import { PluginsSection } from './tabs/PluginsSection'
 import { ErrorBanner } from '../../components/ErrorBanner'
 import { createTryHotkey } from '../../components/primitives/hotkey-collisions'
 import { usePoeVersion } from '../../shared/poe-version-context'
 import { ProfileManagerTab } from '../profiles/ProfileManagerTab'
 import { m } from '../../../../shared/paraglide/messages.js'
+import { usePluginUpdates } from '../../plugins/use-plugin-updates'
 
 interface Props {
   settings: RuntimeSettings
@@ -129,6 +130,8 @@ export function SettingsPanel({
   /** Check if a hotkey collides or is a PoE-reserved combo. Collisions block; warnings pass. */
   const tryHotkey = createTryHotkey(() => settings, currentGame, showError)
 
+  const pluginUpdateCount = usePluginUpdates()
+
   const isOverlay = mode === 'overlay'
 
   return (
@@ -158,9 +161,14 @@ export function SettingsPanel({
               <button
                 key={t}
                 onClick={() => setTab(t)}
-                className={`text-[11px] px-3 py-1.5 ${tab === t ? 'bg-accent text-bg-solid' : 'text-text-dim'}`}
+                className={`text-[11px] px-3 py-1.5 inline-flex items-center gap-1.5 ${tab === t ? 'bg-accent text-bg-solid' : 'text-text-dim'}`}
               >
                 {TAB_LABELS[t]()}
+                {t === 'plugins' && pluginUpdateCount > 0 && (
+                  <span className="min-w-[16px] h-[16px] px-1 grid place-items-center rounded-full bg-accent text-bg-solid text-[10px] font-bold leading-none">
+                    {pluginUpdateCount}
+                  </span>
+                )}
               </button>
             ))}
         </div>

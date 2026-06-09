@@ -42,6 +42,10 @@ function cachePath(): string {
  *  userData override. Call once on app start. */
 export async function loadPremiumMods(): Promise<void> {
   applyRemotePremiumMods((await import('../shared/data/items/premium-mods.json')).default)
+  // Dev uses the bundled copy as the source of truth so local edits to
+  // premium-mods.json take effect without a push to main. Skip the userData
+  // cache + remote override (see refreshPremiumMods).
+  if (!app.isPackaged) return
   try {
     const cached = await fs.readFile(cachePath(), 'utf8')
     applyRemotePremiumMods(JSON.parse(cached))
@@ -53,6 +57,9 @@ export async function loadPremiumMods(): Promise<void> {
 /** Poll the remote manifest; if its hash changed and schema is compatible,
  *  download premium-mods.json, cache it, and swap it in. */
 export async function refreshPremiumMods(): Promise<void> {
+  // Dev keeps the bundled copy (see loadPremiumMods); never let the remote
+  // override a local premium-mods.json edit during development.
+  if (!app.isPackaged) return
   try {
     const mres = await fetch(PREMIUM_MODS_MANIFEST_URL, {
       headers: { 'Cache-Control': 'no-cache', 'User-Agent': 'Scalpel-PremiumMods' },

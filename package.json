@@ -1,6 +1,6 @@
 {
   "name": "scalpel",
-  "version": "0.9.13-rc5",
+  "version": "0.9.14-rc1",
   "description": "Path of Exile's First Fourth-Party Tool",
   "author": "Scalpel",
   "license": "AGPL-3.0-only",
@@ -115,7 +115,7 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "perMachine": false,
-      "allowElevation": true,
+      "allowElevation": false,
       "createDesktopShortcut": false,
       "artifactName": "Scalpel-Setup.${ext}"
     },

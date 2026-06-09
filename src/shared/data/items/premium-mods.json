@@ -5,6 +5,7 @@
     "Loreweave": ["Your Maximum Resistances are #%"]
   },
   "poe2": {
-    "Loreweave": ["Your Maximum Resistances are #%"]
+    "Loreweave": ["Your Maximum Resistances are #%"],
+    "From Nothing": ["explicit.stat_2422708892"]
   }
 }

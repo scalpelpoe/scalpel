@@ -28,6 +28,10 @@ function copyItemToClipboard(d: Listing['itemData'] & {}, rarity: string, btn: H
   if (d.baseType) lines.push(d.baseType)
   lines.push('--------')
   if (d.ilvl) lines.push(`Item Level: ${d.ilvl}`)
+  if (d.grantedSkills?.length) {
+    lines.push('--------')
+    for (const gs of d.grantedSkills) lines.push(`Grants Skill: ${gs.text}`)
+  }
   if (d.implicitMods?.length) {
     lines.push('--------')
     for (const mod of d.implicitMods) lines.push(`${mod} (implicit)`)
@@ -239,6 +243,22 @@ export function ExpandedListing({ listing: l, itemClass, itemName, itemRarity }:
           </div>
         )}
 
+        {/* Granted skills */}
+        {d.grantedSkills && d.grantedSkills.length > 0 && (
+          <div className="mt-1 pt-1 w-full flex flex-col gap-[2px]" style={MOD_SEPARATOR}>
+            {d.grantedSkills.map((gs, gi) => (
+              <div
+                key={gi}
+                className="text-[10px] flex items-center justify-center gap-1"
+                style={{ color: MOD_COLORS.skill }}
+              >
+                {gs.icon && <img src={gs.icon} alt="" className="w-4 h-4 object-contain" />}
+                <span>Grants Skill: {gs.text}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Implicit mods */}
         {d.implicitMods && d.implicitMods.length > 0 && (
           <div className="mt-1 pt-1 w-full" style={MOD_SEPARATOR}>
@@ -255,6 +275,7 @@ export function ExpandedListing({ listing: l, itemClass, itemName, itemRarity }:
               const fracturedSet = new Set(d.fracturedMods ?? [])
               const foulbornSet = new Set(d.foulbornMods ?? [])
               const craftedSet = new Set(d.craftedMods ?? [])
+              const desecratedSet = new Set(d.desecratedMods ?? [])
               const tiers = d.modTiers
               const mods = d.explicitMods!
               const fractured = mods.filter((m) => fracturedSet.has(m))
@@ -275,7 +296,9 @@ export function ExpandedListing({ listing: l, itemClass, itemName, itemRarity }:
                         ? MOD_COLORS.fractured
                         : craftedSet.has(mod)
                           ? MOD_COLORS.crafted
-                          : MOD_COLORS.explicit
+                          : desecratedSet.has(mod)
+                            ? MOD_COLORS.desecrated
+                            : MOD_COLORS.explicit
                   }
                   tierInfo={tiers?.[mod]}
                 />

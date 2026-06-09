@@ -33,7 +33,7 @@ const INDEXABLE_SUPPORT_RE = /^[a-z]+\.indexable_support_\d+/
 export function matchModToStat(
   modText: string,
   preferLocal = false,
-  modType: 'explicit' | 'crafted' | 'implicit' | 'enchant' | 'imbued' | 'sanctum' = 'explicit',
+  modType: 'explicit' | 'crafted' | 'implicit' | 'enchant' | 'imbued' | 'sanctum' | 'skill' = 'explicit',
   preferIndexableSupport = false,
   preferQualifier: string | null = null,
 ): { statId: string; value: number | null; option?: number; aggregated?: boolean } | null {
@@ -59,7 +59,7 @@ const TRAILING_QUALIFIER_RE = /\s*\(([^)]+)\)\s*$/
 function _matchModToStat(
   modText: string,
   preferLocal = false,
-  modType: 'explicit' | 'crafted' | 'implicit' | 'enchant' | 'imbued' | 'sanctum' = 'explicit',
+  modType: 'explicit' | 'crafted' | 'implicit' | 'enchant' | 'imbued' | 'sanctum' | 'skill' = 'explicit',
   preferIndexableSupport = false,
   preferQualifier: string | null = null,
 ): { statId: string; value: number | null; option?: number; aggregated?: boolean } | null {

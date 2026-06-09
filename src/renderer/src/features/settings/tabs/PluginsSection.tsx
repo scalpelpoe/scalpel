@@ -7,6 +7,7 @@ import { Button } from '../../../components/primitives/Button'
 import { HotkeyRecorder } from '../../../components/primitives/HotkeyRecorder'
 import { pluginHotkeyBinding } from './plugin-hotkey-binding'
 import { m } from '../../../../../shared/paraglide/messages.js'
+import { latestVersionFor } from '../../../plugins/plugin-update-check'
 
 interface Props {
   onError: (msg: string, tone?: 'error' | 'warn') => void
@@ -65,6 +66,7 @@ function PluginHotkeyBindRow({
         onChange={setHotkey}
         className="w-[200px] shrink-0"
         placeholder={m.settings_plg_set_hotkey()}
+        clearable
       />
       {/* Read-only on purpose: the plugin + action are fixed by context, so unlike
           the Macros-tab row there is no editable select or remove control here. */}
@@ -80,6 +82,8 @@ function InstalledRow({
   iconUrlFallback,
   busy,
   onUninstall,
+  updateVersion,
+  onUpdate,
   hotkeys,
   settings,
   update,
@@ -91,6 +95,8 @@ function InstalledRow({
   iconUrlFallback?: string
   busy: boolean
   onUninstall: () => void
+  updateVersion: string | null
+  onUpdate: () => void
   hotkeys: Array<{ action: string; label: string }>
   settings: RuntimeSettings
   update: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
@@ -109,9 +115,16 @@ function InstalledRow({
             {m.settings_plg_by({ author: manifest.author })}
           </div>
         </div>
-        <Button variant="secondary" size="sm" disabled={busy} onClick={onUninstall}>
-          {m.settings_plg_uninstall()}
-        </Button>
+        <div className="flex items-center gap-1.5">
+          {updateVersion && (
+            <Button variant="primary" size="sm" disabled={busy} onClick={onUpdate}>
+              {busy ? m.settings_plg_updating() : m.settings_plg_update({ version: updateVersion })}
+            </Button>
+          )}
+          <Button variant="secondary" size="sm" disabled={busy} onClick={onUninstall}>
+            {m.settings_plg_uninstall()}
+          </Button>
+        </div>
       </div>
       {hotkeys.length > 0 && (
         <div className="flex flex-col gap-1.5 pl-[52px]">
@@ -351,9 +364,11 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
 
   useEffect(() => {
     const offInstalled = window.api.onPluginInstalled(() => void refreshAll())
+    const offUpdated = window.api.onPluginUpdated(() => void refreshAll())
     const offHotkeys = window.api.onPluginHotkeysChanged(() => void refreshAll())
     return () => {
       offInstalled()
+      offUpdated()
       offHotkeys()
     }
   }, [refreshAll])
@@ -369,6 +384,20 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
       return
     }
     onError(m.settings_plg_install_success({ name: entry.name }), 'warn')
+    void refreshAll()
+  }
+
+  const doUpdate = async (entry: { id: string; name: string; newVersion: string }): Promise<void> => {
+    setBusyId(entry.id)
+    const r = await window.api.pluginUpdateFromRegistry(
+      (registry?.plugins ?? []).find((e) => e.id === entry.id) as RegistryEntry,
+    )
+    setBusyId(null)
+    if (!r.ok) {
+      onError(m.settings_plg_update_failed({ error: r.error }))
+      return
+    }
+    onError(m.settings_plg_update_success({ name: entry.name, version: entry.newVersion }), 'warn')
     void refreshAll()
   }
 
@@ -399,21 +428,29 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
           <div className="text-xs text-zinc-500">{m.settings_plg_none_installed()}</div>
         ) : (
           <div className="flex flex-col gap-1">
-            {installed.map(({ manifest }) => (
-              <InstalledRow
-                key={manifest.id}
-                manifest={manifest}
-                iconUrlFallback={registry?.plugins?.find((e) => e.id === manifest.id)?.iconUrl}
-                busy={busyId === manifest.id}
-                onUninstall={() => void uninstall(manifest.id, manifest.name)}
-                hotkeys={registeredHotkeys
-                  .filter((h) => h.pluginId === manifest.id)
-                  .map((h) => ({ action: h.action, label: h.label }))}
-                settings={settings}
-                update={update}
-                tryHotkey={tryHotkey}
-              />
-            ))}
+            {installed.map(({ manifest }) => {
+              const updateVersion = latestVersionFor(registry, manifest)
+              return (
+                <InstalledRow
+                  key={manifest.id}
+                  manifest={manifest}
+                  iconUrlFallback={registry?.plugins?.find((e) => e.id === manifest.id)?.iconUrl}
+                  busy={busyId === manifest.id}
+                  onUninstall={() => void uninstall(manifest.id, manifest.name)}
+                  updateVersion={updateVersion}
+                  onUpdate={() => {
+                    if (updateVersion)
+                      void doUpdate({ id: manifest.id, name: manifest.name, newVersion: updateVersion })
+                  }}
+                  hotkeys={registeredHotkeys
+                    .filter((h) => h.pluginId === manifest.id)
+                    .map((h) => ({ action: h.action, label: h.label }))}
+                  settings={settings}
+                  update={update}
+                  tryHotkey={tryHotkey}
+                />
+              )
+            })}
           </div>
         )}
       </section>

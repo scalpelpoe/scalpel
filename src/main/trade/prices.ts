@@ -417,6 +417,13 @@ export function lookupPriceForItem(item: NinjaItemRef): PriceInfo | undefined {
   return lookupPrice(item.name, item.baseType)
 }
 
+/** Test hook: seed the active uniques-by-base map (both versions) so
+ *  lookupBestUniquePrice has deterministic data without a network fetch. */
+export function _setUniquesByBaseForTests(map: Record<string, string[]>): void {
+  uniqueBaseMap = map
+  uniqueBaseMapPoe2 = map
+}
+
 /** Test hook: seed both maps without making network calls. The variant entry
  *  also writes into the legacy name-keyed map (last write wins) so name-only
  *  fallbacks behave the same as in production. */
@@ -458,4 +465,17 @@ export function lookupBestUniquePrice(baseType: string): PriceInfo | undefined {
     }
   }
   return best
+}
+
+/** Pick the price entry to display for an item. Identified uniques -- and every
+ *  non-unique -- resolve by their own name/variant via lookupPriceForItem. An
+ *  *unidentified* unique doesn't expose its name in the clipboard (PoE shows
+ *  only the base), so the only thing we can price it by is its base: we estimate
+ *  with the most valuable unique that drops on that base. This mirrors the
+ *  best-case unidCandidates list shown alongside it in preloadPriceCheck. */
+export function lookupItemPrice(item: NinjaItemRef & { identified?: boolean }): PriceInfo | undefined {
+  if (item.rarity === 'Unique' && !item.identified) {
+    return lookupBestUniquePrice(item.baseType) ?? lookupPriceForItem(item)
+  }
+  return lookupPriceForItem(item)
 }

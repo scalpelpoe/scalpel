@@ -14,6 +14,7 @@ import type { ModTier, TierDataset } from '../../shared/data/tiers/types'
 import { _setTierDataForTests } from '../tier-data'
 import { _setStatEntriesForTests, ITEM_CLASS_TO_CATEGORY, matchItemMods, matchModToStat } from './stat-matcher'
 import { resolveTierDefault } from './stat-matcher/producers/explicits'
+import { isPremiumMod, _resetPremiumMatchCacheForTests } from './stat-matcher/producers/premium'
 
 // Helper to build a minimal itemInfo object
 function makeItemInfo(overrides: Record<string, unknown> = {}) {
@@ -741,28 +742,74 @@ describe('matchItemMods', () => {
       expect(qualityChip?.enabled).toBe(true) // quality >= 20
     })
 
-    it('generates transfigured chip enabled when transfigured', () => {
+    it('shows a gem quality chip off with no value when the gem has 0 quality', () => {
       const filters = matchItemMods(
         [],
         [],
         undefined,
-        makeItemInfo({ itemClass: 'Skill Gems', gemLevel: 1, transfigured: true, sockets: '' }),
+        makeItemInfo({ itemClass: 'Skill Gems', gemLevel: 20, quality: 0, sockets: '' }),
       )
-      const transfigured = filters.find((f) => f.id === 'misc.gem_transfigured')
-      expect(transfigured).toBeDefined()
-      expect(transfigured?.enabled).toBe(true)
+      const qualityChip = filters.find((f) => f.id === 'misc.quality')
+      expect(qualityChip).toBeDefined()
+      expect(qualityChip?.type).toBe('gem')
+      expect(qualityChip?.text).toBe('Quality')
+      expect(qualityChip?.value).toBeNull()
+      expect(qualityChip?.min).toBeNull()
+      expect(qualityChip?.enabled).toBe(false)
+    })
+
+    it('generates transfigured chip enabled when transfigured', () => {
+      const prev = getPoeVersion()
+      setPoeVersion(1)
+      try {
+        const filters = matchItemMods(
+          [],
+          [],
+          undefined,
+          makeItemInfo({ itemClass: 'Skill Gems', gemLevel: 1, transfigured: true, sockets: '' }),
+        )
+        const transfigured = filters.find((f) => f.id === 'misc.gem_transfigured')
+        expect(transfigured).toBeDefined()
+        expect(transfigured?.enabled).toBe(true)
+      } finally {
+        setPoeVersion(prev)
+      }
     })
 
     it('generates transfigured chip disabled when not transfigured', () => {
-      const filters = matchItemMods(
-        [],
-        [],
-        undefined,
-        makeItemInfo({ itemClass: 'Skill Gems', gemLevel: 1, transfigured: false, sockets: '' }),
-      )
-      const transfigured = filters.find((f) => f.id === 'misc.gem_transfigured')
-      expect(transfigured).toBeDefined()
-      expect(transfigured?.enabled).toBe(false)
+      const prev = getPoeVersion()
+      setPoeVersion(1)
+      try {
+        const filters = matchItemMods(
+          [],
+          [],
+          undefined,
+          makeItemInfo({ itemClass: 'Skill Gems', gemLevel: 1, transfigured: false, sockets: '' }),
+        )
+        const transfigured = filters.find((f) => f.id === 'misc.gem_transfigured')
+        expect(transfigured).toBeDefined()
+        expect(transfigured?.enabled).toBe(false)
+      } finally {
+        setPoeVersion(prev)
+      }
+    })
+
+    it('omits the transfigured chip in PoE2 (no transfigured gems there)', () => {
+      const prev = getPoeVersion()
+      setPoeVersion(2)
+      try {
+        const filters = matchItemMods(
+          [],
+          [],
+          undefined,
+          makeItemInfo({ itemClass: 'Skill Gems', gemLevel: 16, quality: 20, sockets: '' }),
+        )
+        expect(filters.find((f) => f.id === 'misc.gem_transfigured')).toBeUndefined()
+        // The gem quality chip still appears in PoE2.
+        expect(filters.find((f) => f.id === 'misc.quality')?.type).toBe('gem')
+      } finally {
+        setPoeVersion(prev)
+      }
     })
 
     it('skips explicits for gem items', () => {
@@ -1452,6 +1499,53 @@ describe('matchItemMods', () => {
         makeItemInfo({ rarity: 'Magic', itemClass: 'Rings' }),
       )
       expect(filters.find((f) => f.id === 'explicit.stat_2777224821')).toBeUndefined()
+    })
+
+    // The tablet's defining implicit is a two-line combined stat the trade API
+    // stores singular ("Adds Abysses to a Map \n# use remaining"); the advanced
+    // clipboard rebuild feeds the matcher the per-line fragments plus the joined
+    // form. Real ids/text from the live PoE2 stats catalog.
+    const TABLET_IMPLICIT_STATS = [
+      { id: 'implicit.stat_2369421690', text: 'Adds Abysses to a Map \n# use remaining', type: 'implicit' },
+      {
+        id: 'implicit.stat_2219129443',
+        text: 'Adds an Otherworldy Breach to a Map \n# use remaining',
+        type: 'implicit',
+      },
+    ]
+
+    it('matches a multi-use tablet implicit (plural "uses") and defaults it on with the uses count', () => {
+      _setStatEntriesForTests(TABLET_IMPLICIT_STATS)
+      const filters = matchItemMods(
+        [],
+        ['Adds Abysses to a Map', '10 uses remaining', 'Adds Abysses to a Map\n10 uses remaining'],
+        undefined,
+        makeItemInfo({ rarity: 'Rare', itemClass: 'Tablet', baseType: 'Abyss Tablet' }),
+      )
+      const chips = filters.filter((f) => f.id === 'implicit.stat_2369421690')
+      expect(chips).toHaveLength(1)
+      expect(chips[0].value).toBe(10)
+      expect(chips[0].min).toBe(10)
+      expect(chips[0].enabled).toBe(true)
+    })
+
+    it('matches a single-use tablet implicit (singular "use") and defaults it on', () => {
+      _setStatEntriesForTests(TABLET_IMPLICIT_STATS)
+      const filters = matchItemMods(
+        [],
+        [
+          'Adds an Otherworldy Breach to a Map',
+          '1 use remaining',
+          'Adds an Otherworldy Breach to a Map\n1 use remaining',
+        ],
+        undefined,
+        makeItemInfo({ rarity: 'Unique', itemClass: 'Tablet', baseType: 'Breach Tablet' }),
+      )
+      const chip = filters.find((f) => f.id === 'implicit.stat_2219129443')
+      expect(chip).toBeDefined()
+      expect(chip?.value).toBe(1)
+      expect(chip?.min).toBe(1)
+      expect(chip?.enabled).toBe(true)
     })
   })
 
@@ -3161,6 +3255,59 @@ describe('premium-mod override', () => {
     } finally {
       setPoeVersion(prev)
       _setPremiumModsForTests(null)
+    }
+  })
+
+  it('base-id entry matches any option variant sharing that base (From Nothing pattern)', () => {
+    const prev = getPoeVersion()
+    _resetPremiumMatchCacheForTests()
+    _setPremiumModsForTests({
+      schemaVersion: 1,
+      poe1: {},
+      poe2: { 'From Nothing': ['explicit.stat_2422708892'] },
+    })
+    // No stat-entry seeding needed - the id path is pure string parsing.
+    try {
+      setPoeVersion(2)
+      const item = makeItemInfo({ rarity: 'Unique', name: 'From Nothing' })
+      // Both option variants resolve to the same base id and should match.
+      expect(isPremiumMod(item, 'explicit.stat_2422708892|34497')).toBe(true)
+      expect(isPremiumMod(item, 'explicit.stat_2422708892|32349')).toBe(true)
+      // An unrelated base id must not match.
+      expect(isPremiumMod(item, 'explicit.stat_9999999999|1')).toBe(false)
+    } finally {
+      setPoeVersion(prev)
+      _setPremiumModsForTests(null)
+      _resetPremiumMatchCacheForTests()
+    }
+  })
+
+  it('text entry still matches via canonical-text path (Loreweave regression)', () => {
+    const prev = getPoeVersion()
+    _resetPremiumMatchCacheForTests()
+    _setStatEntriesForTests([
+      { id: 'explicit.stat_loreweave', text: 'Your Maximum Resistances are #%', type: 'explicit' },
+    ])
+    _setPremiumModsForTests({
+      schemaVersion: 1,
+      poe1: {},
+      poe2: { Loreweave: ['Your Maximum Resistances are #%'] },
+    })
+    try {
+      setPoeVersion(2)
+      const item = makeItemInfo({ rarity: 'Unique', name: 'Loreweave' })
+      expect(isPremiumMod(item, 'explicit.stat_loreweave')).toBe(true)
+      // A stat that maps to a different text must not match.
+      _setStatEntriesForTests([
+        { id: 'explicit.stat_loreweave', text: 'Your Maximum Resistances are #%', type: 'explicit' },
+        { id: 'explicit.stat_other', text: 'Some Other Text', type: 'explicit' },
+      ])
+      _resetPremiumMatchCacheForTests()
+      expect(isPremiumMod(item, 'explicit.stat_other')).toBe(false)
+    } finally {
+      setPoeVersion(prev)
+      _setPremiumModsForTests(null)
+      _resetPremiumMatchCacheForTests()
     }
   })
 })

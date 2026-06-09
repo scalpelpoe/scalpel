@@ -2,7 +2,7 @@ import { app, net } from 'electron'
 import tabletModMap from '../../shared/data/trade/tablet-mods.json'
 import { TRANSFIGURED_GEM_DISC } from '../../shared/data/trade/transfigured-gems'
 import { getTradeUrls } from '../../shared/endpoints'
-import { isClusterJewel, isSkillGem } from '../../shared/poe-item'
+import { isClusterJewel, isSkillGem, splitRuneTier } from '../../shared/poe-item'
 import { getPoeVersion } from '../game-state'
 import { getOverlayWindow } from '../overlay'
 import { harvestIcons } from './icon-cache'
@@ -558,11 +558,14 @@ export async function searchTrade(
     // the beast name and the name field is empty. Setting query.name would AND-filter
     // every listing out. Match APT's behavior and search by type only.
     query.type = item.baseType
-  } else if (item.rarity === 'Unique' && unidEnabled) {
-    // An unidentified unique has no name line in the clipboard, so the parser sets
-    // name == baseType. Sending that as query.name searches for a unique literally
+  } else if (item.rarity === 'Unique' && unidEnabled && item.name === item.baseType) {
+    // A genuinely-unknown unid unique has no name line in the clipboard, so the parser
+    // sets name == baseType. Sending that as query.name searches for a unique literally
     // named e.g. "Heavy Belt" (no such unique) and returns 0 results. Search by base
     // type + rarity:unique instead, matching the trade site's own unid-unique search.
+    // The name == baseType guard is load-bearing: when a user clicks a specific unique
+    // in the UniquesForBase list, the synthetic is unidentified but its name IS the real
+    // unique name (name != baseType), so it falls through to the by-name Unique branch.
     query.type = item.baseType
     query.filters = {
       ...((query.filters as Record<string, unknown>) ?? {}),
@@ -570,7 +573,13 @@ export async function searchTrade(
     }
   } else if (item.rarity === 'Unique') {
     query.name = item.name.replace(/^Foulborn\s+/i, '')
-    query.type = item.baseType
+    const runeChip = statFilters.find((f) => f.id === 'misc.rune_base')
+    const { tier: runeTier, bare: runeBare } = splitRuneTier(item.baseType)
+    if (runeTier && runeChip) {
+      query.type = runeChip.enabled ? { option: item.baseType, discriminator: 'legacy' } : runeBare
+    } else {
+      query.type = item.baseType
+    }
   } else if (item.itemClass === 'Maps') {
     // Maps: use "Map" type with discriminator, add tier + blight filters
     const isValdoMap = item.baseType === 'Valdo Map'
@@ -723,7 +732,12 @@ export async function searchTrade(
     if (item.itemClass === 'Maps' && baseTypeFilter.text === 'Map') {
       query.type = { option: 'Map', discriminator: 'map' }
     } else {
-      query.type = baseTypeFilter.text
+      // The basetype chip carries the bare base; the rune chip composes the
+      // "Runeforged"/"Runemastered" prefix back on. Rune is a refinement of the
+      // pinned base -- it only takes effect while the basetype chip is on (the
+      // trade API has no generic "all runeforged" filter to fall back to).
+      const runeChip = statFilters.find((f) => f.id === 'misc.rune_base' && f.enabled)
+      query.type = runeChip ? `${runeChip.text} ${baseTypeFilter.text}` : baseTypeFilter.text
     }
   }
 
@@ -1002,12 +1016,14 @@ export async function searchTrade(
       item?: {
         icon?: string
         name?: string
+        typeLine?: string
         baseType?: string
         explicitMods?: string[]
         implicitMods?: string[]
         mutatedMods?: string[]
         fracturedMods?: string[]
         craftedMods?: string[]
+        desecratedMods?: string[]
         enchantMods?: string[]
         ilvl?: number
         sockets?: Array<{ group: number; sColour: string }>
@@ -1035,6 +1051,7 @@ export async function searchTrade(
           >
           hashes?: Record<string, Array<[string, number[]]>>
         }
+        grantedSkills?: Array<{ name: string; values: Array<[string, number]>; icon?: string }>
       }
     }>
   }
@@ -1078,24 +1095,41 @@ export async function searchTrade(
           const fractured = clean(r.item.fracturedMods)
           const crafted = clean(r.item.craftedMods)
           const foulborn = clean(r.item.mutatedMods)
+          const desecrated = clean(r.item.desecratedMods)
           return {
-            name: r.item.name,
+            // Magic items (frameType 1) carry an empty `name`; their affixed
+            // display name lives in `typeLine` (e.g. "Glaciated Prismatic Ring"),
+            // with `baseType` holding the clean base. Fall back to typeLine so the
+            // magic name renders instead of nothing. Rare/Unique already set `name`;
+            // Normal stays nameless (typeLine == baseType, shown dim below).
+            name: r.item.name || (r.item.frameType === 1 ? r.item.typeLine : undefined),
             baseType: r.item.baseType,
             rarity: ['Normal', 'Magic', 'Rare', 'Unique'][r.item.frameType ?? 0] ?? 'Normal',
-            explicitMods: [...(fractured ?? []), ...(explicit ?? []), ...(crafted ?? []), ...(foulborn ?? [])],
+            explicitMods: [
+              ...(fractured ?? []),
+              ...(explicit ?? []),
+              ...(crafted ?? []),
+              ...(foulborn ?? []),
+              ...(desecrated ?? []),
+            ],
             implicitMods: implicit,
             enchantMods: enchant,
             fracturedMods: fractured,
             craftedMods: crafted,
             foulbornMods: foulborn,
+            desecratedMods: desecrated,
             ilvl: r.item.ilvl,
             sockets: r.item.sockets,
             gemLevel: r.item.properties?.find((p) => p.name === 'Level')?.values?.[0]?.[0]
               ? parseInt(r.item.properties.find((p) => p.name === 'Level')!.values[0][0], 10)
               : undefined,
-            quality: r.item.properties?.find((p) => p.name === 'Quality')?.values?.[0]?.[0]
-              ? parseInt(r.item.properties.find((p) => p.name === 'Quality')!.values[0][0].replace(/[+%]/g, ''), 10)
-              : undefined,
+            quality: (() => {
+              // PoE1 names the property "Quality"; PoE2 wraps it in a localization
+              // tag ("[Quality]"). Both carry GGG's quality property type code 6,
+              // so match on that (with a name fallback) instead of the literal name.
+              const v = r.item.properties?.find((p) => p.type === 6 || p.name === 'Quality')?.values?.[0]?.[0]
+              return v ? parseInt(v.replace(/[+%]/g, ''), 10) : undefined
+            })(),
             storedExperience: r.item.properties?.find((p) => p.name.startsWith('Stored Experience'))?.values?.[0]?.[0]
               ? parseInt(r.item.properties.find((p) => p.name.startsWith('Stored Experience'))!.values[0][0], 10)
               : undefined,
@@ -1155,6 +1189,7 @@ export async function searchTrade(
                 { key: 'fractured', texts: r.item?.fracturedMods },
                 { key: 'crafted', texts: r.item?.craftedMods },
                 { key: 'enchant', texts: r.item?.enchantMods },
+                { key: 'desecrated', texts: r.item?.desecratedMods },
               ]
               for (const { key, texts } of categories) {
                 const modEntries = mods[key]
@@ -1166,7 +1201,8 @@ export async function searchTrade(
                   const m = modEntries[modIdx]
                   if (!m) continue
                   // Apply implicit multiplier to prefix/suffix ranges
-                  const isAffixCategory = key === 'explicit' || key === 'fractured' || key === 'crafted'
+                  const isAffixCategory =
+                    key === 'explicit' || key === 'fractured' || key === 'crafted' || key === 'desecrated'
                   const mult = isAffixCategory
                     ? m.tier.startsWith('P')
                       ? prefixMult
@@ -1198,6 +1234,9 @@ export async function searchTrade(
             pdps: r.item.extended?.pdps,
             edps: r.item.extended?.edps,
             dps: r.item.extended?.dps,
+            grantedSkills: r.item.grantedSkills
+              ?.map((g) => ({ text: stripTradeTokens(g.values?.[0]?.[0] ?? ''), icon: g.icon }))
+              .filter((g) => g.text),
           }
         })()
       : undefined,

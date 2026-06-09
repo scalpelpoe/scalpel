@@ -20,7 +20,7 @@ export function buildMapEntries(_divineRate: number): MapEntry[] {
     .sort((a, b) => b.totalEv - a.totalEv)
 }
 
-export function formatPrice(v: number, divineRate: number): { text: string; currencyKey: string } {
+export function formatDivCardPrice(v: number, divineRate: number): { text: string; currencyKey: string } {
   if (divineRate > 0 && v >= divineRate) {
     const d = v / divineRate
     return { text: d >= 100 ? Math.round(d).toString() : parseFloat(d.toFixed(1)).toString(), currencyKey: 'divine' }

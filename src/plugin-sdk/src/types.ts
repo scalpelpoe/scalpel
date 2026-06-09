@@ -17,7 +17,12 @@ export interface PluginManifest {
   iconUrl?: string
 }
 
-export type PluginActivate = (ctx: ScalpelPluginContext) => void | Promise<void>
+/** Optional cleanup returned from activate(); the host calls it when the plugin
+ *  is unloaded (uninstall or in-place update) so subscriptions/timers can be
+ *  torn down. Mirrors RegisterTabOptions.render's cleanup-fn convention. */
+export type PluginTeardown = () => void
+
+export type PluginActivate = (ctx: ScalpelPluginContext) => PluginTeardown | void | Promise<PluginTeardown | void>
 
 export interface RegisterTabOptions {
   /** Shown as the title-bar tooltip and in any "manage plugins" UI. */

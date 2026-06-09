@@ -13,7 +13,7 @@ import {
   appMacroScope,
   scopeAppliesTo,
 } from '../../../../../shared/macro-scope'
-import { narrowScopeForCrossGameConflict } from '../../../components/primitives/hotkey-collisions'
+import { narrowScopeForCrossGameConflict, type HotkeySlot } from '../../../components/primitives/hotkey-collisions'
 import { usePoeVersion } from '../../../shared/poe-version-context'
 import { m } from '../../../../../shared/paraglide/messages.js'
 
@@ -36,10 +36,33 @@ function getPresetOptions(presets: RegexPreset[]): Array<{ id: string; label: st
     .sort((a, b) => a.label.localeCompare(b.label))
 }
 
+/** A built-in Scalpel hotkey (filter / price check) rendered in the Macros tab's
+ *  Scalpel Hotkeys section. Unlike the user-added app-macro rows it shows a fixed
+ *  label instead of an action dropdown and has no remove control - the binding is
+ *  a top-level setting, not a list entry. Still clearable via the recorder's X. */
+function FixedHotkeyRow({
+  value,
+  label,
+  onChange,
+}: {
+  value: string
+  label: string
+  onChange: (hotkey: string) => void
+}): JSX.Element {
+  return (
+    <div className="flex gap-[6px] items-center bg-black/15 rounded p-[5px] min-w-0">
+      <HotkeyRecorder value={value} onChange={onChange} className="w-[200px] shrink-0" clearable />
+      <span className="font-mono text-[11px] text-text flex-1 min-w-0 truncate px-3 rounded bg-black/30 h-[34px] box-border flex items-center">
+        {label}
+      </span>
+    </div>
+  )
+}
+
 interface Props {
   settings: RuntimeSettings
   update: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
-  tryHotkey: (hotkey: string, slot: { kind: 'chat'; index: number } | { kind: 'appmacro'; index: number }) => boolean
+  tryHotkey: (hotkey: string, slot: HotkeySlot) => boolean
 }
 
 export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
@@ -158,91 +181,26 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
           </button>
         </div>
       </section>
-
-      {/* Plugin Hotkeys: user-managed bindings to plugin-registered hotkey
-       *  actions. Each row picks a plugin from the dropdown and records its
-       *  key chord. The Scalpel Macros UI pattern (dropdown + remove + add
-       *  button) keeps the surface consistent with the section above. */}
-      {(visiblePluginMacros.length > 0 || availablePluginsForNewRow.length > 0) && (
-        <>
-          <div className="settings-section-title mt-3">{m.settings_mac_plugin_hotkeys()}</div>
-          <section>
-            <div className="flex flex-col gap-2">
-              {visiblePluginMacros.map(({ macro, i }) => {
-                const pluginId =
-                  pluginHotkeys.find((p) => p.action === macro.action)?.pluginId ?? actionPluginId(macro.action)
-                const usedElsewhere = new Set(
-                  visiblePluginMacros.filter(({ i: j }) => j !== i).map(({ macro: m }) => m.action),
-                )
-                const optionsForThisRow = pluginHotkeys.filter(
-                  (p) => p.action === macro.action || !usedElsewhere.has(p.action),
-                )
-                const orphan = !pluginHotkeys.some((p) => p.action === macro.action)
-                return (
-                  <div key={i} className="flex gap-[6px] items-center bg-black/15 rounded p-[5px] min-w-0">
-                    <HotkeyRecorder
-                      value={macro.hotkey}
-                      onChange={(hotkey) => {
-                        if (!tryHotkey(hotkey, { kind: 'appmacro', index: i })) return
-                        const macros = [...(settings.appMacros ?? [])]
-                        macros[i] = { ...macros[i], hotkey }
-                        update('appMacros', macros)
-                      }}
-                      className="w-[200px] shrink-0"
-                    />
-                    <select
-                      value={macro.action}
-                      onChange={(e) => {
-                        const macros = [...(settings.appMacros ?? [])]
-                        macros[i] = { ...macros[i], action: e.target.value }
-                        update('appMacros', macros)
-                      }}
-                      className="text-[11px] flex-1 min-w-0 rounded h-[34px] box-border"
-                      style={{ padding: '4px 24px 4px 8px' }}
-                    >
-                      {orphan && (
-                        <option value={macro.action}>
-                          {m.settings_mac_plugin_not_loaded({ name: getPluginName(pluginId) })}
-                        </option>
-                      )}
-                      {optionsForThisRow.map((p) => (
-                        <option key={p.action} value={p.action}>
-                          {pluginOptionLabel(p.pluginId, p.label)}
-                        </option>
-                      ))}
-                    </select>
-                    <RemoveButton
-                      onClick={() =>
-                        update(
-                          'appMacros',
-                          (settings.appMacros ?? []).filter((_, j) => j !== i),
-                        )
-                      }
-                    />
-                  </div>
-                )
-              })}
-              {availablePluginsForNewRow.length > 0 && (
-                <button
-                  onClick={() => {
-                    const next = availablePluginsForNewRow[0]
-                    if (!next) return
-                    update('appMacros', [...(settings.appMacros ?? []), { action: next.action, hotkey: '' }])
-                  }}
-                  className="text-[11px] text-text-dim self-start px-3 py-1.5"
-                >
-                  {m.settings_mac_add_plugin_hotkey()}
-                </button>
-              )}
-            </div>
-          </section>
-        </>
-      )}
-
       {/* Scalpel Hotkeys */}
       <div className="settings-section-title mt-3">{m.settings_mac_scalpel_hotkeys()}</div>
       <section>
         <div className="flex flex-col gap-2">
+          <FixedHotkeyRow
+            value={settings.hotkey}
+            label={m.settings_filter_hotkey()}
+            onChange={(hotkey) => {
+              if (!tryHotkey(hotkey, { kind: 'filter' })) return
+              update('hotkey', hotkey)
+            }}
+          />
+          <FixedHotkeyRow
+            value={settings.priceCheckHotkey}
+            label={m.settings_pc_hotkey()}
+            onChange={(hotkey) => {
+              if (!tryHotkey(hotkey, { kind: 'pricecheck' })) return
+              update('priceCheckHotkey', hotkey)
+            }}
+          />
           {visibleAppMacros.map(({ macro, i }) => {
             const usedActions = new Set((settings.appMacros ?? []).map((m, j) => (j !== i ? m.action : '')))
             const availableActions = APP_MACRO_DEFS.filter(
@@ -343,6 +301,86 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
           </button>
         </div>
       </section>
+
+      {/* Plugin Hotkeys: user-managed bindings to plugin-registered hotkey
+       *  actions. Each row picks a plugin from the dropdown and records its
+       *  key chord. The Scalpel Macros UI pattern (dropdown + remove + add
+       *  button) keeps the surface consistent with the section above. */}
+      {(visiblePluginMacros.length > 0 || availablePluginsForNewRow.length > 0) && (
+        <>
+          <div className="settings-section-title mt-3">{m.settings_mac_plugin_hotkeys()}</div>
+          <section>
+            <div className="flex flex-col gap-2">
+              {visiblePluginMacros.map(({ macro, i }) => {
+                const pluginId =
+                  pluginHotkeys.find((p) => p.action === macro.action)?.pluginId ?? actionPluginId(macro.action)
+                const usedElsewhere = new Set(
+                  visiblePluginMacros.filter(({ i: j }) => j !== i).map(({ macro: m }) => m.action),
+                )
+                const optionsForThisRow = pluginHotkeys.filter(
+                  (p) => p.action === macro.action || !usedElsewhere.has(p.action),
+                )
+                const orphan = !pluginHotkeys.some((p) => p.action === macro.action)
+                return (
+                  <div key={i} className="flex gap-[6px] items-center bg-black/15 rounded p-[5px] min-w-0">
+                    <HotkeyRecorder
+                      value={macro.hotkey}
+                      onChange={(hotkey) => {
+                        if (!tryHotkey(hotkey, { kind: 'appmacro', index: i })) return
+                        const macros = [...(settings.appMacros ?? [])]
+                        macros[i] = { ...macros[i], hotkey }
+                        update('appMacros', macros)
+                      }}
+                      className="w-[200px] shrink-0"
+                    />
+                    <select
+                      value={macro.action}
+                      onChange={(e) => {
+                        const macros = [...(settings.appMacros ?? [])]
+                        macros[i] = { ...macros[i], action: e.target.value }
+                        update('appMacros', macros)
+                      }}
+                      className="text-[11px] flex-1 min-w-0 rounded h-[34px] box-border"
+                      style={{ padding: '4px 24px 4px 8px' }}
+                    >
+                      {orphan && (
+                        <option value={macro.action}>
+                          {m.settings_mac_plugin_not_loaded({ name: getPluginName(pluginId) })}
+                        </option>
+                      )}
+                      {optionsForThisRow.map((p) => (
+                        <option key={p.action} value={p.action}>
+                          {pluginOptionLabel(p.pluginId, p.label)}
+                        </option>
+                      ))}
+                    </select>
+                    <RemoveButton
+                      onClick={() =>
+                        update(
+                          'appMacros',
+                          (settings.appMacros ?? []).filter((_, j) => j !== i),
+                        )
+                      }
+                    />
+                  </div>
+                )
+              })}
+              {availablePluginsForNewRow.length > 0 && (
+                <button
+                  onClick={() => {
+                    const next = availablePluginsForNewRow[0]
+                    if (!next) return
+                    update('appMacros', [...(settings.appMacros ?? []), { action: next.action, hotkey: '' }])
+                  }}
+                  className="text-[11px] text-text-dim self-start px-3 py-1.5"
+                >
+                  {m.settings_mac_add_plugin_hotkey()}
+                </button>
+              )}
+            </div>
+          </section>
+        </>
+      )}
 
       {/* Other Macros */}
       <div className="settings-section-title mt-3">{m.settings_mac_other_macros()}</div>

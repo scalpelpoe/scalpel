@@ -2,6 +2,14 @@ import type { ModTier, TierDataset, TierLadder, TierStat } from './types'
 
 type CompactMod = TierDataset['mods'][number]
 
+/** RePoE stores some stats in internal units the game renders scaled. `_permyriad`
+ *  stats (per-10,000, e.g. leech) display as a percentage = value / 100. Tier matching
+ *  and the scrub range work in the displayed value-space, so normalize raw stats here.
+ *  Other internal-unit suffixes can be added if they surface. */
+function displayDivisor(id: string): number {
+  return id.endsWith('_permyriad') ? 100 : 1
+}
+
 /** Sort key for a [min,max] pair so two stat sets can be compared order-independently.
  *  The sort exists only to make the key stable regardless of advRanges ordering;
  *  we compare exact stat pairs so lexical vs numeric sort is irrelevant - identical
@@ -18,9 +26,13 @@ export function computeTierRange(
   stats: Array<[string, number, number]>,
   aggregated: boolean,
 ): { min: number; max: number } {
-  if (stats.length === 1) return { min: stats[0][1], max: stats[0][2] }
-  const min = stats.reduce((s, [, lo]) => s + lo, 0) / stats.length
-  const max = stats.reduce((s, [, , hi]) => s + hi, 0) / stats.length
+  if (stats.length === 1) {
+    const [id, lo, hi] = stats[0]
+    const d = displayDivisor(id)
+    return { min: lo / d, max: hi / d }
+  }
+  const min = stats.reduce((s, [id, lo]) => s + lo / displayDivisor(id), 0) / stats.length
+  const max = stats.reduce((s, [id, , hi]) => s + hi / displayDivisor(id), 0) / stats.length
   void aggregated // caller guarantees aggregated when stats.length > 1
   return { min, max }
 }
@@ -53,7 +65,7 @@ export function resolveTierLadder(
     let matchedAsc = -1
     for (let i = 0; i < idxList.length; i++) {
       const m: CompactMod = data.mods[idxList[i]]
-      if (pairKey(m.s.map(([, lo, hi]) => [lo, hi])) === target) {
+      if (pairKey(m.s.map(([id, lo, hi]) => [lo / displayDivisor(id), hi / displayDivisor(id)])) === target) {
         // If multiple tiers share identical ranges, prefer a name match when given.
         if (matchedAsc === -1 || (advName && m.n === advName)) matchedAsc = i
       }

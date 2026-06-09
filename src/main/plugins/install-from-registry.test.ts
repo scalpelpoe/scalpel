@@ -5,6 +5,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const PLUGIN_BYTES = new Uint8Array([1, 2, 3])
 const PLUGIN_SHA = createHash('sha256').update(PLUGIN_BYTES).digest('hex')
 
+const NEW_BYTES = new Uint8Array([9, 9, 9])
+const NEW_SHA = createHash('sha256').update(NEW_BYTES).digest('hex')
+
 const TEST_USER_DATA = '/test/userData'
 
 const { mockNetFetchFn } = vi.hoisted(() => ({
@@ -181,5 +184,31 @@ describe('installFromRegistry', () => {
     const r = await installFromRegistry(entry)
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error.toLowerCase()).toContain('checksum')
+  })
+
+  it('overwrites an existing plugin in place (update path)', async () => {
+    // Pre-seed an older install on disk + in installed.json.
+    mockFs.bufs.set(join(TEST_USER_DATA, 'plugins', 'hello-world', 'plugin.js'), PLUGIN_BYTES)
+    mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'installed.json'), JSON.stringify(['hello-world']))
+
+    const newManifest = { ...matchingManifest, version: '2.0.0' }
+    const newEntry = { ...validEntry, latestVersion: '2.0.0', sha256: NEW_SHA }
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v2.0.0/plugin.js': new Response(
+        NEW_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v2.0.0/manifest.json':
+        new Response(JSON.stringify(newManifest)),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry(newEntry)
+
+    expect(r.ok).toBe(true)
+    expect(mockFs.bufs.get(join(TEST_USER_DATA, 'plugins', 'hello-world', 'plugin.js'))).toEqual(NEW_BYTES)
+    expect(readMockJson(join(TEST_USER_DATA, 'plugins', 'hello-world', 'manifest.json'))).toMatchObject({
+      version: '2.0.0',
+    })
+    expect(readMockJson(join(TEST_USER_DATA, 'plugins', 'installed.json'))).toEqual(['hello-world'])
   })
 })

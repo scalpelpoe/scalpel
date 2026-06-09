@@ -2,7 +2,7 @@ import { chaosIcon } from '../../shared/icons'
 import { IconGlow } from '../../shared/IconGlow'
 import type { MapCardEntry } from './types'
 import { formatEv } from './utils'
-import { PriceChip } from './PriceChip'
+import { DivCardPriceChip } from './DivCardPriceChip'
 import { zebraRowBg } from '../../shared/utils'
 
 interface ExpandedCardListProps {
@@ -91,7 +91,7 @@ export function ExpandedCardList({
             <span
               className={`text-[11px] text-text-dim relative z-[2] font-mono w-[65px] text-right ${isFlagged ? 'line-through' : ''}`}
             >
-              <PriceChip value={c.card.price} divineRate={divineRate} />
+              <DivCardPriceChip value={c.card.price} divineRate={divineRate} />
             </span>
             <span
               className={`text-[11px] font-mono relative z-[2] w-[55px] text-right flex items-center justify-end gap-[3px] ${isFlagged ? 'text-[#ef9a3f]' : 'text-text-dim'}`}

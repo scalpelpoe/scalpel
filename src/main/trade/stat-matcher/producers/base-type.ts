@@ -1,4 +1,4 @@
-import { isClusterJewel, SKILL_GEM_CLASSES } from '../../../../shared/poe-item'
+import { isClusterJewel, SKILL_GEM_CLASSES, splitRuneTier } from '../../../../shared/poe-item'
 import type { StatFilter } from '../../trade'
 
 type BaseTypeItemInfo = {
@@ -29,12 +29,17 @@ export function buildBaseTypeFilter(itemInfo: BaseTypeItemInfo | undefined): Sta
   const isCluster = isClusterJewel({ itemClass: itemInfo.itemClass, baseType: baseTypeCleaned })
   const isBaseItem = itemInfo.rarity === 'Normal' || itemInfo.rarity === 'Magic'
   const isOverqualitied = itemInfo.quality > 20
+  // The basetype chip always shows the BARE base ("Faithful Leggings"); the
+  // separate misc.rune_base chip composes the "Runeforged"/"Runemastered" prefix
+  // back on at query time. Rune bases default off like any other rare (category
+  // search) -- the user pins the base + rune chips explicitly when narrowing.
+  const baseTypeText = splitRuneTier(baseTypeCleaned).bare
   const baseTypeEnabled = isSpecialMap || isCluster || (isBaseItem && isOverqualitied)
 
   return [
     {
       id: 'misc.basetype',
-      text: baseTypeCleaned,
+      text: baseTypeText,
       value: null,
       min: null,
       max: null,

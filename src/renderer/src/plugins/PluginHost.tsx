@@ -36,6 +36,11 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
   const loadedRef = useRef(false)
   const pluginHotkeyHandlersRef = useRef<Map<string, () => void>>(new Map())
   const pendingOverlayRef = useRef<Map<string, { title: string; icon?: string }>>(new Map())
+  // Per-plugin unsubscribe fns the host collected by wrapping ctx subscriptions,
+  // plus the optional teardown fn the plugin returned from activate(). Both are
+  // drained by unloadPlugin so a reload (or uninstall) leaves nothing running.
+  const pluginDisposersRef = useRef<Map<string, Array<() => void>>>(new Map())
+  const pluginTeardownRef = useRef<Map<string, () => void>>(new Map())
   // Latest-value refs let our captured-once subscribe callbacks return current values.
   const poeVersionRef = useRef(props.poeVersion)
   const leagueRef = useRef(props.league)
@@ -76,6 +81,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
   const loadPlugin = useCallback(async (entry: { manifest: PluginManifest; entryUrl: string }): Promise<void> => {
     const m = entry.manifest
     if (m.poeVersions && !m.poeVersions.includes(poeVersionRef.current)) return
+    const disposers: Array<() => void> = []
     try {
       const mod = (await importPluginModule(entry.entryUrl)) as { default: PluginActivate }
       if (typeof mod.default !== 'function') {
@@ -88,10 +94,26 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
         getLeague: () => leagueRef.current,
         getCurrentItem: () => currentItemRef.current,
         getCurrentZone: () => currentZoneRef.current,
-        subscribeCurrentItem: (h) => onSubscribeCurrentItemRef.current(h),
-        subscribeCurrentZone: (h) => onSubscribeCurrentZoneRef.current(h),
-        subscribeLeagueChange: (h) => onSubscribeLeagueChangeRef.current(h),
-        onLogLine: (h) => window.api.onLogLine(h),
+        subscribeCurrentItem: (h) => {
+          const u = onSubscribeCurrentItemRef.current(h)
+          disposers.push(u)
+          return u
+        },
+        subscribeCurrentZone: (h) => {
+          const u = onSubscribeCurrentZoneRef.current(h)
+          disposers.push(u)
+          return u
+        },
+        subscribeLeagueChange: (h) => {
+          const u = onSubscribeLeagueChangeRef.current(h)
+          disposers.push(u)
+          return u
+        },
+        onLogLine: (h) => {
+          const u = window.api.onLogLine(h)
+          disposers.push(u)
+          return u
+        },
         getRecentLogLines: (count) => window.api.getRecentLogLines(count),
         openExternal: (url) => onOpenExternalRef.current(url),
         storage: {
@@ -103,12 +125,20 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
         gameConfig: {
           read: () => window.api.gameConfigRead(),
           write: (content) => window.api.gameConfigWrite(content),
-          onChange: (handler) => window.api.onGameConfigChange(handler),
+          onChange: (handler) => {
+            const u = window.api.onGameConfigChange(handler)
+            disposers.push(u)
+            return u
+          },
         },
         prices: {
           getPrices: (opts) => window.api.pricesGet(opts),
           refresh: () => window.api.pricesRefresh(),
-          onChange: (handler) => window.api.onPricesChange(handler),
+          onChange: (handler) => {
+            const u = window.api.onPricesChange(handler)
+            disposers.push(u)
+            return u
+          },
         },
         registerTab: (pluginId, opts) => {
           setTabs((prev) => {
@@ -139,11 +169,58 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
         openOverlay: (pluginId) => void window.api.pluginOpenOverlay(pluginId),
         closeOverlay: (pluginId) => void window.api.pluginCloseOverlay(pluginId),
       })
-      // PluginActivate may be async; await the result so any rejection lands in catch.
-      await mod.default(ctx)
+      pluginDisposersRef.current.set(m.id, disposers)
+      // PluginActivate may be async and may return a teardown fn (host runtime
+      // honors it regardless of the SDK's published type; see the SDK task).
+      const teardown = await mod.default(ctx)
+      if (typeof teardown === 'function') {
+        pluginTeardownRef.current.set(m.id, teardown as () => void)
+      }
     } catch (err) {
+      // activate() may have subscribed before throwing; dispose what it set up
+      // so a failed load does not leak subscriptions.
+      for (const dispose of disposers) {
+        try {
+          dispose()
+        } catch {
+          // ignore: one bad unsubscribe must not block the rest
+        }
+      }
+      pluginDisposersRef.current.delete(m.id)
+      pluginTeardownRef.current.delete(m.id)
       onPluginErrorRef.current?.(m.id, err instanceof Error ? err : new Error(String(err)))
     }
+  }, [])
+
+  // Fully tear a plugin down: run its teardown fn, drop all tracked
+  // subscriptions, remove its tab/hotkey/overlay state, and tell main to
+  // unregister. Used by both hot-uninstall and update-reload.
+  const unloadPlugin = useCallback((pluginId: string): void => {
+    const teardown = pluginTeardownRef.current.get(pluginId)
+    if (teardown) {
+      try {
+        teardown()
+      } catch (err) {
+        onPluginErrorRef.current?.(pluginId, err instanceof Error ? err : new Error(String(err)))
+      }
+      pluginTeardownRef.current.delete(pluginId)
+    }
+    const disposers = pluginDisposersRef.current.get(pluginId)
+    if (disposers) {
+      for (const dispose of disposers) {
+        try {
+          dispose()
+        } catch {
+          // A misbehaving unsubscribe must not block the rest of teardown.
+        }
+      }
+      pluginDisposersRef.current.delete(pluginId)
+    }
+    setTabs((prev) => prev.filter((t) => t.pluginId !== pluginId))
+    pluginHotkeyHandlersRef.current.delete(pluginId)
+    pendingOverlayRef.current.delete(pluginId)
+    void window.api.pluginUnregisterHotkey(pluginId)
+    void window.api.pluginUnregisterTab(pluginId)
   }, [])
 
   useEffect(() => {
@@ -172,17 +249,23 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     })
   }, [])
 
-  // Hot-uninstall: remove an uninstalled plugin's tab and hotkey handler.
+  // Hot-update: unload the running instance, then reload the new code. The
+  // cache-busted entryUrl (?v=<newVersion>) makes importPluginModule fetch fresh.
+  useEffect(() => {
+    return window.api.onPluginUpdated(async (entry) => {
+      unloadPlugin(entry.manifest.id)
+      await loadPlugin(entry)
+    })
+  }, [unloadPlugin])
+
+  // Hot-uninstall: fully unload the plugin (this also disposes subscriptions the
+  // old inline handler leaked).
   useEffect(() => {
     return window.api.onPluginUninstalled((pluginId) => {
-      setTabs((prev) => prev.filter((t) => t.pluginId !== pluginId))
-      pluginHotkeyHandlersRef.current.delete(pluginId)
-      pendingOverlayRef.current.delete(pluginId)
-      void window.api.pluginUnregisterHotkey(pluginId)
-      void window.api.pluginUnregisterTab(pluginId)
+      unloadPlugin(pluginId)
       onPluginUnloadedRef.current?.(pluginId)
     })
-  }, [])
+  }, [unloadPlugin])
 
   useEffect(() => {
     return window.api.onPluginMacro((action: string) => {

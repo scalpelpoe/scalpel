@@ -14,7 +14,9 @@ vi.mock('../manifest', () => ({
 import {
   _setPricesForTests,
   _setPriceEntriesForTests,
+  _setUniquesByBaseForTests,
   getPriceEntries,
+  lookupItemPrice,
   lookupPrice,
   lookupPriceForItem,
   lookupUniquePriceForBase,
@@ -22,6 +24,7 @@ import {
   subscribePriceUpdates,
 } from './prices'
 import type { PriceEntry } from '../../shared/types'
+import { setPoeVersion } from '../game-state'
 
 const baseItem = (overrides: Record<string, unknown> = {}): Parameters<typeof lookupPriceForItem>[0] => ({
   name: '',
@@ -199,6 +202,39 @@ describe('getPriceEntries', () => {
     off()
     _setPriceEntriesForTests([], 2)
     expect(calls).toBe(1)
+  })
+})
+
+describe('lookupItemPrice (identified vs unidentified uniques)', () => {
+  beforeEach(() => {
+    setPoeVersion(2)
+    _setPricesForTests([
+      { name: 'Whisper of the Brotherhood', variant: 'Sapphire Ring', chaos: 2 },
+      { name: 'Pricey Ring Unique', variant: 'Sapphire Ring', chaos: 10 },
+    ])
+    _setUniquesByBaseForTests({ 'Sapphire Ring': ['Whisper of the Brotherhood', 'Pricey Ring Unique'] })
+  })
+
+  it('prices an identified unique by its own name, not the base best', () => {
+    const price = lookupItemPrice({
+      name: 'Whisper of the Brotherhood',
+      baseType: 'Sapphire Ring',
+      rarity: 'Unique',
+      itemClass: 'Rings',
+      identified: true,
+    })
+    expect(price?.chaosValue).toBe(2)
+  })
+
+  it('estimates an unidentified unique by the most valuable unique on its base', () => {
+    const price = lookupItemPrice({
+      name: 'Sapphire Ring',
+      baseType: 'Sapphire Ring',
+      rarity: 'Unique',
+      itemClass: 'Rings',
+      identified: false,
+    })
+    expect(price?.chaosValue).toBe(10)
   })
 })
 

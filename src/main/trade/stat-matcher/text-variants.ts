@@ -70,6 +70,11 @@ function generateTextVariants(text: string): string[] {
     // Trade API stores the singular "Has # Charm Slot" / "# Charm Slot"; an item
     // with 2+ slots reads "Charm Slots", so without this it never matches.
     [/Charm Slots/gi, 'Charm Slot'],
+    // Tablet implicits ("Adds Abysses to a Map \n# use remaining") are stored
+    // singular by the trade API, but a multi-use tablet's clipboard reads
+    // "10 uses remaining" -- without this the plural form never matches and the
+    // tablet's only implicit is dropped. Single-use tablets already say "use".
+    [/uses remaining/gi, 'use remaining'],
     [/Charges/gi, 'Charge'],
     [/Effects/gi, 'Effect'],
     [/Sockets/gi, 'Socket'],

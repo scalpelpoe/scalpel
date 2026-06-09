@@ -3,6 +3,7 @@ import type {
   PluginActivate,
   PluginManifest,
   PluginStorage,
+  PluginTeardown,
   RegisterHotkeyOptions,
   RegisterTabOptions,
   ScalpelPluginContext,
@@ -27,9 +28,11 @@ describe('PluginManifest', () => {
 })
 
 describe('PluginActivate', () => {
-  it('is callable with a context and returns void', () => {
+  it('is callable with a context and returns void or a teardown', () => {
     const fn: PluginActivate = (_ctx) => {}
-    expectTypeOf(fn).toEqualTypeOf<(ctx: ScalpelPluginContext) => void | Promise<void>>()
+    expectTypeOf(fn).toEqualTypeOf<
+      (ctx: ScalpelPluginContext) => PluginTeardown | void | Promise<PluginTeardown | void>
+    >()
   })
 
   it('accepts an async function', () => {
