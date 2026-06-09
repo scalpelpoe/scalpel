@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import { IPC_CHANNELS } from '../shared/contracts/ipc'
 import type { BugReportResult, RendererDiagnosticPayload } from '../shared/diagnostics'
 import type { ExternalLinkTarget } from '../shared/external-link'
 import type {
@@ -395,8 +396,8 @@ export const api = {
   },
   onPriceCheckOpen: (cb: () => void): (() => void) => {
     const handler = (): void => cb()
-    ipcRenderer.on('price-check-open', handler)
-    return () => ipcRenderer.removeListener('price-check-open', handler)
+    ipcRenderer.on(IPC_CHANNELS.OVERLAY.PRICE_CHECK_OPEN_EVENT, handler)
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.OVERLAY.PRICE_CHECK_OPEN_EVENT, handler)
   },
   onFilterHotkeyOpen: (cb: () => void): (() => void) => {
     const handler = (): void => cb()
@@ -433,8 +434,8 @@ export const api = {
     }) => void,
   ): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, data: Parameters<typeof cb>[0]): void => cb(data)
-    ipcRenderer.on('price-check', handler)
-    return () => ipcRenderer.removeListener('price-check', handler)
+    ipcRenderer.on(IPC_CHANNELS.OVERLAY.PRICE_CHECK_EVENT, handler)
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.OVERLAY.PRICE_CHECK_EVENT, handler)
   },
   tradeSearch: (
     item: {

@@ -1,4 +1,5 @@
 import { app, Tray, Menu, nativeImage } from 'electron'
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type Store from 'electron-store'
 import type { AppSettings, GameVariant } from '../../shared/types'
@@ -7,11 +8,25 @@ import { PROFILE_VERSION_KEY } from '../profiles/profile-settings'
 import { requestGameSwitch } from '../game-switch'
 import { createAndOpenBugReport, recordMainDiagnostic } from '../diagnostics'
 
+function resolveAppIconPath(iconExt: 'icon.ico' | 'icon.png'): string | null {
+  const candidates = app.isPackaged
+    ? [join(process.resourcesPath, iconExt)]
+    : [
+        join(app.getAppPath(), 'resources', iconExt),
+        join(process.cwd(), 'resources', iconExt),
+        join(__dirname, '../../resources', iconExt),
+      ]
+
+  return candidates.find((candidate) => existsSync(candidate)) ?? null
+}
+
 function getAppIcon(): Electron.NativeImage {
   const iconExt = process.platform === 'win32' ? 'icon.ico' : 'icon.png'
-  const devPath = join(__dirname, '../../resources', iconExt)
-  const prodPath = join(process.resourcesPath, iconExt)
-  const iconPath = app.isPackaged ? prodPath : devPath
+  const iconPath = resolveAppIconPath(iconExt)
+  if (!iconPath) {
+    recordMainDiagnostic('tray-icon', new Error(`Unable to resolve tray icon ${iconExt}`))
+    return nativeImage.createEmpty()
+  }
   return nativeImage.createFromPath(iconPath)
 }
 

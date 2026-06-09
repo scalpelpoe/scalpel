@@ -130,6 +130,7 @@ export const IPC_CHANNELS = {
     GAME_BOUNDS_EVENT: 'game-bounds',
     OVERLAY_DETACH_EVENT: 'overlay-detach',
     OVERLAY_REATTACH_EVENT: 'overlay-reattach',
+    PRICE_CHECK_EVENT: 'price-check',
     PRICE_CHECK_OPEN_EVENT: 'price-check-open',
     FILTER_HOTKEY_OPEN_EVENT: 'filter-hotkey-open',
     ZONE_CHANGED_EVENT: 'zone-changed',

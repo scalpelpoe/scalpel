@@ -2,6 +2,7 @@ import { clipboard, screen } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
 import type Store from 'electron-store'
 import { isTownOrHideout } from '../shared/is-town-or-hideout'
+import { IPC_CHANNELS } from '../shared/contracts/ipc'
 import type {
   AppSettings,
   FilterFile,
@@ -311,7 +312,7 @@ export async function preloadPriceCheck(item: PoeItem, store: Store<AppSettings>
 
   const divinePrice = lookupPrice('Divine Orb', 'Divine Orb')
   const chaosPerDivine = divinePrice?.chaosValue ?? 0
-  getOverlayWindow()?.webContents.send('price-check', {
+  getOverlayWindow()?.webContents.send(IPC_CHANNELS.OVERLAY.PRICE_CHECK_EVENT, {
     item,
     priceInfo,
     statFilters,
@@ -482,7 +483,7 @@ export function createHotkeyHandler(store: Store<AppSettings>, isElevated: () =>
 /** Switch the overlay into price-check view and populate it with `item`. Shared by the
  *  clipboard hotkey path and UI-triggered lookups (e.g. clicking a sister overlay row). */
 export async function runPriceCheck(item: PoeItem, store: Store<AppSettings>): Promise<void> {
-  getOverlayWindow()?.webContents.send('price-check-open')
+  getOverlayWindow()?.webContents.send(IPC_CHANNELS.OVERLAY.PRICE_CHECK_OPEN_EVENT)
   await preloadPriceCheck(item, store)
   showOverlay()
   if (getCurrentFilter()) evaluateAndSend(item)
