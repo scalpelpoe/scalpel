@@ -1,7 +1,7 @@
 pkgbase = scalpel-poe
 	pkgdesc = Path of Exile's First Fourth-Party Tool
 	pkgver = 0.9.8
-	pkgrel = 1
+	pkgrel = 2
 	url = https://github.com/scalpelpoe/scalpel
 	arch = x86_64
 	license = AGPL-3.0-only

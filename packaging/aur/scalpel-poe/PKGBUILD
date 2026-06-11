@@ -3,7 +3,7 @@
 
 pkgname=scalpel-poe
 pkgver=0.9.8
-pkgrel=1
+pkgrel=2
 pkgdesc="Path of Exile's First Fourth-Party Tool"
 arch=("x86_64")
 url="https://github.com/scalpelpoe/scalpel"
@@ -41,8 +41,10 @@ _check_node_version() {
 }
 
 _enter_builddir() {
-    cd "scalpel-$_upstream_version" || return 1
+    cd "$srcdir/scalpel-$_upstream_version" || return 1
     _check_node_version || return 1
+
+    export SHARP_IGNORE_GLOBAL_LIBVIPS=1
 }
 
 prepare() {
@@ -59,7 +61,7 @@ build() {
 }
 
 package() {
-    cd "scalpel-$_upstream_version"
+    cd "$srcdir/scalpel-$_upstream_version"
 
     install -Dm755 "dist/Scalpel.AppImage" "$pkgdir/opt/scalpel-poe/Scalpel.AppImage"
 
