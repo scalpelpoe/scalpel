@@ -22,10 +22,7 @@ async function getOpenWindows(): Promise<OpenWindowsFn> {
 
 import type { GameVariant } from '@shared/types'
 
-const TITLE_TO_VERSION: Record<string, GameVariant> = {
-  'Path of Exile': 1,
-  'Path of Exile 2': 2,
-}
+import { TITLE_TO_VARIANT } from '../shared/contracts/game-variant'
 
 /** Returns the PoE version of whichever window currently has OS foreground focus,
  *  or null if it's not a PoE window (or the OS lookup failed). Called on hotkey
@@ -35,7 +32,7 @@ export async function detectFocusedPoeVersion(): Promise<GameVariant | null> {
     const fn = await getActiveWindow()
     const win = await fn()
     const title = win?.title
-    return title ? (TITLE_TO_VERSION[title] ?? null) : null
+    return title ? (TITLE_TO_VARIANT[title] ?? null) : null
   } catch {
     return null
   }
@@ -51,7 +48,7 @@ export async function detectOpenPoeVersions(): Promise<Set<GameVariant>> {
     const windows = await fn()
     const versions = new Set<GameVariant>()
     for (const win of windows) {
-      const v = TITLE_TO_VERSION[win.title]
+      const v = TITLE_TO_VARIANT[win.title]
       if (v) versions.add(v)
     }
     return versions

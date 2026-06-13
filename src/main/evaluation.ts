@@ -386,7 +386,7 @@ async function captureItemFromClipboard(isElevated: () => boolean): Promise<PoeI
  *  making targetHasFocus true even when the overlay is attached to the wrong game.
  *  Always returns false when a switch is needed: the current press is swallowed,
  *  and the user reopens the overlay from the correct game after restart. */
-async function ensureCorrectGameForHotkey(store: Store<AppSettings>): Promise<boolean> {
+export async function ensureCorrectGameForHotkey(store: Store<AppSettings>): Promise<boolean> {
   // User typing in an overlay text field -- swallow so single-key hotkeys
   // don't stomp the input. Otherwise if the overlay window itself is focused
   // (user clicked into it), refocus PoE so the subsequent Ctrl+C reaches the

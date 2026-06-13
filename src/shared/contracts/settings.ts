@@ -1,10 +1,11 @@
 import type { MacroScope } from '../macro-scope'
 import type { ThemePalette } from '../theme/palette'
-import type { GameVariant, AppLocale, TradePriceOption, AdaptiveMode } from './core'
+import type { AppLocale, TradePriceOption, AdaptiveMode } from './core'
 import type { CheatSheetsSettings } from './overlay'
 import type { RegexPreset } from './regex'
 import type { PoeProfile } from './profiles'
 import type { HideableTabKey } from './items'
+import { GameVariant } from './game-variant'
 
 export interface LegacyAppSettings {
   filterPathPoe1?: string
@@ -85,4 +86,5 @@ export interface AppSettings {
 
 export interface RuntimeSettings extends AppSettings {
   activeProfile: PoeProfile | null
+  platform: NodeJS.Platform
 }

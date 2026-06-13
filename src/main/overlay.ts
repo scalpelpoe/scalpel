@@ -257,10 +257,7 @@ uIOhook.on(
   }),
 )
 
-const POE_WINDOW_TITLES: Record<1 | 2, string> = {
-  1: 'Path of Exile',
-  2: 'Path of Exile 2',
-}
+import { GAME_TITLES } from '../shared/contracts/game-variant'
 
 /** The PoE version the overlay's native tracker bound to at createOverlayWindow
  *  time. electron-overlay-window attaches once per process, so this is fixed for
@@ -352,7 +349,7 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
   }
 
   // Attach to the PoE game window — syncs overlay bounds automatically
-  OverlayController.attachByTitle(overlayWindow, POE_WINDOW_TITLES[getPoeVersion()])
+  OverlayController.attachByTitle(overlayWindow, GAME_TITLES[getPoeVersion()])
 
   OverlayController.events.on('attach', (ev) => {
     lastAttachAt = Date.now()

@@ -82,7 +82,7 @@ export function getProfileBackedSetting<K extends ProfileSettingKey>(
 
 export function getEffectiveSettings(store: Store<AppSettings>): RuntimeSettings {
   const settings = { ...store.store } as AppSettings
-  return { ...settings, activeProfile: getActiveProfile(store) }
+  return { ...settings, activeProfile: getActiveProfile(store), platform: process.platform }
 }
 
 export function listProfilesByGameVariant(variant: GameVariant): PoeProfile[] {
