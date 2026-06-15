@@ -9,12 +9,7 @@ import { TextEditor, type TextEditorHandle } from './elements/TextEditor'
 import { applyDragDelta, bakeTransform, renderElement } from './elements/registry'
 import { readOsClipboardForPaste, writeElementsToOsClipboard } from '../state/os-clipboard'
 import { createTextAt, measureTextBbox } from './tools/text'
-import type {
-  ImageElement,
-  StrokeElement as StrokeEl,
-  TextElement,
-  WhiteboardElement,
-} from '../../../../shared/whiteboard-types'
+import type { ImageElement, StrokeElement as StrokeEl, TextElement, WhiteboardElement } from '@shared/whiteboard-types'
 import { ContextMenu, type ContextMenuEntry } from './ContextMenu'
 import { appendPoint, commitStroke, getStagePointer, startStroke, type PenSession } from './tools/pen'
 import { applyErase } from './tools/eraser'

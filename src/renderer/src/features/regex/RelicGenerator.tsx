@@ -10,10 +10,10 @@ import {
 } from './mapmods-helpers'
 import { FilterChip } from '../../components/primitives/FilterChip'
 import { ModList } from './ModList'
-import { RELIC_MODS } from '../../../../shared/data/regex/relic-mods'
+import { RELIC_MODS } from '@shared/data/regex/relic-mods'
 import { buildRelicRegex, type RelicMatchType, type RelicSelections } from './relic-engine'
 import { generateRelicPresetTags } from './relic-preset-tags'
-import type { RegexPreset } from '../../../../shared/types'
+import type { RegexPreset } from '@shared/types'
 import type { GeneratorHandle, GeneratorProps } from './generator-types'
 
 const PREFIX_MODS = RELIC_MODS.filter((m) => m.affix === 'PREFIX')

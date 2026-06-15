@@ -3,14 +3,23 @@ import react from '@vitejs/plugin-react'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import pkg from './package.json'
 
+const resolveAlias = {
+  '@shared': resolve(__dirname, 'src/shared'),
+  '@main': resolve(__dirname, 'src/main'),
+  '@renderer': resolve(__dirname, 'src/renderer/src'),
+}
+
 export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
+    resolve: { alias: resolveAlias },
   },
   preload: {
     plugins: [externalizeDepsPlugin()],
+    resolve: { alias: resolveAlias },
   },
   renderer: {
+    resolve: { alias: resolveAlias },
     plugins: [react()],
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),

@@ -1,4 +1,4 @@
-import type { FlaskModGroup } from '../../../../shared/data/regex/flask-mods'
+import type { FlaskModGroup } from '@shared/data/regex/flask-mods'
 
 /** Settings shape for the flask regex generator. Ported from poe-vendor-string's
  *  `FlaskSettings`, with one deliberate deviation: upstream has separate

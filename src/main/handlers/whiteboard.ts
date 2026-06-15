@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { ipcMain } from 'electron'
-import type { BoardLibrary, BoardSnapshot, BoardState } from '../../shared/whiteboard-types'
+import type { BoardLibrary, BoardSnapshot, BoardState } from '@shared/whiteboard-types'
 import { loadExistingLibrary, loadLibrary, saveLibrary } from '../whiteboard'
 
 type Version = 1 | 2

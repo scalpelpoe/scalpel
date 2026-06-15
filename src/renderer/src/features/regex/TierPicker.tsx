@@ -1,6 +1,6 @@
 // Tier art is resolved at module load for TIER_MAP/ZANA_MAP_TIERS below; since the
 // regex tool is PoE1-specific (poe.re tier schema), pull from the PoE1 sheet.
-import itemIcons from '../../../../shared/data/items/item-icons-poe1.json'
+import itemIcons from '@shared/data/items/item-icons-poe1.json'
 import { FilterChip } from '../../components/primitives/FilterChip'
 
 const icons = itemIcons as Record<string, string>

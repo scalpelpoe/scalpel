@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { pluginHotkeyBinding } from './plugin-hotkey-binding'
-import type { RuntimeSettings } from '../../../../../shared/types'
+import type { RuntimeSettings } from '@shared/types'
 
 function settingsWith(appMacros: Array<{ action: string; hotkey: string }>): RuntimeSettings {
   return { appMacros } as unknown as RuntimeSettings

@@ -1,4 +1,4 @@
-import type { RadiusRingElement } from '../../../../../shared/whiteboard-types'
+import type { RadiusRingElement } from '@shared/whiteboard-types'
 import type { GameSize } from '../coords'
 import { groundDistance, screenToGround } from '../poe-projection'
 

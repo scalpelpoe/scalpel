@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { generateRelicPresetTags } from './relic-preset-tags'
-import { RELIC_MODS } from '../../../../shared/data/regex/relic-mods'
+import { RELIC_MODS } from '@shared/data/regex/relic-mods'
 
 describe('generateRelicPresetTags', () => {
   it('returns no tags for an empty any-mode selection', () => {

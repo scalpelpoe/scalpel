@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import type { FilterAction, FilterBlock, FilterCondition, FilterFile } from '../../shared/types'
+import type { FilterAction, FilterBlock, FilterCondition, FilterFile } from '@shared/types'
 import { NUMERIC_CONDITION_TYPES } from './condition-types'
 import { parseFilterFile } from './parser'
 

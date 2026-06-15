@@ -1,4 +1,4 @@
-import type { OverlayAnchor } from '../shared/types'
+import type { OverlayAnchor } from '@shared/types'
 import { forwardZoneChangesTo, sendCurrentZoneTo } from './client-log'
 import { registerSecondaryOverlay, type SecondaryOverlay } from './windowing'
 

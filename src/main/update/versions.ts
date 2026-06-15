@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { basename, join, resolve, sep } from 'node:path'
 import { app } from 'electron'
-import type { FilterVersion } from '../../shared/types'
+import type { FilterVersion } from '@shared/types'
 
 const MAX_AUTO_VERSIONS = 50
 

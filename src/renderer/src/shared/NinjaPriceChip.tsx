@@ -1,4 +1,4 @@
-import type { PriceInfo } from '../../../shared/types'
+import type { PriceInfo } from '@shared/types'
 import { pairCurrencyRole } from './pair-currency'
 import { PriceChip } from './PriceChip'
 import { usePoeVersion } from './poe-version-context'

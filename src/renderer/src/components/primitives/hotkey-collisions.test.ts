@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { findHotkeyCollision, narrowScopeForCrossGameConflict } from './hotkey-collisions'
-import type { RuntimeSettings } from '../../../../shared/types'
+import type { RuntimeSettings } from '@shared/types'
 
 function makeSettings(overrides: Partial<RuntimeSettings> = {}): RuntimeSettings {
   return {

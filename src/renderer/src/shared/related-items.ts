@@ -1,5 +1,5 @@
-import relatedItemsPoe1 from '../../../shared/data/items/related-items.json'
-import relatedItemsPoe2 from '../../../shared/data/items/related-items-poe2.json'
+import relatedItemsPoe1 from '@shared/data/items/related-items.json'
+import relatedItemsPoe2 from '@shared/data/items/related-items-poe2.json'
 import { getCurrentPoeVersion } from './constants'
 
 export interface RelatedRef {

@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { _setTierDataForTests } from '../../tier-data'
 import { attachTierLadder } from './producers/tier-attach'
-import type { TierDataset } from '../../../shared/data/tiers/types'
+import type { TierDataset } from '@shared/data/tiers/types'
 
 const data: TierDataset = {
   schemaVersion: 1,

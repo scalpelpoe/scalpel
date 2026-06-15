@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { ConditionRow } from './ConditionRow'
-import type { FilterCondition } from '../../../../../shared/types'
+import type { FilterCondition } from '@shared/types'
 
 /** ConditionRow renders one line of a filter block: condition type
  *  (left, blue), an optional operator (e.g. ">="), and the value(s) (gold).

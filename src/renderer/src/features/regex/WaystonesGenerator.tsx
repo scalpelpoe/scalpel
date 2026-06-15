@@ -15,7 +15,7 @@ import { FilterChip } from '../../components/primitives/FilterChip'
 import { ModList } from './ModList'
 import { ScrubInput } from '../../components/primitives/ScrubInput'
 import { InfoChip } from '../../shared/InfoChip'
-import { WAYSTONE_MODS } from '../../../../shared/data/regex/waystone-mods'
+import { WAYSTONE_MODS } from '@shared/data/regex/waystone-mods'
 import {
   buildWaystoneRegex,
   type WaystoneQualifiers,
@@ -28,7 +28,7 @@ import { useRegexTrade } from './useRegexTrade'
 import { WaystoneTierPicker } from './WaystoneTierPicker'
 import { TradeResults } from './TradeResults'
 import { useAuth } from '../../shared/use-auth'
-import type { RegexPreset } from '../../../../shared/types'
+import type { RegexPreset } from '@shared/types'
 import type { GeneratorHandle, GeneratorProps } from './generator-types'
 
 type Tab = 'qualifiers' | 'avoid' | 'want'

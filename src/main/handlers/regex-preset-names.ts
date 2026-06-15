@@ -1,4 +1,4 @@
-import type { RegexPreset } from '../../shared/types'
+import type { RegexPreset } from '@shared/types'
 
 /** Backfill `name` from legacy `tags` (joined by spaces) for any preset that
  *  lacks one. Pure + idempotent: returns the (possibly new) array and whether

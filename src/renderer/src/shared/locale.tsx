@@ -1,12 +1,6 @@
 import { createContext, Fragment, type ReactNode, useContext, useSyncExternalStore } from 'react'
 import type { Api } from '../../../preload/index'
-import {
-  baseLocale,
-  isLocale,
-  locales,
-  overwriteGetLocale,
-  overwriteSetLocale,
-} from '../../../shared/paraglide/runtime.js'
+import { baseLocale, isLocale, locales, overwriteGetLocale, overwriteSetLocale } from '@shared/paraglide/runtime.js'
 
 /** The set of locales compiled into the Paraglide runtime (see project.inlang). */
 export type Locale = (typeof locales)[number]

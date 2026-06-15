@@ -1,5 +1,5 @@
 import { Circle } from 'react-konva'
-import type { WhiteboardElement } from '../../../../../shared/whiteboard-types'
+import type { WhiteboardElement } from '@shared/whiteboard-types'
 import type { GameSize } from '../coords'
 import { groundToScreen, projectCircle, rightmostPx } from '../poe-projection'
 

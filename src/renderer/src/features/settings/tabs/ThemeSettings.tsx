@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import type { AppSettings } from '../../../../../shared/types'
-import type { ThemePalette, ThemePreset } from '../../../../../shared/theme/palette'
-import { PRESETS, CUSTOM_THEME_ID } from '../../../../../shared/theme/presets'
-import { resolveActivePalette } from '../../../../../shared/theme/active'
+import type { AppSettings } from '@shared/types'
+import type { ThemePalette, ThemePreset } from '@shared/theme/palette'
+import { PRESETS, CUSTOM_THEME_ID } from '@shared/theme/presets'
+import { resolveActivePalette } from '@shared/theme/active'
 import { applyPalette, applyVars } from '../../../shared/apply-theme'
 import { CollapsibleSection } from '../../../shared/CollapsibleSection'
 

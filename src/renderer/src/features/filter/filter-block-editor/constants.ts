@@ -1,4 +1,4 @@
-import type { FilterBlock } from '../../../../../shared/types'
+import type { FilterBlock } from '@shared/types'
 import { IP, iconMap } from '../../../shared/constants'
 
 export { IP, iconMap }

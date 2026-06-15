@@ -1,4 +1,4 @@
-import type { AppSettings } from '../shared/types'
+import type { AppSettings } from '@shared/types'
 import { setAppMacros } from './hotkeys'
 import { getRegisteredOverlayHotkeys, getRegisteredPluginHotkeys } from './plugins/hotkey-registry'
 

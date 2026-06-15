@@ -1,5 +1,5 @@
 // src/main/learning/engine.ts
-import type { PoeItem } from '../../shared/types'
+import type { PoeItem } from '@shared/types'
 import type { StatFilter } from '../trade/trade'
 import type { AdaptiveMode } from './types'
 import { deriveLearningContext, GLOBAL_KEY } from './context-key'

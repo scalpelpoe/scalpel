@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
 import type { PriceCheckProps, StatFilter, Listing, BulkListing } from './types'
 import { searchSignature } from './search-signature'
-import { getTradeUrls } from '../../../../shared/endpoints'
-import { getGameFeatures } from '../../../../shared/game-features'
+import { getTradeUrls } from '@shared/endpoints'
+import { getGameFeatures } from '@shared/game-features'
 import {
   RARITY_COLORS,
   INFLUENCE_ICONS,

@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings, FilterListEntry } from '../../shared/types'
+import type { AppSettings, FilterListEntry } from '@shared/types'
 import { getAppWindow } from '../app-window'
 import { setCloseOnClickOutside, showOverlay } from '../overlay'
 

@@ -1,4 +1,4 @@
-import type { ShapeElement } from '../../../../../shared/whiteboard-types'
+import type { ShapeElement } from '@shared/whiteboard-types'
 import { fromPixels, type GameSize } from '../coords'
 
 const COMMIT_THRESHOLD_PX = 4

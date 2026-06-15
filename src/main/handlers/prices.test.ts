@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { FilterFile } from '../../shared/types'
+import type { FilterFile } from '@shared/types'
 
 // Stub `../trade/prices` before importing the handler module -- the real implementation
 // tries to fetch from poe.ninja and reads/writes userData on import. We only exercise

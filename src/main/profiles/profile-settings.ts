@@ -8,7 +8,7 @@ import type {
   ProfileSettingValue,
   RegexPreset,
   RuntimeSettings,
-} from '../../shared/types'
+} from '@shared/types'
 import { getProfileStore, type ProfileStore } from './store'
 
 export type ProfileChangedSetting =

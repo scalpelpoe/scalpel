@@ -7,7 +7,7 @@ import { divCardArtMap, RARITY_COLORS } from '../../shared/constants'
 import { getModColor, MOD_BOLD_TYPES, uniqueToBase } from './constants'
 import type { StatFilter } from './types'
 import { zebraRowBg } from '../../shared/utils'
-import { valueToTier } from '../../../../shared/data/tiers/resolve'
+import { valueToTier } from '@shared/data/tiers/resolve'
 
 /** Tint static-box text by the value's item type. Used by Ultimatum chips
  *  whose value is a literal item name - unique flasks for Sacrifice, unique

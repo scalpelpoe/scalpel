@@ -1,6 +1,6 @@
 import type { PluginManifest } from '../../../plugin-sdk/src/types'
-import type { RegistrySnapshot } from '../../../shared/plugin-registry-types'
-import { compareVersions } from '../../../shared/version-match'
+import type { RegistrySnapshot } from '@shared/plugin-registry-types'
+import { compareVersions } from '@shared/version-match'
 
 interface InstalledLike {
   manifest: PluginManifest

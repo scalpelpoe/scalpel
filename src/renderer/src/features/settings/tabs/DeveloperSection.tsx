@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { PluginManifest } from '../../../../../plugin-sdk/src/types'
-import type { AppSettings } from '../../../../../shared/types'
-import { m } from '../../../../../shared/paraglide/messages.js'
+import type { AppSettings } from '@shared/types'
+import { m } from '@shared/paraglide/messages.js'
 
 interface Props {
   settings: AppSettings

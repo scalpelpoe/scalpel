@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildMapRegex, poeRegexMaxLength } from './regex-engine'
-import type { MapMod } from '../../../../shared/data/regex/map-mods'
+import type { MapMod } from '@shared/data/regex/map-mods'
 
 /** Fabricate a MapMod with just the fields buildMapRegex touches. Ids are unique and
  *  chosen not to collide with anything in the real optimization table so the tests

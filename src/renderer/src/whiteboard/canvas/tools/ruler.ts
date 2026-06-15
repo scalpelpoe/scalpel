@@ -1,4 +1,4 @@
-import type { RulerElement } from '../../../../../shared/whiteboard-types'
+import type { RulerElement } from '@shared/whiteboard-types'
 import type { GameSize } from '../coords'
 import { screenToGround } from '../poe-projection'
 

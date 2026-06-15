@@ -1,6 +1,6 @@
 import { useWhiteboardStore } from '../state/store'
 import { IconShape } from './icons'
-import type { ShapeElement } from '../../../../shared/whiteboard-types'
+import type { ShapeElement } from '@shared/whiteboard-types'
 
 const VARIANTS: Array<{ value: ShapeElement['shape']; label: string }> = [
   { value: 'rect', label: 'Rectangle' },

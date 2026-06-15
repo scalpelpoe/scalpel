@@ -1,4 +1,4 @@
-import type { TextElement } from '../../../../../shared/whiteboard-types'
+import type { TextElement } from '@shared/whiteboard-types'
 import { fromPixels, type GameSize } from '../coords'
 
 const DEFAULT_BBOX_W_PX = 200

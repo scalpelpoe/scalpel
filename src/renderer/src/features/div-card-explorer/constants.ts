@@ -1,6 +1,6 @@
-import cardsData from '../../../../shared/data/economy/div-cards.json'
-import mapsData from '../../../../shared/data/economy/div-maps.json'
-import globalsData from '../../../../shared/data/economy/div-globals.json'
+import cardsData from '@shared/data/economy/div-cards.json'
+import mapsData from '@shared/data/economy/div-maps.json'
+import globalsData from '@shared/data/economy/div-globals.json'
 import type { DivCard, MapData } from './types'
 
 export const cards = cardsData as DivCard[]

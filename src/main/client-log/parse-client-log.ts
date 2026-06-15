@@ -1,4 +1,4 @@
-import type { Zone } from '../../shared/types'
+import type { Zone } from '@shared/types'
 
 const PATTERN = /Generating level (\d+) area "([^"]+)"/
 

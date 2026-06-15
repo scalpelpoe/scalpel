@@ -1,5 +1,5 @@
 import socketRunePoe2 from '../../assets/sockets/socket-rune-poe2.png'
-import { isSkillGem } from '../../../../shared/poe-item'
+import { isSkillGem } from '@shared/poe-item'
 import { getItemSize } from '../../shared/item-display'
 
 /**

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import type { StrokeElement, TextElement, WhiteboardElement } from '../../../../shared/whiteboard-types'
+import type { StrokeElement, TextElement, WhiteboardElement } from '@shared/whiteboard-types'
 import {
   __resetClipboardStateForTests,
   elementsToClipboardText,

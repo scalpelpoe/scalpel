@@ -1,6 +1,6 @@
 import type Konva from 'konva'
 import { fromPixels, type GameSize } from '../coords'
-import type { StrokeElement, Pt } from '../../../../../shared/whiteboard-types'
+import type { StrokeElement, Pt } from '@shared/whiteboard-types'
 
 export interface PenSession {
   id: string

@@ -1,5 +1,5 @@
-import { GITHUB_RELEASES_PAGE } from '../../../shared/endpoints'
-import { m } from '../../../shared/paraglide/messages.js'
+import { GITHUB_RELEASES_PAGE } from '@shared/endpoints'
+import { m } from '@shared/paraglide/messages.js'
 
 /** Yellow "update available / downloading / ready" banner with inline progress fill. */
 export function UpdateAvailableBanner({

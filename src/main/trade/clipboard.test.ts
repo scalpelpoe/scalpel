@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { endgameAreaLevel } from '../../shared/poe-item'
+import { endgameAreaLevel } from '@shared/poe-item'
 import { getPoeVersion } from '../game-state'
 import { parseItemText } from './clipboard'
 

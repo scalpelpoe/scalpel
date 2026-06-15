@@ -1,7 +1,7 @@
 import { getPremiumMods } from '../../../premium-mods'
 import { getPoeVersion } from '../../../game-state'
 import type { ItemInfo } from '../context'
-import type { OverrideModSpec, OverrideMode, UniqueOverride } from '../../../../shared/data/items/premium-mods-types'
+import type { OverrideModSpec, OverrideMode, UniqueOverride } from '@shared/data/items/premium-mods-types'
 
 /** Normalized result of resolving all applicable override rules for a unique item.
  *  Callers should check for null before using -- null means no override applies. */

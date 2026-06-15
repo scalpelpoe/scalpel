@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { CloseSmall } from '@icon-park/react'
-import type { RegexPreset } from '../../../../shared/types'
+import type { RegexPreset } from '@shared/types'
 import type { GeneratorKey } from './generator-types'
 import { prettyHotkey } from '../../components/primitives/hotkey-utils'
 import { textColorForBg } from '../../shared/regex-preset-colors'

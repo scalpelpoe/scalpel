@@ -1,6 +1,6 @@
-import type { MapMod } from '../../../../shared/data/regex/map-mods'
-import { MAP_MOD_OPTIMIZATIONS } from '../../../../shared/data/regex/map-mods'
-import type { TokenOptimization } from '../../../../shared/data/regex/vendor/mapmods/GeneratedTypes'
+import type { MapMod } from '@shared/data/regex/map-mods'
+import { MAP_MOD_OPTIMIZATIONS } from '@shared/data/regex/map-mods'
+import type { TokenOptimization } from '@shared/data/regex/vendor/mapmods/GeneratedTypes'
 
 /** Max character length for the in-game search field. Both PoE1 and PoE2 cap the
  *  stash / map-device / waystone search at 250 characters. The `version` param is

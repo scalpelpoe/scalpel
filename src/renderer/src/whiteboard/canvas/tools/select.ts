@@ -1,5 +1,5 @@
 import type Konva from 'konva'
-import type { WhiteboardElement } from '../../../../../shared/whiteboard-types'
+import type { WhiteboardElement } from '@shared/whiteboard-types'
 import type { GameSize } from '../coords'
 import { groundToScreen, projectCircle } from '../poe-projection'
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import data from '../shared/data/items/premium-mods.json'
-import type { PremiumModsData, UniqueOverrideEntry, UniqueOverride } from '../shared/data/items/premium-mods-types'
+import data from '@shared/data/items/premium-mods.json'
+import type { PremiumModsData, UniqueOverrideEntry, UniqueOverride } from '@shared/data/items/premium-mods-types'
 
 const typed = data as unknown as PremiumModsData
 

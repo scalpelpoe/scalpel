@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
 import { AddOne, Forbid, CheckOne } from '@icon-park/react'
-import type { RegexPresetTag } from '../../../../shared/types'
+import type { RegexPresetTag } from '@shared/types'
 import { usePoeVersion } from '../../shared/poe-version-context'
 
 /** Shared palette for the regex-tool UI. Keyed by semantic role so every tab / list /

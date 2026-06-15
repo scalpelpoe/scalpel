@@ -1,5 +1,5 @@
-import type { Zone } from '../../../../../shared/types'
-import { isTownOrHideout } from '../../../../../shared/is-town-or-hideout'
+import type { Zone } from '@shared/types'
+import { isTownOrHideout } from '@shared/is-town-or-hideout'
 import { usePoeVersion } from '../../../shared/poe-version-context'
 import { Toggle } from '../../../components/Toggle'
 

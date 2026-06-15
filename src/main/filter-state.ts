@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import type { FilterFile } from '../shared/types'
+import type { FilterFile } from '@shared/types'
 import { loadIntents, resetIntents } from './filter/intent-recorder'
 import { parseFilterFile } from './filter/parser'
 import { repairFilterOnLoad } from './filter/sanitize'

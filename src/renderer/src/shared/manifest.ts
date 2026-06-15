@@ -1,4 +1,4 @@
-import type { Manifest } from '../../../shared/types'
+import type { Manifest } from '@shared/types'
 
 const EMPTY_MANIFEST: Manifest = { ninjaLeagues: { poe1: {}, poe2: {} }, poe2NinjaCategories: {} }
 

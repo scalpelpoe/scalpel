@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { RegistryEntry, RegistrySnapshot } from '../../../../../shared/plugin-registry-types'
+import type { RegistryEntry, RegistrySnapshot } from '@shared/plugin-registry-types'
 import type { PluginManifest } from '../../../../../plugin-sdk/src/types'
-import type { AppSettings, RuntimeSettings } from '../../../../../shared/types'
+import type { AppSettings, RuntimeSettings } from '@shared/types'
 import type { HotkeySlot } from '../../../components/primitives/hotkey-collisions'
 import { Button } from '../../../components/primitives/Button'
 import { HotkeyRecorder } from '../../../components/primitives/HotkeyRecorder'
 import { pluginHotkeyBinding } from './plugin-hotkey-binding'
-import { m } from '../../../../../shared/paraglide/messages.js'
+import { m } from '@shared/paraglide/messages.js'
 import { latestVersionFor } from '../../../plugins/plugin-update-check'
 
 interface Props {

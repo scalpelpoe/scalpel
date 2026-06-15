@@ -1,4 +1,4 @@
-import type { WhiteboardElement } from '../../../../shared/whiteboard-types'
+import type { WhiteboardElement } from '@shared/whiteboard-types'
 
 /** The exact text we last wrote to the OS clipboard, or null if we haven't
  *  written since module load. Used by `readOsClipboardForPaste` to detect a

@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs'
-import type { FilterFile, FilterVersion } from '../../shared/types'
+import type { FilterFile, FilterVersion } from '@shared/types'
 import { deleteVersion, saveVersion } from '../update/versions'
 import { isEmptyValueListCondition } from './condition-types'
 import { parseFilterFile } from './parser'

@@ -1,12 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from 'react'
 import { useRegexTrade } from './useRegexTrade'
-import {
-  MAP_MODS,
-  DANGER_COLORS,
-  DANGER_LABELS,
-  NIGHTMARE_REGROUPED,
-  type Danger,
-} from '../../../../shared/data/regex/map-mods'
+import { MAP_MODS, DANGER_COLORS, DANGER_LABELS, NIGHTMARE_REGROUPED, type Danger } from '@shared/data/regex/map-mods'
 import { buildMapRegex } from './regex-engine'
 import { buildQualifierRegex, QUALIFIERS, QUALIFIER_GROUPS, type QualifierValues } from './Qualifiers'
 import {
@@ -30,7 +24,7 @@ import { ScrubInput } from '../../components/primitives/ScrubInput'
 import { generatePresetTags } from './preset-tags'
 import { InfoChip } from '../../shared/InfoChip'
 import { useAuth } from '../../shared/use-auth'
-import type { RegexPreset } from '../../../../shared/types'
+import type { RegexPreset } from '@shared/types'
 import type { GeneratorHandle, GeneratorProps } from './generator-types'
 import { zebraRowBg } from '../../shared/utils'
 

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { applyErase, eraseStroke, strokeIntersects } from './eraser'
-import type { StrokeElement } from '../../../../../shared/whiteboard-types'
+import type { StrokeElement } from '@shared/whiteboard-types'
 
 const stroke = (points: Array<[number, number]>, id = 'a'): StrokeElement => ({
   id,

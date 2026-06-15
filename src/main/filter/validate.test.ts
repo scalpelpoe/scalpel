@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { FilterBlock } from '../../shared/types'
+import type { FilterBlock } from '@shared/types'
 import { validateBlock } from './validate'
 
 function block(over: Partial<FilterBlock>): FilterBlock {

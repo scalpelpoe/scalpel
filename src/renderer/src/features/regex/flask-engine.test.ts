@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { generateFlaskOutput, minItemLevel } from './flask-engine'
 import type { FlaskSettings } from './flask-engine'
-import type { FlaskModGroup } from '../../../../shared/data/regex/flask-mods'
+import type { FlaskModGroup } from '@shared/data/regex/flask-mods'
 
 // ---------------------------------------------------------------------------
 // Fixtures

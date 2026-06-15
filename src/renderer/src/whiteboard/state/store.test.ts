@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { createWhiteboardStore } from './store'
-import type { StrokeElement } from '../../../../shared/whiteboard-types'
+import type { StrokeElement } from '@shared/whiteboard-types'
 
 const stroke = (id: string): StrokeElement => ({
   id,

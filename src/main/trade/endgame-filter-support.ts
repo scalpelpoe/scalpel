@@ -1,8 +1,8 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { app } from 'electron'
-import bundled from '../../shared/data/trade/endgame-filter-support.json'
-import { ENDGAME_FILTER_SUPPORT_URL } from '../../shared/endpoints'
+import bundled from '@shared/data/trade/endgame-filter-support.json'
+import { ENDGAME_FILTER_SUPPORT_URL } from '@shared/endpoints'
 
 /** Which PoE2 trade2 "Endgame Filters" GGG actually indexes for search changes
  *  league-to-league (live-probed, not announced). Hard-coding it in source means

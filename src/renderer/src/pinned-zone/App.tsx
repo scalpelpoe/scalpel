@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { CheatSheetCategory, RuntimeSettings } from '../../../shared/types'
+import type { CheatSheetCategory, RuntimeSettings } from '@shared/types'
 import { useStickyZone } from '../shared/use-current-zone'
 
 export function App(): JSX.Element | null {

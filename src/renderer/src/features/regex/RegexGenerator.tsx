@@ -10,7 +10,7 @@ import {
   TabSeparator,
 } from './mapmods-helpers'
 import poereIconTight from '../../assets/other/poere-logo-tight.svg'
-import { POE_RE_URL, POE2_RE_URL } from '../../../../shared/endpoints'
+import { POE_RE_URL, POE2_RE_URL } from '@shared/endpoints'
 import { FilterChip } from '../../components/primitives/FilterChip'
 import { SavedPresetsGrid } from './SavedPresetsGrid'
 import { InfoChip } from '../../shared/InfoChip'
@@ -25,7 +25,7 @@ import { usePoeVersion } from '../../shared/poe-version-context'
 import { HotkeyField } from '../../components/primitives/HotkeyField'
 import { PresetColorPicker } from './PresetColorPicker'
 import type { GeneratorConfig, GeneratorHandle, GeneratorKey } from './generator-types'
-import type { AppSettings, RegexPreset, RegexPresetTag, RuntimeSettings } from '../../../../shared/types'
+import type { AppSettings, RegexPreset, RegexPresetTag, RuntimeSettings } from '@shared/types'
 import type { HotkeySlot } from '../../components/primitives/hotkey-collisions'
 
 interface Props {

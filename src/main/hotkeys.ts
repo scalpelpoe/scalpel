@@ -1,13 +1,8 @@
 import { clipboard, globalShortcut, ipcMain } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
 import { UiohookKey, uIOhook } from 'uiohook-napi'
-import {
-  appMacroEffectiveScope,
-  chatCommandEffectiveScope,
-  type MacroScope,
-  scopeAppliesTo,
-} from '../shared/macro-scope'
-import { POE_SIDEBAR_RATIO } from '../shared/poe-geometry'
+import { appMacroEffectiveScope, chatCommandEffectiveScope, type MacroScope, scopeAppliesTo } from '@shared/macro-scope'
+import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 import { snapshotClipboard } from './clipboard-preserve'
 import { type KeyCombo, isElectronRegisterable, parseAccelerator } from './hotkey-accelerator'
 import {

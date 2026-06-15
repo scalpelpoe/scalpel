@@ -1,5 +1,5 @@
 import { baseToClass, classSizes } from './constants'
-import baseToUniques from '../../../shared/data/items/unique-info.json'
+import baseToUniques from '@shared/data/items/unique-info.json'
 import elderIcon from '../assets/influences/Elder-item-symbol.png'
 import shaperIcon from '../assets/influences/Shaper-item-symbol.png'
 import crusaderIcon from '../assets/influences/Crusader-item-symbol.png'

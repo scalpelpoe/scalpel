@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs'
 import { extname } from 'node:path'
 import { dialog, ipcMain } from 'electron'
-import { PREFAB_PACKS } from '../../shared/data/cheat-sheet-prefabs'
-import { CHEAT_SHEET_PREFAB_BASE_URL } from '../../shared/endpoints'
+import { PREFAB_PACKS } from '@shared/data/cheat-sheet-prefabs'
+import { CHEAT_SHEET_PREFAB_BASE_URL } from '@shared/endpoints'
 import {
   fetchImageBuffer,
   generateCategoryId,

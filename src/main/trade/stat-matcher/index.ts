@@ -1,4 +1,4 @@
-import type { AdvancedMod } from '../../../shared/types'
+import type { AdvancedMod } from '@shared/types'
 import type { StatFilter } from '../trade'
 import type { DefenseValues, ItemInfo } from './context'
 import { deriveContext } from './context'

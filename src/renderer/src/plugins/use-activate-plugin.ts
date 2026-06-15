@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { PluginActivate, RegisterOverlayOptions, ScalpelPluginContext } from '../../../plugin-sdk/src/types'
-import type { PoeItem, Zone } from '../../../shared/types'
+import type { PoeItem, Zone } from '@shared/types'
 import { importPluginModule } from './import-plugin-module'
 
 export interface ActivatedPlugin {

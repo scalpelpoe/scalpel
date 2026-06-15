@@ -1,6 +1,6 @@
 import { copyFile, readFile, rename, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { GameVariant } from '../shared/types'
+import type { GameVariant } from '@shared/types'
 
 /** Resolve the on-disk config path for a game version under the user's
  *  Documents folder. Pure - the caller supplies documentsDir. */

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AppSettings, RegexPreset, RuntimeSettings } from '../../../../../shared/types'
+import type { AppSettings, RegexPreset, RuntimeSettings } from '@shared/types'
 import { Toggle } from '../../../components/Toggle'
 import { RemoveButton } from '../../../components/RemoveButton'
 import { HotkeyRecorder } from '../../../components/primitives/HotkeyRecorder'
@@ -7,15 +7,10 @@ import { CommandInput } from './CommandInput'
 import { APP_MACRO_DEFS } from './utils'
 import { SettingToggleBox } from '../../../components/primitives/SettingToggleBox'
 import { SettingSelectBox } from '../../../components/primitives/SettingSelectBox'
-import {
-  chatCommandEffectiveScope,
-  appMacroEffectiveScope,
-  appMacroScope,
-  scopeAppliesTo,
-} from '../../../../../shared/macro-scope'
+import { chatCommandEffectiveScope, appMacroEffectiveScope, appMacroScope, scopeAppliesTo } from '@shared/macro-scope'
 import { narrowScopeForCrossGameConflict, type HotkeySlot } from '../../../components/primitives/hotkey-collisions'
 import { usePoeVersion } from '../../../shared/poe-version-context'
-import { m } from '../../../../../shared/paraglide/messages.js'
+import { m } from '@shared/paraglide/messages.js'
 
 const STASH_SCROLL_MODIFIER_OPTIONS = [
   { value: 'Ctrl', label: 'Ctrl +' },

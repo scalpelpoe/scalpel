@@ -1,4 +1,4 @@
-import { parseHex, toHex } from '../../../../../shared/color'
+import { parseHex, toHex } from '@shared/color'
 
 /** Shift a `#rrggbb` hex color toward white (positive amt) or black
  *  (negative amt). Used to derive 3D-marker shading from a single base

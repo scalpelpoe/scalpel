@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { generateVendorPresetTags } from './vendor-preset-tags'
-import { DEFAULT_VENDOR_SETTINGS } from '../../../../shared/data/regex/vendor-toggles'
+import { DEFAULT_VENDOR_SETTINGS } from '@shared/data/regex/vendor-toggles'
 
 describe('generateVendorPresetTags', () => {
   it('returns no tags for the empty default', () => {

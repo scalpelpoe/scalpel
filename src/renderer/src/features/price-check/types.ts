@@ -1,5 +1,5 @@
-import type { PoeItem, PriceInfo } from '../../../../shared/types'
-import type { ModTier } from '../../../../shared/data/tiers/types'
+import type { PoeItem, PriceInfo } from '@shared/types'
+import type { ModTier } from '@shared/data/tiers/types'
 
 export type { Listing, BulkListing } from '../../shared/trade-types'
 

@@ -1,6 +1,6 @@
 import { Text as KonvaText } from 'react-konva'
 import type Konva from 'konva'
-import type { TextElement as TextEl } from '../../../../../shared/whiteboard-types'
+import type { TextElement as TextEl } from '@shared/whiteboard-types'
 import type { GameSize } from '../coords'
 import { readAndResetBboxTransform, type BboxTransformResult } from '../tools/transform'
 

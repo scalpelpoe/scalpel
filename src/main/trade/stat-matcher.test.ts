@@ -9,15 +9,15 @@ vi.mock('electron', () => ({
 }))
 
 import { getPoeVersion, setPoeVersion } from '../game-state'
-import type { AdvancedMod } from '../../shared/types'
-import type { ModTier, TierDataset } from '../../shared/data/tiers/types'
+import type { AdvancedMod } from '@shared/types'
+import type { ModTier, TierDataset } from '@shared/data/tiers/types'
 import { _setTierDataForTests } from '../tier-data'
 import { _setIndexedEndgameKeysForTests } from './endgame-filter-support'
 import { _setStatEntriesForTests, ITEM_CLASS_TO_CATEGORY, matchItemMods, matchModToStat } from './stat-matcher'
 import { resolveTierDefault } from './stat-matcher/producers/explicits'
 import { isPremiumMod, _resetPremiumMatchCacheForTests } from './stat-matcher/producers/premium'
-import bundledPremiumMods from '../../shared/data/items/premium-mods.json'
-import type { PremiumModsData } from '../../shared/data/items/premium-mods-types'
+import bundledPremiumMods from '@shared/data/items/premium-mods.json'
+import type { PremiumModsData } from '@shared/data/items/premium-mods-types'
 
 // Helper to build a minimal itemInfo object
 function makeItemInfo(overrides: Record<string, unknown> = {}) {

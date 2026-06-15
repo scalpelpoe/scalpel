@@ -1,6 +1,6 @@
 import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import type { DiagnosticSource } from '../../../shared/diagnostics'
+import type { DiagnosticSource } from '@shared/diagnostics'
 import { bootstrapTheme } from '../shared/apply-theme'
 import { DiagnosticErrorBoundary, installRendererDiagnostics } from '../shared/diagnostics'
 import { bootstrapLocale, bootstrapLocaleSync, LocaleProvider } from '../shared/locale'

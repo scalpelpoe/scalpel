@@ -1,6 +1,6 @@
 // src/main/learning/context-key.ts
-import type { PoeItem } from '../../shared/types'
-import { isClusterJewel } from '../../shared/poe-item'
+import type { PoeItem } from '@shared/types'
+import { isClusterJewel } from '@shared/poe-item'
 import { ARMOUR_CLASSES, WEAPON_CLASSES } from '../trade/stat-matcher/item-classes'
 import type { LearningContext } from './types'
 

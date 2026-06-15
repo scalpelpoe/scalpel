@@ -1,10 +1,10 @@
 import { net } from 'electron'
 import type Store from 'electron-store'
-import { getTradeUrls } from '../../shared/endpoints'
+import { getTradeUrls } from '@shared/endpoints'
 import { getProfileStore } from '../profiles/store'
 import { listProfilesByGameVariant, type ProfileChangedSetting } from '../profiles/profile-settings'
-import { getGameFeatures } from '../../shared/game-features'
-import type { AppSettings } from '../../shared/types'
+import { getGameFeatures } from '@shared/game-features'
+import type { AppSettings } from '@shared/types'
 
 interface LeaguesResponse {
   result?: Array<{ id?: string; text?: string; realm?: string }>

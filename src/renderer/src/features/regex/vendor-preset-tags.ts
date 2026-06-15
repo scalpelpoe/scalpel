@@ -1,6 +1,6 @@
-import { VENDOR_TABS } from '../../../../shared/data/regex/vendor-toggles'
+import { VENDOR_TABS } from '@shared/data/regex/vendor-toggles'
 import type { VendorSettings } from './vendor-engine'
-import type { RegexPresetTag } from '../../../../shared/types'
+import type { RegexPresetTag } from '@shared/types'
 import { TAB_COLORS } from './mapmods-helpers'
 
 /** Auto-tags for a vendor selection: one per active toggle (catalog label) plus a

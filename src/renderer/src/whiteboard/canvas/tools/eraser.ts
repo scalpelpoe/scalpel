@@ -1,4 +1,4 @@
-import type { Pt, StrokeElement, WhiteboardElement } from '../../../../../shared/whiteboard-types'
+import type { Pt, StrokeElement, WhiteboardElement } from '@shared/whiteboard-types'
 import type { GameSize } from '../coords'
 
 const DEFAULT_ERASER_RADIUS_PX = 14

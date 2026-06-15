@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { BreakpointEditor } from './BreakpointEditor'
-import type { StackSizeBreakpoint } from '../../../../../shared/types'
+import type { StackSizeBreakpoint } from '@shared/types'
 
 /** BreakpointEditor renders a band of "range pill + boundary stepper" pairs
  *  so the user can pick which stack-size / ilvl range they're editing. The

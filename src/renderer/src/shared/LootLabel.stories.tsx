@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { LootLabel, HiddenLootLabel } from './LootLabel'
-import type { FilterBlock } from '../../../shared/types'
+import type { FilterBlock } from '@shared/types'
 
 /** LootLabel renders an item name the same way PoE paints it on the ground:
  *  text color, optional background plate, optional border, all derived from

@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events'
-import type { Zone } from '../../shared/types'
+import type { Zone } from '@shared/types'
 
 let currentZone: Zone | null = null
 // Default max listeners (10) is generous: three production subscribers today

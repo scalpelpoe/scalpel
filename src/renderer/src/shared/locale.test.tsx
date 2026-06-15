@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { act, render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { getLocale } from '../../../shared/paraglide/runtime.js'
-import { m } from '../../../shared/paraglide/messages.js'
+import { getLocale } from '@shared/paraglide/runtime.js'
+import { m } from '@shared/paraglide/messages.js'
 import {
   _resetLocaleForTests,
   bootstrapLocale,

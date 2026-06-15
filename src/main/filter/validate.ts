@@ -1,4 +1,4 @@
-import type { FilterBlock } from '../../shared/types'
+import type { FilterBlock } from '@shared/types'
 import { isEmptyValueListCondition } from './condition-types'
 import { parseFilterFile } from './parser'
 import { serializeBlock } from './writer'

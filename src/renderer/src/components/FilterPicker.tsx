@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { CloseSmall, Info } from '@icon-park/react'
-import type { FilterListEntry, GameVariant, RuntimeSettings } from '../../../shared/types'
+import type { FilterListEntry, GameVariant, RuntimeSettings } from '@shared/types'
 
 interface Props {
   settings: RuntimeSettings

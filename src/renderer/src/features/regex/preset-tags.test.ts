@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { generatePresetTags } from './preset-tags'
-import { MAP_MODS, DANGER_COLORS } from '../../../../shared/data/regex/map-mods'
+import { MAP_MODS, DANGER_COLORS } from '@shared/data/regex/map-mods'
 
 /** Pick a real mod ID from each category so danger-color assertions stay in sync with
  *  whatever the upstream data file says today. */

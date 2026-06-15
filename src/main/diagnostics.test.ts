@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type Store from 'electron-store'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
-import type { AppSettings } from '../shared/types'
+import type { AppSettings } from '@shared/types'
 
 const HOME = '/home/exile'
 

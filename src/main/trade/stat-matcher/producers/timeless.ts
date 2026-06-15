@@ -1,4 +1,4 @@
-import type { AdvancedMod } from '../../../../shared/types'
+import type { AdvancedMod } from '@shared/types'
 import type { StatFilter } from '../../trade'
 
 type TimelessItemInfo = {

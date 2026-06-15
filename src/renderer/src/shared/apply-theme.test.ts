@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { applyPalette, applyVars, applyCachedVars, bootstrapTheme, THEME_CACHE_KEY } from './apply-theme'
-import { DEFAULT_PALETTE, PRESETS } from '../../../shared/theme/presets'
-import { resolveCssVars } from '../../../shared/theme/derive'
+import { DEFAULT_PALETTE, PRESETS } from '@shared/theme/presets'
+import { resolveCssVars } from '@shared/theme/derive'
 
 const NON_DEFAULT = PRESETS.filter((p) => p.id !== 'default')
 const SAMPLE_A = NON_DEFAULT[0]

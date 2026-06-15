@@ -1,4 +1,4 @@
-import type { Pt, RadiusRingElement, RulerElement } from '../../../../../shared/whiteboard-types'
+import type { Pt, RadiusRingElement, RulerElement } from '@shared/whiteboard-types'
 import type { GameSize } from '../coords'
 import { groundDistance, screenToGround } from '../poe-projection'
 

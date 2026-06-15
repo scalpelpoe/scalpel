@@ -1,4 +1,4 @@
-import { m } from '../../../shared/paraglide/messages.js'
+import { m } from '@shared/paraglide/messages.js'
 
 export function StepHeader({
   title,

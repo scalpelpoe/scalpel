@@ -9,7 +9,7 @@
 
 import { type BrowserWindow, powerMonitor } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings, GameVariant } from '../../shared/types'
+import type { AppSettings } from '@shared/types'
 import { refreshPrices, invalidatePriceCache } from '../trade/prices'
 import { onRateLimitUpdate } from '../trade/trade'
 import { startOnlineSync } from '../online-sync'

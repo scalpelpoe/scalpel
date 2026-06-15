@@ -3,6 +3,12 @@
     "target": "ES2020",
     "module": "CommonJS",
     "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "@shared/*": ["src/shared/*"],
+      "@main/*": ["src/main/*"],
+      "@renderer/*": ["src/renderer/src/*"]
+    },
     "jsx": "react-jsx",
     "strict": true,
     "allowJs": true,

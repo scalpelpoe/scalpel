@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs'
-import type { FilterBlock, FilterFile } from '../../shared/types'
+import type { FilterBlock, FilterFile } from '@shared/types'
 import { NUMERIC_CONDITION_TYPES } from './condition-types'
 import { validateBlock } from './validate'
 

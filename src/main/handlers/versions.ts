@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings, PoeItem } from '../../shared/types'
+import type { AppSettings, PoeItem } from '@shared/types'
 import { evaluateAndSend } from '../evaluation'
 import { getCurrentFilter, loadFilter } from '../filter-state'
 import { clearHistory, getHistory, undoLast } from '../history'

@@ -6,7 +6,7 @@ import type {
   MatchResult,
   PoeItem,
   StackSizeBreakpoint,
-} from '../../shared/types'
+} from '@shared/types'
 import { evaluatePoe2Condition } from './matcher.poe2'
 
 // ─── Condition evaluators ─────────────────────────────────────────────────────

@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { app } from 'electron'
-import bundledPoe1 from '../../shared/data/items/item-icons-poe1.json'
-import bundledPoe2 from '../../shared/data/items/item-icons-poe2.json'
+import bundledPoe1 from '@shared/data/items/item-icons-poe1.json'
+import bundledPoe2 from '@shared/data/items/item-icons-poe2.json'
 
 /**
  * Runtime icon cache. Observes trade-fetch responses and persists any icons

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { _setPremiumModsForTests } from '../../../premium-mods'
 import { setPoeVersion } from '../../../game-state'
-import type { PremiumModsData } from '../../../../shared/data/items/premium-mods-types'
+import type { PremiumModsData } from '@shared/data/items/premium-mods-types'
 import { resolveUniqueOverride } from './overrides'
 
 // Minimal ItemInfo helper -- provides all required fields with cheap defaults.

@@ -13,7 +13,7 @@ vi.mock('electron', () => ({
   screen: { getPrimaryDisplay: vi.fn(() => ({ workArea: { x: 0, y: 0, width: 1920, height: 1080 } })) },
 }))
 
-import { emptyBoardLibrary } from '../shared/whiteboard-types'
+import { emptyBoardLibrary } from '@shared/whiteboard-types'
 import { __setUserDataDirForTests, loadLibrary, saveLibrary } from './whiteboard'
 
 let tmp: string

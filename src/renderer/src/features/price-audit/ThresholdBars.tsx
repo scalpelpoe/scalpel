@@ -1,5 +1,5 @@
 import dustIcon from '../../assets/currency/thaumaturgic-dust.png'
-import type { FilterBlock } from '../../../../shared/types'
+import type { FilterBlock } from '@shared/types'
 import { type AuditItem, formatDust, formatTierLabel, retierSelectStyle } from './constants'
 import { usePoeVersion } from '../../shared/poe-version-context'
 import { CurrencyIcon } from '../../shared/CurrencyIcon'

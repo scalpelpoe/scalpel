@@ -1,6 +1,6 @@
 import { app, ipcMain } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings, GameVariant } from '../shared/types'
+import type { AppSettings, GameVariant } from '@shared/types'
 import { getAppWindow, showAppWindow } from './app-window'
 import { applySetting } from './settings-write'
 

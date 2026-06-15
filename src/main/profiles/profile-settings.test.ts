@@ -3,7 +3,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { describe, expect, it } from 'vitest'
 import type Store from 'electron-store'
-import type { AppSettings } from '../../shared/types'
+import type { AppSettings } from '@shared/types'
 import { initProfileStore } from './store'
 import {
   ACTIVE_PROFILE_ID_KEY,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { FilterCondition, PoeItem } from '../../shared/types'
+import type { FilterCondition, PoeItem } from '@shared/types'
 import { evaluatePoe2Condition } from './matcher.poe2'
 
 function makeItem(overrides: Partial<PoeItem> = {}): PoeItem {

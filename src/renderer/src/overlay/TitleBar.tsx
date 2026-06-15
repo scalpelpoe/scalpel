@@ -1,13 +1,13 @@
 import { Setting, CloseSmall, ChartHistogram, Flask, Buy, AllApplication } from '@icon-park/react'
-import type { HideableTabKey, OverlayData } from '../../../shared/types'
-import type { GameFeatures } from '../../../shared/game-features'
+import type { HideableTabKey, OverlayData } from '@shared/types'
+import type { GameFeatures } from '@shared/game-features'
 import { getCurrencyIcons } from '../shared/icons'
 import { DIV_CARD_ICON_URL, divCardArtMap, iconMap, IP } from '../shared/constants'
 import dustIconAsset from '../assets/currency/thaumaturgic-dust.png'
 import appIcon from '../../../../resources/icon.png'
 import poereIcon from '../assets/other/poere-logo.svg'
 import type { View } from './view'
-import { m } from '../../../shared/paraglide/messages.js'
+import { m } from '@shared/paraglide/messages.js'
 
 interface TitleBarProps {
   view: View

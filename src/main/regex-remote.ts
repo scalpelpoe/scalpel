@@ -1,6 +1,6 @@
-import type { RegexPreset } from '../shared/types'
-import type { PanelState } from '../shared/panel-state'
-import { POE_SIDEBAR_RATIO } from '../shared/poe-geometry'
+import type { RegexPreset } from '@shared/types'
+import type { PanelState } from '@shared/panel-state'
+import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 import { registerSecondaryOverlay, type OverlayAnchor, type Rect, type SecondaryOverlay } from './windowing'
 
 export interface RegexRemoteApplyDeps {

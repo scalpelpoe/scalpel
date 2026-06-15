@@ -4,7 +4,7 @@ import { generateNumberRegex } from './waystone-number-regex'
 import { generateWaystoneRegex } from './__fixtures__/poe2re/WaystoneResult'
 import type { SelectOption } from './__fixtures__/poe2re/SelectOption'
 import type { Settings } from './__fixtures__/poe2re/Settings'
-import { WAYSTONE_MODS } from '../../../../shared/data/regex/waystone-mods'
+import { WAYSTONE_MODS } from '@shared/data/regex/waystone-mods'
 
 /**
  * Parity tests against poe2.re's reference implementation. We import poe2.re's

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { BoardSnapshot } from '../../../../shared/whiteboard-types'
+import type { BoardSnapshot } from '@shared/whiteboard-types'
 import { PANEL_CHROME } from '../toolbar/panel-chrome'
 import { IconClose, IconTrash } from '../toolbar/icons'
 import { useDismissOnOutside } from '../state/use-dismiss-on-outside'

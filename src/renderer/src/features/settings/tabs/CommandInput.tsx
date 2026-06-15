@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { chatCommandScope, scopeAppliesTo } from '../../../../../shared/macro-scope'
+import { chatCommandScope, scopeAppliesTo } from '@shared/macro-scope'
 import { usePoeVersion } from '../../../shared/poe-version-context'
 
 const POE_COMMANDS: string[] = [

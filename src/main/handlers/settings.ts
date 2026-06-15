@@ -1,6 +1,6 @@
 import { app, ipcMain } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings, GameVariant, RegexPreset } from '../../shared/types'
+import type { AppSettings, GameVariant, RegexPreset } from '@shared/types'
 import { backfillPresetNames } from './regex-preset-names'
 import { broadcastToWindows } from '../window-broadcast'
 import { getColorFrequencies } from '../filter-state'

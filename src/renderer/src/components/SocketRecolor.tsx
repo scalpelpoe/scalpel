@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { PoeItem } from '../../../shared/types'
+import type { PoeItem } from '@shared/types'
 import { ItemSummary } from './ItemSummary'
 import { zebraRowBg } from '../shared/utils'
 import socketRed from '../assets/sockets/socket-red.png'
@@ -7,13 +7,13 @@ import socketGreen from '../assets/sockets/socket-green.png'
 import socketBlue from '../assets/sockets/socket-blue.png'
 import socketWhite from '../assets/sockets/socket-white.png'
 import socketLink from '../assets/sockets/socket-link.png'
-import { MAX_SOCKETS_BY_CLASS_POE1 } from '../../../shared/data/items/max-sockets'
-import { getItemClasses } from '../../../shared/data/items/item-classes'
+import { MAX_SOCKETS_BY_CLASS_POE1 } from '@shared/data/items/max-sockets'
+import { getItemClasses } from '@shared/data/items/item-classes'
 import { chaosIcon } from '../shared/icons'
 // Socket recolor is a PoE1-only feature (gated via features.socketRecolor), so we
 // pull its icons directly from the PoE1 sheet rather than going through the shared
 // iconMap -- these are module-load-time constants evaluated before initIconMap runs.
-import itemIcons from '../../../shared/data/items/item-icons-poe1.json'
+import itemIcons from '@shared/data/items/item-icons-poe1.json'
 
 // Flatten the PoE1 per-class basetype lists into a name -> reqs lookup.
 // SocketRecolor is gated on features.socketRecolor (PoE1-only), so we pin the
@@ -230,7 +230,7 @@ function calculateMethods(
 
 interface Props {
   item: PoeItem
-  priceInfo?: import('../../../shared/types').PriceInfo
+  priceInfo?: import('@shared/types').PriceInfo
   chaosPerDivine?: number
   divineGraph?: (number | null)[]
 }

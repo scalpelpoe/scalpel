@@ -1,7 +1,7 @@
 import { ipcMain } from 'electron'
 import type { IpcMainEvent, WebContents } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings } from '../../shared/types'
+import type { AppSettings } from '@shared/types'
 import { getProfileBackedSetting } from '../profiles/profile-settings'
 import { getPriceEntries, invalidatePriceCache, refreshPrices, subscribePriceUpdates } from '../trade/prices'
 

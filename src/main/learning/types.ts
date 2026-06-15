@@ -1,6 +1,6 @@
 // src/main/learning/types.ts
 
-export type { AdaptiveMode } from '../../shared/types'
+export type { AdaptiveMode } from '@shared/types'
 
 /** A decayed per-(rung, chip) counter. */
 export interface CounterRecord {

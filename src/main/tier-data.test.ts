@@ -5,7 +5,7 @@ vi.mock('electron', () => ({
 }))
 
 import { _setTierDataForTests, getTierData, applyRemoteTierData } from './tier-data'
-import type { TierDataset } from '../shared/data/tiers/types'
+import type { TierDataset } from '@shared/data/tiers/types'
 
 const valid: TierDataset = { schemaVersion: 1, mods: [], pools: [], bases: {} }
 

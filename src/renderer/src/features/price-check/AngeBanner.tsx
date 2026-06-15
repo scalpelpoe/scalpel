@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
-import type { PoeItem, PriceInfo } from '../../../../shared/types'
-import { isVendorExchangeItem } from '../../../../shared/data/trade/bulk-exchange-eligibility'
+import type { PoeItem, PriceInfo } from '@shared/types'
+import { isVendorExchangeItem } from '@shared/data/trade/bulk-exchange-eligibility'
 import { angePortrait } from '../../shared/icons'
 import { PriceChip } from '../../shared/PriceChip'
 import { NinjaPriceChip } from '../../shared/NinjaPriceChip'

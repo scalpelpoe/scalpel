@@ -1,8 +1,8 @@
-import { CHANGELOG } from '../../../../../shared/changelog'
-import { getFaq } from '../../../../../shared/faq'
+import { CHANGELOG } from '@shared/changelog'
+import { getFaq } from '@shared/faq'
 import { FaqItem } from './FaqItem'
 import { CollapsibleSection } from '../../../shared/CollapsibleSection'
-import { m } from '../../../../../shared/paraglide/messages.js'
+import { m } from '@shared/paraglide/messages.js'
 
 export function FaqTab(): JSX.Element {
   return (

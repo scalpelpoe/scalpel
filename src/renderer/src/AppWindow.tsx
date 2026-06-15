@@ -1,5 +1,5 @@
 import { Fragment, useEffect, useState } from 'react'
-import type { AppSettings, PoeProfileSummary, RuntimeSettings } from '../../shared/types'
+import type { AppSettings, PoeProfileSummary, RuntimeSettings } from '@shared/types'
 import { type Step, STEP_ORDER, type SelectedGames, totalOnboardingSteps } from './app-window/constants'
 import {
   backStepFromFilterFolder,

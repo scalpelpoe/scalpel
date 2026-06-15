@@ -26,7 +26,7 @@ import {
   IconRuler,
 } from './icons'
 import { CAMERA_CONSTANTS } from '../canvas/poe-projection'
-import type { BoardSnapshot, BoardState } from '../../../../shared/whiteboard-types'
+import type { BoardSnapshot, BoardState } from '@shared/whiteboard-types'
 
 interface ToolbarProps {
   version: 1 | 2

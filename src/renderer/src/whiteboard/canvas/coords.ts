@@ -1,4 +1,4 @@
-import type { Pt } from '../../../../shared/whiteboard-types'
+import type { Pt } from '@shared/whiteboard-types'
 
 export interface GameSize {
   w: number

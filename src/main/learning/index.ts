@@ -1,6 +1,6 @@
 // src/main/learning/index.ts
 import Store from 'electron-store'
-import type { AppSettings, PoeItem } from '../../shared/types'
+import type { AppSettings, PoeItem } from '@shared/types'
 import type { StatFilter } from '../trade/trade'
 import type { AdaptiveMode, CounterRecord } from './types'
 import { LEARNING_BASELINE_VERSION, needsBaselineReset } from './baseline'

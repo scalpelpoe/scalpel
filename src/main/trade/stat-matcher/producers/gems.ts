@@ -1,5 +1,5 @@
 import { getPoeVersion } from '../../../game-state'
-import { SKILL_GEM_CLASSES } from '../../../../shared/poe-item'
+import { SKILL_GEM_CLASSES } from '@shared/poe-item'
 import type { StatFilter } from '../../trade'
 
 type GemItemInfo = {

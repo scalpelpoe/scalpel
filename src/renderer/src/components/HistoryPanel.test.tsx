@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, waitFor } from '@testing-library/react'
 import { HistoryPanel } from './HistoryPanel'
-import type { FilterChange } from '../../../shared/types'
+import type { FilterChange } from '@shared/types'
 
 function installApi(
   canReset: boolean,

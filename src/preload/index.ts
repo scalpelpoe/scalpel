@@ -1,7 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
-import { IPC_CHANNELS } from '../shared/contracts/ipc'
-import type { BugReportResult, RendererDiagnosticPayload } from '../shared/diagnostics'
-import type { ExternalLinkTarget } from '../shared/external-link'
+import { IPC_CHANNELS } from '@shared/contracts/ipc'
+import type { BugReportResult, RendererDiagnosticPayload } from '@shared/diagnostics'
+import type { ExternalLinkTarget } from '@shared/external-link'
 import type {
   AppSettings,
   AuthResult,
@@ -18,8 +18,8 @@ import type {
   ProfileSettingValue,
   RuntimeSettings,
   Zone,
-} from '../shared/types'
-import type { BoardLibrary, BoardSnapshot, BoardState } from '../shared/whiteboard-types'
+} from '@shared/types'
+import type { BoardLibrary, BoardSnapshot, BoardState } from '@shared/whiteboard-types'
 
 export const api = {
   // Manifest
@@ -98,7 +98,7 @@ export const api = {
     flags?: { zanaMemory?: boolean },
   ): Promise<void> => ipcRenderer.invoke('lookup-base-type', baseType, itemClass, rarity, uniqueName, flags),
   getUniquesForBase: (baseType: string): Promise<string[]> => ipcRenderer.invoke('get-uniques-for-base', baseType),
-  getSearchableItems: (): Promise<import('../shared/types').SearchableItem[]> =>
+  getSearchableItems: (): Promise<import('@shared/types').SearchableItem[]> =>
     ipcRenderer.invoke('get-searchable-items'),
   getDivCardTiers: (): Promise<{
     tierStyles: Record<string, { border: string; bg: string; text: string }>
@@ -221,12 +221,12 @@ export const api = {
     ipcRenderer.invoke('reset-learning', scope),
 
   // Regex presets
-  getRegexPresets: (): Promise<import('../shared/types').RegexPreset[]> => ipcRenderer.invoke('get-regex-presets'),
-  saveRegexPreset: (preset: import('../shared/types').RegexPreset): Promise<import('../shared/types').RegexPreset[]> =>
+  getRegexPresets: (): Promise<import('@shared/types').RegexPreset[]> => ipcRenderer.invoke('get-regex-presets'),
+  saveRegexPreset: (preset: import('@shared/types').RegexPreset): Promise<import('@shared/types').RegexPreset[]> =>
     ipcRenderer.invoke('save-regex-preset', preset),
-  deleteRegexPreset: (id: string): Promise<import('../shared/types').RegexPreset[]> =>
+  deleteRegexPreset: (id: string): Promise<import('@shared/types').RegexPreset[]> =>
     ipcRenderer.invoke('delete-regex-preset', id),
-  reorderRegexPresets: (ids: string[]): Promise<import('../shared/types').RegexPreset[]> =>
+  reorderRegexPresets: (ids: string[]): Promise<import('@shared/types').RegexPreset[]> =>
     ipcRenderer.invoke('reorder-regex-presets', ids),
   regexRemoteApply: (presetId: string): void => ipcRenderer.send('regex-remote:apply', presetId),
   closeRegexRemote: (): void => ipcRenderer.send('regex-remote:close'),
@@ -372,7 +372,7 @@ export const api = {
   },
   pricesGet: (opts?: {
     category?: string
-  }): Promise<{ prices: import('../shared/types').PriceEntry[]; updatedAt: number | null }> =>
+  }): Promise<{ prices: import('@shared/types').PriceEntry[]; updatedAt: number | null }> =>
     ipcRenderer.invoke('plugins:prices-get', opts),
   pricesRefresh: (): Promise<void> => ipcRenderer.invoke('plugins:prices-refresh'),
   onPricesChange: (cb: () => void): (() => void) => {
@@ -414,8 +414,8 @@ export const api = {
   },
   onPriceCheck: (
     cb: (data: {
-      item: import('../shared/types').PoeItem
-      priceInfo?: import('../shared/types').PriceInfo
+      item: import('@shared/types').PoeItem
+      priceInfo?: import('@shared/types').PriceInfo
       statFilters: Array<{
         id: string
         text: string
@@ -850,14 +850,14 @@ export const api = {
   pluginInstallUnpacked: (): Promise<{ ok: true; id: string } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:install-unpacked'),
   pluginFetchRegistry: (): Promise<
-    { ok: true; snapshot: import('../shared/plugin-registry-types').RegistrySnapshot } | { ok: false; error: string }
+    { ok: true; snapshot: import('@shared/plugin-registry-types').RegistrySnapshot } | { ok: false; error: string }
   > => ipcRenderer.invoke('plugins:fetch-registry'),
   pluginInstallFromRegistry: (
-    entry: import('../shared/plugin-registry-types').RegistryEntry,
+    entry: import('@shared/plugin-registry-types').RegistryEntry,
   ): Promise<{ ok: true; id: string } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:install-from-registry', entry),
   pluginUpdateFromRegistry: (
-    entry: import('../shared/plugin-registry-types').RegistryEntry,
+    entry: import('@shared/plugin-registry-types').RegistryEntry,
   ): Promise<{ ok: true; id: string } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:update-from-registry', entry),
   pluginUninstall: (pluginId: string): Promise<{ ok: true } | { ok: false; error: string }> =>
@@ -914,7 +914,7 @@ export const api = {
     ipcRenderer.on('plugin-overlay:init', handler)
     return () => ipcRenderer.removeListener('plugin-overlay:init', handler)
   },
-  pluginTriggerMainHotkey: (): Promise<import('../shared/types').PoeItem | null> =>
+  pluginTriggerMainHotkey: (): Promise<import('@shared/types').PoeItem | null> =>
     ipcRenderer.invoke('plugins:trigger-main-hotkey'),
   pluginShowOverlay: (): Promise<void> => ipcRenderer.invoke('plugins:show-overlay'),
   pluginRegisterOverlay: (

@@ -6,7 +6,7 @@
  * screens.
  */
 
-import type { RegexPreset } from '../../../../../shared/contracts/regex'
+import type { RegexPreset } from '@shared/contracts/regex'
 
 export function getRegexPresets(): Promise<RegexPreset[]> {
   return window.api.getRegexPresets()

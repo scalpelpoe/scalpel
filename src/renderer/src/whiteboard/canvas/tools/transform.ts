@@ -1,5 +1,5 @@
 import type Konva from 'konva'
-import type { ImageElement, ShapeElement, StrokeElement, TextElement } from '../../../../../shared/whiteboard-types'
+import type { ImageElement, ShapeElement, StrokeElement, TextElement } from '@shared/whiteboard-types'
 import type { GameSize } from '../coords'
 
 export interface StrokeTransformResult {

@@ -1,10 +1,5 @@
-import type { RuntimeSettings } from '../../../../shared/types'
-import {
-  chatCommandEffectiveScope,
-  appMacroEffectiveScope,
-  scopeAppliesTo,
-  type MacroScope,
-} from '../../../../shared/macro-scope'
+import type { RuntimeSettings } from '@shared/types'
+import { chatCommandEffectiveScope, appMacroEffectiveScope, scopeAppliesTo, type MacroScope } from '@shared/macro-scope'
 import { prettyHotkey } from './hotkey-utils'
 
 export type HotkeySlot =

@@ -3,7 +3,7 @@ import { render } from '@testing-library/react'
 import { fireEvent, waitFor } from '@testing-library/dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { DeveloperSection } from './DeveloperSection'
-import type { AppSettings } from '../../../../../shared/types'
+import type { AppSettings } from '@shared/types'
 
 function installApi(
   unpackedPlugins: Array<{ manifest: { id: string; name: string; version: string }; entryUrl: string }>,

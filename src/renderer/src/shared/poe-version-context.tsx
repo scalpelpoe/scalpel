@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react'
-import type { GameVariant } from '../../../shared/types'
+import type { GameVariant } from '@shared/types'
 
 /** React context for the current PoE game version. Reading via usePoeVersion()
  *  avoids prop-drilling through deep trees (overlay -> FilterPanel -> ItemSummary

@@ -1,7 +1,7 @@
 import { clipboard } from 'electron'
-import { getItemClasses } from '../../shared/data/items/item-classes'
-import { endgameAreaLevel, SKILL_GEM_CLASSES } from '../../shared/poe-item'
-import type { AdvancedMod, ItemRarity, PoeItem } from '../../shared/types'
+import { getItemClasses } from '@shared/data/items/item-classes'
+import { endgameAreaLevel, SKILL_GEM_CLASSES } from '@shared/poe-item'
+import type { AdvancedMod, ItemRarity, PoeItem } from '@shared/types'
 import { getPoeVersion } from '../game-state'
 
 // Both base-name and class-size lookups seed lazily from the active game's

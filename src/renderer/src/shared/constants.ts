@@ -1,11 +1,11 @@
-import divCardsData from '../../../shared/data/economy/div-cards.json'
-import itemIconsPoe1 from '../../../shared/data/items/item-icons-poe1.json'
-import itemIconsPoe2 from '../../../shared/data/items/item-icons-poe2.json'
-import uniqueInfoPoe1 from '../../../shared/data/items/unique-info.json'
-import uniqueInfoPoe2 from '../../../shared/data/items/unique-info-poe2.json'
-import { getItemClasses } from '../../../shared/data/items/item-classes'
+import divCardsData from '@shared/data/economy/div-cards.json'
+import itemIconsPoe1 from '@shared/data/items/item-icons-poe1.json'
+import itemIconsPoe2 from '@shared/data/items/item-icons-poe2.json'
+import uniqueInfoPoe1 from '@shared/data/items/unique-info.json'
+import uniqueInfoPoe2 from '@shared/data/items/unique-info-poe2.json'
+import { getItemClasses } from '@shared/data/items/item-classes'
 
-export { RARITY_COLORS } from '../../../shared/rarity-colors'
+export { RARITY_COLORS } from '@shared/rarity-colors'
 
 export const IP = {
   theme: 'two-tone' as const,

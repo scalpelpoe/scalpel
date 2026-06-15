@@ -1,6 +1,6 @@
 import { Line } from 'react-konva'
 import type Konva from 'konva'
-import type { StrokeElement as StrokeEl } from '../../../../../shared/whiteboard-types'
+import type { StrokeElement as StrokeEl } from '@shared/whiteboard-types'
 import type { GameSize } from '../coords'
 import { widthToPixels } from '../coords'
 import type { StrokeTransformResult } from '../tools/transform'

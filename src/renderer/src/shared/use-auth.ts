@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AuthResult } from '../../../shared/types'
+import type { AuthResult } from '@shared/types'
 
 /** Trade-site auth state. Checks login on mount; `login`/`logout` perform the
  *  action then refresh. `loggedIn` is the derived boolean for consumers that

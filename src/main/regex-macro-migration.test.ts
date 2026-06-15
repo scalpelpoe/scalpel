@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { migrateAppMacros } from './regex-macro-migration'
-import type { AppSettings, RegexPreset } from '../shared/types'
+import type { AppSettings, RegexPreset } from '@shared/types'
 
 type Macro = AppSettings['appMacros'][number]
 const preset = (id: string, tagText: string): RegexPreset => ({

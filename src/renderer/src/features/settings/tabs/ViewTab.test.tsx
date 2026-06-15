@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { RuntimeSettings } from '../../../../../shared/types'
+import type { RuntimeSettings } from '@shared/types'
 import { ViewTab } from './ViewTab'
 
 const baseSettings = {

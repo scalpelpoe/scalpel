@@ -9,7 +9,7 @@ import type {
   FilterFile,
   TierTag,
   Visibility,
-} from '../../shared/types'
+} from '@shared/types'
 
 function parseTierTag(comment: string): TierTag | undefined {
   const typeMatch = comment.match(/\$type->(\S+)/)

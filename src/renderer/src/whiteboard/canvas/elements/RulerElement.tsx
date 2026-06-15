@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { Line } from 'react-konva'
-import type { RulerElement as RulerEl } from '../../../../../shared/whiteboard-types'
+import type { RulerElement as RulerEl } from '@shared/whiteboard-types'
 import { widthToPixels, type GameSize } from '../coords'
 import { groundDistance, groundToScreen, unitsToMetres } from '../poe-projection'
 import { MetreLabel } from './MetreLabel'

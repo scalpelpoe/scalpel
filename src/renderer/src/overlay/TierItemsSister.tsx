@@ -3,7 +3,7 @@ import { iconFor, RARITY_COLORS } from '../shared/constants'
 import { ItemRowContent } from '../shared/ItemRowContent'
 import { SisterShell } from './SisterShell'
 import { SisterRow } from './SisterRow'
-import type { ItemRarity } from '../../../shared/types'
+import type { ItemRarity } from '@shared/types'
 
 type PriceMap = Record<string, { chaosValue: number; divineValue?: number } | null>
 

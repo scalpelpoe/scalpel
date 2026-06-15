@@ -1,4 +1,4 @@
-import type { AdvancedMod } from '../../../shared/types'
+import type { AdvancedMod } from '@shared/types'
 
 /** Strip range annotations and parenthetical text from advanced mod lines */
 function stripAdvModLines(lines: string[]): string[] {

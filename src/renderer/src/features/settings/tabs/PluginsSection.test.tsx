@@ -2,7 +2,7 @@
 import { fireEvent, render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { PluginsSection } from './PluginsSection'
-import type { RuntimeSettings } from '../../../../../shared/types'
+import type { RuntimeSettings } from '@shared/types'
 
 function installApi(hotkeys: Array<{ action: string; pluginId: string; label: string }>): void {
   ;(window as unknown as { api: Record<string, unknown> }).api = {

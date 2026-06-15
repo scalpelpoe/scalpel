@@ -4,8 +4,8 @@
  *  term; movement-speed tiers group by zero/five ending; `[move0, move5].join('')`
  *  relies on Array.toString for the single-tier case. */
 
-import type { VendorSettings } from '../../../../shared/data/regex/vendor-toggles'
-export type { VendorSettings } from '../../../../shared/data/regex/vendor-toggles'
+import type { VendorSettings } from '@shared/data/regex/vendor-toggles'
+export type { VendorSettings } from '@shared/data/regex/vendor-toggles'
 
 export function buildVendorRegex(s: VendorSettings, customText = ''): string {
   const terms = [

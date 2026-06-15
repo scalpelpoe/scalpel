@@ -1,5 +1,5 @@
 import { isEndgameFilterIndexed } from '../../endgame-filter-support'
-import type { AdvancedMod } from '../../../../shared/types'
+import type { AdvancedMod } from '@shared/types'
 import type { StatFilter } from '../../trade'
 
 /** "Fuzz floor" applied to a map/waystone property when searching: accept

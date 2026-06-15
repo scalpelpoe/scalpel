@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { CheatSheetCategory } from '../../../../../../shared/types'
+import type { CheatSheetCategory } from '@shared/types'
 import { usePoeVersion } from '../../../../shared/poe-version-context'
 
 /** Lists the bundled starter packs (PREFAB_PACKS, scoped to the active PoE

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import type { StackSizeBreakpoint } from '../../../../../shared/types'
+import type { StackSizeBreakpoint } from '@shared/types'
 import { visColors } from './constants'
 import { BoundaryControl } from './BoundaryControl'
 import { DismissibleTip } from '../../../shared/DismissibleTip'

@@ -1,5 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs'
-import type { HistoryEntry } from '../shared/types'
+import type { HistoryEntry } from '@shared/types'
 
 interface Snapshot {
   entry: HistoryEntry

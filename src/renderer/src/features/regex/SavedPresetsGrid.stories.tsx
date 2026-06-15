@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
 import { SavedPresetsGrid } from './SavedPresetsGrid'
-import type { RegexPreset } from '../../../../shared/types'
+import type { RegexPreset } from '@shared/types'
 import type { GeneratorKey } from './generator-types'
 
 /** SavedPresetsGrid renders a wrapping grid of "Saved Regex" boxes beneath the

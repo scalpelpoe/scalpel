@@ -6,7 +6,7 @@ import type {
   ProfileSettingKey,
   ProfileSettingValue,
   RuntimeSettings,
-} from '../../../../shared/types'
+} from '@shared/types'
 import { GeneralTab, ViewTab, MacrosTab, FilterTab, PriceCheckTab, FaqTab, CheatSheetsTab } from './tabs'
 import { DeveloperSection } from './tabs/DeveloperSection'
 import { PluginsSection } from './tabs/PluginsSection'
@@ -14,7 +14,7 @@ import { ErrorBanner } from '../../components/ErrorBanner'
 import { createTryHotkey } from '../../components/primitives/hotkey-collisions'
 import { usePoeVersion } from '../../shared/poe-version-context'
 import { ProfileManagerTab } from '../profiles/ProfileManagerTab'
-import { m } from '../../../../shared/paraglide/messages.js'
+import { m } from '@shared/paraglide/messages.js'
 import { usePluginUpdates } from '../../plugins/use-plugin-updates'
 
 interface Props {

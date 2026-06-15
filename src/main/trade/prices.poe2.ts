@@ -1,6 +1,6 @@
-import { POE_NINJA_POE2_EXCHANGE, POE2_NINJA_PROXY } from '../../shared/endpoints'
-import { getGameFeatures } from '../../shared/game-features'
-import type { PriceEntry, PriceInfo } from '../../shared/types'
+import { POE_NINJA_POE2_EXCHANGE, POE2_NINJA_PROXY } from '@shared/endpoints'
+import { getGameFeatures } from '@shared/game-features'
+import type { PriceEntry, PriceInfo } from '@shared/types'
 
 /**
  * PoE2 ninja price fetching + processing. The PoE2 API has no dense/overviews

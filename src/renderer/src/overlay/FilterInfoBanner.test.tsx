@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { fireEvent, render, waitFor } from '@testing-library/react'
-import { m } from '../../../shared/paraglide/messages.js'
+import { m } from '@shared/paraglide/messages.js'
 import { FilterInfoBanner } from './FilterInfoBanner'
 
 function installApi(hasOnlineSource: boolean): void {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { RgbaColorPicker } from 'react-colorful'
-import type { FilterAction, RgbaColor } from '../../../../../shared/types'
+import type { FilterAction, RgbaColor } from '@shared/types'
 import { getColorFreqs } from './color-freq-cache'
 import type { ColorEntry } from './types'
 

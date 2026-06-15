@@ -1,4 +1,4 @@
-import type { RegexPreset, RegexPresetTag } from '../../../../shared/types'
+import type { RegexPreset, RegexPresetTag } from '@shared/types'
 
 /** Imperative handle every regex generator exposes via forwardRef. The container uses
  *  this to dispatch save/load operations without needing to own the generator's state.

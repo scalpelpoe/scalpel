@@ -1,4 +1,4 @@
-import type { WaystoneMod } from '../../../../shared/data/regex/waystone-mods'
+import type { WaystoneMod } from '@shared/data/regex/waystone-mods'
 import { generateNumberRegex } from './waystone-number-regex'
 
 export interface WaystoneTier {

@@ -1,6 +1,6 @@
 import { getTierData } from '../../../tier-data'
-import { resolveTierLadder } from '../../../../shared/data/tiers/resolve'
-import type { ModTier } from '../../../../shared/data/tiers/types'
+import { resolveTierLadder } from '@shared/data/tiers/resolve'
+import type { ModTier } from '@shared/data/tiers/types'
 
 /** Resolve a tier ladder for a matched affix, or undefined when not applicable
  *  (no data, Unique item, unknown base, no match, or hybrid multi-stat mod).

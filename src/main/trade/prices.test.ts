@@ -23,7 +23,7 @@ import {
   processDenseResponse,
   subscribePriceUpdates,
 } from './prices'
-import type { PriceEntry } from '../../shared/types'
+import type { PriceEntry } from '@shared/types'
 import { setPoeVersion } from '../game-state'
 
 const baseItem = (overrides: Record<string, unknown> = {}): Parameters<typeof lookupPriceForItem>[0] => ({

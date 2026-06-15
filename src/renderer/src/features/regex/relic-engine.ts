@@ -11,7 +11,7 @@
  *     poe2.re's generateRelicResult exactly and is intentional.
  *   - poe2.re hardcodes round10=false for relic; its current number-regex always includes a 3-digit branch, so there is no over-100 toggle. See relic-number-regex.ts. */
 
-import type { RelicMod } from '../../../../shared/data/regex/relic-mods'
+import type { RelicMod } from '@shared/data/regex/relic-mods'
 import { generateNumberRegex } from './relic-number-regex'
 
 export type RelicMatchType = 'any' | 'both'

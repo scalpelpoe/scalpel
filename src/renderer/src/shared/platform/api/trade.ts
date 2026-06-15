@@ -6,8 +6,8 @@
  * check or trade screens.
  */
 
-import type { PoeItem } from '../../../../../shared/contracts/items'
-import type { PriceInfo, PriceEntry } from '../../../../../shared/contracts/prices'
+import type { PoeItem } from '@shared/contracts/items'
+import type { PriceInfo } from '@shared/contracts/prices'
 
 // ── Price lookups ─────────────────────────────────────────────────────────────
 
@@ -25,7 +25,7 @@ export function getUniquesForBase(baseType: string): Promise<string[]> {
   return window.api.getUniquesForBase(baseType)
 }
 
-export function getSearchableItems(): Promise<import('../../../../../shared/contracts/items').SearchableItem[]> {
+export function getSearchableItems(): Promise<import('@shared/contracts/items').SearchableItem[]> {
   return window.api.getSearchableItems()
 }
 
@@ -189,7 +189,7 @@ export function poeLogin(): Promise<void> {
   return window.api.poeLogin()
 }
 
-export function poeCheckAuth(): Promise<import('../../../../../shared/contracts/updates').AuthResult> {
+export function poeCheckAuth(): Promise<import('@shared/contracts/updates').AuthResult> {
   return window.api.poeCheckAuth()
 }
 

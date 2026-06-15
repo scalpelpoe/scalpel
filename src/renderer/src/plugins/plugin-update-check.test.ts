@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { RegistrySnapshot } from '../../../shared/plugin-registry-types'
+import type { RegistrySnapshot } from '@shared/plugin-registry-types'
 import type { PluginManifest } from '../../../plugin-sdk/src/types'
 import { latestVersionFor, outdatedPluginIds } from './plugin-update-check'
 

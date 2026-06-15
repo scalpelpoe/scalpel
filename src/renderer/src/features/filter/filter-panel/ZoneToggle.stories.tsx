@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useState } from 'react'
-import type { Zone } from '../../../../../shared/types'
+import type { Zone } from '@shared/types'
 import { ZoneToggle } from './ZoneToggle'
 
 const meta: Meta<typeof ZoneToggle> = {

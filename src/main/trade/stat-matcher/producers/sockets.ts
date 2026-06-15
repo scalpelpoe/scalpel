@@ -1,6 +1,6 @@
-import type { AdvancedMod } from '../../../../shared/types'
+import type { AdvancedMod } from '@shared/types'
 import type { StatFilter } from '../../trade'
-import { SKILL_GEM_CLASSES } from '../../../../shared/poe-item'
+import { SKILL_GEM_CLASSES } from '@shared/poe-item'
 
 type SocketItemInfo = {
   sockets: string

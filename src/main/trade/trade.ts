@@ -1,8 +1,8 @@
 import { app, net } from 'electron'
-import tabletModMap from '../../shared/data/trade/tablet-mods.json'
-import { TRANSFIGURED_GEM_DISC } from '../../shared/data/trade/transfigured-gems'
-import { getTradeUrls } from '../../shared/endpoints'
-import { isClusterJewel, isSkillGem, splitRuneTier } from '../../shared/poe-item'
+import tabletModMap from '@shared/data/trade/tablet-mods.json'
+import { TRANSFIGURED_GEM_DISC } from '@shared/data/trade/transfigured-gems'
+import { getTradeUrls } from '@shared/endpoints'
+import { isClusterJewel, isSkillGem, splitRuneTier } from '@shared/poe-item'
 import { recordMainBreadcrumb } from '../diagnostics'
 import { getPoeVersion } from '../game-state'
 import { getOverlayWindow } from '../overlay'
@@ -206,7 +206,7 @@ export interface StatFilter {
   modRange?: { min: number; max: number } // possible roll range for this mod
   /** Resolved tier ladder for scrubbable affixes (single-stat or trade-averaged,
    *  non-Unique). Attached by the explicits producer; absent when not scrubbable. */
-  tierLadder?: import('../../shared/data/tiers/types').ModTier[]
+  tierLadder?: import('@shared/data/tiers/types').ModTier[]
   /** Quality magnitude multiplier (e.g. 1.2) for a quality-increased mod; the tierLadder
    *  ranges are unmodified, so the renderer multiplies by this for the modified search-value space. */
   tierQualityMult?: number
@@ -1376,8 +1376,8 @@ export async function searchTrade(
 
 // ─── Bulk Exchange ──────────────────────────────────────────────────────────
 
-import { isVendorExchangeItem } from '../../shared/data/trade/bulk-exchange-eligibility'
-import { getBulkExchangeIdMap } from '../../shared/data/trade/bulk-exchange-ids'
+import { isVendorExchangeItem } from '@shared/data/trade/bulk-exchange-eligibility'
+import { getBulkExchangeIdMap } from '@shared/data/trade/bulk-exchange-ids'
 
 /** Build the `type` field of a gem trade query. Returns the discriminator shape for
  *  transfigured gems (with "Vaal " prepended to the base when the gem has a Vaal alt),

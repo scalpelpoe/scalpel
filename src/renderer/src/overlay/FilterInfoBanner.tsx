@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { m } from '../../../shared/paraglide/messages.js'
+import { m } from '@shared/paraglide/messages.js'
 
 interface FilterInfoBannerProps {
   filterPath: string

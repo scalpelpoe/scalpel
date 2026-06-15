@@ -1,7 +1,7 @@
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import type Store from 'electron-store'
 import type { PluginManifest } from '../../plugin-sdk/src/types'
-import type { AppSettings } from '../../shared/types'
+import type { AppSettings } from '@shared/types'
 import { refreshAppMacros } from '../app-macros'
 import { runMainHotkeyFlow } from '../evaluation'
 import { getOverlayWindow, showOverlay } from '../overlay'
@@ -172,7 +172,7 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     if (!entry || typeof entry !== 'object') {
       return { ok: false as const, error: 'invalid registry entry' }
     }
-    const result = await installFromRegistry(entry as import('../../shared/plugin-registry-types').RegistryEntry)
+    const result = await installFromRegistry(entry as import('@shared/plugin-registry-types').RegistryEntry)
     if (result.ok) {
       const installed = getInstalledPlugins().find((p) => p.manifest.id === result.id)
       if (installed) {
@@ -256,7 +256,7 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     notifyHotkeysChanged()
   })
 
-  ipcMain.handle('plugins:trigger-main-hotkey', async (): Promise<import('../../shared/types').PoeItem | null> => {
+  ipcMain.handle('plugins:trigger-main-hotkey', async (): Promise<import('@shared/types').PoeItem | null> => {
     return runMainHotkeyFlow(store, isElevated)
   })
 

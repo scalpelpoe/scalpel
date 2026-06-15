@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildVendorRegex, buildVendorGroupsRegex, type VendorSettings } from './vendor-engine'
-import { DEFAULT_VENDOR_SETTINGS } from '../../../../shared/data/regex/vendor-toggles'
+import { DEFAULT_VENDOR_SETTINGS } from '@shared/data/regex/vendor-toggles'
 import { generateVendorRegex } from './__fixtures__/poe2re/VendorResult'
 import type { Settings } from './__fixtures__/poe2re/Settings'
 

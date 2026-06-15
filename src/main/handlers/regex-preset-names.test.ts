@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { backfillPresetNames } from './regex-preset-names'
-import type { RegexPreset } from '../../shared/types'
+import type { RegexPreset } from '@shared/types'
 
 const base = (over: Partial<RegexPreset>): RegexPreset => ({
   id: 'x',

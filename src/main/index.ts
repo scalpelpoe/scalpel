@@ -1,4 +1,4 @@
-import { app, type BrowserWindow, clipboard, crashReporter, ipcMain, screen } from 'electron'
+import { app, clipboard, crashReporter, ipcMain, screen } from 'electron'
 import { installEarlyDiagnostics, recordMainBreadcrumb, recordMainDiagnostic } from './diagnostics'
 
 // Prevent unhandled JS exceptions from crashing the native overlay thread
@@ -84,15 +84,7 @@ import {
 import { registerWhiteboardOverlay, toggleWhiteboard } from './whiteboard'
 import { togglePluginOverlay } from './plugin-overlay'
 import { registerPinnedZoneOverlay, applyPinnedZoneEnabled } from './pinned-zone'
-import {
-  getOverlayAnchor,
-  hideAllOnPoeBlur,
-  restoreAllOnPoeFocus,
-  isAnyScalpelWindowFocused,
-  setMainOverlayGetter,
-  setOnLeaveScalpel,
-  subscribeToPoeMoves,
-} from './windowing'
+import { getOverlayAnchor, setMainOverlayGetter, setOnLeaveScalpel, subscribeToPoeMoves } from './windowing'
 import { initAppMacrosRefresh, withPluginHotkeys } from './app-macros'
 import { runRegexMacroMigration } from './regex-macro-migration'
 import {
@@ -103,7 +95,7 @@ import {
   toggleRegexRemote,
 } from './regex-remote'
 import { detectPanelStateOnce, getCurrentPanelState } from './panel-detection'
-import type { AppSettings, CheatSheetsSettings, GameVariant, LegacyAppSettings, RegexPreset } from '../shared/types'
+import type { AppSettings, CheatSheetsSettings, GameVariant, LegacyAppSettings, RegexPreset } from '@shared/types'
 import { initProfileStore } from './profiles/store'
 import {
   ACTIVE_PROFILE_ID_KEY,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { bakeStrokeFromTransformResult, bakeShapeFromTransformResult, bakeTextFromTransformResult } from './transform'
-import type { StrokeElement, ShapeElement, TextElement } from '../../../../../shared/whiteboard-types'
+import type { StrokeElement, ShapeElement, TextElement } from '@shared/whiteboard-types'
 
 const SIZE = { w: 1000, h: 1000 }
 

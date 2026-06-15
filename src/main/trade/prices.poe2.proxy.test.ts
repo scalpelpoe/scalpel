@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { PriceInfo } from '../../shared/types'
+import type { PriceInfo } from '@shared/types'
 import {
   applyProxyResponse,
   buildPoe2UniquesByBaseFromProxy,
@@ -332,7 +332,7 @@ describe('applyProxyResponse pair-currency entries', () => {
   it('carries an exalted sparkline from a currency overview line onto the canonical exalted entry and into entriesOut', () => {
     const map = new Map<string, PriceInfo>()
     const variantMap = new Map<string, PriceInfo>()
-    const entries: import('../../shared/types').PriceEntry[] = []
+    const entries: import('@shared/types').PriceEntry[] = []
     applyProxyResponse(
       resp({
         rates: { exalted: 141 },
@@ -369,7 +369,7 @@ describe('applyProxyResponse pair-currency entries', () => {
   it('deduplicates: when a Currency line mentions Divine Orb, entriesOut has exactly one Divine Orb entry (canonical) and pricesByVariant carries the canonical chaosValue', () => {
     const map = new Map<string, PriceInfo>()
     const variantMap = new Map<string, PriceInfo>()
-    const entries: import('../../shared/types').PriceEntry[] = []
+    const entries: import('@shared/types').PriceEntry[] = []
     applyProxyResponse(
       resp({
         rates: { exalted: 150 },

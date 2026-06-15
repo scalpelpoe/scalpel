@@ -1,5 +1,5 @@
 import { app, net } from 'electron'
-import { getTradeUrls } from '../../../shared/endpoints'
+import { getTradeUrls } from '@shared/endpoints'
 import { getPoeVersion } from '../../game-state'
 
 // ─── Types ────────────────────────────────────────────────────────────────────

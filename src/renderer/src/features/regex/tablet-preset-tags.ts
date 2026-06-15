@@ -1,6 +1,6 @@
 import { TAB_COLORS } from './mapmods-helpers'
-import type { TabletMod } from '../../../../shared/data/regex/tablet-mods'
-import type { RegexPresetTag } from '../../../../shared/types'
+import type { TabletMod } from '@shared/data/regex/tablet-mods'
+import type { RegexPresetTag } from '@shared/types'
 
 export interface TabletTagState {
   want: Set<number>

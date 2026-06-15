@@ -1,17 +1,9 @@
 import { clipboard, screen } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
 import type Store from 'electron-store'
-import { isTownOrHideout } from '../shared/is-town-or-hideout'
-import { IPC_CHANNELS } from '../shared/contracts/ipc'
-import type {
-  AppSettings,
-  FilterFile,
-  MatchResult,
-  OverlayData,
-  PoeItem,
-  TierGroup,
-  TierSibling,
-} from '../shared/types'
+import { isTownOrHideout } from '@shared/is-town-or-hideout'
+import { IPC_CHANNELS } from '@shared/contracts/ipc'
+import type { AppSettings, FilterFile, MatchResult, OverlayData, PoeItem, TierGroup, TierSibling } from '@shared/types'
 import { getCurrentZone } from './client-log'
 import { snapshotClipboard } from './clipboard-preserve'
 import { getProfileBackedSetting } from './profiles/profile-settings'

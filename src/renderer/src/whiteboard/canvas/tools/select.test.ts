@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { RadiusRingElement, RulerElement } from '../../../../../shared/whiteboard-types'
+import type { RadiusRingElement, RulerElement } from '@shared/whiteboard-types'
 import { groundToScreen } from '../poe-projection'
 import { elementAabbPx } from './select'
 

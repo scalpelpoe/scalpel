@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { PoeProfileSummary, RuntimeSettings } from '../../../../shared/types'
+import type { PoeProfileSummary, RuntimeSettings } from '@shared/types'
 import { ProfileManagerTab } from './ProfileManagerTab'
 
 function profile(

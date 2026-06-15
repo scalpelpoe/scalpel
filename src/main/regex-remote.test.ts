@@ -6,8 +6,8 @@ import {
   regexRemoteAnchor,
   type RegexRemoteApplyDeps,
 } from './regex-remote'
-import type { RegexPreset } from '../shared/types'
-import { POE_SIDEBAR_RATIO } from '../shared/poe-geometry'
+import type { RegexPreset } from '@shared/types'
+import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 
 vi.mock('./windowing', () => ({ registerSecondaryOverlay: vi.fn() }))
 

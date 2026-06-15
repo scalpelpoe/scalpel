@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ReactSortable } from 'react-sortablejs'
 import { AddOne, Drag } from '@icon-park/react'
-import type { CheatSheetCategory } from '../../../../../../shared/types'
+import type { CheatSheetCategory } from '@shared/types'
 import { RemoveButton } from '../../../../components/RemoveButton'
 import { createMomentumScrollHandler } from '../../../../shared/momentumScroll'
 import { HotkeyField } from '../../../../components/primitives/HotkeyField'

@@ -6,8 +6,8 @@
  * screens.
  */
 
-import type { FilterBlock, FilterListEntry } from '../../../../../shared/contracts/items'
-import type { HistoryEntry, FilterChange, FilterVersion } from '../../../../../shared/contracts/history'
+import type { FilterBlock, FilterListEntry } from '@shared/contracts/items'
+import type { HistoryEntry, FilterChange, FilterVersion } from '@shared/contracts/history'
 
 // ── Filter files ──────────────────────────────────────────────────────────────
 

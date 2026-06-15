@@ -1,6 +1,6 @@
 // src/main/filter/intent-replay.ts
 
-import type { ActionType, ComparisonOperator, FilterBlock, FilterFile } from '../../shared/types'
+import type { ActionType, ComparisonOperator, FilterBlock, FilterFile } from '@shared/types'
 import type {
   Intent,
   IntentLog,

@@ -1,6 +1,6 @@
 // src/main/learning/engine.test.ts
 import { describe, it, expect } from 'vitest'
-import { defaultPoeItem } from '../../shared/poe-item'
+import { defaultPoeItem } from '@shared/poe-item'
 import { CounterStore, type LearningPersistence } from './counter-store'
 import type { CounterRecord } from './types'
 import { computeLearnedDecisions, captureObservation, isLearnable } from './engine'

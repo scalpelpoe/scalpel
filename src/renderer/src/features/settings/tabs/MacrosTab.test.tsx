@@ -2,7 +2,7 @@
 import { fireEvent, render } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { MacrosTab } from './MacrosTab'
-import type { RuntimeSettings } from '../../../../../shared/types'
+import type { RuntimeSettings } from '@shared/types'
 
 function installApi(): void {
   ;(window as unknown as { api: Record<string, unknown> }).api = {

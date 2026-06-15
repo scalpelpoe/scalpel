@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useEffect, useState } from 'react'
-import type { PoeProfileSummary, RuntimeSettings } from '../../../../shared/types'
+import type { PoeProfileSummary, RuntimeSettings } from '@shared/types'
 import { ProfileManagerTab } from './ProfileManagerTab'
 
 function profile(

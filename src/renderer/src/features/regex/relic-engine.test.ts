@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildRelicRegex, type RelicSelections } from './relic-engine'
-import type { RelicMod } from '../../../../shared/data/regex/relic-mods'
+import type { RelicMod } from '@shared/data/regex/relic-mods'
 import { generateNumberRegex } from './relic-number-regex'
 
 // Inline fixtures (independent of the generated data) so expectations are stable.

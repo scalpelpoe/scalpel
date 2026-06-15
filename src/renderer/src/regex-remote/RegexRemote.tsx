@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { RegexPreset, RuntimeSettings } from '../../../shared/types'
+import type { RegexPreset, RuntimeSettings } from '@shared/types'
 import { Chrome } from '../secondary-overlay/Chrome'
 import { textColorForBg } from '../shared/regex-preset-colors'
 import { getOverlayState } from '../shared/platform/api/overlay'

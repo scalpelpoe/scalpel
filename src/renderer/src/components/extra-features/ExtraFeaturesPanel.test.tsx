@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { PoeVersionProvider } from '../../shared/poe-version-context'
 import { ExtraFeaturesPanel } from './ExtraFeaturesPanel'
-import type { RuntimeSettings } from '../../../../shared/types'
+import type { RuntimeSettings } from '@shared/types'
 
 // window.api is read by the internal updateProfile helper.
 beforeEach(() => {

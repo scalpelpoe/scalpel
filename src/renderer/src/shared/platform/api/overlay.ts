@@ -6,8 +6,8 @@
  * screens.
  */
 
-import type { ExternalLinkTarget } from '../../../../../shared/external-link'
-import type { OverlayData, PoeItem, Zone } from '../../../../../shared/contracts/items'
+import type { ExternalLinkTarget } from '@shared/external-link'
+import type { OverlayData, Zone } from '@shared/contracts/items'
 
 export function closeOverlay(): void {
   window.api.closeOverlay()

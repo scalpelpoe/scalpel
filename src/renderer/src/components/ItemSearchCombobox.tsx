@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { SearchableItem } from '../../../shared/types'
+import type { SearchableItem } from '@shared/types'
 import { iconMap } from '../shared/constants'
 import { IconGlow } from '../shared/IconGlow'
 import { LootLabel, HiddenLootLabel } from '../shared/LootLabel'

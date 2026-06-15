@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { FilterChange, FilterVersion, HistoryEntry, PoeItem } from '../../../shared/types'
+import type { FilterChange, FilterVersion, HistoryEntry, PoeItem } from '@shared/types'
 import { Save, Pin } from '@icon-park/react'
 import { CollapsibleSection } from '../shared/CollapsibleSection'
 import { IP, iconMap } from '../shared/constants'

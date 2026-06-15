@@ -1,4 +1,4 @@
-import type { PanelState } from '../../shared/panel-state'
+import type { PanelState } from '@shared/panel-state'
 import { getPoeVersion } from '../game-state'
 import { captureGameWindow } from '../screen-capture/capture'
 import { matchPatchFuzzy, votePanels } from './match'

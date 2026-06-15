@@ -1,9 +1,9 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { app } from 'electron'
-import { PREMIUM_MODS_MANIFEST_URL, PREMIUM_MODS_URL } from '../shared/endpoints'
-import { PREMIUM_MODS_SCHEMA_VERSION } from '../shared/data/items/premium-mods-types'
-import type { PremiumModsData } from '../shared/data/items/premium-mods-types'
+import { PREMIUM_MODS_MANIFEST_URL, PREMIUM_MODS_URL } from '@shared/endpoints'
+import { PREMIUM_MODS_SCHEMA_VERSION } from '@shared/data/items/premium-mods-types'
+import type { PremiumModsData } from '@shared/data/items/premium-mods-types'
 
 let active: PremiumModsData | null = null
 let localHash: string | null = null
@@ -41,7 +41,7 @@ function cachePath(): string {
 /** Load the bundled premium-mods dataset (offline floor), then any cached
  *  userData override. Call once on app start. */
 export async function loadPremiumMods(): Promise<void> {
-  applyRemotePremiumMods((await import('../shared/data/items/premium-mods.json')).default)
+  applyRemotePremiumMods((await import('@shared/data/items/premium-mods.json')).default)
   // Dev uses the bundled copy as the source of truth so local edits to
   // premium-mods.json take effect without a push to main. Skip the userData
   // cache + remote override (see refreshPremiumMods).

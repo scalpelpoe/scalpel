@@ -1,4 +1,4 @@
-import type { Pt } from '../../../../shared/whiteboard-types'
+import type { Pt } from '@shared/whiteboard-types'
 import type { GameSize } from './coords'
 
 /** Camera/render constants for one PoE game version. Distances are in the

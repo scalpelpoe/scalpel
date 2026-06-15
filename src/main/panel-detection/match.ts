@@ -1,4 +1,4 @@
-import type { PanelState } from '../../shared/panel-state'
+import type { PanelState } from '@shared/panel-state'
 
 /** A captured frame as BGRA pixel data (the format NativeImage.toBitmap yields),
  *  cropped so (0,0) is the game-window top-left. */

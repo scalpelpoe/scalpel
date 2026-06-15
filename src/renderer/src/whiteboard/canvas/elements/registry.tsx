@@ -7,7 +7,7 @@ import type {
   StrokeElement as StrokeEl,
   TextElement as TextEl,
   WhiteboardElement,
-} from '../../../../../shared/whiteboard-types'
+} from '@shared/whiteboard-types'
 import type { GameSize } from '../coords'
 import {
   bakeImageFromTransformResult,

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { FilterAction } from '../../../../../shared/types'
+import type { FilterAction } from '@shared/types'
 import {
   ALERT_SOUNDS,
   BEAM_COLORS,
@@ -9,7 +9,7 @@ import {
   POE_COLOR_HEX,
   getShapeIconUrl,
   getMinimapIconUrl,
-} from '../../../../../shared/data/filter/filter-actions'
+} from '@shared/data/filter/filter-actions'
 import { Toggle } from '../../../components/Toggle'
 import { CollapsibleSection } from '../../../shared/CollapsibleSection'
 

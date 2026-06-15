@@ -1,6 +1,6 @@
 // src/main/learning/context-key.test.ts
 import { describe, it, expect } from 'vitest'
-import { defaultPoeItem } from '../../shared/poe-item'
+import { defaultPoeItem } from '@shared/poe-item'
 import { deriveLearningContext, relevanceAxisFor, GLOBAL_KEY } from './context-key'
 
 describe('relevanceAxisFor', () => {

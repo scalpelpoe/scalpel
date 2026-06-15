@@ -1,4 +1,4 @@
-import type { AppSettings, ProfileSettingValue, RuntimeSettings } from '../../../../../shared/types'
+import type { AppSettings, ProfileSettingValue, RuntimeSettings } from '@shared/types'
 import { PoeLoginButton } from './PoeLoginButton'
 import { HotkeyField } from '../../../components/primitives/HotkeyField'
 import {
@@ -10,7 +10,7 @@ import {
 } from '../../../shared/trade-settings'
 import { SettingSelectBox } from '../../../components/primitives/SettingSelectBox'
 import { SettingToggleBox } from '../../../components/primitives/SettingToggleBox'
-import { m } from '../../../../../shared/paraglide/messages.js'
+import { m } from '@shared/paraglide/messages.js'
 
 interface Props {
   settings: RuntimeSettings

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { generateTabletPresetTags, type TabletTagState } from './tablet-preset-tags'
-import { TABLET_MODS } from '../../../../shared/data/regex/tablet-mods'
+import { TABLET_MODS } from '@shared/data/regex/tablet-mods'
 
 function emptyState(): TabletTagState {
   return {

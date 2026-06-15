@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
 import { ChartHistogram } from '@icon-park/react'
-import type { OverlayData, FilterBlock, TierGroup } from '../../../shared/types'
+import type { OverlayData, FilterBlock, TierGroup } from '@shared/types'
 import { iconMap, IP } from '../shared/constants'
 import { PriceAudit, AuditTierControls, useAuditState } from '../features/price-audit'
 import { getActiveMatch } from '../shared/activeMatch'
 import { Notice } from './Notice'
-import { m } from '../../../shared/paraglide/messages.js'
+import { m } from '@shared/paraglide/messages.js'
 
 interface AuditViewProps {
   overlayData: OverlayData

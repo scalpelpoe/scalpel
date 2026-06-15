@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { PriceEntry, PriceInfo } from '../../shared/types'
+import type { PriceEntry, PriceInfo } from '@shared/types'
 import { applyProxyResponse, applyResponse, fetchPoe2PricesFromProxy } from './prices.poe2'
 
 // Helper: minimal valid Poe2ExchangeResponse shape for the parts applyResponse
@@ -283,7 +283,7 @@ describe('PoE2 price entries', () => {
       itemOverviews: [{ type: 'UniqueWeapons', lines: [{ name: 'Some Unique', primaryValue: 5 }] }],
     }
     const priceMap = new Map()
-    const entries: import('../../shared/types').PriceEntry[] = []
+    const entries: import('@shared/types').PriceEntry[] = []
     applyProxyResponse(resp as never, priceMap, {}, undefined, entries)
     expect(entries.find((e) => e.name === 'Some Unique')?.category).toBe('unique-weapons')
   })

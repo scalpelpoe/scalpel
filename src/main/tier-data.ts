@@ -1,9 +1,9 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import { app } from 'electron'
-import { SCHEMA_VERSION } from '../shared/data/tiers/schema'
-import { TIER_DATA_BASE_URL, TIER_DATA_MANIFEST_URL } from '../shared/endpoints'
-import type { TierDataset } from '../shared/data/tiers/types'
+import { SCHEMA_VERSION } from '@shared/data/tiers/schema'
+import { TIER_DATA_BASE_URL, TIER_DATA_MANIFEST_URL } from '@shared/endpoints'
+import type { TierDataset } from '@shared/data/tiers/types'
 
 let active: TierDataset | null = null
 let localHash: string | null = null
@@ -39,8 +39,8 @@ export function applyRemoteTierData(data: unknown): void {
 export async function loadTierData(version: 1 | 2): Promise<void> {
   const bundled =
     version === 1
-      ? (await import('../shared/data/tiers/tiers-poe1.json')).default
-      : (await import('../shared/data/tiers/tiers-poe2.json')).default
+      ? (await import('@shared/data/tiers/tiers-poe1.json')).default
+      : (await import('@shared/data/tiers/tiers-poe2.json')).default
   applyRemoteTierData(bundled)
   try {
     const cached = await fs.readFile(cachePath(version), 'utf8')

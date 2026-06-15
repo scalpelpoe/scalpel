@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { FilterAction, FilterBlock } from '../../../../../shared/types'
+import type { FilterAction, FilterBlock } from '@shared/types'
 import { invalidateColorFreqCache } from './color-freq-cache'
 import { ConditionRow } from './ConditionRow'
 import { ColorActionEditor } from './ColorActionEditor'

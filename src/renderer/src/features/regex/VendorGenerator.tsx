@@ -17,8 +17,8 @@ import {
   ensureVendorGroupsMigrated,
   type VendorTabKey,
   type VendorGroupsState,
-} from '../../../../shared/data/regex/vendor-toggles'
-import type { RegexPreset, RegexPresetTag } from '../../../../shared/types'
+} from '@shared/data/regex/vendor-toggles'
+import type { RegexPreset, RegexPresetTag } from '@shared/types'
 import type { GeneratorHandle, GeneratorProps } from './generator-types'
 
 /** Per-category-tab icon. */

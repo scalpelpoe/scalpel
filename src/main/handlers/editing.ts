@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings, FilterAction, FilterBlock, FilterChange, PoeItem } from '../../shared/types'
+import type { AppSettings, FilterAction, FilterBlock, FilterChange, PoeItem } from '@shared/types'
 import { evaluateAndSend } from '../evaluation'
 import { describeIntent } from '../filter/intent-describe'
 import { getIntents, record } from '../filter/intent-recorder'

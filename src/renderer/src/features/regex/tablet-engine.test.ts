@@ -3,7 +3,7 @@ import { buildTabletRegex, type TabletBuildArgs } from './tablet-engine'
 import { generateTabletRegex } from './__fixtures__/poe2re/TabletResult'
 import type { Settings } from './__fixtures__/poe2re/Settings'
 import type { SelectOption } from './__fixtures__/poe2re/SelectOption'
-import { TABLET_MODS } from '../../../../shared/data/regex/tablet-mods'
+import { TABLET_MODS } from '@shared/data/regex/tablet-mods'
 
 function emptyArgs(): TabletBuildArgs {
   return {

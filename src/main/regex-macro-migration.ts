@@ -1,5 +1,5 @@
 import type Store from 'electron-store'
-import type { AppSettings, RegexPreset } from '../shared/types'
+import type { AppSettings, RegexPreset } from '@shared/types'
 
 type AppMacro = AppSettings['appMacros'][number]
 

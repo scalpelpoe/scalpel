@@ -1,4 +1,4 @@
-import type { TabletMod } from '../../../../shared/data/regex/tablet-mods'
+import type { TabletMod } from '@shared/data/regex/tablet-mods'
 import { generateNumberRegex } from './waystone-number-regex'
 
 export interface TabletRarity {

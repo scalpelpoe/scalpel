@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { generateWaystonePresetTags } from './waystone-preset-tags'
-import { WAYSTONE_MODS } from '../../../../shared/data/regex/waystone-mods'
+import { WAYSTONE_MODS } from '@shared/data/regex/waystone-mods'
 
 const FIRE = WAYSTONE_MODS.find((m) => m.affix === 'PREFIX' && m.text.toLowerCase().includes('extra fire'))!
 const BLEED = WAYSTONE_MODS.find(

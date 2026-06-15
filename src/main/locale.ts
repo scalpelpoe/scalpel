@@ -1,6 +1,6 @@
 import type Store from 'electron-store'
-import type { AppSettings } from '../shared/types'
-import { isLocale, locales, overwriteGetLocale } from '../shared/paraglide/runtime.js'
+import type { AppSettings } from '@shared/types'
+import { isLocale, locales, overwriteGetLocale } from '@shared/paraglide/runtime.js'
 
 type Locale = (typeof locales)[number]
 

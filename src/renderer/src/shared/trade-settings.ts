@@ -1,4 +1,4 @@
-import type { AdaptiveMode } from '../../../shared/types'
+import type { AdaptiveMode } from '@shared/types'
 export type { AdaptiveMode }
 
 export type ListedTime =

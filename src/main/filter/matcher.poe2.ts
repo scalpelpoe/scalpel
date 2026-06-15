@@ -1,4 +1,4 @@
-import type { ConditionResult, FilterCondition, PoeItem } from '../../shared/types'
+import type { ConditionResult, FilterCondition, PoeItem } from '@shared/types'
 import { boolMatch, compareNum } from './matcher'
 
 /**

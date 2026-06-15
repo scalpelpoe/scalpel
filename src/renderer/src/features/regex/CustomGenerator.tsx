@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react'
-import type { RegexPreset } from '../../../../shared/types'
+import type { RegexPreset } from '@shared/types'
 import { loadStorage, useRegexKey } from './mapmods-helpers'
 import type { GeneratorHandle, GeneratorProps } from './generator-types'
 

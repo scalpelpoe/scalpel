@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { SavedPresetsGrid } from './SavedPresetsGrid'
-import type { RegexPreset } from '../../../../shared/types'
+import type { RegexPreset } from '@shared/types'
 
 const p = (id: string, name: string, color?: string): RegexPreset => ({
   id,

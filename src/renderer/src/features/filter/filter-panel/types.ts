@@ -1,4 +1,4 @@
-import type { OverlayData, Zone } from '../../../../../shared/types'
+import type { OverlayData, Zone } from '@shared/types'
 
 export interface FilterPanelProps {
   data: OverlayData

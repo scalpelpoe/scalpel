@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type Store from 'electron-store'
-import type { AppSettings } from '../shared/types'
-import { getLocale } from '../shared/paraglide/runtime.js'
+import type { AppSettings } from '@shared/types'
+import { getLocale } from '@shared/paraglide/runtime.js'
 import { initMainLocale } from './locale'
 
 type ChangeHandler = (value: unknown) => void

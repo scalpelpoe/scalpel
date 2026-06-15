@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Github } from '@icon-park/react'
-import type { AppSettings, ProfileSettingValue, RuntimeSettings } from '../../../../../shared/types'
-import { getGameFeatures } from '../../../../../shared/game-features'
-import { GITHUB_REPO_URL, KOFI_URL } from '../../../../../shared/endpoints'
+import type { AppSettings, ProfileSettingValue, RuntimeSettings } from '@shared/types'
+import { getGameFeatures } from '@shared/game-features'
+import { GITHUB_REPO_URL, KOFI_URL } from '@shared/endpoints'
 import { reportDiagnosticError } from '../../../shared/diagnostics'
 import { CollapsibleSection } from '../../../shared/CollapsibleSection'
 import kofiIcon from '../../../assets/other/kofi-logo.svg'
 import { SettingToggleBox } from '../../../components/primitives/SettingToggleBox'
 import { LOCALE_LABELS, setAppLocale, SUPPORTED_LOCALES, useCurrentLocale } from '../../../shared/locale'
-import { m } from '../../../../../shared/paraglide/messages.js'
+import { m } from '@shared/paraglide/messages.js'
 
 interface Props {
   settings: RuntimeSettings

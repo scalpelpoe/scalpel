@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from '
 import { join } from 'node:path'
 import { app, ipcMain } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
-import { type BoardLibrary, emptyBoardLibrary, migrateBoardLibrary } from '../shared/whiteboard-types'
+import { type BoardLibrary, emptyBoardLibrary, migrateBoardLibrary } from '@shared/whiteboard-types'
 import { registerSecondaryOverlay, type SecondaryOverlay } from './windowing'
 
 let userDataDirOverride: string | null = null

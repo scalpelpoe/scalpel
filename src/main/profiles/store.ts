@@ -2,7 +2,7 @@ import { writeFileSync, readFileSync, existsSync, mkdirSync, readdirSync, unlink
 import { join } from 'path'
 import { randomUUID } from 'crypto'
 import type Store from 'electron-store'
-import type { AppSettings, PoeProfile, GameVariant, LegacyAppSettings } from '../../shared/types'
+import type { AppSettings, PoeProfile, GameVariant, LegacyAppSettings } from '@shared/types'
 
 let _instance: ProfileStore | null = null
 

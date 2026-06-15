@@ -1,6 +1,6 @@
-import type { OverlayData } from '../../../shared/types'
+import type { OverlayData } from '@shared/types'
 import { UpdateAvailableBanner, JustUpdatedBanner, BrickedReleaseBanner } from '../shared/update-banners'
-import { m } from '../../../shared/paraglide/messages.js'
+import { m } from '@shared/paraglide/messages.js'
 
 interface UpdateBannerProps {
   updateVersion: string | null

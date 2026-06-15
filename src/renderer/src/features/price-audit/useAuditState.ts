@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { FilterBlock, TierGroup, TierSibling, PoeItem } from '../../../../shared/types'
+import type { FilterBlock, TierGroup, TierSibling, PoeItem } from '@shared/types'
 import { usePoeVersion } from '../../shared/poe-version-context'
 import {
   type AuditItem,

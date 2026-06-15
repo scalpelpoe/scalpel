@@ -1,6 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import type { DiagnosticSource, RendererDiagnosticPayload } from '../../../shared/diagnostics'
-import { serializeDiagnosticError } from '../../../shared/diagnostics'
+import type { DiagnosticSource, RendererDiagnosticPayload } from '@shared/diagnostics'
+import { serializeDiagnosticError } from '@shared/diagnostics'
 
 let installed = false
 let toastTimer: ReturnType<typeof setTimeout> | null = null

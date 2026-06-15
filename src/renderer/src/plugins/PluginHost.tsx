@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { PoeItem, Zone } from '../../../shared/types'
+import type { PoeItem, Zone } from '@shared/types'
 import type { PluginActivate, PluginManifest } from '../../../plugin-sdk/src/types'
 import { createPluginContext } from './context'
 import { importPluginModule } from './import-plugin-module'

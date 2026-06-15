@@ -1,6 +1,6 @@
-import type { WaystoneMod } from '../../../../shared/data/regex/waystone-mods'
-import { WAYSTONE_MODS } from '../../../../shared/data/regex/waystone-mods'
-import type { RegexPresetTag } from '../../../../shared/types'
+import type { WaystoneMod } from '@shared/data/regex/waystone-mods'
+import { WAYSTONE_MODS } from '@shared/data/regex/waystone-mods'
+import type { RegexPresetTag } from '@shared/types'
 import { TAB_COLORS } from './mapmods-helpers'
 
 /** Hand-curated short tag names per waystone mod, keyed by the unique regex token

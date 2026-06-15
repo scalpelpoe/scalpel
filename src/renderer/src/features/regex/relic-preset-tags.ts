@@ -1,5 +1,5 @@
-import { RELIC_MODS } from '../../../../shared/data/regex/relic-mods'
-import type { RegexPresetTag } from '../../../../shared/types'
+import { RELIC_MODS } from '@shared/data/regex/relic-mods'
+import type { RegexPresetTag } from '@shared/types'
 import type { RelicMatchType } from './relic-engine'
 import { TAB_COLORS } from './mapmods-helpers'
 

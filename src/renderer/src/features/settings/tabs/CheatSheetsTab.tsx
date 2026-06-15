@@ -1,11 +1,11 @@
 import { ReactSortable } from 'react-sortablejs'
-import type { CheatSheetCategory, ProfileSettingValue, RuntimeSettings } from '../../../../../shared/types'
+import type { CheatSheetCategory, ProfileSettingValue, RuntimeSettings } from '@shared/types'
 import { HotkeyField } from '../../../components/primitives/HotkeyField'
 import { generateClientCategoryId } from './utils'
 import type { HotkeySlot } from '../../../components/primitives/hotkey-collisions'
 import { CategoryCard } from './cheatsheets/CategoryCard'
 import { PrefabPicker } from './cheatsheets/PrefabPicker'
-import { m } from '../../../../../shared/paraglide/messages.js'
+import { m } from '@shared/paraglide/messages.js'
 
 interface Props {
   settings: RuntimeSettings

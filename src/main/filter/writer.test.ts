@@ -2,7 +2,7 @@ import { mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import type { FilterBlock } from '../../shared/types'
+import type { FilterBlock } from '@shared/types'
 import { parseFilterFile } from './parser'
 import {
   detectIndent,

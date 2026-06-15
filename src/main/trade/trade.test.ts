@@ -10,6 +10,12 @@ interface CapturedTradeFilterGroup {
   filters: Record<string, { min?: number; option?: string }>
 }
 
+interface CapturedTradeStatGroup {
+  type: string
+  filters?: Array<{ id: string; value?: Record<string, unknown> }>
+  value?: { min?: number; max?: number }
+}
+
 interface CapturedTradeBody {
   query: {
     filters: {
@@ -18,9 +24,11 @@ interface CapturedTradeBody {
       socket_filters: CapturedTradeFilterGroup
       type_filters: CapturedTradeFilterGroup
       weapon_filters: CapturedTradeFilterGroup
+      map_filters?: CapturedTradeFilterGroup
+      misc_filters?: CapturedTradeFilterGroup
     }
     name?: string
-    stats: Array<{ type: string; filters: Array<{ id: string }> }>
+    stats: Array<CapturedTradeStatGroup>
     type?: string
   }
 }
@@ -304,7 +312,7 @@ describe('searchTrade filter-group dispatch', () => {
     expect(body.query.type).toBeUndefined()
     const andGroup = body.query.stats.find((g) => g.type === 'and')
     expect(andGroup).toBeDefined()
-    expect(andGroup?.filters.map((f) => f.id)).toContain('sanctum.stat_1583320325')
+    expect(andGroup?.filters?.map((f) => f.id)).toContain('sanctum.stat_1583320325')
   })
 
   it('PoE2 Tablet routes to map.tablet category, not a base-type-only search', async () => {
@@ -450,7 +458,7 @@ describe('searchTrade filter-group dispatch', () => {
     await searchTrade('Mirage', unidCluster, filters, { tradeStatus: 'any', tradePriceOption: 'chaos_divine' })
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     const body = parseCapturedBody(req)
-    const sentIds = body.query.stats[0].filters.map((f: { id: string }) => f.id)
+    const sentIds = body.query.stats[0].filters?.map((f) => f.id)
     // Enchant survives the unid drop, regular explicit does not.
     expect(sentIds).toContain('enchant.stat_3086156145')
     expect(sentIds).not.toContain('explicit.stat_2828710986')
@@ -1197,8 +1205,8 @@ describe('searchWaystonesByRegex', () => {
     expect(req).toBeDefined()
     const body = parseCapturedBody(req)
     expect(body.query.filters.type_filters.filters.category).toEqual({ option: 'map.waystone' })
-    expect((body.query.filters as any).map_filters.filters.map_tier).toEqual({ min: 14, max: 14 })
-    expect((body.query.filters as any).misc_filters.filters.corrupted).toEqual({ option: 'true' })
+    expect(body.query.filters.map_filters?.filters.map_tier).toEqual({ min: 14, max: 14 })
+    expect(body.query.filters.misc_filters?.filters.corrupted).toEqual({ option: 'true' })
   })
 
   it('matches the exact waystone stat, not a tablet-scoped fuzzy match', async () => {
@@ -1231,9 +1239,7 @@ describe('searchWaystonesByRegex', () => {
     )
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     const body = parseCapturedBody(req)
-    const countGroup = body.query.stats.find((g: { type: string }) => g.type === 'count') as
-      | { filters: Array<{ id: string }> }
-      | undefined
+    const countGroup = body.query.stats.find((g) => g.type === 'count')
     expect(countGroup?.filters).toEqual([{ id: 'explicit.stat_mm', value: {} }])
   })
 
@@ -1260,7 +1266,7 @@ describe('searchWaystonesByRegex', () => {
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     expect(req).toBeDefined()
     const body = parseCapturedBody(req)
-    expect((body.query.filters as any).misc_filters).toBeUndefined()
+    expect(body.query.filters.misc_filters).toBeUndefined()
   })
 
   it('sets corrupted option to false when uncorrupted only', async () => {
@@ -1286,7 +1292,7 @@ describe('searchWaystonesByRegex', () => {
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
     expect(req).toBeDefined()
     const body = parseCapturedBody(req)
-    expect((body.query.filters as any).misc_filters.filters.corrupted).toEqual({ option: 'false' })
+    expect(body.query.filters.misc_filters?.filters.corrupted).toEqual({ option: 'false' })
   })
 
   it('does NOT send Quantity & yield thresholds to trade (disabled for now)', async () => {
@@ -1305,7 +1311,7 @@ describe('searchWaystonesByRegex', () => {
       true,
     )
     const req = capturedRequests.find((r) => r.url.includes('/search/'))
-    const mapFilters = (parseCapturedBody(req).query.filters as any).map_filters.filters
+    const mapFilters = parseCapturedBody(req).query.filters.map_filters?.filters
     // Only tier is sent; quantity map_filters are commented out in searchWaystonesByRegex.
     expect(mapFilters).toEqual({ map_tier: { min: 14, max: 14 } })
   })
@@ -1355,14 +1361,10 @@ describe('searchWaystonesByRegex', () => {
       true,
     )
     const body = parseCapturedBody(capturedRequests.find((r) => r.url.includes('/search/')))
-    const countGroup = body.query.stats.find((g: { type: string }) => g.type === 'count') as
-      | { filters: Array<{ id: string }> }
-      | undefined
+    const countGroup = body.query.stats.find((g) => g.type === 'count')
     // Delirious rides in the count group (optional, part of the any-set), not a separate required group.
-    expect(countGroup?.filters.map((f) => f.id).sort()).toEqual(['explicit.stat_delir', 'explicit.stat_dmg'])
-    expect(body.query.stats.some((g: { type: string }) => g.type === 'and' && (g as any).filters.length > 0)).toBe(
-      false,
-    )
+    expect(countGroup?.filters?.map((f) => f.id).sort()).toEqual(['explicit.stat_delir', 'explicit.stat_dmg'])
+    expect(body.query.stats.some((g) => g.type === 'and' && (g.filters?.length ?? 0) > 0)).toBe(false)
   })
 
   it('all-mode keeps delirious as a separate required and group', async () => {
@@ -1388,8 +1390,7 @@ describe('searchWaystonesByRegex', () => {
     // In all-mode delirious is a required term: its own `and` group holding just the delir stat.
     expect(
       body.query.stats.some(
-        (g: { type: string; filters: Array<{ id: string }> }) =>
-          g.type === 'and' && g.filters.length === 1 && g.filters[0].id === 'explicit.stat_delir',
+        (g) => g.type === 'and' && (g.filters?.length ?? 0) === 1 && g.filters?.[0]?.id === 'explicit.stat_delir',
       ),
     ).toBe(true)
   })
@@ -1425,7 +1426,7 @@ describe('searchTabletsByRegex', () => {
     expect(body.query.filters.type_filters.filters.rarity).toEqual({ option: 'magic' })
     const countGroup = body.query.stats.find((g: { type: string }) => g.type === 'count')
     expect(countGroup).toBeDefined()
-    expect((countGroup as any).value).toEqual({ min: 1 })
+    expect(countGroup?.value).toEqual({ min: 1 })
     expect(body.query.stats.every((g: { type: string }) => g.type !== 'not')).toBe(true)
   })
 

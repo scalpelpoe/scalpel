@@ -6,8 +6,8 @@ import {
   CHEAT_SHEET_MINIMIZED_SLACK,
   CHEAT_SHEET_MINIMIZED_WIDTH,
   clampRectToScreen,
-} from '../shared/cheat-sheet-window'
-import type { CheatSheetsSettings, OverlayAnchor } from '../shared/types'
+} from '@shared/cheat-sheet-window'
+import type { CheatSheetsSettings, OverlayAnchor } from '@shared/types'
 import { forwardZoneChangesTo, sendCurrentZoneTo } from './client-log'
 import { setSecondaryOverlayHotkeys } from './hotkeys'
 import {

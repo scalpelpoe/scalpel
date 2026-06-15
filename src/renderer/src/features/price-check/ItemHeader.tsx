@@ -1,5 +1,5 @@
-import type { PriceInfo } from '../../../../shared/types'
-import { getGameFeatures } from '../../../../shared/game-features'
+import type { PriceInfo } from '@shared/types'
+import { getGameFeatures } from '@shared/game-features'
 import { usePoeVersion } from '../../shared/poe-version-context'
 import { IconGlow } from '../../shared/IconGlow'
 import { PriceChip } from '../../shared/PriceChip'

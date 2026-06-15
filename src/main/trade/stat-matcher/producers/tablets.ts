@@ -1,5 +1,5 @@
-import tabletMods from '../../../../shared/data/trade/tablet-mods.json'
-import { BENEFICIAL_NEGATIVE_KEYWORDS } from '../../../../shared/data/trade/beneficial-negatives'
+import tabletMods from '@shared/data/trade/tablet-mods.json'
+import { BENEFICIAL_NEGATIVE_KEYWORDS } from '@shared/data/trade/beneficial-negatives'
 import type { StatFilter } from '../../trade'
 import { findAdvMod } from '../adv-mods'
 import { computeValueBounds } from '../bounds'

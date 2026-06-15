@@ -1,4 +1,4 @@
-import type { ShapeElement } from '../../../../../shared/whiteboard-types'
+import type { ShapeElement } from '@shared/whiteboard-types'
 import { IconBase, type BaseProps } from './IconBase'
 
 export function IconShape({

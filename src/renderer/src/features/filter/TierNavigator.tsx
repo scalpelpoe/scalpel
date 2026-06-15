@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import type { FilterBlock, PoeItem, TierGroup, TierSibling } from '../../../../shared/types'
+import type { FilterBlock, PoeItem, TierGroup, TierSibling } from '@shared/types'
 import { Down, Up, SortThree } from '@icon-park/react'
 import { IP } from '../../shared/constants'
 import { LootLabel, HiddenLootLabel, extractLabelStyle } from '../../shared/LootLabel'

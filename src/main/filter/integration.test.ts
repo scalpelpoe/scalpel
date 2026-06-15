@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
-import type { FilterFile, MatchResult, PoeItem } from '../../shared/types'
+import type { FilterFile, MatchResult, PoeItem } from '@shared/types'
 import { findMatchingBlocks } from './matcher'
 import { parseFilterFile } from './parser'
 

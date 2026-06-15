@@ -12,7 +12,7 @@ import {
   type ProfileChangedSetting,
 } from './profiles/profile-settings'
 import { initProfileStore } from './profiles/store'
-import type { AppSettings, PoeProfile } from '../shared/types'
+import type { AppSettings, PoeProfile } from '@shared/types'
 
 function makeStore(initial: Record<string, unknown>): Store<AppSettings> {
   const data: Record<string, unknown> = { ...initial }

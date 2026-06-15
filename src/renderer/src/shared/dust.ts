@@ -1,6 +1,6 @@
-import dustValues from '../../../shared/data/economy/dust-values.json'
-import uniqueInfoData from '../../../shared/data/items/unique-info.json'
-import type { PoeItem } from '../../../shared/types'
+import dustValues from '@shared/data/economy/dust-values.json'
+import uniqueInfoData from '@shared/data/items/unique-info.json'
+import type { PoeItem } from '@shared/types'
 
 const dustMap = dustValues as Record<string, number>
 const baseToUniques = uniqueInfoData as Record<string, string[]>

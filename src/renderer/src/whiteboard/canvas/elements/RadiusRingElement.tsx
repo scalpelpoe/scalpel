@@ -1,6 +1,6 @@
 import { memo } from 'react'
 import { Line } from 'react-konva'
-import type { RadiusRingElement as RingEl } from '../../../../../shared/whiteboard-types'
+import type { RadiusRingElement as RingEl } from '@shared/whiteboard-types'
 import { widthToPixels, type GameSize } from '../coords'
 import { groundToScreen, projectCircle, rightmostPx, unitsToMetres } from '../poe-projection'
 import { MetreLabel } from './MetreLabel'

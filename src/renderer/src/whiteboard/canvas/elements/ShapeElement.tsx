@@ -1,6 +1,6 @@
 import { Arrow, Ellipse, Line, Rect } from 'react-konva'
 import type Konva from 'konva'
-import type { ShapeElement as ShapeEl } from '../../../../../shared/whiteboard-types'
+import type { ShapeElement as ShapeEl } from '@shared/whiteboard-types'
 import type { GameSize } from '../coords'
 import { widthToPixels } from '../coords'
 import { readAndResetBboxTransform, type BboxTransformResult } from '../tools/transform'

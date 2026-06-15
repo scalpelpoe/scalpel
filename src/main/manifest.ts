@@ -1,6 +1,6 @@
 import bundled from '../../manifest.json'
-import { MANIFEST_URL } from '../shared/endpoints'
-import type { Manifest } from '../shared/types'
+import { MANIFEST_URL } from '@shared/endpoints'
+import type { Manifest } from '@shared/types'
 
 // Imported directly so the manifest is baked into app.asar. The auto-updater
 // only ships app.asar; using extraResources broke updates from older builds

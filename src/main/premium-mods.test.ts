@@ -5,7 +5,7 @@ vi.mock('electron', () => ({
 }))
 
 import { _setPremiumModsForTests, getPremiumMods, applyRemotePremiumMods } from './premium-mods'
-import type { PremiumModsData } from '../shared/data/items/premium-mods-types'
+import type { PremiumModsData } from '@shared/data/items/premium-mods-types'
 
 const valid: PremiumModsData = { schemaVersion: 2, poe1: {}, poe2: {} }
 

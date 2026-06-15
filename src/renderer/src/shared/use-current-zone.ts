@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import type { Zone } from '../../../shared/types'
-import { isTownOrHideout } from '../../../shared/is-town-or-hideout'
+import type { Zone } from '@shared/types'
+import { isTownOrHideout } from '@shared/is-town-or-hideout'
 import { usePoeVersion } from './poe-version-context'
 
 /** React subscription to the main-process zone state. Returns the latest

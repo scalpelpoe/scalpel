@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Image as KonvaImage } from 'react-konva'
 import type Konva from 'konva'
-import type { ImageElement as ImageEl } from '../../../../../shared/whiteboard-types'
+import type { ImageElement as ImageEl } from '@shared/whiteboard-types'
 import type { GameSize } from '../coords'
 import { readAndResetBboxTransform, type BboxTransformResult } from '../tools/transform'
 

@@ -7,7 +7,7 @@ import { prewarmSnapCanvas, type Rect, setSnapGhost } from './snap-canvas'
 import { fireOnLeaveScalpel, type OverlayState, overlays } from './state'
 import { createOverlayWindow } from './window'
 
-export type { OverlayAnchor } from '../../shared/types'
+export type { OverlayAnchor } from '@shared/types'
 export {
   aroundNativeDialog,
   closeAllOverlaysOnPoeExit,
@@ -23,7 +23,7 @@ export { registerAuxiliaryScalpelWindow, registerOnPoeLeave, setMainOverlayGette
 // Public re-exports - this module is the public face of the windowing system.
 export type { Rect }
 
-import type { OverlayAnchor } from '../../shared/types'
+import type { OverlayAnchor } from '@shared/types'
 
 export interface OverlaySpec {
   /** Stable id, used for IPC channels and as a lookup key. Kebab-case. */

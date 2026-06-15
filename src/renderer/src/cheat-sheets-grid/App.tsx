@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { GridFour, GridNine, GridSixteen } from '@icon-park/react'
-import type { CheatSheetsSettings, CheatSheetCategory, RuntimeSettings } from '../../../shared/types'
-import { CHEAT_SHEET_MINIMIZED_HEIGHT, CHEAT_SHEET_MINIMIZED_SLACK } from '../../../shared/cheat-sheet-window'
+import type { CheatSheetsSettings, CheatSheetCategory, RuntimeSettings } from '@shared/types'
+import { CHEAT_SHEET_MINIMIZED_HEIGHT, CHEAT_SHEET_MINIMIZED_SLACK } from '@shared/cheat-sheet-window'
 import { Chrome } from '../secondary-overlay/Chrome'
 import { useStickyZone } from '../shared/use-current-zone'
 

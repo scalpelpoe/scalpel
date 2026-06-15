@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { TradeListings } from '../../shared/trade-results/TradeListings'
 import { RateLimitBar } from '../../components/primitives/RateLimitBar'
 import type { Listing } from '../../shared/trade-types'
-import { getTradeUrls } from '../../../../shared/endpoints'
+import { getTradeUrls } from '@shared/endpoints'
 
 /** Above this result count, the in-Scalpel Travel-to-Hideout action gets unreliable:
  *  the page's live results churn between our API fetch and the click, so the data-id

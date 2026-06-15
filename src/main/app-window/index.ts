@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { app, BrowserWindow, ipcMain, nativeImage } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings } from '../../shared/types'
+import type { AppSettings } from '@shared/types'
 import { persistAppWindowPosition, restoreAppWindowPosition } from './position'
 
 let appWindow: BrowserWindow | null = null

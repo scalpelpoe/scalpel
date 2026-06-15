@@ -4,7 +4,7 @@ import { Toolbar } from './toolbar/Toolbar'
 import { useWhiteboardStore } from './state/store'
 import { createDebouncedSaver } from './state/persistence'
 import { useReportInputFocus } from '../shared/use-report-input-focus'
-import type { BoardState } from '../../../shared/whiteboard-types'
+import type { BoardState } from '@shared/whiteboard-types'
 
 export function Whiteboard(): JSX.Element {
   const poeVersion = useWhiteboardStore((s) => s.poeVersion)

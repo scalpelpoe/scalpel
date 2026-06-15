@@ -1,4 +1,4 @@
-import type { FilterBlock } from '../../../shared/types'
+import type { FilterBlock } from '@shared/types'
 
 /** PoE's in-game loot-label background when no block in the match chain sets
  *  SetBackgroundColor. The game paints an ~60%-opaque black plate behind the

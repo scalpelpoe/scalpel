@@ -1,5 +1,5 @@
-import itemIconsPoe1 from '../../../shared/data/items/item-icons-poe1.json'
-import itemIconsPoe2 from '../../../shared/data/items/item-icons-poe2.json'
+import itemIconsPoe1 from '@shared/data/items/item-icons-poe1.json'
+import itemIconsPoe2 from '@shared/data/items/item-icons-poe2.json'
 
 function buildCurrencyIcons(icons: Record<string, string>): Record<string, string> {
   const entries: Record<string, string> = {}

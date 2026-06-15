@@ -7,10 +7,10 @@ vi.mock('electron', () => ({ app: { getPath: () => '/tmp/test-scalpel' } }))
 
 // Both bundled JSONs are imported at module load; stub them with a few known
 // entries so we can verify bundled-wins-over-cache behaviour.
-vi.mock('../../shared/data/items/item-icons-poe1.json', () => ({
+vi.mock('@shared/data/items/item-icons-poe1.json', () => ({
   default: { 'Chaos Orb': 'https://poe1-bundle/chaos.png', 'Exquisite Blade': 'https://poe1-bundle/blade.png' },
 }))
-vi.mock('../../shared/data/items/item-icons-poe2.json', () => ({
+vi.mock('@shared/data/items/item-icons-poe2.json', () => ({
   default: { 'Exalted Orb': 'https://poe2-bundle/exalted.png' },
 }))
 

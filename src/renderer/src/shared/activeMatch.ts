@@ -1,4 +1,4 @@
-import type { OverlayData, MatchResult, TierGroup } from '../../../shared/types'
+import type { OverlayData, MatchResult, TierGroup } from '@shared/types'
 
 export interface ActiveMatch {
   match: MatchResult | null

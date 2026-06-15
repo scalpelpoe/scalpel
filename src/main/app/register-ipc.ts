@@ -8,7 +8,7 @@
 
 import { ipcMain } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings } from '../../shared/types'
+import type { AppSettings } from '@shared/types'
 import type { BrowserWindow } from 'electron'
 import { registerDiagnostics } from '../diagnostics'
 import * as tradeHandlers from '../handlers/trade'

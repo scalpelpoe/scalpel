@@ -1,6 +1,6 @@
-import { MAP_MODS, DANGER_COLORS, type Danger } from '../../../../shared/data/regex/map-mods'
+import { MAP_MODS, DANGER_COLORS, type Danger } from '@shared/data/regex/map-mods'
 import { QUALIFIERS } from './Qualifiers'
-import type { RegexPresetTag } from '../../../../shared/types'
+import type { RegexPresetTag } from '@shared/types'
 import { TAB_COLORS } from './mapmods-helpers'
 
 /** Hand-curated short tag names for map mods, keyed by mod ID */

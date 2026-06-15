@@ -2,7 +2,7 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { RegexRemote } from './RegexRemote'
-import type { RegexPreset } from '../../../shared/types'
+import type { RegexPreset } from '@shared/types'
 
 function preset(over: Partial<RegexPreset>): RegexPreset {
   return {

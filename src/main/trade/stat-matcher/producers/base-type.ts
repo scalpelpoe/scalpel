@@ -1,4 +1,4 @@
-import { isClusterJewel, SKILL_GEM_CLASSES, splitRuneTier } from '../../../../shared/poe-item'
+import { isClusterJewel, SKILL_GEM_CLASSES, splitRuneTier } from '@shared/poe-item'
 import type { StatFilter } from '../../trade'
 
 type BaseTypeItemInfo = {

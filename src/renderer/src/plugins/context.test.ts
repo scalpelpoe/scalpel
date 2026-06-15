@@ -2,7 +2,7 @@
 
 import { describe, it, expect, vi } from 'vitest'
 import { createPluginContext } from './context'
-import type { PoeItem } from '../../../shared/types'
+import type { PoeItem } from '@shared/types'
 
 const baseDeps = () => ({
   pluginId: 'test',

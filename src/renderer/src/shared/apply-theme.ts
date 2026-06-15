@@ -1,8 +1,8 @@
 import type { Api } from '../../../preload/index'
-import type { AppSettings } from '../../../shared/types'
-import type { ThemePalette } from '../../../shared/theme/palette'
-import { resolveCssVars } from '../../../shared/theme/derive'
-import { resolveActivePalette } from '../../../shared/theme/active'
+import type { AppSettings } from '@shared/types'
+import type { ThemePalette } from '@shared/theme/palette'
+import { resolveCssVars } from '@shared/theme/derive'
+import { resolveActivePalette } from '@shared/theme/active'
 
 export const THEME_CACHE_KEY = 'scalpel:theme-vars'
 
