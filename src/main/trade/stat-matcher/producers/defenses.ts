@@ -1,4 +1,4 @@
-import { getPoeVersion } from '../../../game-state'
+import { getPoeVersion } from '@main/game-state'
 import type { StatFilter } from '../../trade'
 
 // Add defense filters as special "defence" type

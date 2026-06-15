@@ -1,4 +1,4 @@
-import { getPoeVersion } from '../../../game-state'
+import { getPoeVersion } from '@main/game-state'
 import { isPremiumMod } from './premium'
 import { attachTierLadder } from './tier-attach'
 import { BENEFICIAL_NEGATIVE_KEYWORDS } from '@shared/data/trade/beneficial-negatives'

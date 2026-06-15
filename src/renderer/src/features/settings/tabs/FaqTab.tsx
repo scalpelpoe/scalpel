@@ -1,7 +1,7 @@
 import { CHANGELOG } from '@shared/changelog'
 import { getFaq } from '@shared/faq'
 import { FaqItem } from './FaqItem'
-import { CollapsibleSection } from '../../../shared/CollapsibleSection'
+import { CollapsibleSection } from '@renderer/shared/CollapsibleSection'
 import { m } from '@shared/paraglide/messages.js'
 
 export function FaqTab(): JSX.Element {

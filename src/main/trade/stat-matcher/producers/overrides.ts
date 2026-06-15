@@ -1,5 +1,5 @@
-import { getPremiumMods } from '../../../premium-mods'
-import { getPoeVersion } from '../../../game-state'
+import { getPremiumMods } from '@main/premium-mods'
+import { getPoeVersion } from '@main/game-state'
 import type { ItemInfo } from '../context'
 import type { OverrideModSpec, OverrideMode, UniqueOverride } from '@shared/data/items/premium-mods-types'
 

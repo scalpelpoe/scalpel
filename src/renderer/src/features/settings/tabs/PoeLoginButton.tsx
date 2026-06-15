@@ -1,4 +1,4 @@
-import { useAuth } from '../../../shared/use-auth'
+import { useAuth } from '@renderer/shared/use-auth'
 
 export function PoeLoginButton(): JSX.Element {
   const { auth, login, logout } = useAuth()

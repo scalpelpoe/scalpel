@@ -1,4 +1,4 @@
-import { getTierData } from '../../../tier-data'
+import { getTierData } from '@main/tier-data'
 import { resolveTierLadder } from '@shared/data/tiers/resolve'
 import type { ModTier } from '@shared/data/tiers/types'
 

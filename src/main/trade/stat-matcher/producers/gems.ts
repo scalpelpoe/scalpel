@@ -1,4 +1,4 @@
-import { getPoeVersion } from '../../../game-state'
+import { getPoeVersion } from '@main/game-state'
 import { SKILL_GEM_CLASSES } from '@shared/poe-item'
 import type { StatFilter } from '../../trade'
 

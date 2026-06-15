@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { _setPremiumModsForTests } from '../../../premium-mods'
-import { setPoeVersion } from '../../../game-state'
+import { _setPremiumModsForTests } from '@main/premium-mods'
+import { setPoeVersion } from '@main/game-state'
 import type { PremiumModsData } from '@shared/data/items/premium-mods-types'
 import { resolveUniqueOverride } from './overrides'
 

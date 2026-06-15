@@ -1,5 +1,5 @@
 import { SaveButton } from './SaveButton'
-import { IconGlow } from '../../../shared/IconGlow'
+import { IconGlow } from '@renderer/shared/IconGlow'
 
 interface CollapsedHeaderProps {
   collapsed: boolean

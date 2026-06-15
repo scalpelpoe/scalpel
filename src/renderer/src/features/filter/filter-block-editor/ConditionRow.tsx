@@ -1,5 +1,5 @@
 import type { FilterCondition } from '@shared/types'
-import { ItemChip } from '../../../components/ItemChip'
+import { ItemChip } from '@renderer/components/ItemChip'
 
 export function ConditionRow({ cond, itemClass }: { cond: FilterCondition; itemClass: string }): JSX.Element {
   const numericTypes = new Set([

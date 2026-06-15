@@ -1,4 +1,4 @@
-export { keyEventToAccelerator, prettyHotkey } from '../../../components/primitives/hotkey-utils'
+export { keyEventToAccelerator, prettyHotkey } from '@renderer/components/primitives/hotkey-utils'
 
 export const APP_MACRO_DEFS = [
   { id: 'openSettings', label: 'Open Settings' },

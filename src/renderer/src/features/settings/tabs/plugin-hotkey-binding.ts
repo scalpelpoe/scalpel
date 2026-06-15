@@ -1,5 +1,5 @@
 import type { AppSettings, RuntimeSettings } from '@shared/types'
-import type { HotkeySlot } from '../../../components/primitives/hotkey-collisions'
+import type { HotkeySlot } from '@renderer/components/primitives/hotkey-collisions'
 
 interface PluginHotkeyBindingDeps {
   /** The appMacros action this row binds, e.g. 'plugin:demo' or 'plugin-overlay:demo'. */

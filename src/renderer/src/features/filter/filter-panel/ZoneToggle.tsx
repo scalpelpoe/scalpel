@@ -1,7 +1,7 @@
 import type { Zone } from '@shared/types'
 import { isTownOrHideout } from '@shared/is-town-or-hideout'
-import { usePoeVersion } from '../../../shared/poe-version-context'
-import { Toggle } from '../../../components/Toggle'
+import { usePoeVersion } from '@renderer/shared/poe-version-context'
+import { Toggle } from '@renderer/components/Toggle'
 
 interface ZoneToggleProps {
   currentZone: Zone | null

@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { CollapsedHeader } from './CollapsedHeader'
-import chaosIcon from '../../../assets/currency/chaos-orb.png'
+import chaosIcon from '@renderer/assets/currency/chaos-orb.png'
 
 /** Sticky header that slides in from the top when the user scrolls past the
  *  filter-panel hero. Carries the item icon, name, and a compact SaveButton

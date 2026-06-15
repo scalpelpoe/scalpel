@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import type { AppSettings, HideableTabKey } from '@shared/types'
-import { ScrubInput } from '../../../components/primitives/ScrubInput'
-import { SettingToggleBox } from '../../../components/primitives/SettingToggleBox'
+import { ScrubInput } from '@renderer/components/primitives/ScrubInput'
+import { SettingToggleBox } from '@renderer/components/primitives/SettingToggleBox'
 import { ThemeSettings } from './ThemeSettings'
 import { Setting, CloseSmall, Buy, Filter, AllApplication } from '@icon-park/react'
 import { getGameFeatures } from '@shared/game-features'
-import { DIV_CARD_ICON_URL, IP } from '../../../shared/constants'
-import dustIconAsset from '../../../assets/currency/thaumaturgic-dust.png'
-import poereIcon from '../../../assets/other/poere-logo.svg'
+import { DIV_CARD_ICON_URL, IP } from '@renderer/shared/constants'
+import dustIconAsset from '@renderer/assets/currency/thaumaturgic-dust.png'
+import poereIcon from '@renderer/assets/other/poere-logo.svg'
 import { m } from '@shared/paraglide/messages.js'
 
 interface Props {

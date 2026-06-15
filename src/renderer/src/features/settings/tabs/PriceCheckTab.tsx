@@ -1,15 +1,15 @@
 import type { AppSettings, ProfileSettingValue, RuntimeSettings } from '@shared/types'
 import { PoeLoginButton } from './PoeLoginButton'
-import { HotkeyField } from '../../../components/primitives/HotkeyField'
+import { HotkeyField } from '@renderer/components/primitives/HotkeyField'
 import {
   ADAPTIVE_MODE_OPTIONS,
   LISTED_TIME_OPTIONS,
   getPriceOptions,
   RESULTS_VIEW_OPTIONS,
   STATUS_OPTIONS,
-} from '../../../shared/trade-settings'
-import { SettingSelectBox } from '../../../components/primitives/SettingSelectBox'
-import { SettingToggleBox } from '../../../components/primitives/SettingToggleBox'
+} from '@renderer/shared/trade-settings'
+import { SettingSelectBox } from '@renderer/components/primitives/SettingSelectBox'
+import { SettingToggleBox } from '@renderer/components/primitives/SettingToggleBox'
 import { m } from '@shared/paraglide/messages.js'
 
 interface Props {

@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
-import { iconMap } from '../../../shared/constants'
+import { iconMap } from '@renderer/shared/constants'
 
 const ICON_SIZE = 22
 const GAP = 3

@@ -1,5 +1,5 @@
-import { RARITY_COLORS } from '../../../shared/constants'
-import { getItemIcon } from '../../../shared/utils'
+import { RARITY_COLORS } from '@renderer/shared/constants'
+import { getItemIcon } from '@renderer/shared/utils'
 
 export { RARITY_COLORS }
 export { getItemIcon as getItemIconUrl }

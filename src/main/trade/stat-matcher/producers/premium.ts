@@ -1,6 +1,6 @@
-import { getPremiumMods } from '../../../premium-mods'
+import { getPremiumMods } from '@main/premium-mods'
 import { statTextById, _resetStatTextCacheForTests } from '../stats-cache'
-import { getPoeVersion } from '../../../game-state'
+import { getPoeVersion } from '@main/game-state'
 import type { ItemInfo } from '../context'
 import { baseId } from '../stat-id'
 

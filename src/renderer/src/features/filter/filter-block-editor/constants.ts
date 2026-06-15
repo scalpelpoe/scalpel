@@ -1,5 +1,5 @@
 import type { FilterBlock } from '@shared/types'
-import { IP, iconMap } from '../../../shared/constants'
+import { IP, iconMap } from '@renderer/shared/constants'
 
 export { IP, iconMap }
 

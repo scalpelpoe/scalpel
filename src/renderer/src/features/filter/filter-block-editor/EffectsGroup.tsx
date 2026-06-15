@@ -10,8 +10,8 @@ import {
   getShapeIconUrl,
   getMinimapIconUrl,
 } from '@shared/data/filter/filter-actions'
-import { Toggle } from '../../../components/Toggle'
-import { CollapsibleSection } from '../../../shared/CollapsibleSection'
+import { Toggle } from '@renderer/components/Toggle'
+import { CollapsibleSection } from '@renderer/shared/CollapsibleSection'
 
 export function ActionBox({ title, children }: { title: string; children: React.ReactNode }): JSX.Element {
   return (

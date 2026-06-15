@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import type { StackSizeBreakpoint } from '@shared/types'
 import { visColors } from './constants'
 import { BoundaryControl } from './BoundaryControl'
-import { DismissibleTip } from '../../../shared/DismissibleTip'
+import { DismissibleTip } from '@renderer/shared/DismissibleTip'
 import type { PendingThreshold } from './types'
 
 /** Apply a boundary change and push adjacent boundaries to avoid collisions */

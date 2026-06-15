@@ -1,9 +1,9 @@
 import type { AppSettings, ProfileSettingValue, PoeItem, RuntimeSettings } from '@shared/types'
 import { getGameFeatures } from '@shared/game-features'
-import { FilterPicker } from '../../../components/FilterPicker'
-import { HistoryPanel } from '../../../components/HistoryPanel'
-import { HotkeyField } from '../../../components/primitives/HotkeyField'
-import { SettingToggleBox } from '../../../components/primitives/SettingToggleBox'
+import { FilterPicker } from '@renderer/components/FilterPicker'
+import { HistoryPanel } from '@renderer/components/HistoryPanel'
+import { HotkeyField } from '@renderer/components/primitives/HotkeyField'
+import { SettingToggleBox } from '@renderer/components/primitives/SettingToggleBox'
 import { m } from '@shared/paraglide/messages.js'
 
 interface Props {
