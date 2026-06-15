@@ -1,7 +1,7 @@
 import type { MacroScope } from '../macro-scope'
 import type { ThemePalette } from '../theme/palette'
 import type { GameVariant, AppLocale, TradePriceOption, AdaptiveMode } from './core'
-import type { CheatSheet, CheatSheetCategory, CheatSheetsSettings, OverlayAnchor } from './overlay'
+import type { CheatSheetsSettings } from './overlay'
 import type { RegexPreset } from './regex'
 import type { PoeProfile } from './profiles'
 import type { HideableTabKey } from './items'

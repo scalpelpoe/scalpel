@@ -26,7 +26,7 @@
     "dist:linux": "npm run build && electron-builder --linux AppImage --x64",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json",
     "postinstall": "node scripts/postinstall.js",
-    "lint": "biome lint src",
+    "lint": "biome lint src && node scripts/check-import-aliases.mjs",
     "format": "biome format --write src",
     "format:check": "biome format src",
     "test": "vitest run",

@@ -1,4 +1,4 @@
-import type { GameVariant, TradePriceOption, AdaptiveMode } from './core'
+import type { GameVariant, TradePriceOption } from './core'
 import type { CheatSheetsSettings } from './overlay'
 import type { RegexPreset } from './regex'
 

@@ -6,13 +6,9 @@
  * wrappers incrementally when touching a settings/profile screen.
  */
 
-import type { AppSettings, RuntimeSettings } from '../../../../../shared/contracts/settings'
-import type {
-  PoeProfileSummary,
-  ProfileSettingKey,
-  ProfileSettingValue,
-} from '../../../../../shared/contracts/profiles'
-import type { GameVariant } from '../../../../../shared/contracts/core'
+import type { AppSettings, RuntimeSettings } from '@shared/contracts/settings'
+import type { PoeProfileSummary, ProfileSettingKey, ProfileSettingValue } from '@shared/contracts/profiles'
+import type { GameVariant } from '@shared/contracts/core'
 
 export function getSettings(): Promise<RuntimeSettings> {
   return window.api.getSettings()

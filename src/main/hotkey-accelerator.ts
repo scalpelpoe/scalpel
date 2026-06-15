@@ -1,5 +1,5 @@
 import { UiohookKey } from 'uiohook-napi'
-import { PHYSICAL_PREFIX, PHYSICAL_CODES, decodePhysicalToken } from '../shared/hotkey-tokens'
+import { PHYSICAL_PREFIX, PHYSICAL_CODES, decodePhysicalToken } from '@shared/hotkey-tokens'
 
 // ─── Accelerator → uiohook keycode mapping ────────────────────────────────────
 //

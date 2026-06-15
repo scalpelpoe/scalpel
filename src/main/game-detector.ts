@@ -20,7 +20,7 @@ async function getOpenWindows(): Promise<OpenWindowsFn> {
   return openWindowsFn
 }
 
-import type { GameVariant } from '../shared/types'
+import type { GameVariant } from '@shared/types'
 
 const TITLE_TO_VERSION: Record<string, GameVariant> = {
   'Path of Exile': 1,

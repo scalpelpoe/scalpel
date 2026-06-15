@@ -9,7 +9,7 @@ import { loadTierData, refreshTierData } from './tier-data'
 import { loadPremiumMods, refreshPremiumMods } from './premium-mods'
 import { loadEndgameFilterSupport, refreshEndgameFilterSupport } from './trade/endgame-filter-support'
 import { closeAllOverlaysOnPoeExit, isAnyScalpelWindowFocused, isInsideAnySecondaryOverlay } from './windowing'
-import { POE_SIDEBAR_RATIO } from '../shared/poe-geometry'
+import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 
 let overlayWindow: BrowserWindow | null = null
 let overlayVisible = false

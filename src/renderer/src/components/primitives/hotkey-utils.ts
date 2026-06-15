@@ -1,9 +1,4 @@
-import {
-  PHYSICAL_PREFIX,
-  decodePhysicalToken,
-  encodePhysicalKey,
-  isPhysicalCode,
-} from '../../../../shared/hotkey-tokens'
+import { PHYSICAL_PREFIX, decodePhysicalToken, encodePhysicalKey, isPhysicalCode } from '@shared/hotkey-tokens'
 
 export function keyEventToAccelerator(e: KeyboardEvent): string | null {
   const KEY_MAP: Record<string, string> = {
