@@ -17,6 +17,11 @@ let statEntries: StatEntry[] = []
 let statsFetched = false
 let refreshTimer: ReturnType<typeof setInterval> | null = null
 
+/** Monotonic counter bumped on every invalidateStatsCache() call. The in-flight
+ *  fetch checks this after settling so a stale response (from before the
+ *  invalidation) never overwrites fresh state. */
+let fetchGeneration = 0
+
 /** Hard ceiling on the stats fetch. Without this a half-open TCP socket can
  *  stall `await ensureStatsLoaded()` forever and nothing else in the price
  *  check path ever runs -- not even the search the user actually asked for.
@@ -60,6 +65,23 @@ export function getStatsFetched(): boolean {
   return statsFetched
 }
 
+export function invalidateStatsCache(): void {
+  statEntries = []
+  statsFetched = false
+  fetchGeneration++
+  // Drop the lazy statId -> text map so the next lookup rebuilds from the
+  // (now-empty) entries array. The reference check in statTextById would also
+  // catch this, but explicit nulling avoids holding the old array in memory.
+  textById = null
+  textBuiltFrom = null
+  // Cancel any pending periodic refresh — the next ensureStatsLoaded() will
+  // re-fetch for the new game version and re-arm the timer.
+  if (refreshTimer) {
+    clearInterval(refreshTimer)
+    refreshTimer = null
+  }
+}
+
 /** Internal setter used by the test hook in index.ts. Sets entries and marks
  *  stats as fetched. Does NOT touch the pseudo map -- that coordination
  *  happens in index.ts. */
@@ -84,6 +106,7 @@ async function fetchStats(): Promise<void> {
     return
   }
   if (inFlight) return inFlight
+  const generationAtStart = fetchGeneration
   const url = getTradeUrls(getPoeVersion()).stats
   inFlight = (async () => {
     const started = Date.now()
@@ -133,6 +156,8 @@ async function fetchStats(): Promise<void> {
         })
         request.end()
       })
+      // Discard if invalidateStatsCache() was called while we were in-flight.
+      if (generationAtStart !== fetchGeneration) return
       const resp = JSON.parse(data) as {
         result: Array<{ id: string; label: string; entries: StatEntry[] }>
       }

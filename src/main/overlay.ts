@@ -24,6 +24,8 @@ let lastOverlayError: string | null = null
 let onGameFocus: (() => void) | null = null
 let onGameBlur: (() => void) | null = null
 let overlayAttachedVersion: 1 | 2 = 1
+let retargeting = false
+let multiTitleMode = false
 
 export function setCloseOnClickOutside(enabled: boolean): void {
   closeOnClickOutside = enabled
@@ -257,7 +259,7 @@ uIOhook.on(
   }),
 )
 
-import { GAME_TITLES } from '../shared/contracts/game-variant'
+import { GAME_TITLES } from '@shared/contracts/game-variant'
 
 /** The PoE version the overlay's native tracker bound to at createOverlayWindow
  *  time. electron-overlay-window attaches once per process, so this is fixed for
@@ -267,9 +269,17 @@ export function getOverlayAttachedVersion(): 1 | 2 {
   return overlayAttachedVersion
 }
 
-export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
+export interface CreateOverlayOptions {
+  /** When true, attach to both PoE1 and PoE2 titles so the native tracker
+   *  can detect either without a relaunch. Requires the overlay fork's
+   *  attachByTitles / setTargetTitles API. Only use in experimental mode. */
+  multiTitle?: boolean
+}
+
+export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayOptions): BrowserWindow {
   setPoeVersion(version)
   overlayAttachedVersion = version
+  multiTitleMode = options?.multiTitle === true
   loadTierData(version)
     .then(() => refreshTierData(version))
     .catch(() => {})
@@ -348,12 +358,38 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
     return origIsVisible()
   }
 
-  // Attach to the PoE game window — syncs overlay bounds automatically
-  OverlayController.attachByTitle(overlayWindow, GAME_TITLES[getPoeVersion()])
+  // Attach to the PoE game window — syncs overlay bounds automatically.
+  // In multi-title mode (experimental), pass both titles so the native tracker
+  // can find either PoE1 or PoE2 without a restart. In single-title mode
+  // (stable), attach to the specific game version only.
+  if (multiTitleMode) {
+    OverlayController.attachByTitles(overlayWindow, [GAME_TITLES[1], GAME_TITLES[2]])
+  } else {
+    OverlayController.attachByTitle(overlayWindow, GAME_TITLES[version])
+  }
 
   OverlayController.events.on('attach', (ev) => {
     lastAttachAt = Date.now()
     try {
+      // During a retarget, poeVersion was already set by retargetForGame()
+      // so we skip titleIndex inference.
+      if (!retargeting) {
+        if (multiTitleMode) {
+          // Multi-title mode (experimental): use titleIndex to detect which
+          // PoE actually has focus (0 = PoE1, 1 = PoE2).
+          if (ev.titleIndex === 0) {
+            setPoeVersion(1)
+            overlayAttachedVersion = 1
+          } else if (ev.titleIndex === 1) {
+            setPoeVersion(2)
+            overlayAttachedVersion = 2
+          }
+        }
+        // Single-title mode (stable): version was set at createOverlayWindow
+        // time and the native tracker is bound to that specific title, so
+        // nothing to infer from titleIndex.
+      }
+      retargeting = false
       if (overlayWindow && !overlayWindow.isDestroyed()) {
         overlayWindow.webContents.send('poe-version', getPoeVersion())
         startClientLogWatcher(overlayWindow)
@@ -373,6 +409,11 @@ export function createOverlayWindow(version: 1 | 2 = 1): BrowserWindow {
   OverlayController.events.on('detach', () => {
     lastDetachAt = Date.now()
     try {
+      if (retargeting) {
+        // Retarget detach — skip cleanup, keep retargeting flag
+        // so the subsequent attach handler also skips version inference.
+        return
+      }
       // PoE window was destroyed (player quit / crashed). The library
       // already hides the main overlay's BrowserWindow; we still need to
       // clear our renderer-side overlay state and hide every secondary
@@ -437,6 +478,19 @@ function sendGameBounds(physWidth: number, physHeight: number): void {
     gameHeight,
     sidebarWidth,
   })
+}
+
+/** Switch overlay attachment to a different PoE version in-process.
+ *  Tells the native tracker to detach from the current game and look
+ *  for the new title instead — no app relaunch needed.
+ *  Only works in multi-title mode (experimental); no-op otherwise. */
+export function retargetForGame(target: 1 | 2): void {
+  if (!multiTitleMode) return
+  retargeting = true
+  hideOverlay()
+  setPoeVersion(target)
+  overlayAttachedVersion = target
+  OverlayController.setTargetTitles([GAME_TITLES[target]])
 }
 
 export function showOverlay(): void {

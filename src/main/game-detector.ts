@@ -22,7 +22,7 @@ async function getOpenWindows(): Promise<OpenWindowsFn> {
 
 import type { GameVariant } from '@shared/types'
 
-import { TITLE_TO_VARIANT } from '../shared/contracts/game-variant'
+import { TITLE_TO_VARIANT } from '@shared/contracts/game-variant'
 
 /** Returns the PoE version of whichever window currently has OS foreground focus,
  *  or null if it's not a PoE window (or the OS lookup failed). Called on hotkey

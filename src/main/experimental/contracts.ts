@@ -1,6 +1,6 @@
 import type { BrowserWindow } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings, GameVariant, RuntimeSettings } from '../../shared/types'
+import type { AppSettings, GameVariant, RuntimeSettings } from '@shared/types'
 
 export interface GameSwitchCoordinator {
   ensureCorrectGameForHotkey(store: Store<AppSettings>): Promise<boolean>

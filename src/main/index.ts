@@ -33,14 +33,7 @@ import { execSync } from 'node:child_process'
 import { uIOhook, UiohookKey } from 'uiohook-napi'
 import Store from 'electron-store'
 import { OverlayController } from 'electron-overlay-window'
-import {
-  createOverlayWindow,
-  hideOverlay,
-  showOverlay,
-  getOverlayWindow,
-  setCloseOnClickOutside,
-  setWindowInputFocused,
-} from './overlay'
+import { hideOverlay, showOverlay, getOverlayWindow, setCloseOnClickOutside, setWindowInputFocused } from './overlay'
 import { createAppWindow, showAppWindow, getAppWindow } from './app-window'
 import {
   startHotkeyListener,
@@ -109,6 +102,7 @@ import {
 import { registerAllIpc } from './app/register-ipc'
 import { createTray, refreshTrayMenu } from './app/tray'
 import { startLiveServices } from './app/lifecycle'
+import { getOverlayAttachStrategy } from './experimental'
 
 // ---- Linux display-server setup --------------------------------------------
 
@@ -281,7 +275,8 @@ if (!gotLock) {
 const installDir = IS_E2E ? process.cwd() : applyPendingUpdate()
 
 app.whenReady().then(() => {
-  if (!IS_E2E) createOverlayWindow((store.get(PROFILE_VERSION_KEY) as GameVariant) ?? 1)
+  if (!IS_E2E)
+    getOverlayAttachStrategy(store).createInitialOverlay((store.get(PROFILE_VERSION_KEY) as GameVariant) ?? 1)
   setMainOverlayGetter(getOverlayWindow)
   if (!IS_E2E) setOnLeaveScalpel(() => suspendHotkeys())
   createAppWindow(store)

@@ -55,6 +55,10 @@ function getBaseToClass(): Record<string, string> {
   return _baseToClass
 }
 
+export function invalidateBaseToClassCache(): void {
+  _baseToClass = null
+}
+
 /** Div card name -> reward text, built once from static economy data. */
 const DIV_CARD_REWARDS: Record<string, string> = (() => {
   const map: Record<string, string> = {}

@@ -17,7 +17,7 @@ import {
 import { getCurrentFilter } from './filter-state'
 import { detectFocusedPoeVersion, detectOpenPoeVersions } from './game-detector'
 import { getPoeVersion } from './game-state'
-import { requestGameSwitch } from './game-switch'
+import { requestGameSwitch as stableRequestGameSwitch } from './game-switch'
 import { sendCtrlCToPoE } from './hotkeys'
 import { focusGameWindow, getOverlayAttachedVersion, getOverlayWindow, isTypingInOverlay, showOverlay } from './overlay'
 import { readItemFromClipboard } from './trade/clipboard'
@@ -31,6 +31,16 @@ import {
 } from './trade/prices'
 import { ensureStatsLoaded, matchItemMods } from './trade/trade'
 import { beginSession, decisionsForSession } from './learning'
+
+// ---- Injectable game-switch request ----------------------------------------
+// Defaults to the stable (restart-based) path. The experimental coordinator
+// overrides this at init time so hotkeys route through the in-process switch
+// without evaluation.ts importing from experimental/ (which would cycle).
+let requestGameSwitch: typeof stableRequestGameSwitch = stableRequestGameSwitch
+
+export function setGameSwitchRequest(fn: typeof stableRequestGameSwitch): void {
+  requestGameSwitch = fn
+}
 
 // ---- Tier group builder ----------------------------------------------------
 

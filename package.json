@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "active-win": "^9.0.0",
-    "electron-overlay-window": "^4.0.2",
+    "electron-overlay-window": "github:scalpelpoe/electron-overlay-window",
     "electron-store": "^8.2.0",
     "konva": "^9.3.22",
     "react-konva": "^18.2.14",

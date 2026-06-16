@@ -5,7 +5,7 @@ import type { CheatSheetsSettings } from './overlay'
 import type { RegexPreset } from './regex'
 import type { PoeProfile } from './profiles'
 import type { HideableTabKey } from './items'
-import { GameVariant } from './game-variant'
+import type { GameVariant } from './game-variant'
 
 export interface LegacyAppSettings {
   filterPathPoe1?: string
