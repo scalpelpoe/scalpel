@@ -37,6 +37,7 @@ import { _setStatEntries } from './stats-cache'
 export { matchModToStat } from './mod-matcher'
 export { ensureStatsLoaded } from './stats-cache'
 export { ITEM_CLASS_TO_CATEGORY }
+export { invalidateStatMatcherCaches } from './cache-invalidation'
 
 // ─── Stat Matcher ─────────────────────────────────────────────────────────────
 

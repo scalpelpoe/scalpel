@@ -274,6 +274,10 @@ export interface CreateOverlayOptions {
    *  can detect either without a relaunch. Requires the overlay fork's
    *  attachByTitles / setTargetTitles API. Only use in experimental mode. */
   multiTitle?: boolean
+  /** Called when the native tracker attaches to a different game variant in
+   *  multi-title mode. The experimental coordinator wires full context switching
+   *  here; stable mode leaves it unset (single-title never changes). */
+  onAttachedGameVariant?: (variant: 1 | 2) => void
 }
 
 export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayOptions): BrowserWindow {
@@ -377,12 +381,12 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
         if (multiTitleMode) {
           // Multi-title mode (experimental): use titleIndex to detect which
           // PoE actually has focus (0 = PoE1, 1 = PoE2).
-          if (ev.titleIndex === 0) {
-            setPoeVersion(1)
-            overlayAttachedVersion = 1
-          } else if (ev.titleIndex === 1) {
-            setPoeVersion(2)
-            overlayAttachedVersion = 2
+          if (ev.titleIndex === 0 || ev.titleIndex === 1) {
+            const detected: 1 | 2 = ev.titleIndex === 0 ? 1 : 2
+            if (detected !== getPoeVersion()) {
+              options?.onAttachedGameVariant?.(detected)
+            }
+            overlayAttachedVersion = detected
           }
         }
         // Single-title mode (stable): version was set at createOverlayWindow

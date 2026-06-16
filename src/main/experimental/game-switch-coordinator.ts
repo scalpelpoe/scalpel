@@ -1,6 +1,6 @@
 import type { WebContents } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings, RuntimeSettings } from '@shared/types'
+import type { AppSettings, PoeProfile, RuntimeSettings } from '@shared/types'
 import type { GameVariant } from '@shared/contracts/game-variant'
 import { getGameFeatures } from '@shared/game-features'
 import { applyCheatSheetHotkeys } from '../cheat-sheets'
@@ -13,13 +13,15 @@ import {
   getActiveProfile,
   getEffectiveSettings,
   switchActiveProfileByGameVariant,
+  switchActiveProfileById,
+  hydrateActiveProfileSettings,
   type ProfileChangedSetting,
 } from '../profiles/profile-settings'
 import { broadcastSettingUpdates } from '../settings-write'
 import { initLearning } from '../learning'
 import { refreshLeagues } from '../trade/leagues'
 import { refreshPrices } from '../trade/prices'
-import { invalidateStatsCache } from '../trade/stat-matcher/stats-cache'
+import { invalidateStatMatcherCaches } from '../trade/stat-matcher/cache-invalidation'
 import { getPoeVersion, setPoeVersion } from '../game-state'
 
 function isValidLeagueForGame(store: Store<AppSettings>, league: string, variant: GameVariant): boolean {
@@ -40,13 +42,23 @@ export interface GameSwitchResult {
  *  fires background network / disk work. Does NOT retarget the native overlay
  *  — callers that need overlay attachment changes must additionally call
  *  `retargetForGame`. */
-export function switchGameContext(store: Store<AppSettings>, target: GameVariant): GameSwitchResult {
+export function switchGameContext(
+  store: Store<AppSettings>,
+  target: GameVariant,
+  requestedProfile?: PoeProfile,
+): GameSwitchResult {
   const changed = target !== getPoeVersion()
   setPoeVersion(target)
 
   const previous = getEffectiveSettings(store)
 
-  const changes = switchActiveProfileByGameVariant(store, target)
+  const changes = requestedProfile
+    ? switchActiveProfileById(store, requestedProfile.id)
+    : switchActiveProfileByGameVariant(store, target)
+
+  if (requestedProfile && changes.length === 0) {
+    changes.push(...hydrateActiveProfileSettings(store))
+  }
 
   const profile = getActiveProfile(store)
   if (profile) {
@@ -62,7 +74,7 @@ export function switchGameContext(store: Store<AppSettings>, target: GameVariant
     applyPinnedZoneEnabled(false)
   }
 
-  invalidateStatsCache()
+  invalidateStatMatcherCaches()
   invalidateBaseToClassCache()
 
   if (changed) {
@@ -87,8 +99,9 @@ export function performGameSwitch(
   store: Store<AppSettings>,
   target: GameVariant,
   sender?: WebContents | null,
+  requestedProfile?: PoeProfile,
 ): GameSwitchResult {
-  const result = switchGameContext(store, target)
+  const result = switchGameContext(store, target, requestedProfile)
   retargetForGame(target)
   broadcastSettingUpdates(sender ?? null, result.changes, result.previous, result.current)
   return result

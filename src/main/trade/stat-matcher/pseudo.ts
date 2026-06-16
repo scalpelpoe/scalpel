@@ -35,7 +35,7 @@ export const PSEUDO_CONTRIBUTIONS: Record<string, PseudoContribution[]> = {}
 // pseudoId -> the full universe of contributing real stat ids (deduped). The
 // trade2 weight group sums these at the implicit default weight of 1, so only the
 // ids matter here; the per-stat multiplier stays in PSEUDO_CONTRIBUTIONS for the
-// accumulator total. Built in buildPseudoMap(), cleared by _resetPseudoMap().
+// accumulator total. Built in buildPseudoMap(), cleared by resetPseudoMap().
 export const PSEUDO_WEIGHT_GROUPS: Record<string, Array<{ id: string }>> = {}
 
 function buildPseudoMap(): void {
@@ -239,14 +239,17 @@ export function accumulatePseudo(
  *  trade API fetch) well after createOverlayWindow sets the version at startup, so
  *  the first build always sees the correct game. If startup ordering ever changes
  *  so stats can be present before setPoeVersion runs, gate this on the version
- *  being known, or _resetPseudoMap once it is. */
+ *  being known, or resetPseudoMap once it is. */
 export function ensurePseudoMapBuilt(): void {
   if (Object.keys(PSEUDO_CONTRIBUTIONS).length === 0 && getStatEntries().length > 0) buildPseudoMap()
 }
 
 /** Clear the pseudo contributions map. Called by the test hook in index.ts so
  *  each test rebuilds from its own seeded entries. */
-export function _resetPseudoMap(): void {
+export function resetPseudoMap(): void {
   for (const k of Object.keys(PSEUDO_CONTRIBUTIONS)) delete PSEUDO_CONTRIBUTIONS[k]
   for (const k of Object.keys(PSEUDO_WEIGHT_GROUPS)) delete PSEUDO_WEIGHT_GROUPS[k]
 }
+
+/** @deprecated Use resetPseudoMap instead. Kept for test compatibility. */
+export const _resetPseudoMap = resetPseudoMap

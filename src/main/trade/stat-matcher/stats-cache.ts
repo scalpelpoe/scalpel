@@ -69,6 +69,10 @@ export function invalidateStatsCache(): void {
   statEntries = []
   statsFetched = false
   fetchGeneration++
+  // Drop the in-flight reference so the next ensureStatsLoaded() starts a
+  // fresh fetch instead of reusing the stale promise. The stale fetch will
+  // still run to completion but its generation check will discard the result.
+  inFlight = null
   // Drop the lazy statId -> text map so the next lookup rebuilds from the
   // (now-empty) entries array. The reference check in statTextById would also
   // catch this, but explicit nulling avoids holding the old array in memory.
@@ -166,7 +170,10 @@ async function fetchStats(): Promise<void> {
     } catch (e) {
       console.error(`[trade] Failed to fetch stats from ${url} after ${Date.now() - started}ms:`, e)
     } finally {
-      inFlight = null
+      // Only clear inFlight if we are still the active fetch. If
+      // invalidateStatsCache() bumped the generation (and nulled inFlight) or
+      // a fresh fetch started, clearing would clobber the newer promise.
+      if (generationAtStart === fetchGeneration) inFlight = null
     }
   })()
   return inFlight
