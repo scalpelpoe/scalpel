@@ -471,6 +471,20 @@ app.whenReady().then(() => {
   ipcMain.on('suspend-hotkeys', () => suspendHotkeys())
   ipcMain.on('resume-hotkeys', () => resumeHotkeys())
 
+  // Plugin dev quality-of-life: a fully-reload requires an app relaunch
+  // (plugin code is loaded once at start). Surface a button in the Developer
+  // settings section so plugin authors don't have to close + reopen by hand.
+  // Dev builds skip the relaunch step since electron-vite dev won't come back
+  // after app.quit() — same caveat as game-switch.ts.
+  ipcMain.on('app-restart', () => {
+    if (!app.isPackaged) {
+      console.warn('[app-restart] dev build — close and `npm run dev` to re-attach')
+      return
+    }
+    app.relaunch()
+    app.quit()
+  })
+
   ipcMain.on('overlay-input-focused', (e, focused: boolean) => {
     setWindowInputFocused(e.sender.id, focused)
     if (focused) suspendHotkeys()

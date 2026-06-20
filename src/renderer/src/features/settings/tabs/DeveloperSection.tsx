@@ -102,6 +102,19 @@ export function DeveloperSection({ settings, update, onError }: Props): JSX.Elem
               </div>
             )}
           </div>
+          <div className="flex flex-col gap-1 mt-3 pt-3 border-t border-border">
+            <span className="text-xs text-zinc-400">Restart Scalpel</span>
+            <span className="text-[10px] text-zinc-500">
+              Plugin code is loaded at startup. Restart to pick up a freshly-built or just-installed plugin
+              without closing and reopening by hand.
+            </span>
+            <button
+              onClick={() => window.api.restartApp()}
+              className="btn-bounce self-start px-3 py-1 text-xs bg-zinc-700 hover:bg-zinc-600 rounded mt-1"
+            >
+              Restart now
+            </button>
+          </div>
         </div>
       )}
     </div>

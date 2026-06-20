@@ -412,6 +412,12 @@ export const api = {
   respondGameSwitch: (choice: 'restart' | 'cancel'): void => {
     ipcRenderer.send('game-switch-response', choice)
   },
+  /** Full app relaunch. Used by the Developer settings "Restart Scalpel"
+   *  button so plugin authors can pick up freshly-built plugin code without
+   *  closing + reopening the app by hand. No-op in dev builds (see main). */
+  restartApp: (): void => {
+    ipcRenderer.send('app-restart')
+  },
   onPriceCheck: (
     cb: (data: {
       item: import('@shared/types').PoeItem
