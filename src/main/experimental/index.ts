@@ -1,14 +1,9 @@
 import type Store from 'electron-store'
 import type { AppSettings } from '@shared/types'
 import type { GameVariant } from '@shared/contracts/game-variant'
-import {
-  type GameSwitchCoordinator,
-  type OverlayAttachStrategy,
-  type StartupGameResolver,
-  type AutoGameWatcher,
-} from './contracts'
+import { type GameSwitchCoordinator, type OverlayAttachStrategy } from './contracts'
 import { isExperimentalMultiWindowEnabled } from './feature-gates'
-import { stableGameSwitchCoordinator, stableOverlayStrategy, stableStartupResolver, stableAutoWatcher } from './stable'
+import { stableGameSwitchCoordinator, stableOverlayStrategy } from './stable'
 import { ensureCorrectGameForHotkey, setGameSwitchRequest } from '../evaluation'
 import { performGameSwitch, switchGameContext } from './game-switch-coordinator'
 import {
@@ -21,14 +16,12 @@ import { applyProfileHydrationSideEffects, broadcastSettingUpdates } from '../se
 import { createOverlayWindow, getOverlayAttachedVersion, retargetForGame } from '../overlay'
 
 /** Resolved once on first access from the store's updateChannel at that point.
- *  Changing updateChannel mid-session has no effect — the multi-window
- *  architecture (overlay attachment strategy, game-switch path, watcher) is
- *  fixed at process start. A restart is required to switch modes. */
+ *  Changing updateChannel mid-session has no effect - the multi-window
+ *  architecture (overlay attachment strategy, game-switch path) is fixed at
+ *  process start. A restart is required to switch modes. */
 let enabledAtBoot: boolean | null = null
 let cachedCoordinator: GameSwitchCoordinator | null = null
 let cachedOverlay: OverlayAttachStrategy | null = null
-let cachedResolver: StartupGameResolver | null = null
-let cachedWatcher: AutoGameWatcher | null = null
 
 function resolveEnabled(store: Store<AppSettings>): boolean {
   if (enabledAtBoot === null) enabledAtBoot = isExperimentalMultiWindowEnabled(store)
@@ -51,7 +44,7 @@ function buildExperimentalCoordinator(): GameSwitchCoordinator {
   return {
     ensureCorrectGameForHotkey,
     requestGameSwitch: experimentalInProcessSwitch,
-    applyProfileSwitch: async (store, id, restartIfNeeded, sender) => {
+    applyProfileSwitch: async (store, id, _restartIfNeeded, sender) => {
       const previous = getEffectiveSettings(store)
       const current = store.get('poeVersion') === 2 ? 2 : 1
       const targetProfile = getProfileById(id)
@@ -108,18 +101,4 @@ export function getOverlayAttachStrategy(store: Store<AppSettings>): OverlayAtta
     }
   }
   return cachedOverlay
-}
-
-export function getStartupGameResolver(store: Store<AppSettings>): StartupGameResolver {
-  if (!cachedResolver) {
-    cachedResolver = resolveEnabled(store) ? stableStartupResolver : stableStartupResolver
-  }
-  return cachedResolver
-}
-
-export function getAutoGameWatcher(store: Store<AppSettings>): AutoGameWatcher {
-  if (!cachedWatcher) {
-    cachedWatcher = resolveEnabled(store) ? stableAutoWatcher : stableAutoWatcher
-  }
-  return cachedWatcher
 }

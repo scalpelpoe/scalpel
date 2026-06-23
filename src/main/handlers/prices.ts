@@ -117,6 +117,14 @@ function findItemClassInFilter(baseType: string): string {
 const SEARCHABLE_CACHE_TTL = 6 * 60 * 60 * 1000
 let searchableCache: { filter: FilterFile; items: SearchableItem[]; computedAt: number } | null = null
 
+/** Drop the searchable-items cache so it rebuilds against the new game's data.
+ *  On the common switch path the filter reference changes (filter reload) and
+ *  the cache self-invalidates, but a profile with no filter keeps the previous
+ *  reference; nulling here covers that edge for the in-process game switch. */
+export function invalidateSearchableItemsCache(): void {
+  searchableCache = null
+}
+
 /** Evaluate a synthetic item against the filter and return the full Continue
  *  chain in file order, ending with the primary non-Continue match. When no
  *  non-Continue match is found, falls back to the last Continue-chain entry

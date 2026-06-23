@@ -7,11 +7,9 @@ import { CurrencyLabelsProvider } from './currency-labels-context'
  *  secondary-overlay entry points whose renderers need version context (for
  *  hooks like useStickyZone, usePoeVersion). Renders children with version=1
  *  and labels-as-text=false until the first settings response lands, matching
- *  both contexts' defaults - safe since game-version switches trigger
- *  app.relaunch, so the first read is also the final read. The a11y toggle
- *  could change at runtime, but secondary overlays do not re-subscribe to
- *  settings changes; full coverage of live toggling lives in the main overlay
- *  App.tsx wiring. */
+ *  both contexts' defaults. Re-subscribes to poe-version and the currency-label
+ *  toggle so secondary overlays stay correct after an in-process game switch
+ *  (experimental multi-window), where there is no relaunch to reset them. */
 export function PoeVersionRoot({ children }: { children: ReactNode }): JSX.Element {
   const [version, setVersion] = useState<1 | 2>(1)
   const [currencyLabelsAsText, setCurrencyLabelsAsText] = useState(false)
@@ -20,6 +18,14 @@ export function PoeVersionRoot({ children }: { children: ReactNode }): JSX.Eleme
       setVersion(s.poeVersion ?? 1)
       setCurrencyLabelsAsText(Boolean(s.currencyLabelsAsText))
     })
+    const unsubVersion = window.api.onPoeVersion((v) => setVersion(v))
+    const unsubSetting = window.api.onSettingUpdated((key, value) => {
+      if (key === 'currencyLabelsAsText') setCurrencyLabelsAsText(Boolean(value))
+    })
+    return () => {
+      unsubVersion()
+      unsubSetting()
+    }
   }, [])
   return (
     <PoeVersionProvider version={version}>

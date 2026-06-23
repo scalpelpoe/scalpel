@@ -78,7 +78,7 @@ export function invalidateStatsCache(): void {
   // catch this, but explicit nulling avoids holding the old array in memory.
   textById = null
   textBuiltFrom = null
-  // Cancel any pending periodic refresh — the next ensureStatsLoaded() will
+  // Cancel any pending periodic refresh - the next ensureStatsLoaded() will
   // re-fetch for the new game version and re-arm the timer.
   if (refreshTimer) {
     clearInterval(refreshTimer)

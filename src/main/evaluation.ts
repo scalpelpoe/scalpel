@@ -141,6 +141,15 @@ export function reEvaluateLastItem(): void {
   if (lastEvaluatedItem) evaluateAndSend(lastEvaluatedItem)
 }
 
+/** Forget the last displayed item so a subsequent reEvaluateLastItem() is a
+ *  no-op. A relaunch-based game switch dropped this naturally (fresh process);
+ *  the experimental in-process switch must clear it explicitly, otherwise the
+ *  filter reload that fires on profile activation would re-evaluate the previous
+ *  game's item and pop the (closed) overlay back open on the new game. */
+export function clearLastEvaluatedItem(): void {
+  lastEvaluatedItem = null
+}
+
 export function evaluateAndSend(item: PoeItem): void {
   lastEvaluatedItem = item
   const effective = applyZoneAreaLevel(item)

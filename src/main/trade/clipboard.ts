@@ -32,6 +32,15 @@ function getItemSizes(): Record<string, [number, number]> {
   return _itemSizes
 }
 
+/** Drop the per-version base-type and item-size caches so the next access
+ *  rebuilds from the now-current game's class sheet. Needed only by the
+ *  in-process game switch (experimental multi-window); a relaunch switch
+ *  rebuilds them from scratch in the new process. */
+export function invalidateClipboardCaches(): void {
+  _staticBaseTypes = null
+  _itemSizes = null
+}
+
 /** Add base types extracted from the loaded filter */
 export function registerFilterBaseTypes(baseTypes: string[]): void {
   _filterBaseTypes = new Set(baseTypes)

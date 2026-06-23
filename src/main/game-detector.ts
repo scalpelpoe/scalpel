@@ -1,3 +1,6 @@
+import type { GameVariant } from '@shared/types'
+import { TITLE_TO_VARIANT } from '@shared/contracts/game-variant'
+
 // active-win is ESM-only; dynamic import lets us consume it from our CJS main.
 // The module and its native binding load once, then we reuse the cached fn.
 type ActiveWindowFn = () => Promise<{ title?: string } | undefined>
@@ -19,10 +22,6 @@ async function getOpenWindows(): Promise<OpenWindowsFn> {
   openWindowsFn = mod.openWindows
   return openWindowsFn
 }
-
-import type { GameVariant } from '@shared/types'
-
-import { TITLE_TO_VARIANT } from '@shared/contracts/game-variant'
 
 /** Returns the PoE version of whichever window currently has OS foreground focus,
  *  or null if it's not a PoE window (or the OS lookup failed). Called on hotkey

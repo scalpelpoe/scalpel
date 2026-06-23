@@ -10,6 +10,7 @@ import { loadPremiumMods, refreshPremiumMods } from './premium-mods'
 import { loadEndgameFilterSupport, refreshEndgameFilterSupport } from './trade/endgame-filter-support'
 import { closeAllOverlaysOnPoeExit, isAnyScalpelWindowFocused, isInsideAnySecondaryOverlay } from './windowing'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
+import { GAME_TITLES } from '@shared/contracts/game-variant'
 
 let overlayWindow: BrowserWindow | null = null
 let overlayVisible = false
@@ -25,6 +26,13 @@ let onGameFocus: (() => void) | null = null
 let onGameBlur: (() => void) | null = null
 let overlayAttachedVersion: 1 | 2 = 1
 let retargeting = false
+let retargetWatchdog: ReturnType<typeof setTimeout> | null = null
+// Grace period for a retarget's detach+attach cycle to land. If the target game
+// isn't running the attach never fires, so we clear `retargeting` after this so
+// a later real PoE-quit detach still runs its cleanup. Generous enough to cover
+// a slow native re-attach; a late attach past it is harmless (it re-infers the
+// same version retargetForGame already set).
+const RETARGET_WATCHDOG_MS = 2000
 let multiTitleMode = false
 
 export function setCloseOnClickOutside(enabled: boolean): void {
@@ -259,12 +267,12 @@ uIOhook.on(
   }),
 )
 
-import { GAME_TITLES } from '@shared/contracts/game-variant'
-
 /** The PoE version the overlay's native tracker bound to at createOverlayWindow
- *  time. electron-overlay-window attaches once per process, so this is fixed for
- *  the process lifetime; switching games must relaunch to rebind. Onboarding
- *  reads this to decide whether finishing on the other game needs a relaunch. */
+ *  time. In single-title (stable) mode electron-overlay-window attaches once per
+ *  process, so this is fixed for the process lifetime; switching games must
+ *  relaunch to rebind. In multi-title (experimental) mode retargetForGame can
+ *  move it in-process. Onboarding reads this to decide whether finishing on the
+ *  other game needs a relaunch. */
 export function getOverlayAttachedVersion(): 1 | 2 {
   return overlayAttachedVersion
 }
@@ -362,7 +370,7 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
     return origIsVisible()
   }
 
-  // Attach to the PoE game window — syncs overlay bounds automatically.
+  // Attach to the PoE game window - syncs overlay bounds automatically.
   // In multi-title mode (experimental), pass both titles so the native tracker
   // can find either PoE1 or PoE2 without a restart. In single-title mode
   // (stable), attach to the specific game version only.
@@ -394,6 +402,10 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
         // nothing to infer from titleIndex.
       }
       retargeting = false
+      if (retargetWatchdog) {
+        clearTimeout(retargetWatchdog)
+        retargetWatchdog = null
+      }
       if (overlayWindow && !overlayWindow.isDestroyed()) {
         overlayWindow.webContents.send('poe-version', getPoeVersion())
         startClientLogWatcher(overlayWindow)
@@ -414,7 +426,7 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
     lastDetachAt = Date.now()
     try {
       if (retargeting) {
-        // Retarget detach — skip cleanup, keep retargeting flag
+        // Retarget detach - skip cleanup, keep retargeting flag
         // so the subsequent attach handler also skips version inference.
         return
       }
@@ -486,15 +498,29 @@ function sendGameBounds(physWidth: number, physHeight: number): void {
 
 /** Switch overlay attachment to a different PoE version in-process.
  *  Tells the native tracker to detach from the current game and look
- *  for the new title instead — no app relaunch needed.
- *  Only works in multi-title mode (experimental); no-op otherwise. */
+ *  for the new title instead - no app relaunch needed.
+ *  Only works in multi-title mode (experimental); no-op otherwise.
+ *
+ *  setTargetTitles() makes the native tracker emit a detach and then, once it
+ *  finds the new title, an attach. The detach handler swallows its cleanup
+ *  while `retargeting` is true and the attach handler clears the flag. But if
+ *  the target game is not running, the attach never arrives, so we arm a
+ *  watchdog to clear `retargeting` regardless - otherwise the flag would stick
+ *  true and the next real PoE-quit detach would skip its cleanup. */
 export function retargetForGame(target: 1 | 2): void {
   if (!multiTitleMode) return
+  // Clear any prior in-flight retarget so a second switch can't compound the
+  // flag state if the previous attach never landed.
+  if (retargetWatchdog) clearTimeout(retargetWatchdog)
   retargeting = true
   hideOverlay()
   setPoeVersion(target)
   overlayAttachedVersion = target
   OverlayController.setTargetTitles([GAME_TITLES[target]])
+  retargetWatchdog = setTimeout(() => {
+    retargeting = false
+    retargetWatchdog = null
+  }, RETARGET_WATCHDOG_MS)
 }
 
 export function showOverlay(): void {
@@ -528,7 +554,7 @@ export function hideOverlay(): void {
   try {
     overlayWindow.setIgnoreMouseEvents(true)
   } catch {}
-  // Tell renderer to hide its content (don't call overlayWindow.hide() —
+  // Tell renderer to hide its content (don't call overlayWindow.hide() -
   // OverlayController manages window visibility and would re-show it, causing flicker)
   overlayWindow.webContents.send('overlay-hide')
   OverlayController.focusTarget()

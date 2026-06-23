@@ -4,11 +4,14 @@ import type { AppSettings, PoeProfile, RuntimeSettings } from '@shared/types'
 import type { GameVariant } from '@shared/contracts/game-variant'
 import { getGameFeatures } from '@shared/game-features'
 import { applyCheatSheetHotkeys } from '../cheat-sheets'
+import { clearLastEvaluatedItem } from '../evaluation'
 import { clearFilterState, loadFilter } from '../filter-state'
-import { invalidateBaseToClassCache } from '../handlers/prices'
+import { invalidateBaseToClassCache, invalidateSearchableItemsCache } from '../handlers/prices'
 import { updateOnlineSyncDir } from '../online-sync'
 import { retargetForGame } from '../overlay'
 import { applyPinnedZoneEnabled } from '../pinned-zone'
+import { invalidateClipboardCaches } from '../trade/clipboard'
+import { loadTierData, refreshTierData, resetTierDataRefreshGuard } from '../tier-data'
 import {
   getActiveProfile,
   getEffectiveSettings,
@@ -40,7 +43,7 @@ export interface GameSwitchResult {
 /** Single coordinator for every game-switch path. Updates the persistent
  *  settings / active profile synchronously, invalidates trade caches, then
  *  fires background network / disk work. Does NOT retarget the native overlay
- *  — callers that need overlay attachment changes must additionally call
+ *  - callers that need overlay attachment changes must additionally call
  *  `retargetForGame`. */
 export function switchGameContext(
   store: Store<AppSettings>,
@@ -49,6 +52,11 @@ export function switchGameContext(
 ): GameSwitchResult {
   const changed = target !== getPoeVersion()
   setPoeVersion(target)
+
+  // Drop the previous game's last-evaluated item before the filter (re)load
+  // below fires onFilterLoaded -> reEvaluateLastItem, which would otherwise
+  // re-open a closed overlay on the new game with the old game's item.
+  if (changed) clearLastEvaluatedItem()
 
   const previous = getEffectiveSettings(store)
 
@@ -78,6 +86,17 @@ export function switchGameContext(
   invalidateBaseToClassCache()
 
   if (changed) {
+    // Version-keyed caches that survive in-process and would otherwise serve
+    // the previous game's data: clipboard base-types/sizes, the searchable
+    // item list, and the tier dataset (reload + drop the refresh-hash guard).
+    invalidateClipboardCaches()
+    invalidateSearchableItemsCache()
+    resetTierDataRefreshGuard()
+    void loadTierData(target)
+      .then(() => refreshTierData(target))
+      .catch((e) => {
+        if (process.env.SCALPEL_DEBUG_LOG) console.warn('[tier-data] switch reload failed:', e)
+      })
     initLearning(store, target)
   }
 
@@ -93,7 +112,7 @@ export function switchGameContext(
 /** Switch game context, retarget the native overlay to the new game, and
  *  broadcast setting/profile changes to all renderers. Use this for user-
  *  initiated or watcher-driven game switches that must move overlay attachment.
- *  Do NOT call this from inside a native overlay attach callback — use
+ *  Do NOT call this from inside a native overlay attach callback - use
  *  `switchGameContext` directly instead. */
 export function performGameSwitch(
   store: Store<AppSettings>,

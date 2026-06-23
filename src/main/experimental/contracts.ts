@@ -24,13 +24,3 @@ export interface OverlayAttachStrategy {
   retargetForGame(target: GameVariant): void
   getOverlayAttachedVersion(): GameVariant
 }
-
-export interface StartupGameResolver {
-  resolve(store: Store<AppSettings>): Promise<GameVariant>
-}
-
-export interface AutoGameWatcher {
-  start(store: Store<AppSettings>): void
-  stop(): void
-  onSwitch(fn: (version: GameVariant) => void): () => void
-}

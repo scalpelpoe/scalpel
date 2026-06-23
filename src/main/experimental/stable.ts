@@ -1,13 +1,6 @@
 import { app } from 'electron'
-import type Store from 'electron-store'
-import type { AppSettings, GameVariant } from '@shared/types'
-import type {
-  AutoGameWatcher,
-  GameSwitchCoordinator,
-  OverlayAttachStrategy,
-  ProfileSwitchResult,
-  StartupGameResolver,
-} from './contracts'
+import type { GameVariant } from '@shared/types'
+import type { GameSwitchCoordinator, OverlayAttachStrategy } from './contracts'
 import { createOverlayWindow, getOverlayAttachedVersion } from '../overlay'
 import { requestGameSwitch } from '../game-switch'
 import { ensureCorrectGameForHotkey } from '../evaluation'
@@ -48,14 +41,4 @@ export const stableOverlayStrategy: OverlayAttachStrategy = {
   createInitialOverlay: (version: GameVariant) => createOverlayWindow(version),
   retargetForGame: () => {},
   getOverlayAttachedVersion,
-}
-
-export const stableStartupResolver: StartupGameResolver = {
-  resolve: async (store: Store<AppSettings>) => (store.get('poeVersion') === 2 ? 2 : 1),
-}
-
-export const stableAutoWatcher: AutoGameWatcher = {
-  start: () => {},
-  stop: () => {},
-  onSwitch: () => () => {},
 }

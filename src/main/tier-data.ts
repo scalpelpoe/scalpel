@@ -16,6 +16,14 @@ export function _setTierDataForTests(data: TierDataset | null): void {
   active = data
 }
 
+/** Clear the remote-refresh hash guard so the next refreshTierData() re-fetches
+ *  for a newly-switched game version. The in-process game switch (experimental
+ *  multi-window) reuses this module across both games; without resetting the
+ *  hash, a shared manifest hash would suppress the new game's first refresh. */
+export function resetTierDataRefreshGuard(): void {
+  localHash = null
+}
+
 function isValidDataset(value: unknown): value is TierDataset {
   if (!value || typeof value !== 'object') return false
   const d = value as Record<string, unknown>
