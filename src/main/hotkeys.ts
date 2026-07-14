@@ -82,12 +82,12 @@ function fireTrigger(): void {
   lastTriggerFireAt = now
   if (injecting) return
   releaseHotkeyKey(triggerCombo)
-  void hasPoeOrOverlayFocus()
-    .then((ok) => {
-      if (!ok || injecting) return
-      if (onTrigger) onTrigger()
-    })
-    .catch((e) => recordMainDiagnostic('hotkey-context:trigger', e))
+  // No focus gate here: onTrigger (createHotkeyHandler) runs ensureCorrectGameForHotkey,
+  // which is the single focus authority for this path -- it already does the active-win
+  // check plus an OverlayController.targetHasFocus fallback and the game-switch logic. A
+  // second gate here would only duplicate the active-win lookup and, lacking that
+  // fallback, could swallow a valid press on a foreground-change race. See evaluation.ts.
+  if (onTrigger) onTrigger()
 }
 
 /** True when the OS foreground context is exactly PoE/PoE2 or a Scalpel-owned
@@ -105,12 +105,9 @@ function firePriceCheck(): void {
   lastPriceCheckFireAt = now
   if (injecting) return
   releaseHotkeyKey(priceCheckCombo)
-  void hasPoeOrOverlayFocus()
-    .then((ok) => {
-      if (!ok || injecting) return
-      if (onPriceCheck) onPriceCheck()
-    })
-    .catch((e) => recordMainDiagnostic('hotkey-context:price-check', e))
+  // No focus gate here: onPriceCheck (createPriceCheckHandler) runs ensureCorrectGameForHotkey,
+  // which is the single focus authority for this path (see fireTrigger above).
+  if (onPriceCheck) onPriceCheck()
 }
 
 // ─── uiohook action bindings (international / OEM keys) ─────────────────────────

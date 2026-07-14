@@ -124,6 +124,7 @@ import {
   setAppMacroHandler,
   setAppMacros,
   setChatCommands,
+  setEscapeHandler,
   setHotkey,
   setPriceCheckHandler,
   setPriceCheckHotkey,
@@ -135,6 +136,15 @@ async function flushHotkey(): Promise<void> {
   await Promise.resolve()
   await Promise.resolve()
   await Promise.resolve()
+}
+
+/** Dispatch a synthetic key event to every uiohook 'keydown' listener that
+ *  startHotkeyListener registered (modifier tracking + the main handler). */
+function pressKey(event: { keycode: number; ctrlKey?: boolean; shiftKey?: boolean; altKey?: boolean }): void {
+  const e = { ctrlKey: false, shiftKey: false, altKey: false, ...event }
+  for (const [type, handler] of mock.uIOhook.on.mock.calls as Array<[string, (ev: unknown) => void]>) {
+    if (type === 'keydown') handler(e)
+  }
 }
 
 beforeEach(() => {
@@ -225,7 +235,11 @@ describe('contextual hotkey handlers', () => {
     expect(mock.uIOhook.keyTap).not.toHaveBeenCalled()
   })
 
-  it('releases trigger and price-check keys immediately but does not run handlers from an unrelated app', async () => {
+  it('releases trigger and price-check keys and delegates to their handlers', async () => {
+    // fireTrigger/firePriceCheck deliberately do NOT gate on focus here: their
+    // handlers (createHotkeyHandler/createPriceCheckHandler) run
+    // ensureCorrectGameForHotkey, which is the single focus authority for these
+    // two paths. So at this layer we only assert key-release + delegation.
     const trigger = vi.fn()
     const price = vi.fn()
     startHotkeyListener(trigger)
@@ -237,9 +251,30 @@ describe('contextual hotkey handlers', () => {
     mock.registered.get('Ctrl+P')?.()
     await flushHotkey()
 
-    expect(trigger).not.toHaveBeenCalled()
-    expect(price).not.toHaveBeenCalled()
+    expect(trigger).toHaveBeenCalledOnce()
+    expect(price).toHaveBeenCalledOnce()
     expect(mock.uIOhook.keyToggle).toHaveBeenCalledWith(mock.keycodes.D, 'up')
     expect(mock.uIOhook.keyToggle).toHaveBeenCalledWith(mock.keycodes.P, 'up')
+  })
+
+  it('hides the overlay on Escape when an exact PoE title is focused', async () => {
+    mock.state.focusedVersion = 1
+    const escape = vi.fn()
+    startHotkeyListener(vi.fn())
+    setEscapeHandler(escape)
+
+    pressKey({ keycode: mock.keycodes.Escape })
+    await vi.waitFor(() => expect(escape).toHaveBeenCalledOnce())
+  })
+
+  it('does not hide the overlay on Escape from an unrelated foreground app', async () => {
+    const escape = vi.fn()
+    startHotkeyListener(vi.fn())
+    setEscapeHandler(escape)
+
+    pressKey({ keycode: mock.keycodes.Escape })
+    await flushHotkey()
+
+    expect(escape).not.toHaveBeenCalled()
   })
 })
