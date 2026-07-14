@@ -13,6 +13,7 @@ export {
   closeAllOverlaysOnPoeExit,
   hideAllOnPoeBlur,
   hideFocusedOrAnyVisibleSecondaryOverlay,
+  isAnyScalpelBrowserWindowFocused,
   isAnyScalpelWindowFocused,
   isInsideAnySecondaryOverlay,
   isSecondaryOverlayWindow,

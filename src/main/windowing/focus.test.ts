@@ -4,8 +4,35 @@ vi.mock('electron', () => ({
   BrowserWindow: { getFocusedWindow: () => focusHolder.current },
   screen: { getDisplayNearestPoint: () => ({ scaleFactor: 1 }) },
 }))
-import { closeAllOverlaysOnPoeExit, hideFocusedOrAnyVisibleSecondaryOverlay, restoreAllOnPoeFocus } from './focus'
+import {
+  aroundNativeDialog,
+  closeAllOverlaysOnPoeExit,
+  hideFocusedOrAnyVisibleSecondaryOverlay,
+  isAnyScalpelBrowserWindowFocused,
+  isAnyScalpelWindowFocused,
+  restoreAllOnPoeFocus,
+} from './focus'
 import { type OverlayState, overlays } from './state'
+
+describe('native-dialog focus', () => {
+  it('keeps the logical app active without treating the dialog as a focused BrowserWindow', async () => {
+    focusHolder.current = null
+    let closeDialog!: () => void
+    const dialog = aroundNativeDialog(
+      () =>
+        new Promise<void>((resolve) => {
+          closeDialog = resolve
+        }),
+    )
+
+    expect(isAnyScalpelWindowFocused()).toBe(true)
+    expect(isAnyScalpelBrowserWindowFocused()).toBe(false)
+
+    closeDialog()
+    await dialog
+    expect(isAnyScalpelWindowFocused()).toBe(false)
+  })
+})
 
 function fakeState(opts: {
   visible: boolean

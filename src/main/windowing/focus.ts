@@ -65,17 +65,24 @@ function collectScalpelWindows(): BrowserWindow[] {
   return result
 }
 
-/** True iff focus is currently on any Scalpel-owned window: the main overlay
- *  or any registered secondary overlay. The single source of truth for "did
- *  the user actually leave the app?" - every blur/hide decision should defer
- *  to this so clicking from one Scalpel window to another doesn't trigger
- *  cross-overlay hides. Native dialogs count as Scalpel-active too. */
-export function isAnyScalpelWindowFocused(): boolean {
-  if (nativeDialogCount > 0) return true
+/** True iff an actual Scalpel BrowserWindow currently owns focus. Native OS
+ *  dialogs are intentionally excluded: callers that authorize keyboard input
+ *  must not treat a file picker as an injection target. */
+export function isAnyScalpelBrowserWindowFocused(): boolean {
   const focused = BrowserWindow.getFocusedWindow()
   if (!focused || focused.isDestroyed()) return false
   if (focused === getMainOverlay()) return true
   return isSecondaryOverlayWindow(focused)
+}
+
+/** True iff focus is currently within the logical Scalpel task. The single
+ *  source of truth for "did the user actually leave the app?" - every
+ *  blur/hide decision should defer to this so clicking from one Scalpel window
+ *  to another doesn't trigger cross-overlay hides. Native dialogs count as
+ *  Scalpel-active here so their owner is not hidden while they are open. */
+export function isAnyScalpelWindowFocused(): boolean {
+  if (nativeDialogCount > 0) return true
+  return isAnyScalpelBrowserWindowFocused()
 }
 
 /** True if the screen point lies inside any visible secondary overlay window.
