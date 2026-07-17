@@ -1703,6 +1703,55 @@ describe('matchItemMods', () => {
     })
   })
 
+  describe('catalyst quality scales implicit magnitude (#477)', () => {
+    // Catalyst quality on jewellery scales the magnitude of both explicit AND
+    // implicit mods of the relevant tag; GGG annotates each scaled mod's advanced
+    // header with "-- N% Increased", parsed onto the AdvancedMod as
+    // magnitudeMultiplier. Explicits already apply it; implicits did not (#477).
+    it('scales an implicit roll up by the advanced-mod magnitude multiplier', () => {
+      _setStatEntriesForTests([{ id: 'implicit.stat_3372524247', text: '+#% to Fire Resistance', type: 'implicit' }])
+      const advancedMods: AdvancedMod[] = [
+        {
+          type: 'implicit',
+          name: '',
+          tier: 0,
+          tags: [],
+          lines: ['+12% to Fire Resistance'],
+          ranges: [],
+          magnitudeMultiplier: 1.2, // 20% catalyst quality
+        },
+      ]
+      const filters = matchItemMods(
+        [],
+        ['+12% to Fire Resistance'],
+        undefined,
+        makeItemInfo({ rarity: 'Rare', itemClass: 'Rings', quality: 20 }),
+        advancedMods,
+      )
+      const res = filters.find((f) => f.id === 'implicit.stat_3372524247')
+      expect(res).toBeDefined()
+      expect(res?.value).toBe(14) // trunc(12 * 1.2)
+      expect(res?.min).toBe(14)
+      expect(res?.text).toContain('14')
+    })
+
+    it('leaves an implicit roll untouched when there is no magnitude multiplier', () => {
+      _setStatEntriesForTests([{ id: 'implicit.stat_3372524247', text: '+#% to Fire Resistance', type: 'implicit' }])
+      const advancedMods: AdvancedMod[] = [
+        { type: 'implicit', name: '', tier: 0, tags: [], lines: ['+12% to Fire Resistance'], ranges: [] },
+      ]
+      const filters = matchItemMods(
+        [],
+        ['+12% to Fire Resistance'],
+        undefined,
+        makeItemInfo({ rarity: 'Rare', itemClass: 'Rings' }),
+        advancedMods,
+      )
+      const res = filters.find((f) => f.id === 'implicit.stat_3372524247')
+      expect(res?.value).toBe(12)
+    })
+  })
+
   describe('charm slots (singular trade text vs plural item text)', () => {
     // The PoE2 trade API stores these singular ("# Charm Slot", "Has # Charm Slot"),
     // but a belt with 2+ slots reads "Charm Slots". Without the plural->singular

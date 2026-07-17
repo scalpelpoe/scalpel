@@ -631,6 +631,49 @@ describe('waystone-engine: rarity + revives ordering and inert bounds', () => {
   })
 })
 
+describe('waystone-engine: tier token (poe2.re July 2026 "er " fix)', () => {
+  it('tier 12-15 emits "er 1[2345]\\)" (over-10 only)', () => {
+    expect(ours({ tierMin: 12, tierMax: 15 })).toBe('"er 1[2345]\\)"')
+  })
+
+  it('tier 8-9 emits "er [89]\\)" (under-10 only)', () => {
+    expect(ours({ tierMin: 8, tierMax: 9 })).toBe('"er [89]\\)"')
+  })
+
+  it('tier 16-16 emits "er 16\\)" (single over-10 value)', () => {
+    expect(ours({ tierMin: 16, tierMax: 16 })).toBe('"er 16\\)"')
+  })
+
+  it('tier 5-10 emits "er [5-9]\\)|er 10\\)" (each branch prefixed)', () => {
+    expect(ours({ tierMin: 5, tierMax: 10 })).toBe('"er [5-9]\\)|er 10\\)"')
+  })
+
+  it('tier 2-16 emits "er [2-9]\\)|er 1[0123456]\\)" (each branch prefixed)', () => {
+    expect(ours({ tierMin: 2, tierMax: 16 })).toBe('"er [2-9]\\)|er 1[0123456]\\)"')
+  })
+
+  // Behavioral: the "er " prefix pins the token to the "...er N)" tail of a waystone
+  // name line so it can't false-match other parenthesized numbers (the upstream bug).
+  it('tier 8-9 token matches waystone tier names, magic or not, no anchor', () => {
+    const inner = ours({ tierMin: 8, tierMax: 9 }).slice(1, -1)
+    const re = new RegExp(inner, 'i')
+    expect(re.test('Waystone (Tier 9)')).toBe(true)
+    expect(re.test('Waystone (Tier 8) of Rain')).toBe(true)
+  })
+
+  it('tier 12-15 token matches "Waystone (Tier 13)"', () => {
+    const inner = ours({ tierMin: 12, tierMax: 15 }).slice(1, -1)
+    const re = new RegExp(inner, 'i')
+    expect(re.test('Waystone (Tier 13)')).toBe(true)
+  })
+
+  it('tier 12-15 token does NOT match "Uncut Skill Gem (Level 13)" (the false-positive class the upstream fix targets)', () => {
+    const inner = ours({ tierMin: 12, tierMax: 15 }).slice(1, -1)
+    const re = new RegExp(inner, 'i')
+    expect(re.test('Uncut Skill Gem (Level 13)')).toBe(false)
+  })
+})
+
 describe('waystone-engine: parity with poe2.re reference implementation', () => {
   for (const c of CASES) {
     it(c.label, () => {
@@ -646,7 +689,7 @@ describe('waystone-engine: parity with poe2.re reference implementation', () => 
     const tokens = WAYSTONE_MODS.filter((m) => m.id === FIRE || m.id === ENFEEBLE)
       .map((m) => m.regex)
       .join('|')
-    const expected = `"r [2-9]\\)|1[0123456]\\)" "${tokens}"`
+    const expected = `"er [2-9]\\)|er 1[0123456]\\)" "${tokens}"`
     expect(theirs(args)).toBe(expected)
     expect(ours(args)).toBe(expected)
   })

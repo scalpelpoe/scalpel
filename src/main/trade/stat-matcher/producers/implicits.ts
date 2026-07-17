@@ -10,7 +10,7 @@ export function processImplicits(ctx: MatchContext): StatFilter[] {
   const out: StatFilter[] = []
 
   for (const mod of implicits) {
-    const cleaned = mod.replace(/\s*\(implicit\)\s*$/i, '').trim()
+    let cleaned = mod.replace(/\s*\(implicit\)\s*$/i, '').trim()
     // Try implicit stats first, then fall back to explicit (non-local, then local) and remap the ID
     const matched =
       matchModToStat(cleaned, false, 'implicit') ??
@@ -20,6 +20,17 @@ export function processImplicits(ctx: MatchContext): StatFilter[] {
         return { ...fallback, statId: `implicit.${fallback.statId.split('.')[1]}` }
       })()
     if (matched) {
+      const advMod = advancedMods ? findAdvMod(advancedMods, cleaned, 'implicit') : undefined
+      // Catalyst quality (and other magnitude sources) scale an implicit's roll the
+      // same way they scale affixes; GGG annotates the advanced header with
+      // "-- N% Increased", parsed onto the AdvancedMod as magnitudeMultiplier. Mirror
+      // the explicit path so the chip shows the real scaled value and the trade
+      // search min matches (#477).
+      if (advMod?.magnitudeMultiplier && matched.value != null) {
+        const oldVal = matched.value
+        matched.value = Math.trunc(oldVal * advMod.magnitudeMultiplier)
+        cleaned = cleaned.replace(String(Math.abs(oldVal)), String(Math.abs(matched.value)))
+      }
       // Skip "X per Y" mods -- they're conditional and shouldn't inflate pseudo totals
       const isPerMod = /\bper\b/i.test(cleaned)
       const pseudoList = PSEUDO_CONTRIBUTIONS[matched.statId]
@@ -28,10 +39,7 @@ export function processImplicits(ctx: MatchContext): StatFilter[] {
       }
       // Check if this implicit is from eldritch (Searing Exarch / Eater of Worlds)
       let _isEldritch = false
-      if (advancedMods) {
-        const advMod = findAdvMod(advancedMods, cleaned, 'implicit')
-        if (advMod?.eldritch) _isEldritch = true
-      }
+      if (advMod?.eldritch) _isEldritch = true
       // Gem-level implicits (e.g. corrupted "+1 to Level of all Skill Gems" on
       // amulets) are discrete brackets -- pin max to the exact rolled value so
       // the search doesn't merge with pricier +2 listings.

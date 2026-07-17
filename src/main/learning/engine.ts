@@ -1,17 +1,11 @@
 // src/main/learning/engine.ts
 import type { PoeItem } from '@shared/types'
+import { isLearnable } from '@shared/learning'
 import type { StatFilter } from '../trade/trade'
 import type { AdaptiveMode } from './types'
 import { deriveLearningContext, GLOBAL_KEY } from './context-key'
 import { CounterStore } from './counter-store'
 import { blendEnableRate, decide, type RungSample } from './shrinkage'
-
-/** v1: stat-mod lines only. Property/ternary/min-max chips are phase 2. */
-export const LEARNABLE_TYPES = new Set(['explicit', 'implicit', 'pseudo', 'crafted', 'fractured', 'enchant', 'imbued'])
-
-export function isLearnable(f: { type: string }): boolean {
-  return LEARNABLE_TYPES.has(f.type)
-}
 
 /**
  * Returns the engine's confident enable/disable opinion per learnable chip

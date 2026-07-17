@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useMemo, Fragment } from 'react'
+import { createPortal } from 'react-dom'
 import type { PriceCheckProps, StatFilter, Listing, BulkListing } from './types'
 import { searchSignature } from './search-signature'
 import { getTradeUrls } from '@shared/endpoints'
@@ -42,6 +43,8 @@ import { LISTED_TIME_OPTIONS, getPriceOptions, primaryCurrencySwap, STATUS_OPTIO
 import { SearchSettingDropdown } from './SearchSettingDropdown'
 import { zebraRowBg, stripIpcErrorWrapper } from '../../shared/utils'
 import { useAuth } from '../../shared/use-auth'
+import { ContextMenu, type ContextMenuEntry } from '../../components/primitives/ContextMenu'
+import { learnedMenuEntries, type SessionPref } from './learned-preference-menu'
 
 export function PriceCheck({
   item,
@@ -93,6 +96,28 @@ export function PriceCheck({
   }, [])
 
   const [filters, setFilters] = useState<StatFilter[]>(initialFilters)
+  // Right-click learned-preference menu on a stat row: viewport coords + the
+  // ORIGINAL index into `filters` of the row that was clicked.
+  const [rowMenu, setRowMenu] = useState<{ x: number; y: number; scale: number; filterIdx: number } | null>(null)
+  // Mid-session pins/unpins; shadows the static learnedDecisions payload so
+  // menu entries stay correct when the menu is re-opened before a new check.
+  const [sessionPrefs, setSessionPrefs] = useState<Record<string, SessionPref>>({})
+
+  const setLearnedPreference = (filterIdx: number): void => {
+    const f = filters[filterIdx]
+    if (!f) return
+    window.api.setLearnedPreference(sessionId, f.id, f.enabled)
+    setSessionPrefs((p) => ({ ...p, [f.id]: 'set' }))
+    setFilters((fs) => fs.map((x, xi) => (xi === filterIdx ? { ...x, learned: true } : x)))
+  }
+
+  const unsetLearnedPreference = (filterIdx: number): void => {
+    const f = filters[filterIdx]
+    if (!f) return
+    window.api.unsetLearnedPreference(sessionId, f.id)
+    setSessionPrefs((p) => ({ ...p, [f.id]: 'unset' }))
+    setFilters((fs) => fs.map((x, xi) => (xi === filterIdx ? { ...x, learned: false } : x)))
+  }
   const filtersRef = useRef(filters)
   const sessionIdRef = useRef(sessionId)
   // Set true once the mount effect has applied base mode + learned defaults. The capture
@@ -726,6 +751,7 @@ export function PriceCheck({
                       updateFilterMin={updateFilterMin}
                       updateFilterMax={updateFilterMax}
                       itemRarity={item.rarity}
+                      onRowContextMenu={(i2, x, y, scale) => setRowMenu({ filterIdx: i2, x, y, scale })}
                     />
                     {/* This pseudo needs a Weighted Sum search, which the trade API
                         only allows for logged-in users; it was dropped this search. */}
@@ -892,6 +918,31 @@ export function PriceCheck({
         )}
       </div>
       {searched && !searching && <RateLimitBar rateLimitTiers={rateLimitTiers} />}
+      {rowMenu &&
+        (() => {
+          const f = filters[rowMenu.filterIdx]
+          if (!f) return null
+          const entries = learnedMenuEntries(f, learnedDecisions ?? {}, sessionPrefs)
+          if (entries.length === 0) return null
+          const items: ContextMenuEntry[] = entries.map((en) => ({
+            label: en.label,
+            onClick: () =>
+              en.kind === 'set' ? setLearnedPreference(rowMenu.filterIdx) : unsetLearnedPreference(rowMenu.filterIdx),
+          }))
+          // The panel wrapper always carries a CSS transform, which would hijack
+          // position:fixed - portal to body escapes it (same reason as HoverTooltip).
+          return createPortal(
+            <ContextMenu
+              positioning="fixed"
+              x={rowMenu.x}
+              y={rowMenu.y}
+              scale={rowMenu.scale}
+              items={items}
+              onClose={() => setRowMenu(null)}
+            />,
+            document.body,
+          )
+        })()}
     </div>
   )
 }

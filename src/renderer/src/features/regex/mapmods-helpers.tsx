@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type Dispatch, type SetStateAction } from 'react'
+import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import { AddOne, Forbid, CheckOne } from '@icon-park/react'
 import type { RegexPresetTag } from '@shared/types'
 import { usePoeVersion } from '../../shared/poe-version-context'
@@ -100,6 +100,18 @@ function usePersistedStorage<T>(
   // useState's lazy-initializer form runs once on mount, so the localStorage
   // read happens exactly when needed -- not on every render.
   const [value, setValue] = useState<T>(initLazy)
+  // The key is version-namespaced and changes on a live component during an
+  // in-process game switch (experimental multi-window). Re-read the new key's
+  // value instead of carrying the old game's state forward -- the write effect
+  // below would otherwise persist that state under the new key, permanently
+  // poisoning the other game's store (PoE2-shaped vendor groups under the poe1:
+  // key crashed the PoE1 vendor tab). Render-phase adjustment, per React's
+  // adjust-state-when-props-change pattern.
+  const keyRef = useRef(storageKey)
+  if (keyRef.current !== storageKey) {
+    keyRef.current = storageKey
+    setValue(initLazy())
+  }
   useEffect(() => {
     try {
       localStorage.setItem(storageKey, serialize(value))
@@ -154,8 +166,16 @@ export function usePersistedBool(
   )
 }
 
-export function usePersistedJSON<T>(storageKey: string, defaultValue: T): [T, Dispatch<SetStateAction<T>>] {
-  return usePersistedStorage<T>(storageKey, () => loadStorage(storageKey, defaultValue), JSON.stringify)
+export function usePersistedJSON<T>(
+  storageKey: string,
+  defaultValue: T,
+  validate?: (parsed: unknown) => T,
+): [T, Dispatch<SetStateAction<T>>] {
+  return usePersistedStorage<T>(
+    storageKey,
+    () => loadStorage(storageKey, defaultValue, (s) => (validate ? validate(JSON.parse(s)) : (JSON.parse(s) as T))),
+    JSON.stringify,
+  )
 }
 
 export function usePersistedSet<T = number>(storageKey: string): [Set<T>, Dispatch<SetStateAction<Set<T>>>] {
@@ -232,4 +252,51 @@ export function TagSourceIcon({ source, size = 12 }: { source?: string; size?: n
   if (source === 'avoid') return <Forbid size={size} theme="two-tone" fill={fill} style={style} />
   if (source === 'want') return <CheckOne size={size} theme="two-tone" fill={fill} style={style} />
   return null
+}
+
+/** Sticky section header + rows, shared by the vendor generators. */
+export function QualifierSection({ label, children }: { label: string; children: React.ReactNode }): JSX.Element {
+  return (
+    <div>
+      <div
+        className="flex items-center gap-2 px-3 py-[8px] sticky-group-header sticky top-0 z-[1]"
+        style={{ height: 39, boxSizing: 'border-box' }}
+      >
+        <span className="text-[10px] uppercase tracking-wider font-bold flex-1 text-text">{label}</span>
+      </div>
+      {children}
+    </div>
+  )
+}
+
+/** Checkbox row, shared by the vendor generators. `labelColor` tints the label
+ *  while unchecked (gem-color tinting); checked rows always read as active text. */
+export function ToggleRow({
+  label,
+  checked,
+  onChange,
+  alt = false,
+  labelColor,
+}: {
+  label: React.ReactNode
+  checked: boolean
+  onChange: () => void
+  alt?: boolean
+  labelColor?: string
+}): JSX.Element {
+  return (
+    <div
+      className="flex items-center gap-2 px-3 py-[6px] cursor-pointer select-none"
+      style={{ background: alt ? 'rgba(255,255,255,0.02)' : 'transparent' }}
+      onClick={onChange}
+    >
+      <RegexCheckbox checked={checked} color={TAB_COLORS.qualifiers} />
+      <span
+        className="text-[11px] flex-1"
+        style={{ color: checked ? 'var(--text)' : (labelColor ?? 'var(--text-dim)') }}
+      >
+        {label}
+      </span>
+    </div>
+  )
 }

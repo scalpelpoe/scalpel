@@ -146,8 +146,14 @@ function buildTierRegex(tier: WaystoneTier): string | null {
   const regexOver10 =
     numbersOver10.length <= 1 ? numbersOver10.join('') : `1[${numbersOver10.map((n) => n.toString()[1]).join('')}]`
 
-  const under10 = regexUnder10 === '' ? '' : `r ${regexUnder10}\\)`
-  const over10 = regexOver10 === '' ? '' : `${regexOver10}\\)`
+  // The "er " prefix pins each token to the "...er N)" tail of the waystone name line
+  // ("Waystone (Tier 9)") so a bare `1[0-6]\)` can't false-match other parenthesized
+  // numbers, e.g. "Uncut Skill Gem (Level 16)". poe2.re's July 2026 fix (commits
+  // 95f6c7d5 + 19031221) prepends "er " to the joined alternation, which via regex
+  // alternation precedence only reaches the first branch -- we prefix each branch
+  // instead, matching the fix's intent.
+  const under10 = regexUnder10 === '' ? '' : `er ${regexUnder10}\\)`
+  const over10 = regexOver10 === '' ? '' : `er ${regexOver10}\\)`
   const result = [under10, over10].filter((s) => s !== '').join('|')
   return result === '' ? null : `"${result}"`
 }

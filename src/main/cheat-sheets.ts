@@ -5,7 +5,7 @@ import {
   CHEAT_SHEET_MINIMIZED_HEIGHT,
   CHEAT_SHEET_MINIMIZED_SLACK,
   CHEAT_SHEET_MINIMIZED_WIDTH,
-  clampRectToScreen,
+  restoreTargetRect,
 } from '@shared/cheat-sheet-window'
 import type { CheatSheetsSettings, OverlayAnchor } from '@shared/types'
 import { forwardZoneChangesTo, sendCurrentZoneTo } from './client-log'
@@ -179,17 +179,19 @@ const ANIMATION_FRAME_MS = 16
  *  preview. The tail covers the final reflow's mouseEnter, which can land a frame
  *  or two after the last tween step. */
 const PREVIEW_SUPPRESS_TAIL_MS = 120
-/** Default size used when expand is requested but we don't have saved
- *  pre-minimize bounds (e.g. the user shrank the window manually, or the app
+/** Default size used when expand is requested but we don't have a saved
+ *  pre-minimize size (e.g. the user shrank the window manually, or the app
  *  was restarted while the window was at its minimized footprint). The user
  *  can resize from there. */
 const DEFAULT_EXPANDED_WIDTH = 460
 const DEFAULT_EXPANDED_HEIGHT = 270
 
-/** Bounds the window had immediately before the user pressed minimize.
- *  Restored verbatim on un-minimize. Cleared once the restore tween starts
- *  so a stale entry doesn't outlive its usefulness. */
-let preMinimizeBounds: Rect | null = null
+/** Size the window had immediately before the user pressed minimize. Only the
+ *  size survives minimize now - the restore position is derived from wherever
+ *  the strip currently sits, since the user may have dragged it while
+ *  minimized. Cleared once the restore tween starts so a stale entry doesn't
+ *  outlive its usefulness. */
+let preMinimizeSize: { width: number; height: number } | null = null
 let animationTimer: NodeJS.Timeout | null = null
 /** Epoch ms before which showPreview is a no-op. Bumped whenever a size tween
  *  starts (animateBoundsTo) so reflow-driven mouseEnter events during the
@@ -252,7 +254,7 @@ export function minimizeCheatSheets(): void {
   if (!win || win.isDestroyed()) return
   const cur = win.getBounds()
   if (cur.height <= CHEAT_SHEET_MINIMIZED_HEIGHT + CHEAT_SHEET_MINIMIZED_SLACK) return
-  preMinimizeBounds = cur
+  preMinimizeSize = { width: cur.width, height: cur.height }
   animateBoundsTo(
     {
       x: cur.x + cur.width - CHEAT_SHEET_MINIMIZED_WIDTH,
@@ -261,7 +263,7 @@ export function minimizeCheatSheets(): void {
       height: CHEAT_SHEET_MINIMIZED_HEIGHT,
     },
     // Lock the collapsed strip non-resizable so an edge-drag can't pull it back
-    // open into a half-minimized state (which desyncs preMinimizeBounds from the
+    // open into a half-minimized state (which desyncs preMinimizeSize from the
     // renderer's height-derived minimized flag). The restore button is the only
     // intended way back; restoreCheatSheets re-enables resizing.
     () => {
@@ -271,10 +273,14 @@ export function minimizeCheatSheets(): void {
   )
 }
 
-/** Restore the cheat-sheets window. If we recorded a pre-minimize size (this
- *  session), animate back to it. Otherwise expand from the current bottom-
- *  right anchor to a default size so the window grows into the screen rather
- *  than off the right edge. */
+/** Restore the cheat-sheets window. Expands in place from the strip's current
+ *  bottom-right corner - it may have been dragged since minimize - reusing the
+ *  pre-minimize size when we recorded one this session, or the default size
+ *  otherwise. Clamped fully on-screen so a strip parked near the top or left
+ *  screen edge can't expand the header out of reach (this also covers a stale
+ *  saved size from a display that has since changed resolution or been
+ *  unplugged, since clampRectToScreen caps the size to the display it lands
+ *  on). */
 export function restoreCheatSheets(): void {
   const win = overlay?.getWindow()
   if (!win || win.isDestroyed()) return
@@ -282,25 +288,13 @@ export function restoreCheatSheets(): void {
   // so the restored grid can be edge-resized again.
   win.setResizable(true)
   const cur = win.getBounds()
-  let target = preMinimizeBounds
-  if (!target) {
-    target = {
-      x: cur.x + cur.width - DEFAULT_EXPANDED_WIDTH,
-      y: cur.y + cur.height - DEFAULT_EXPANDED_HEIGHT,
-      width: DEFAULT_EXPANDED_WIDTH,
-      height: DEFAULT_EXPANDED_HEIGHT,
-    }
-  }
-  // Clamp the restore target to the display the window currently sits on so a
-  // stale pre-minimize rect (saved before a monitor layout or resolution
-  // change) can't animate the panel off-screen, where it's unreachable without
-  // an app restart.
+  const size = preMinimizeSize ?? { width: DEFAULT_EXPANDED_WIDTH, height: DEFAULT_EXPANDED_HEIGHT }
   const display = screen.getDisplayNearestPoint({
     x: cur.x + Math.round(cur.width / 2),
     y: cur.y + Math.round(cur.height / 2),
   })
-  target = clampRectToScreen(target, display.bounds)
-  preMinimizeBounds = null
+  const target = restoreTargetRect(cur, size, display.bounds)
+  preMinimizeSize = null
   animateBoundsTo(target)
 }
 

@@ -35,6 +35,24 @@ describe('keyEventToAccelerator', () => {
   it('returns null for a bare modifier press', () => {
     expect(keyEventToAccelerator(ev({ key: 'Shift', shiftKey: true }))).toBeNull()
   })
+
+  it('encodes a numpad digit by code, with NumLock on', () => {
+    expect(keyEventToAccelerator(ev({ key: '2', code: 'Numpad2' }))).toBe('num2')
+    expect(keyEventToAccelerator(ev({ key: '2', code: 'Numpad2', ctrlKey: true }))).toBe('CommandOrControl+num2')
+  })
+
+  it('encodes numpad add and decimal (including locale comma) by code', () => {
+    expect(keyEventToAccelerator(ev({ key: '+', code: 'NumpadAdd' }))).toBe('numadd')
+    expect(keyEventToAccelerator(ev({ key: ',', code: 'NumpadDecimal' }))).toBe('numdec')
+  })
+
+  it('records NumLock-off numpad presses as their named navigation key', () => {
+    expect(keyEventToAccelerator(ev({ key: 'ArrowDown', code: 'Numpad2' }))).toBe('Down')
+  })
+
+  it('leaves top-row digits unaffected by the numpad code check', () => {
+    expect(keyEventToAccelerator(ev({ key: '2', code: 'Digit2' }))).toBe('2')
+  })
 })
 
 describe('prettyHotkey', () => {
@@ -54,5 +72,10 @@ describe('prettyHotkey', () => {
   it('passes plain accelerators through', () => {
     expect(prettyHotkey('F8')).toBe('F8')
     expect(prettyHotkey('')).toBe('')
+  })
+
+  it('renders a numpad token with its display label', () => {
+    expect(prettyHotkey('num2')).toBe('Num 2')
+    expect(prettyHotkey('CommandOrControl+Shift+numadd')).toBe('Ctrl+Shift+Num +')
   })
 })

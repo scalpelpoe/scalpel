@@ -13,7 +13,7 @@ import {
   registerDiagnosticProvider,
 } from './diagnostics'
 import { getPoeVersion } from './game-state'
-import { focusGameWindow, isTypingInOverlay } from './overlay'
+import { focusGameWindow, isTypingInOverlay, setOverlayVisibilityListener } from './overlay'
 import { hideFocusedOrAnyVisibleSecondaryOverlay, isAnyScalpelBrowserWindowFocused } from './windowing'
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -55,6 +55,13 @@ let hookResumeTimer: ReturnType<typeof setTimeout> | null = null
 const DEDUPE_MS = 100
 let lastTriggerFireAt = 0
 let lastPriceCheckFireAt = 0
+let lastEscapeFireAt = 0
+
+// Escape is also registered as a real globalShortcut (not just the uiohook
+// fallback below) while the main overlay is visible, so the OS consumes the
+// key before PoE sees it - see fireEscape/syncEscapeShortcut.
+let escapeShortcutRegistered = false
+let overlayVisibleForEscape = false
 
 function matchesCombo(
   e: { keycode: number; ctrlKey: boolean; shiftKey: boolean; altKey: boolean },
@@ -108,6 +115,48 @@ function firePriceCheck(): void {
   // No focus gate here: onPriceCheck (createPriceCheckHandler) runs ensureCorrectGameForHotkey,
   // which is the single focus authority for this path (see fireTrigger above).
   if (onPriceCheck) onPriceCheck()
+}
+
+/** Shared entry point for both Escape delivery paths (the globalShortcut
+ *  registered by syncEscapeShortcut, and the uiohook fallback keydown branch
+ *  below). Both can deliver for the same physical press - see DEDUPE_MS. */
+function fireEscape(): void {
+  const now = Date.now()
+  if (now - lastEscapeFireAt < DEDUPE_MS) return
+  lastEscapeFireAt = now
+  if (injecting) return
+  // Secondary overlays (cheat sheets etc.) own Esc when visible - same
+  // precedence as the existing uiohook branch, and NOT gated on focus.
+  if (hideFocusedOrAnyVisibleSecondaryOverlay()) return
+  if (!onEscape) return
+  void hasPoeOrOverlayFocus()
+    .then((ok) => {
+      if (ok && onEscape) onEscape()
+    })
+    .catch((err) => recordMainDiagnostic('hotkey-context:escape', err))
+}
+
+/** Register/unregister the Escape globalShortcut so the OS consumes the key
+ *  before PoE sees it, exactly while the main overlay is visible, the
+ *  attached game has focus, hotkeys aren't suspended, and a handler is set.
+ *  Safe to call from anywhere - it's a no-op when the desired state already
+ *  matches the registered state. */
+function syncEscapeShortcut(): void {
+  const desired = !!onEscape && overlayVisibleForEscape && OverlayController.targetHasFocus && suspendDepth === 0
+  if (desired === escapeShortcutRegistered) return
+  if (desired) {
+    try {
+      const ok = globalShortcut.register('Escape', () => fireEscape())
+      escapeShortcutRegistered = ok
+    } catch (e) {
+      console.error('[hotkeys] Failed to register Escape shortcut:', e)
+    }
+  } else {
+    try {
+      globalShortcut.unregister('Escape')
+    } catch {}
+    escapeShortcutRegistered = false
+  }
 }
 
 // ─── uiohook action bindings (international / OEM keys) ─────────────────────────
@@ -199,28 +248,37 @@ function runSecondaryOverlay(handler: () => void, combo: KeyCombo | null): void 
 export function startHotkeyListener(handler: () => void): void {
   onTrigger = handler
 
+  // Escape's globalShortcut is only valid while the game has focus (see
+  // syncEscapeShortcut). Re-sync on every focus/blur so it registers/unregisters
+  // in step with the attached game gaining/losing OS focus.
+  OverlayController.events.on(
+    'focus',
+    guardNativeListener('escape-sync-focus', () => syncEscapeShortcut()),
+  )
+  OverlayController.events.on(
+    'blur',
+    guardNativeListener('escape-sync-blur', () => syncEscapeShortcut()),
+  )
+  // Track main-overlay visibility so syncEscapeShortcut can gate on it too.
+  setOverlayVisibilityListener((visible) => {
+    overlayVisibleForEscape = visible
+    syncEscapeShortcut()
+  })
+
   // uiohook is only used for Escape (overlay close), stash scroll, and modifier tracking
   initModifierTracking()
   uIOhook.on(
     'keydown',
     guardNativeListener('keydown-main', (e) => {
       if (injecting) return
-      // Only respond to Escape when PoE or the overlay itself has focus -- otherwise
-      // pressing Esc in another app (browser, Discord, etc.) would silently hide the
-      // overlay here in the background.
+      // uiohook fallback for Escape: the globalShortcut registered by
+      // syncEscapeShortcut consumes the key when it's active, but uiohook still
+      // sees every press regardless (kernel-level hook), and this is the only
+      // path at all when the shortcut isn't registered (overlay hidden, game
+      // unfocused, etc.). fireEscape() dedupes double-delivery and holds the
+      // secondary-overlay precedence + PoE/overlay focus gate.
       if (e.keycode === UiohookKey.Escape) {
-        // Secondary overlays (cheat sheets etc.) own Esc when visible. The
-        // renderer keydown listener doesn't fire reliably because Windows
-        // often denies focus stealing from PoE, so handle it kernel-side here.
-        if (hideFocusedOrAnyVisibleSecondaryOverlay()) return
-        // Only respond to Escape when PoE or the overlay itself has focus -- otherwise
-        // pressing Esc in another app (browser, Discord, etc.) would silently hide the
-        // overlay here in the background.
-        void hasPoeOrOverlayFocus()
-          .then((ok) => {
-            if (ok && onEscape) onEscape()
-          })
-          .catch((err) => recordMainDiagnostic('hotkey-context:escape', err))
+        fireEscape()
       }
       // Trigger + price-check via uIOhook so the combo fires in BOTH PoE1 and PoE2,
       // not just whichever game electron-overlay-window is attached to. The handlers
@@ -322,6 +380,10 @@ export function suspendHotkeys(): void {
   suspendDepth++
   if (suspendDepth === 1) {
     globalShortcut.unregisterAll()
+    // globalShortcut.unregisterAll() above already wiped Escape's OS-side
+    // registration - just reflect that in our own flag. No sync needed: the
+    // desired state is false while suspended either way.
+    escapeShortcutRegistered = false
     // The uiohook action bindings fire kernel-side regardless of globalShortcut,
     // so clear them too or an international-key hotkey would still fire while the
     // recorder is open / the user is typing in an overlay input. resumeHotkeys
@@ -346,6 +408,7 @@ export function resumeHotkeys(): void {
   setChatCommands(cmds)
   setAppMacros(lastAppMacros)
   setSecondaryOverlayHotkeys(secondaryOverlayHotkeys)
+  syncEscapeShortcut()
 }
 
 /** Update the active hotkey. Registered with both globalShortcut (swallows the key
@@ -396,6 +459,9 @@ export function setPriceCheckHandler(handler: (() => void) | null): void {
 
 export function setEscapeHandler(handler: (() => void) | null): void {
   onEscape = handler
+  // Order-independent: setEscapeHandler and the overlay-visibility/focus
+  // wire-ups can happen in either order at boot, so re-sync here too.
+  syncEscapeShortcut()
 }
 
 export function setChatCommands(
@@ -649,6 +715,7 @@ export function stopHotkeyListener(): void {
     hookStarted = false
   }
   globalShortcut.unregisterAll()
+  escapeShortcutRegistered = false
 }
 
 export function setStashScrollEnabled(enabled: boolean): void {

@@ -64,3 +64,45 @@ export function decodePhysicalToken(segment: string): { code: string; glyph: str
   if (colon === -1) return null
   return { code: rest.slice(0, colon), glyph: rest.slice(colon + 1) }
 }
+
+// Numpad keys. Unlike the physically-routed OEM keys above, Electron CAN bind
+// these natively (num0-num9, numdec, numadd, numsub, nummult, numdiv), so they
+// stay Electron-registerable plain tokens. DOM code names match UiohookKey
+// property names exactly, so the main process derives uiohook keycodes by
+// inverting this map.
+export const NUMPAD_CODE_TO_TOKEN = {
+  Numpad0: 'num0',
+  Numpad1: 'num1',
+  Numpad2: 'num2',
+  Numpad3: 'num3',
+  Numpad4: 'num4',
+  Numpad5: 'num5',
+  Numpad6: 'num6',
+  Numpad7: 'num7',
+  Numpad8: 'num8',
+  Numpad9: 'num9',
+  NumpadDecimal: 'numdec',
+  NumpadAdd: 'numadd',
+  NumpadSubtract: 'numsub',
+  NumpadMultiply: 'nummult',
+  NumpadDivide: 'numdiv',
+} as const
+
+// Display labels for the settings UI ("num2" reads poorly in a hotkey chip).
+export const NUMPAD_TOKEN_LABELS: Record<string, string> = {
+  num0: 'Num 0',
+  num1: 'Num 1',
+  num2: 'Num 2',
+  num3: 'Num 3',
+  num4: 'Num 4',
+  num5: 'Num 5',
+  num6: 'Num 6',
+  num7: 'Num 7',
+  num8: 'Num 8',
+  num9: 'Num 9',
+  numdec: 'Num .',
+  numadd: 'Num +',
+  numsub: 'Num -',
+  nummult: 'Num *',
+  numdiv: 'Num /',
+}

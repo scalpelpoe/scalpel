@@ -11,7 +11,7 @@ import { PANEL_CHROME } from './panel-chrome'
 import { FontSizePicker } from './FontSizePicker'
 import { SaveCurrentDialog } from '../snapshots/SaveCurrentDialog'
 import { SnapshotLibrary } from '../snapshots/SnapshotLibrary'
-import { useDismissOnOutside } from '../state/use-dismiss-on-outside'
+import { useDismissOnOutside } from '../../shared/use-dismiss-on-outside'
 import { UnifiedPillArrow } from './pill-arrow'
 import { ToolMarker, ToolHighlighter, ToolEraser } from './tool-icons'
 import {

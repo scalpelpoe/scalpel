@@ -61,3 +61,24 @@ describe('CounterStore', () => {
     expect(store.sample('g', 'explicit.move', 1000).shownWeight).toBe(0)
   })
 })
+
+describe('resetChip', () => {
+  it('forgets one chip at the given rungs, leaving other chips and rungs intact', () => {
+    const store = new CounterStore(fakePersistence())
+    store.recordObservation(['g', 'Rare|Boots', 'Rare|Boots|dex'], 'explicit.move', true, 1000)
+    store.recordObservation(['g', 'Rare|Boots'], 'explicit.life', true, 1000)
+    store.resetChip(['Rare|Boots', 'Rare|Boots|dex'], 'explicit.move')
+    // targeted chip gone at specific rungs, global untouched
+    expect(store.sample('Rare|Boots', 'explicit.move', 1000)).toEqual({ enabledWeight: 0, shownWeight: 0 })
+    expect(store.sample('Rare|Boots|dex', 'explicit.move', 1000)).toEqual({ enabledWeight: 0, shownWeight: 0 })
+    expect(store.sample('g', 'explicit.move', 1000)).toEqual({ enabledWeight: 1, shownWeight: 1 })
+    // sibling chip untouched
+    expect(store.sample('Rare|Boots', 'explicit.life', 1000)).toEqual({ enabledWeight: 1, shownWeight: 1 })
+  })
+
+  it('is safe on rungs and chips that were never recorded', () => {
+    const store = new CounterStore(fakePersistence())
+    store.resetChip(['Rare|Boots'], 'explicit.move')
+    expect(store.sample('Rare|Boots', 'explicit.move', 1000)).toEqual({ enabledWeight: 0, shownWeight: 0 })
+  })
+})

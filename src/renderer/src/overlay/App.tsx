@@ -539,6 +539,15 @@ export default function App(): JSX.Element {
           height: tierSister.height,
         })
       }
+      // Context menus portal to document.body to escape the wrapper's transform,
+      // which also removes them from the rects above - collect them so an open
+      // menu stays clickable even where it juts past the panel edge.
+      for (const el of document.querySelectorAll('[data-context-menu]')) {
+        const r = el.getBoundingClientRect()
+        if (r.width > 0 && r.height > 0) {
+          rects.push({ left: r.left, top: r.top, width: r.width, height: r.height })
+        }
+      }
       window.api.reportPanelRect(rects)
     }
     tick()

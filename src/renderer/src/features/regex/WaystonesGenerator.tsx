@@ -664,6 +664,10 @@ export const WaystonesGenerator = forwardRef<GeneratorHandle, GeneratorProps>(fu
                     onChange={(v) => setRevivesMax(v == null ? 6 : Math.max(0, Math.min(6, v)))}
                   />
                 </div>
+                <p className="text-[10px] text-text-dim px-3 py-[6px] m-0">
+                  Setting min and max revives to 0 finds 6+ modifier waystones. There is no way to search for exactly 8
+                  mods.
+                </p>
               </QualifierSection>
 
               <QualifierSection label="CORRUPTION">

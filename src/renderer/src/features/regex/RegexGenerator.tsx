@@ -19,6 +19,7 @@ import { CustomGenerator } from './CustomGenerator'
 import { FlaskGenerator } from './FlaskGenerator'
 import { WaystonesGenerator } from './WaystonesGenerator'
 import { VendorGenerator } from './VendorGenerator'
+import { VendorPoe1Generator } from './VendorPoe1Generator'
 import { TabletGenerator } from './TabletGenerator'
 import { RelicGenerator } from './RelicGenerator'
 import { usePoeVersion } from '../../shared/poe-version-context'
@@ -43,10 +44,11 @@ interface Props {
  *       of these lists to avoid bundling this component tree; it silently omits
  *       any generator missing from that copy)
  *  The registry drives the tab strip, localStorage key, and preset scoping.
- *  Generator availability is per-game: PoE1 uses Maps + Flasks + Custom;
- *  PoE2 uses Waystones + Custom (no flasks UI yet, no PoE1 maps). */
+ *  Generator availability is per-game: PoE1 uses Maps + Vendor + Flasks + Custom;
+ *  PoE2 uses Waystones + Tablet + Vendor + Relic + Custom. */
 const GENERATORS_POE1 = [
   { key: 'maps', label: 'Maps' },
+  { key: 'vendor', label: 'Vendor' },
   { key: 'flasks', label: 'Flasks' },
   { key: 'custom', label: 'Custom' },
 ] as const satisfies readonly GeneratorConfig[]
@@ -484,7 +486,11 @@ export function RegexGenerator({ settings, update, tryHotkey }: Props): JSX.Elem
       case 'tablet':
         return <TabletGenerator ref={tabletRef} {...sharedProps} />
       case 'vendor':
-        return <VendorGenerator ref={vendorRef} {...sharedProps} />
+        return poeVersion === 2 ? (
+          <VendorGenerator ref={vendorRef} {...sharedProps} />
+        ) : (
+          <VendorPoe1Generator ref={vendorRef} {...sharedProps} />
+        )
       case 'relic':
         return <RelicGenerator ref={relicRef} {...sharedProps} />
       case 'custom':

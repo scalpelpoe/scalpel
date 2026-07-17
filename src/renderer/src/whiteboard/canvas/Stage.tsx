@@ -10,7 +10,7 @@ import { applyDragDelta, bakeTransform, renderElement } from './elements/registr
 import { readOsClipboardForPaste, writeElementsToOsClipboard } from '../state/os-clipboard'
 import { createTextAt, measureTextBbox } from './tools/text'
 import type { ImageElement, StrokeElement as StrokeEl, TextElement, WhiteboardElement } from '@shared/whiteboard-types'
-import { ContextMenu, type ContextMenuEntry } from './ContextMenu'
+import { ContextMenu, type ContextMenuEntry } from '../../components/primitives/ContextMenu'
 import { appendPoint, commitStroke, getStagePointer, startStroke, type PenSession } from './tools/pen'
 import { applyErase } from './tools/eraser'
 import { elementAabbPx, elementsInMarquee, pickTopElement } from './tools/select'

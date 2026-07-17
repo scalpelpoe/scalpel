@@ -219,6 +219,10 @@ export const api = {
     ipcRenderer.send('record-pref-observation', sessionId, chips),
   resetLearning: (scope: 'all' | { rarity: string; itemClass: string }): Promise<void> =>
     ipcRenderer.invoke('reset-learning', scope),
+  setLearnedPreference: (sessionId: number, chipId: string, enabled: boolean): void =>
+    ipcRenderer.send('set-learned-preference', sessionId, chipId, enabled),
+  unsetLearnedPreference: (sessionId: number, chipId: string): void =>
+    ipcRenderer.send('unset-learned-preference', sessionId, chipId),
 
   // Regex presets
   getRegexPresets: (): Promise<import('@shared/types').RegexPreset[]> => ipcRenderer.invoke('get-regex-presets'),

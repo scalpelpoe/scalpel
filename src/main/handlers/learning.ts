@@ -1,10 +1,20 @@
 import { ipcMain } from 'electron'
-import { recordSession, resetLearning } from '../learning'
+import { recordSession, resetLearning, setPreference, unsetPreference } from '../learning'
 
 export function register(): void {
   ipcMain.on('record-pref-observation', (_e, sessionId: unknown, chips: unknown) => {
     if (typeof sessionId !== 'number' || !Array.isArray(chips)) return
     recordSession(sessionId, chips as Array<{ id: string; type: string; enabled: boolean }>)
+  })
+
+  ipcMain.on('set-learned-preference', (_e, sessionId: unknown, chipId: unknown, enabled: unknown) => {
+    if (typeof sessionId !== 'number' || typeof chipId !== 'string' || typeof enabled !== 'boolean') return
+    setPreference(sessionId, chipId, enabled)
+  })
+
+  ipcMain.on('unset-learned-preference', (_e, sessionId: unknown, chipId: unknown) => {
+    if (typeof sessionId !== 'number' || typeof chipId !== 'string') return
+    unsetPreference(sessionId, chipId)
   })
 
   ipcMain.handle('reset-learning', (_e, scope: unknown) => {

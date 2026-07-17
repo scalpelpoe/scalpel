@@ -14,7 +14,6 @@
   "feature_regex_tool": "Regex-Werkzeug",
   "feature_extra_features": "Extra-Funktionen",
   "settings_title": "Einstellungen",
-  "settings_beta_version": "Beta {version}",
   "settings_language_label": "Sprache",
   "settings_tab_general": "Allgemein",
   "settings_tab_view": "Ansicht",

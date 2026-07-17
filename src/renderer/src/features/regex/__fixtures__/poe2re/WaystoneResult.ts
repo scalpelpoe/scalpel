@@ -6,7 +6,10 @@
  * Hybrid vintage: the modifier/state (corruption) paths below track the May 2026
  * upstream vintage our engine forked from; the rarity/revives parts and the result
  * array's ordering track July 2026 upstream (`generateRarityRegex` + `generateReviveRegex`,
- * inserted ahead of tier/modifiers per current upstream order). */
+ * inserted ahead of tier/modifiers per current upstream order). The tier function
+ * carries poe2.re's July 2026 "er " tier fix in corrected per-branch form, because
+ * upstream's literal `"er ${result}"` only prefixes the first alternation branch
+ * (upstream commits 95f6c7d5, 19031221). */
 import type { Settings } from './Settings'
 import { selectedOptionRegex } from './SelectedOptionRegex'
 import { generateRarityRegex } from './GenerateRarityRegex'
@@ -67,8 +70,8 @@ function generateTierRegex(settings: Settings['waystone']['tier']): string | nul
   const regexOver10 =
     numbersOver10.length <= 1 ? `${numbersOver10.join('')}` : `1[${numbersOver10.map((e) => e.toString()[1]).join('')}]`
 
-  const under10 = regexUnder10 === '' ? '' : `r ${regexUnder10}\\)`
-  const over10 = regexOver10 === '' ? '' : `${regexOver10}\\)`
+  const under10 = regexUnder10 === '' ? '' : `er ${regexUnder10}\\)`
+  const over10 = regexOver10 === '' ? '' : `er ${regexOver10}\\)`
   const result = [under10, over10].filter((e) => e !== '').join('|')
   return result === '' ? '' : `"${result}"`
 }

@@ -32,6 +32,9 @@ const FILES = [
   'mapmods/GeneratedTypes.ts',
   // Re-mapped on save: upstream stores it in src/generated/, we put it under flaskmods/.
   { from: 'GeneratedFlaskMods.ts', to: 'flaskmods/GeneratedFlaskMods.ts' },
+  // PoE1 vendor gems (Vendor tab gem list + gem regex tokens).
+  'gems/Generated.Gems.English.ts',
+  'gems/GeneratedTypes.ts',
 ]
 
 const ATTRIBUTION = `// Data sourced from poe-vendor-string (https://github.com/${REPO})

@@ -146,9 +146,7 @@ export function SettingsPanel({
           >
             {m.settings_title()}
           </h2>
-          <span className="text-[9px] text-accent opacity-60">
-            {m.settings_beta_version({ version: __APP_VERSION__ })}
-          </span>
+          <span className="text-[9px] text-accent opacity-60">v{__APP_VERSION__}</span>
         </div>
         <div className="flex flex-wrap gap-[6px]">
           {(TAB_KEYS as readonly TabKey[])

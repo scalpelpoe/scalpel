@@ -1,5 +1,6 @@
 import { UiohookKey } from 'uiohook-napi'
 import { describe, expect, it } from 'vitest'
+import { NUMPAD_CODE_TO_TOKEN } from '@shared/hotkey-tokens'
 import { isElectronRegisterable, parseAccelerator } from './hotkey-accelerator'
 
 describe('parseAccelerator', () => {
@@ -54,6 +55,27 @@ describe('parseAccelerator', () => {
   it('returns null for the empty string', () => {
     expect(parseAccelerator('')).toBeNull()
   })
+
+  it('resolves a numpad token to its uiohook keycode', () => {
+    expect(parseAccelerator('num2')).toEqual({
+      keycode: UiohookKey.Numpad2,
+      ctrl: false,
+      shift: false,
+      alt: false,
+    })
+  })
+
+  it('resolves a modified numpad token', () => {
+    const combo = parseAccelerator('Ctrl+numdiv')
+    expect(combo?.keycode).toBe(UiohookKey.NumpadDivide)
+    expect(combo?.ctrl).toBe(true)
+  })
+
+  it('parses every numpad token to a non-null combo', () => {
+    for (const token of Object.values(NUMPAD_CODE_TO_TOKEN)) {
+      expect(parseAccelerator(token)).not.toBeNull()
+    }
+  })
 })
 
 describe('isElectronRegisterable', () => {
@@ -69,5 +91,9 @@ describe('isElectronRegisterable', () => {
 
   it('is false even when the physical token glyph is a plus sign', () => {
     expect(isElectronRegisterable('Alt+Phys:Equal:+')).toBe(false)
+  })
+
+  it('is true for numpad tokens', () => {
+    expect(isElectronRegisterable('num2')).toBe(true)
   })
 })

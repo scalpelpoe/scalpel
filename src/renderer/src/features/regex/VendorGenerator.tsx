@@ -1,6 +1,6 @@
 import { Fragment, forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { Search, CloseSmall, Magic, ListView, Level, Plus } from '@icon-park/react'
-import { TAB_COLORS, RegexCheckbox, TabSeparator, useRegexKey, usePersistedJSON } from './mapmods-helpers'
+import { TAB_COLORS, TabSeparator, useRegexKey, usePersistedJSON, QualifierSection, ToggleRow } from './mapmods-helpers'
 import { FilterChip } from '../../components/primitives/FilterChip'
 import { ScrubInput } from '../../components/primitives/ScrubInput'
 import { InfoChip } from '../../shared/InfoChip'
@@ -15,6 +15,7 @@ import {
   qualifiersToVendorGroups,
   isVendorGroupsEmpty,
   ensureVendorGroupsMigrated,
+  sanitizeVendorGroups,
   type VendorTabKey,
   type VendorGroupsState,
 } from '@shared/data/regex/vendor-toggles'
@@ -106,7 +107,11 @@ export const VendorGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
   // run too late); idempotent + cheap, mirroring ensureLegacyRegexKeysMigrated in
   // RegexGenerator.
   ensureVendorGroupsMigrated(key('vendor-settings'), key('vendor-groups'))
-  const [state, setState] = usePersistedJSON<VendorGroupsState>(key('vendor-groups'), DEFAULT_VENDOR_GROUPS_STATE)
+  const [state, setState] = usePersistedJSON<VendorGroupsState>(
+    key('vendor-groups'),
+    DEFAULT_VENDOR_GROUPS_STATE,
+    sanitizeVendorGroups,
+  )
   const [tab, setTab] = useState<VendorTabKey>('mods')
   const [search, setSearch] = useState('')
   const [searchOpen, setSearchOpen] = useState(false)
@@ -441,45 +446,6 @@ export const VendorGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
     </>
   )
 })
-
-function QualifierSection({ label, children }: { label: string; children: React.ReactNode }): JSX.Element {
-  return (
-    <div>
-      <div
-        className="flex items-center gap-2 px-3 py-[8px] sticky-group-header sticky top-0 z-[1]"
-        style={{ height: 39, boxSizing: 'border-box' }}
-      >
-        <span className="text-[10px] uppercase tracking-wider font-bold flex-1 text-text">{label}</span>
-      </div>
-      {children}
-    </div>
-  )
-}
-
-function ToggleRow({
-  label,
-  checked,
-  onChange,
-  alt = false,
-}: {
-  label: string
-  checked: boolean
-  onChange: () => void
-  alt?: boolean
-}): JSX.Element {
-  return (
-    <div
-      className="flex items-center gap-2 px-3 py-[6px] cursor-pointer select-none"
-      style={{ background: alt ? 'rgba(255,255,255,0.02)' : 'transparent' }}
-      onClick={onChange}
-    >
-      <RegexCheckbox checked={checked} color={TAB_COLORS.qualifiers} />
-      <span className="text-[11px] flex-1" style={{ color: checked ? 'var(--text)' : 'var(--text-dim)' }}>
-        {label}
-      </span>
-    </div>
-  )
-}
 
 function LevelRow({
   label,

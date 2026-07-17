@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react'
 import { PANEL_CHROME } from '../toolbar/panel-chrome'
 import { IconClose } from '../toolbar/icons'
-import { useDismissOnOutside } from '../state/use-dismiss-on-outside'
+import { useDismissOnOutside } from '../../shared/use-dismiss-on-outside'
 
 interface Props {
   open: boolean

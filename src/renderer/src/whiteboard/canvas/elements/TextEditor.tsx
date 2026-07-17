@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react'
 import { useWhiteboardStore } from '../../state/store'
-import { useDismissOnOutside } from '../../state/use-dismiss-on-outside'
+import { useDismissOnOutside } from '@renderer/shared/use-dismiss-on-outside'
 import { measureTextBbox } from '../tools/text'
 import type { GameSize } from '../coords'
 

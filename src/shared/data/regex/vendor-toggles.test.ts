@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import {
   VENDOR_TABS,
   DEFAULT_VENDOR_SETTINGS,
+  DEFAULT_VENDOR_GROUPS_STATE,
   vendorSettingsToQualifiers,
   qualifiersToVendorSettings,
   vendorGroupsToQualifiers,
@@ -10,6 +11,7 @@ import {
   vendorGroupConditionCount,
   isVendorGroupsEmpty,
   ensureVendorGroupsMigrated,
+  sanitizeVendorGroups,
   type VendorSettings,
   type VendorGroupsState,
 } from './vendor-toggles'
@@ -119,5 +121,32 @@ describe('ensureVendorGroupsMigrated', () => {
   it('is a no-op when there is no legacy data', () => {
     ensureVendorGroupsMigrated('k:vendor-settings', 'k:vendor-groups')
     expect(localStorage.getItem('k:vendor-groups')).toBeNull()
+  })
+})
+
+describe('sanitizeVendorGroups', () => {
+  it('heals PoE1-shaped groups (reverse poisoned key) to defaults without throwing', () => {
+    const poe1Shaped = {
+      groups: [{ links: { any3: true }, colors3: { rrr: true }, gems: [123] }],
+      selectedGroupId: 0,
+    }
+    expect(sanitizeVendorGroups(poe1Shaped)).toEqual(DEFAULT_VENDOR_GROUPS_STATE)
+  })
+
+  it('passes valid state through and clamps level ranges + selectedGroupId', () => {
+    const g = structuredClone(DEFAULT_VENDOR_SETTINGS)
+    g.itemProperty.quality = true
+    g.itemLevel = { min: 10, max: 60 }
+    expect(sanitizeVendorGroups({ groups: [g], selectedGroupId: 9 })).toEqual({ groups: [g], selectedGroupId: 0 })
+    const dirty = structuredClone(DEFAULT_VENDOR_SETTINGS) as unknown as Record<string, unknown>
+    dirty.itemLevel = { min: -5, max: 400 }
+    const healed = sanitizeVendorGroups({ groups: [dirty], selectedGroupId: 0 })
+    expect(healed.groups[0].itemLevel).toEqual({ min: 0, max: 100 })
+  })
+
+  it('returns the default state for junk values', () => {
+    for (const junk of [null, 42, 'x', {}, { groups: [] }]) {
+      expect(sanitizeVendorGroups(junk)).toEqual(DEFAULT_VENDOR_GROUPS_STATE)
+    }
   })
 })

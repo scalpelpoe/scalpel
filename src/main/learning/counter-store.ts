@@ -42,4 +42,17 @@ export class CounterStore {
     }
     this.persist()
   }
+
+  /** Forgets one chip's counters at the given rungs (manual "Unset Learned
+   *  Preference"). Callers pass the item's specific rungs only - the global
+   *  rung shapes other items and decisions gate on specific-rung evidence. */
+  resetChip(rungKeys: string[], chipId: string): void {
+    for (const key of rungKeys) {
+      const bucket = this.buckets[key]
+      if (!bucket) continue
+      delete bucket[chipId]
+      if (Object.keys(bucket).length === 0) delete this.buckets[key]
+    }
+    this.persist()
+  }
 }

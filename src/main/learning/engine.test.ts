@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { defaultPoeItem } from '@shared/poe-item'
 import { CounterStore, type LearningPersistence } from './counter-store'
 import type { CounterRecord } from './types'
-import { computeLearnedDecisions, captureObservation, isLearnable } from './engine'
+import { computeLearnedDecisions, captureObservation } from './engine'
 import type { StatFilter } from '../trade/trade'
 
 function newStore(): CounterStore {
@@ -25,20 +25,6 @@ const chip = (id: string, type: string, enabled: boolean): StatFilter => ({
   min: null,
   max: null,
   enabled,
-})
-
-describe('isLearnable', () => {
-  it('accepts stat-mod lines and rejects others', () => {
-    expect(isLearnable({ type: 'explicit' })).toBe(true)
-    expect(isLearnable({ type: 'pseudo' })).toBe(true)
-    expect(isLearnable({ type: 'misc' })).toBe(false)
-    expect(isLearnable({ type: 'socket' })).toBe(false)
-  })
-
-  it('accepts imbued chips (real emitted type string)', () => {
-    expect(isLearnable({ type: 'imbued' })).toBe(true)
-    expect(isLearnable({ type: 'imbue' })).toBe(false)
-  })
 })
 
 describe('captureObservation + computeLearnedDecisions round trip', () => {

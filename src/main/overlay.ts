@@ -37,6 +37,15 @@ let retargetWatchdog: ReturnType<typeof setTimeout> | null = null
 const RETARGET_WATCHDOG_MS = 2000
 let multiTitleMode = false
 
+let overlayVisibilityListener: ((visible: boolean) => void) | null = null
+
+/** Notified with the current `overlayVisible` state on every showOverlay/hideOverlay
+ *  call, so other modules (hotkeys.ts's Escape globalShortcut sync) can react without
+ *  polling. Single slot - only one consumer today (hotkeys.ts). */
+export function setOverlayVisibilityListener(cb: ((visible: boolean) => void) | null): void {
+  overlayVisibilityListener = cb
+}
+
 export function setCloseOnClickOutside(enabled: boolean): void {
   closeOnClickOutside = enabled
 }
@@ -566,6 +575,7 @@ export function showOverlay(): void {
     lastOverlayError = String(err)
     console.error('[overlay] Error in showOverlay:', err)
   }
+  overlayVisibilityListener?.(true)
 }
 
 export function hideOverlay(): void {
@@ -579,6 +589,7 @@ export function hideOverlay(): void {
   // OverlayController manages window visibility and would re-show it, causing flicker)
   overlayWindow.webContents.send('overlay-hide')
   OverlayController.focusTarget()
+  overlayVisibilityListener?.(false)
 }
 
 /** Send reload command to PoE, then re-apply interactive state so overlay stays usable */

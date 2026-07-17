@@ -109,7 +109,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -155578423,
     "name": "##% increased chance for Desecrated Currency from Abysses in Map",
-    "regex": "cy",
+    "regex": "des",
     "values": [],
     "ranges": [
       [
@@ -189,7 +189,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -2071746539,
     "name": "##% increased Expedition Explosive Placement Range in Map",
-    "regex": "pla",
+    "regex": "ace",
     "values": [],
     "ranges": [
       [
@@ -568,6 +568,22 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
+    "id": -1098842492,
+    "name": "Delirium Fog in Map applies ##% increased Deliriousness to Players",
+    "regex": "sn",
+    "values": [],
+    "ranges": [
+      [
+        15,
+        30
+      ]
+    ],
+    "prefix": false,
+    "tags": [
+      "delirium"
+    ]
+  },
+  {
     "id": -75847069,
     "name": "Delirium Fog in Map dissipates ##% slower",
     "regex": "slo",
@@ -586,7 +602,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -1301692462,
     "name": "Delirium Fog in Map lasts ## additional seconds before dissipating",
-    "regex": "bef",
+    "regex": "ast",
     "values": [],
     "ranges": [
       [
@@ -624,22 +640,6 @@ export const tabletRegex: TabletRegex[] = [
       [
         12,
         26
-      ]
-    ],
-    "prefix": false,
-    "tags": [
-      "delirium"
-    ]
-  },
-  {
-    "id": -1500776985,
-    "name": "Delirium in Map increases ##% faster with distance from the mirror",
-    "regex": "fas",
-    "values": [],
-    "ranges": [
-      [
-        15,
-        30
       ]
     ],
     "prefix": false,
@@ -730,7 +730,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -1408619460,
     "name": "Map contains # additional Azmeri Spirit",
-    "regex": "it$",
+    "regex": "irit$",
     "values": [
       1
     ],

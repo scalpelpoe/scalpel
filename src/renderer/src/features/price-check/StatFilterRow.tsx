@@ -8,6 +8,7 @@ import { getModColor, MOD_BOLD_TYPES, uniqueToBase } from './constants'
 import type { StatFilter } from './types'
 import { zebraRowBg } from '../../shared/utils'
 import { valueToTier } from '@shared/data/tiers/resolve'
+import { isLearnable } from '@shared/learning'
 
 /** Tint static-box text by the value's item type. Used by Ultimatum chips
  *  whose value is a literal item name - unique flasks for Sacrifice, unique
@@ -99,6 +100,7 @@ export function StatFilterRow({
   updateFilterMin,
   updateFilterMax,
   itemRarity,
+  onRowContextMenu,
 }: {
   f: StatFilter
   i: number
@@ -107,6 +109,7 @@ export function StatFilterRow({
   updateFilterMin: (i: number, val: string) => void
   updateFilterMax: (i: number, val: string) => void
   itemRarity: string
+  onRowContextMenu: (i: number, x: number, y: number, scale: number) => void
 }): JSX.Element {
   const minTint = getSearchTint(f.min, null, f.modRange, itemRarity, f.type)
   const maxTint = getSearchTint(null, f.max, f.modRange, itemRarity, f.type)
@@ -204,6 +207,16 @@ export function StatFilterRow({
       }}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
+      onContextMenu={(e) => {
+        if (!isLearnable(f)) return
+        e.preventDefault()
+        e.stopPropagation()
+        // The overlay applies a CSS scale; rect is in scaled viewport pixels and
+        // offsetWidth is unscaled, so their ratio recovers the effective scale.
+        const el = e.currentTarget
+        const scale = el.offsetWidth > 0 ? el.getBoundingClientRect().width / el.offsetWidth : 1
+        onRowContextMenu(i, e.clientX, e.clientY, scale)
+      }}
     >
       <div
         onClick={(e) => {

@@ -6,8 +6,11 @@ import type { AdaptiveMode, CounterRecord } from './types'
 import { LEARNING_BASELINE_VERSION, needsBaselineReset } from './baseline'
 import { CounterStore, type LearningPersistence } from './counter-store'
 import { captureObservation, computeLearnedDecisions } from './engine'
+import { overlayManualPreferences, setManualPreference, unsetManualPreference } from './manual-preferences'
+import { OverrideStore, type OverridePersistence } from './override-store'
 
 let counterStore: CounterStore | null = null
+let overrideStore: OverrideStore | null = null
 let settingsRef: Store<AppSettings> | null = null
 const sessionItems = new Map<number, PoeItem>()
 let sessionSeq = 0
@@ -22,12 +25,18 @@ export function initLearning(settings: Store<AppSettings>, version: 1 | 2): void
   settingsRef = settings
   sessionItems.clear()
   sessionSeq = 0
-  const data = new Store<{ buckets: Record<string, Record<string, CounterRecord>>; baselineVersion?: number }>({
+  const data = new Store<{
+    buckets: Record<string, Record<string, CounterRecord>>
+    overrides?: Record<string, Record<string, boolean>>
+    baselineVersion?: number
+  }>({
     name: `scalpel-learning-poe${version}`,
     defaults: { buckets: {} },
   })
   // One-time wipe when defaults shift (see learning/baseline.ts). Runs before
-  // CounterStore loads so the cleared buckets are what it reads.
+  // CounterStore loads so the cleared buckets are what it reads. Wipes buckets
+  // ONLY - manual pins in `overrides` are explicit user intent and survive
+  // baseline shifts deliberately.
   if (needsBaselineReset(data.get('baselineVersion'), LEARNING_BASELINE_VERSION)) {
     data.set('buckets', {})
     data.set('baselineVersion', LEARNING_BASELINE_VERSION)
@@ -37,6 +46,11 @@ export function initLearning(settings: Store<AppSettings>, version: 1 | 2): void
     save: (b) => data.set('buckets', b),
   }
   counterStore = new CounterStore(persistence)
+  const overridePersistence: OverridePersistence = {
+    load: () => data.get('overrides') ?? {},
+    save: (o) => data.set('overrides', o),
+  }
+  overrideStore = new OverrideStore(overridePersistence)
 }
 
 export function getMode(): AdaptiveMode {
@@ -56,9 +70,10 @@ export function beginSession(item: PoeItem): number {
 
 /** Returns the engine's confident enable/disable opinions per chip. {} until initLearning, or on error. */
 export function decisionsForSession(statFilters: StatFilter[], item: PoeItem): Record<string, boolean> {
-  if (!counterStore) return {}
+  if (!counterStore || !overrideStore) return {}
   try {
-    return computeLearnedDecisions(statFilters, item, getMode(), counterStore, Date.now())
+    const learned = computeLearnedDecisions(statFilters, item, getMode(), counterStore, Date.now())
+    return overlayManualPreferences(learned, item, overrideStore)
   } catch (err) {
     logLearningError('decisionsForSession', err)
     return {}
@@ -73,6 +88,30 @@ export function recordSession(sessionId: number, chips: Array<{ id: string; type
     captureObservation(item, chips, counterStore, Date.now()) // captures in all modes incl off
   } catch (err) {
     logLearningError('recordSession', err)
+  }
+}
+
+/** Manual pin from the price-check context menu. No-ops for evicted sessions. */
+export function setPreference(sessionId: number, chipId: string, enabled: boolean): void {
+  if (!overrideStore) return
+  const item = sessionItems.get(sessionId)
+  if (!item) return
+  try {
+    setManualPreference(item, chipId, enabled, overrideStore)
+  } catch (err) {
+    logLearningError('setPreference', err)
+  }
+}
+
+/** Manual unpin + forget from the price-check context menu. No-ops for evicted sessions. */
+export function unsetPreference(sessionId: number, chipId: string): void {
+  if (!overrideStore || !counterStore) return
+  const item = sessionItems.get(sessionId)
+  if (!item) return
+  try {
+    unsetManualPreference(item, chipId, overrideStore, counterStore)
+  } catch (err) {
+    logLearningError('unsetPreference', err)
   }
 }
 
