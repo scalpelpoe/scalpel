@@ -103,7 +103,12 @@ function fireTrigger(): void {
  *  "Path of Exile 2", while active-win gives us the exact foreground title. */
 export async function hasPoeOrOverlayFocus(): Promise<boolean> {
   if (isAnyScalpelBrowserWindowFocused()) return true
-  return (await detectFocusedPoeVersion()) !== null
+  if ((await detectFocusedPoeVersion()) !== null) return true
+  // active-win can't read the foreground title under Wayland/XWayland; on Linux
+  // the attached window's focus flag is the only reliable signal. Kept off
+  // Windows, where active-win is reliable and targetHasFocus can be stale
+  // (issues #18/#21). Issue #493.
+  return process.platform === 'linux' && OverlayController.targetHasFocus
 }
 
 function firePriceCheck(): void {

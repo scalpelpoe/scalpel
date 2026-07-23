@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Covers the async foreground-focus gate (hasPoeOrOverlayFocus) and the
 // contextual hotkey paths that consult it: chat commands, app macros,
@@ -158,8 +158,36 @@ beforeEach(() => {
 })
 
 describe('hasPoeOrOverlayFocus', () => {
-  it('rejects stale overlay target focus when the foreground title is not PoE', async () => {
+  let originalPlatform: PropertyDescriptor | undefined
+
+  beforeEach(() => {
+    originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')
+  })
+
+  afterEach(() => {
+    if (originalPlatform) Object.defineProperty(process, 'platform', originalPlatform)
+  })
+
+  it('rejects stale overlay target focus on Windows when the foreground title is not PoE', async () => {
+    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
     mock.state.targetHasFocus = true
+
+    await expect(hasPoeOrOverlayFocus()).resolves.toBe(false)
+  })
+
+  it('accepts overlay target focus on Linux when active-win cannot read the foreground title', async () => {
+    Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
+    mock.state.targetHasFocus = true
+    mock.state.focusedVersion = null
+
+    await expect(hasPoeOrOverlayFocus()).resolves.toBe(true)
+  })
+
+  it('still rejects on Linux when neither active-win nor the overlay target reports focus', async () => {
+    Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
+    mock.state.targetHasFocus = false
+    mock.state.focusedVersion = null
+    mock.state.scalpelFocused = false
 
     await expect(hasPoeOrOverlayFocus()).resolves.toBe(false)
   })
