@@ -42,4 +42,28 @@ describe('MacrosTab built-in hotkeys', () => {
     fireEvent.click(clears[1])
     expect(update).toHaveBeenCalledWith('priceCheckHotkey', '')
   })
+
+  it('recomputes explicit scope when a command or action changes', () => {
+    const update = vi.fn()
+    const settings = {
+      ...baseSettings,
+      chatCommands: [{ hotkey: 'F7', command: '/menagerie', autoSubmit: true, scope: 'poe1' }],
+      appMacros: [{ hotkey: 'F8', action: 'openDust', scope: 'poe1' }],
+    } as RuntimeSettings
+    const { container, getByDisplayValue } = render(
+      <MacrosTab settings={settings} update={update} tryHotkey={() => true} />,
+    )
+
+    fireEvent.change(getByDisplayValue('/menagerie'), { target: { value: '/hideout' } })
+    expect(update).toHaveBeenCalledWith('chatCommands', [
+      { hotkey: 'F7', command: '/hideout', autoSubmit: true, scope: undefined },
+    ])
+
+    const actionSelect = [...container.querySelectorAll('select')].find((select) => select.value === 'openDust')
+    expect(actionSelect).toBeTruthy()
+    fireEvent.change(actionSelect as HTMLSelectElement, { target: { value: 'openRegex' } })
+    expect(update).toHaveBeenCalledWith('appMacros', [
+      { hotkey: 'F8', action: 'openRegex', presetId: undefined, tag: undefined, scope: undefined },
+    ])
+  })
 })

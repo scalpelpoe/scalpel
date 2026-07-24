@@ -12,10 +12,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 // covered in hotkeys-focus.test.ts, which uses a static-import harness that
 // cannot reset the module-level Escape dedupe stamp between tests.
 
+const activeGlobalShortcuts = new Map<string, () => void>()
+const registerGlobalShortcut = (accelerator: string, callback: () => void): boolean => {
+  if (activeGlobalShortcuts.has(accelerator)) return false
+  activeGlobalShortcuts.set(accelerator, callback)
+  return true
+}
 const globalShortcutMock = {
-  register: vi.fn((_accelerator: string, _callback: () => void) => true),
-  unregister: vi.fn(),
-  unregisterAll: vi.fn(),
+  register: vi.fn(registerGlobalShortcut),
+  unregister: vi.fn((accelerator: string) => activeGlobalShortcuts.delete(accelerator)),
+  unregisterAll: vi.fn(() => activeGlobalShortcuts.clear()),
 }
 
 const overlayControllerState: { targetHasFocus: boolean; events: EventEmitter; targetBounds: unknown } = {
@@ -108,8 +114,9 @@ const ESCAPE_KEYDOWN = { keycode: 1, ctrlKey: false, shiftKey: false, altKey: fa
  *  and tests opt into target or gameplay-overlay focus before delivery. */
 async function loadHotkeys(onEscape: () => void) {
   vi.resetModules()
+  activeGlobalShortcuts.clear()
   globalShortcutMock.register.mockClear()
-  globalShortcutMock.register.mockImplementation(() => true)
+  globalShortcutMock.register.mockImplementation(registerGlobalShortcut)
   globalShortcutMock.unregister.mockClear()
   globalShortcutMock.unregisterAll.mockClear()
   overlayControllerState.targetHasFocus = false
@@ -332,5 +339,124 @@ describe('Escape globalShortcut sync', () => {
 
     emitKeydown(ESCAPE_KEYDOWN)
     expect(onEscape).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('scoped hotkey refresh', () => {
+  it('rebuilds complete chat and app sources across repeated game switches', async () => {
+    const hotkeys = await loadHotkeys(() => {})
+    const { setPoeVersion } = await import('./game-state')
+    setPoeVersion(2)
+
+    hotkeys.setChatCommands([
+      { hotkey: 'Ctrl+H', command: '/hideout' },
+      { hotkey: 'Ctrl+M', command: '/menagerie' },
+      { hotkey: 'Ctrl+T', command: '/trade', scope: 'poe2' },
+    ])
+    hotkeys.setAppMacros([
+      { hotkey: 'Ctrl+D', action: 'openDust' },
+      { hotkey: 'Ctrl+C', action: 'openDivCards' },
+      { hotkey: 'Ctrl+S', action: 'openSettings' },
+    ])
+
+    const expected = {
+      1: ['Ctrl+C', 'Ctrl+D', 'Ctrl+H', 'Ctrl+M', 'Ctrl+S'],
+      2: ['Ctrl+H', 'Ctrl+S', 'Ctrl+T'],
+    }
+    expect([...activeGlobalShortcuts.keys()].sort()).toEqual(expected[2])
+
+    for (const game of [1, 2, 1] as const) {
+      setPoeVersion(game)
+      hotkeys.refreshScopedHotkeys('test-switch')
+      expect([...activeGlobalShortcuts.keys()].sort()).toEqual(expected[game])
+    }
+  })
+
+  it('retains complete sources while suspended and applies the current game on resume', async () => {
+    const hotkeys = await loadHotkeys(() => {})
+    const { setPoeVersion } = await import('./game-state')
+    setPoeVersion(2)
+    hotkeys.setChatCommands([
+      { hotkey: 'Ctrl+H', command: '/hideout' },
+      { hotkey: 'Ctrl+M', command: '/menagerie' },
+      { hotkey: 'Ctrl+T', command: '/trade', scope: 'poe2' },
+    ])
+
+    hotkeys.suspendHotkeys()
+    setPoeVersion(1)
+    hotkeys.refreshScopedHotkeys('test-switch')
+    expect(activeGlobalShortcuts.size).toBe(0)
+
+    hotkeys.resumeHotkeys()
+    expect([...activeGlobalShortcuts.keys()].sort()).toEqual(['Ctrl+H', 'Ctrl+M'])
+  })
+
+  it('unregisters both categories before transferring an accelerator', async () => {
+    const handler = vi.fn()
+    const hotkeys = await loadHotkeys(() => {})
+    const { setPoeVersion } = await import('./game-state')
+    setPoeVersion(2)
+    hotkeys.setAppMacroHandler(handler)
+    hotkeys.setChatCommands([{ hotkey: 'Ctrl+X', command: '/trade', scope: 'poe2' }])
+    hotkeys.setAppMacros([{ hotkey: 'Ctrl+X', action: 'openDust' }])
+    expect(activeGlobalShortcuts.has('Ctrl+X')).toBe(true)
+
+    setPoeVersion(1)
+    hotkeys.refreshScopedHotkeys('test-switch')
+    activeGlobalShortcuts.get('Ctrl+X')?.()
+    await flushEscapeGate()
+
+    expect(handler).toHaveBeenCalledWith('openDust', undefined, undefined)
+    const { registerDiagnosticProvider } = await import('./diagnostics')
+    const provider = vi
+      .mocked(registerDiagnosticProvider)
+      .mock.calls.filter(([name]) => name === 'hotkeyDiagnostics')
+      .at(-1)?.[1]
+    expect(provider?.().failedScopedRegistrations).toEqual([])
+  })
+
+  it('reports register false without counting it as active', async () => {
+    const hotkeys = await loadHotkeys(() => {})
+    globalShortcutMock.register.mockImplementation((accelerator, callback) => {
+      if (accelerator === 'Ctrl+F' || accelerator === 'Ctrl+G') return false
+      return registerGlobalShortcut(accelerator, callback)
+    })
+
+    hotkeys.setChatCommands([{ hotkey: 'Ctrl+F', command: '/hideout' }])
+    hotkeys.setAppMacros([{ hotkey: 'Ctrl+G', action: 'openSettings' }])
+
+    const { registerDiagnosticProvider } = await import('./diagnostics')
+    const provider = vi
+      .mocked(registerDiagnosticProvider)
+      .mock.calls.filter(([name]) => name === 'hotkeyDiagnostics')
+      .at(-1)?.[1]
+    expect(provider?.()).toMatchObject({
+      chatCommandConfiguredCount: 1,
+      chatCommandApplicableCount: 1,
+      chatCommandHotkeyCount: 0,
+      appMacroConfiguredCount: 1,
+      appMacroApplicableCount: 1,
+      appMacroHotkeyCount: 0,
+      failedScopedRegistrations: [
+        { category: 'chat-command', accelerator: 'Ctrl+F' },
+        { category: 'app-macro', accelerator: 'Ctrl+G' },
+      ],
+    })
+  })
+
+  it('rejects a stale scoped callback after the game changes', async () => {
+    const handler = vi.fn()
+    const hotkeys = await loadHotkeys(() => {})
+    const { setPoeVersion } = await import('./game-state')
+    setPoeVersion(1)
+    hotkeys.setAppMacroHandler(handler)
+    hotkeys.setAppMacros([{ hotkey: 'Ctrl+D', action: 'openDust' }])
+    const staleCallback = activeGlobalShortcuts.get('Ctrl+D')
+
+    setPoeVersion(2)
+    staleCallback?.()
+    await flushEscapeGate()
+
+    expect(handler).not.toHaveBeenCalled()
   })
 })

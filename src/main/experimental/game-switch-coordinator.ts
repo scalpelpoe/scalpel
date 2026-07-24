@@ -26,6 +26,7 @@ import { refreshLeagues } from '../trade/leagues'
 import { refreshPrices } from '../trade/prices'
 import { invalidateStatMatcherCaches } from '../trade/stat-matcher/cache-invalidation'
 import { getPoeVersion, setPoeVersion } from '../game-state'
+import { refreshScopedHotkeys } from '../hotkeys'
 
 function isValidLeagueForGame(store: Store<AppSettings>, league: string, variant: GameVariant): boolean {
   const key = variant === 2 ? 'leaguesPoe2' : 'leaguesPoe1'
@@ -52,6 +53,7 @@ export function switchGameContext(
 ): GameSwitchResult {
   const changed = target !== getPoeVersion()
   setPoeVersion(target)
+  if (changed) refreshScopedHotkeys('game-switch')
 
   // Drop the previous game's last-evaluated item before the filter (re)load
   // below fires onFilterLoaded -> reEvaluateLastItem, which would otherwise

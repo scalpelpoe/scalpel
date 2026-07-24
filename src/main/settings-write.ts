@@ -12,6 +12,7 @@ import {
   setChatCommands,
   setHotkey,
   setPriceCheckHotkey,
+  refreshScopedHotkeys,
   setStashScrollEnabled,
   setStashScrollModifier,
 } from './hotkeys'
@@ -77,6 +78,7 @@ function sideEffect(setting: ProfileChangedSetting, prevAppSettings?: AppSetting
 
   if (key === PROFILE_VERSION_KEY) {
     setPoeVersion(value as GameVariant)
+    refreshScopedHotkeys('settings-game-change')
   } else if (key === 'hotkey') {
     setHotkey(value as string)
   } else if (key === 'priceCheckHotkey') {

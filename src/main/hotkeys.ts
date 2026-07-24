@@ -21,9 +21,17 @@ let currentAccelerator: string | null = null
 let priceCheckAccelerator: string | null = null
 let triggerCombo: KeyCombo | null = null
 let priceCheckCombo: KeyCombo | null = null
-let chatCommandHotkeys: Array<{ accelerator: string; command: string; autoSubmit: boolean; scope?: MacroScope }> = []
+type ChatCommandConfig = { hotkey: string; command: string; autoSubmit?: boolean; scope?: MacroScope }
+type AppMacroConfig = { action: string; hotkey: string; tag?: string; presetId?: string; scope?: MacroScope }
+type ScopedHotkeyCategory = 'chat-command' | 'app-macro'
+
+let configuredChatCommands: ChatCommandConfig[] = []
+let configuredAppMacros: AppMacroConfig[] = []
+let registeredChatAccelerators: string[] = []
 let appMacroAccelerators: string[] = []
-let lastAppMacros: Array<{ action: string; hotkey: string; tag?: string; presetId?: string; scope?: MacroScope }> = []
+let applicableChatCommandCount = 0
+let applicableAppMacroCount = 0
+let failedScopedRegistrations: Array<{ category: ScopedHotkeyCategory; accelerator: string }> = []
 let onAppMacro: ((action: string, tag?: string, presetId?: string) => void) | null = null
 // Secondary-overlay hotkeys (cheat-sheets today, more later). Stored as a
 // flat list of (accelerator, handler) pairs so each consumer composes its own
@@ -354,6 +362,8 @@ export function suspendHotkeys(): void {
     // recorder is open / the user is typing in an overlay input. resumeHotkeys
     // rebuilds them via the set*() calls.
     clearActionBindings()
+    registeredChatAccelerators = []
+    appMacroAccelerators = []
   }
 }
 
@@ -364,14 +374,7 @@ export function resumeHotkeys(): void {
   if (suspendDepth > 0) return
   if (currentAccelerator) setHotkey(currentAccelerator)
   if (priceCheckAccelerator) setPriceCheckHotkey(priceCheckAccelerator)
-  const cmds = chatCommandHotkeys.map((c) => ({
-    hotkey: c.accelerator,
-    command: c.command,
-    autoSubmit: c.autoSubmit,
-    scope: c.scope,
-  }))
-  setChatCommands(cmds)
-  setAppMacros(lastAppMacros)
+  refreshScopedHotkeys('resume')
   setSecondaryOverlayHotkeys(secondaryOverlayHotkeys)
   syncEscapeShortcut()
 }
@@ -429,41 +432,99 @@ export function setEscapeHandler(handler: (() => void) | null): void {
   syncEscapeShortcut()
 }
 
-export function setChatCommands(
-  commands: Array<{ hotkey: string; command: string; autoSubmit?: boolean; scope?: MacroScope }>,
-): void {
-  // Unregister previous chat command shortcuts (no-op when suspended -- nothing
-  // is registered with the OS in that state).
+function recordScopedRegistrationFailure(category: ScopedHotkeyCategory, accelerator: string): void {
+  failedScopedRegistrations.push({ category, accelerator })
+  const safeAccelerator = accelerator.replace(/\s+/g, ' ').slice(0, 100)
+  recordMainBreadcrumb(`hotkey registration failed category=${category} accelerator=${safeAccelerator}`)
+}
+
+function clearScopedHotkeyRegistrations(): void {
   if (suspendDepth === 0) {
-    for (const ch of chatCommandHotkeys) {
+    for (const accelerator of [...registeredChatAccelerators, ...appMacroAccelerators]) {
       try {
-        globalShortcut.unregister(ch.accelerator)
+        globalShortcut.unregister(accelerator)
       } catch {}
     }
   }
-  chatCommandHotkeys = []
+  registeredChatAccelerators = []
+  appMacroAccelerators = []
   chatActionBindings = []
+  macroActionBindings = []
+  failedScopedRegistrations = []
+}
+
+/** Rebuild game-scoped chat and app hotkeys as one unit. Complete configured
+ *  sources are retained while suspended; OS and uIOhook registration is deferred
+ *  until the final resume. */
+export function refreshScopedHotkeys(reason?: string): void {
+  clearScopedHotkeyRegistrations()
 
   const version = getPoeVersion()
-  for (const c of commands) {
+  applicableChatCommandCount = 0
+  applicableAppMacroCount = 0
+
+  for (const c of configuredChatCommands) {
     if (!c.hotkey || !c.command) continue
     if (!scopeAppliesTo(chatCommandEffectiveScope(c), version)) continue
-    const autoSubmit = c.autoSubmit !== false
-    chatCommandHotkeys.push({ accelerator: c.hotkey, command: c.command, autoSubmit, scope: c.scope })
+    applicableChatCommandCount++
     if (suspendDepth > 0) continue
+    const autoSubmit = c.autoSubmit !== false
     const combo = parseAccelerator(c.hotkey)
     // International/OEM keys can't go through globalShortcut; match them via uiohook.
     if (!isElectronRegisterable(c.hotkey)) {
-      if (combo)
-        chatActionBindings.push({ combo, lastFireAt: 0, fire: () => runChatCommand(c.command, autoSubmit, combo) })
+      if (combo) chatActionBindings.push({ combo, lastFireAt: 0, fire: () => runChatCommand(c, autoSubmit, combo) })
       continue
     }
     try {
-      globalShortcut.register(c.hotkey, () => runChatCommand(c.command, autoSubmit, combo))
+      if (globalShortcut.register(c.hotkey, () => runChatCommand(c, autoSubmit, combo))) {
+        registeredChatAccelerators.push(c.hotkey)
+      } else {
+        recordScopedRegistrationFailure('chat-command', c.hotkey)
+      }
     } catch (e) {
       console.error(`[hotkeys] Failed to register chat command "${c.hotkey}":`, e)
+      recordScopedRegistrationFailure('chat-command', c.hotkey)
+      recordMainDiagnostic('hotkey-register:chat-command', e)
     }
   }
+
+  for (const m of configuredAppMacros) {
+    if (!m.hotkey || !m.action) continue
+    if (!scopeAppliesTo(appMacroEffectiveScope(m), version)) continue
+    applicableAppMacroCount++
+    if (suspendDepth > 0) continue
+    const combo = parseAccelerator(m.hotkey)
+    // International/OEM keys can't go through globalShortcut; match them via uiohook.
+    if (!isElectronRegisterable(m.hotkey)) {
+      if (combo) macroActionBindings.push({ combo, lastFireAt: 0, fire: () => runAppMacro(m, combo) })
+      continue
+    }
+    try {
+      if (globalShortcut.register(m.hotkey, () => runAppMacro(m, combo))) {
+        appMacroAccelerators.push(m.hotkey)
+      } else {
+        recordScopedRegistrationFailure('app-macro', m.hotkey)
+      }
+    } catch (e) {
+      console.error(`[hotkeys] Failed to register app macro "${m.action}" (${m.hotkey}):`, e)
+      recordScopedRegistrationFailure('app-macro', m.hotkey)
+      recordMainDiagnostic('hotkey-register:app-macro', e)
+    }
+  }
+
+  if (reason) {
+    recordMainBreadcrumb(
+      `scoped hotkeys refreshed reason=${reason} game=poe${version} suspended=${suspendDepth > 0} ` +
+        `chat=${configuredChatCommands.length}/${applicableChatCommandCount}/${registeredChatAccelerators.length}/${chatActionBindings.length} ` +
+        `app=${configuredAppMacros.length}/${applicableAppMacroCount}/${appMacroAccelerators.length}/${macroActionBindings.length} ` +
+        `failed=${failedScopedRegistrations.length}`,
+    )
+  }
+}
+
+export function setChatCommands(commands: ChatCommandConfig[]): void {
+  configuredChatCommands = [...commands]
+  refreshScopedHotkeys()
 }
 
 export function setAppMacroHandler(handler: (action: string, tag?: string, presetId?: string) => void): void {
@@ -504,39 +565,9 @@ export function setSecondaryOverlayHotkeys(hotkeys: OverlayHotkey[]): void {
   }
 }
 
-export function setAppMacros(
-  macros: Array<{ action: string; hotkey: string; tag?: string; presetId?: string; scope?: MacroScope }>,
-): void {
-  lastAppMacros = macros
-  if (suspendDepth === 0) {
-    for (const acc of appMacroAccelerators) {
-      try {
-        globalShortcut.unregister(acc)
-      } catch {}
-    }
-  }
-  appMacroAccelerators = []
-  macroActionBindings = []
-  if (suspendDepth > 0) return
-
-  const version = getPoeVersion()
-  for (const m of macros) {
-    if (!m.hotkey || !m.action) continue
-    if (!scopeAppliesTo(appMacroEffectiveScope(m), version)) continue
-    const combo = parseAccelerator(m.hotkey)
-    // International/OEM keys can't go through globalShortcut; match them via uiohook.
-    if (!isElectronRegisterable(m.hotkey)) {
-      if (combo)
-        macroActionBindings.push({ combo, lastFireAt: 0, fire: () => runAppMacro(m.action, m.tag, m.presetId, combo) })
-      continue
-    }
-    try {
-      globalShortcut.register(m.hotkey, () => runAppMacro(m.action, m.tag, m.presetId, combo))
-      appMacroAccelerators.push(m.hotkey)
-    } catch (e) {
-      console.error(`[hotkeys] Failed to register app macro "${m.action}" (${m.hotkey}):`, e)
-    }
-  }
+export function setAppMacros(macros: AppMacroConfig[]): void {
+  configuredAppMacros = [...macros]
+  refreshScopedHotkeys()
 }
 
 const PLACEHOLDER_LAST = '@last'
@@ -775,18 +806,24 @@ export async function sendCtrlCToPoE(): Promise<void> {
 
 function getHotkeyDiagnostics(): Record<string, unknown> {
   return {
+    game: getPoeVersion(),
     hookStarted,
     hookSuspended,
     suspendDepth,
     triggerHotkeyConfigured: currentAccelerator !== null,
     priceCheckHotkeyConfigured: priceCheckAccelerator !== null,
-    chatCommandHotkeyCount: chatCommandHotkeys.length,
+    chatCommandConfiguredCount: configuredChatCommands.length,
+    chatCommandApplicableCount: applicableChatCommandCount,
+    chatCommandHotkeyCount: registeredChatAccelerators.length,
+    appMacroConfiguredCount: configuredAppMacros.length,
+    appMacroApplicableCount: applicableAppMacroCount,
     appMacroHotkeyCount: appMacroAccelerators.length,
     secondaryOverlayHotkeyCount: secondaryOverlayHotkeys.length,
     // uiohook-matched bindings for international/OEM keys globalShortcut can't bind.
     chatActionBindingCount: chatActionBindings.length,
     macroActionBindingCount: macroActionBindings.length,
     overlayActionBindingCount: overlayActionBindings.length,
+    failedScopedRegistrations,
     stashScrollEnabled,
     stashScrollModifier,
     lastHookStartError,
