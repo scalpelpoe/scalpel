@@ -165,56 +165,6 @@ beforeEach(() => {
   setPriceCheckHandler(null)
 })
 
-describe('hasPoeOrOverlayFocus', () => {
-  let originalPlatform: PropertyDescriptor | undefined
-
-  beforeEach(() => {
-    originalPlatform = Object.getOwnPropertyDescriptor(process, 'platform')
-  })
-
-  afterEach(() => {
-    if (originalPlatform) Object.defineProperty(process, 'platform', originalPlatform)
-  })
-
-  it('rejects stale overlay target focus on Windows when the foreground title is not PoE', async () => {
-    Object.defineProperty(process, 'platform', { value: 'win32', configurable: true })
-    mock.state.targetHasFocus = true
-
-    await expect(hasPoeOrOverlayFocus()).resolves.toBe(false)
-  })
-
-  it('accepts overlay target focus on Linux when active-win cannot read the foreground title', async () => {
-    Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
-    mock.state.targetHasFocus = true
-    mock.state.focusedVersion = null
-
-    await expect(hasPoeOrOverlayFocus()).resolves.toBe(true)
-  })
-
-  it('still rejects on Linux when neither active-win nor the overlay target reports focus', async () => {
-    Object.defineProperty(process, 'platform', { value: 'linux', configurable: true })
-    mock.state.targetHasFocus = false
-    mock.state.focusedVersion = null
-    mock.state.scalpelFocused = false
-
-    await expect(hasPoeOrOverlayFocus()).resolves.toBe(false)
-  })
-
-  it('allows exact PoE foreground titles reported by the detector', async () => {
-    mock.state.focusedVersion = 1
-    await expect(hasPoeOrOverlayFocus()).resolves.toBe(true)
-
-    mock.state.focusedVersion = 2
-    await expect(hasPoeOrOverlayFocus()).resolves.toBe(true)
-  })
-
-  it('allows Scalpel-owned focused windows even when no PoE title is focused', async () => {
-    mock.state.scalpelFocused = true
-
-    await expect(hasPoeOrOverlayFocus()).resolves.toBe(true)
-  })
-})
-
 describe('contextual hotkey handlers', () => {
   it('does not run app macros or release keys from an unrelated foreground app', () => {
     const handler = vi.fn()
@@ -236,6 +186,17 @@ describe('contextual hotkey handlers', () => {
     mock.registered.get('F8')?.()
 
     expect(handler).toHaveBeenCalledWith('toggleRegexRemote', undefined, undefined)
+  })
+
+  it('runs app macros while a Scalpel gameplay window is focused', () => {
+    const handler = vi.fn()
+    mock.state.scalpelFocused = true
+    setAppMacroHandler(handler)
+    setAppMacros([{ action: 'closeOverlay', hotkey: 'F8' }])
+
+    mock.registered.get('F8')?.()
+
+    expect(handler).toHaveBeenCalledWith('closeOverlay', undefined, undefined)
   })
 
   it('runs secondary overlay hotkeys while a Scalpel gameplay window is focused', () => {

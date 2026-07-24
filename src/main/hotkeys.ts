@@ -91,20 +91,6 @@ function fireTrigger(): void {
   if (onTrigger) onTrigger()
 }
 
-/** True when the OS foreground context is exactly PoE/PoE2 or a Scalpel-owned
- *  window. This deliberately does not trust OverlayController.targetHasFocus:
- *  that flag can be stale or prefix-confused between "Path of Exile" and
- *  "Path of Exile 2", while active-win gives us the exact foreground title. */
-export async function hasPoeOrOverlayFocus(): Promise<boolean> {
-  if (isAnyScalpelBrowserWindowFocused()) return true
-  if ((await detectFocusedPoeVersion()) !== null) return true
-  // active-win can't read the foreground title under Wayland/XWayland; on Linux
-  // the attached window's focus flag is the only reliable signal. Kept off
-  // Windows, where active-win is reliable and targetHasFocus can be stale
-  // (issues #18/#21). Issue #493.
-  return process.platform === 'linux' && OverlayController.targetHasFocus
-}
-
 function firePriceCheck(): void {
   if (injecting || isTypingInOverlay() || !hotkeyContextIsActive()) return
   const now = Date.now()
@@ -217,7 +203,7 @@ function runSecondaryOverlay(handler: () => void, combo: KeyCombo | null): void 
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-/** Start the low-level keyboard hook (for Escape only) and register the trigger callback. */
+/** Start the low-level keyboard hook and register the trigger callback. */
 export function startHotkeyListener(handler: () => void): void {
   onTrigger = handler
 

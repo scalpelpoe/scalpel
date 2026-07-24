@@ -8,7 +8,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 // pieces itself in beforeEach.
 //
 // This file owns the Escape-delivery behavior (globalShortcut sync + uiohook
-// fallback). The async focus gate and the other contextual hotkey paths are
+// fallback). The shared focus gate and the other contextual hotkey paths are
 // covered in hotkeys-focus.test.ts, which uses a static-import harness that
 // cannot reset the module-level Escape dedupe stamp between tests.
 
