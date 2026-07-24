@@ -257,6 +257,10 @@ describe('contextual hotkey handlers', () => {
     mock.registered.get('Ctrl+D')?.()
     mock.registered.get('Ctrl+P')?.()
 
+    mock.state.targetHasFocus = true
+    mock.registered.get('Ctrl+D')?.()
+    mock.registered.get('Ctrl+P')?.()
+
     expect(mock.trigger).toHaveBeenCalledOnce()
     expect(price).toHaveBeenCalledOnce()
     expect(mock.uIOhook.keyToggle).toHaveBeenCalledWith(mock.keycodes.D, 'up')
