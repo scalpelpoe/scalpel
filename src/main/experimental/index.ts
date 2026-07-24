@@ -4,7 +4,6 @@ import type { GameVariant } from '@shared/contracts/game-variant'
 import { type GameSwitchCoordinator, type OverlayAttachStrategy } from './contracts'
 import { isExperimentalMultiWindowEnabled } from './feature-gates'
 import { stableGameSwitchCoordinator, stableOverlayStrategy } from './stable'
-import { ensureCorrectGameForHotkey, setGameSwitchRequest } from '../evaluation'
 import { performGameSwitch, switchGameContext } from './game-switch-coordinator'
 import {
   getEffectiveSettings,
@@ -32,17 +31,8 @@ const experimentalInProcessSwitch = async (store: Store<AppSettings>, target: Ga
   performGameSwitch(store, target)
 }
 
-/** Wire the in-process game switch into the injectable requestGameSwitch slot.
- *  Called eagerly at startup from getOverlayAttachStrategy so that the first
- *  hotkey switch already uses the in-process path rather than the stable
- *  restart-based requestGameSwitch. */
-function wireExperimentalHotkeySwitch(): void {
-  setGameSwitchRequest(experimentalInProcessSwitch)
-}
-
 function buildExperimentalCoordinator(): GameSwitchCoordinator {
   return {
-    ensureCorrectGameForHotkey,
     requestGameSwitch: experimentalInProcessSwitch,
     applyProfileSwitch: async (store, id, _restartIfNeeded, sender) => {
       const previous = getEffectiveSettings(store)
@@ -81,9 +71,6 @@ export function getGameSwitchCoordinator(store: Store<AppSettings>): GameSwitchC
 export function getOverlayAttachStrategy(store: Store<AppSettings>): OverlayAttachStrategy {
   if (!cachedOverlay) {
     if (resolveEnabled(store)) {
-      // Wire hotkey switch eagerly so the first hotkey switch before
-      // getGameSwitchCoordinator is called still uses the in-process path.
-      wireExperimentalHotkeySwitch()
       cachedOverlay = {
         createInitialOverlay: (version: GameVariant) =>
           createOverlayWindow(version, {

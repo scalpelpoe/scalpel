@@ -40,7 +40,6 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "active-win": "^9.0.0",
     "electron-overlay-window": "github:scalpelpoe/electron-overlay-window#db989812d62d6e988e915e25d772fc5c34aebdbb",
     "electron-store": "^8.2.0",
     "konva": "^9.3.22",

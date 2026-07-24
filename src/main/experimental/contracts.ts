@@ -3,7 +3,6 @@ import type Store from 'electron-store'
 import type { AppSettings, GameVariant, RuntimeSettings } from '@shared/types'
 
 export interface GameSwitchCoordinator {
-  ensureCorrectGameForHotkey(store: Store<AppSettings>): Promise<boolean>
   requestGameSwitch(store: Store<AppSettings>, target: GameVariant): Promise<void>
   applyProfileSwitch(
     store: Store<AppSettings>,

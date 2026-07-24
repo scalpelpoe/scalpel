@@ -130,9 +130,8 @@ export function register(store: Store<AppSettings>): void {
     }
   })
 
-  // Regex presets live in a per-version slot. The relaunch-on-game-switch flow
-  // (ensureCorrectGameForHotkey) means `poeVersion` is stable for the lifetime
-  // of this process, so it's safe to capture the active key once and reuse it.
+  // Regex presets live in a per-version slot. Resolve the active slot at each
+  // operation because multi-title attachment can switch games in-process.
   const regexPresetsKey = (): 'regexPresetsPoe1' | 'regexPresetsPoe2' =>
     store.get('poeVersion') === 2 ? 'regexPresetsPoe2' : 'regexPresetsPoe1'
 

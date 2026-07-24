@@ -3,12 +3,10 @@ import type { GameVariant } from '@shared/types'
 import type { GameSwitchCoordinator, OverlayAttachStrategy } from './contracts'
 import { createOverlayWindow, getOverlayAttachedVersion } from '../overlay'
 import { requestGameSwitch } from '../game-switch'
-import { ensureCorrectGameForHotkey } from '../evaluation'
 import { getEffectiveSettings, getProfileById, persistProfileSwitchForRestart } from '../profiles/profile-settings'
 import { applySetting } from '../settings-write'
 
 export const stableGameSwitchCoordinator: GameSwitchCoordinator = {
-  ensureCorrectGameForHotkey,
   requestGameSwitch,
   applyProfileSwitch: async (store, id, restartIfNeeded, sender) => {
     const profile = getProfileById(id)

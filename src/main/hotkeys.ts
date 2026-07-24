@@ -4,7 +4,6 @@ import { UiohookKey, uIOhook } from 'uiohook-napi'
 import { appMacroEffectiveScope, chatCommandEffectiveScope, type MacroScope, scopeAppliesTo } from '@shared/macro-scope'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 import { snapshotClipboard } from './clipboard-preserve'
-import { detectFocusedPoeVersion } from './game-detector'
 import { type KeyCombo, isElectronRegisterable, parseAccelerator } from './hotkey-accelerator'
 import {
   guardNativeListener,
@@ -84,16 +83,11 @@ function releaseHotkeyKey(combo: KeyCombo | null): void {
 }
 
 function fireTrigger(): void {
+  if (injecting || isTypingInOverlay() || !hotkeyContextIsActive()) return
   const now = Date.now()
   if (now - lastTriggerFireAt < DEDUPE_MS) return
   lastTriggerFireAt = now
-  if (injecting) return
   releaseHotkeyKey(triggerCombo)
-  // No focus gate here: onTrigger (createHotkeyHandler) runs ensureCorrectGameForHotkey,
-  // which is the single focus authority for this path -- it already does the active-win
-  // check plus an OverlayController.targetHasFocus fallback and the game-switch logic. A
-  // second gate here would only duplicate the active-win lookup and, lacking that
-  // fallback, could swallow a valid press on a foreground-change race. See evaluation.ts.
   if (onTrigger) onTrigger()
 }
 
@@ -112,13 +106,11 @@ export async function hasPoeOrOverlayFocus(): Promise<boolean> {
 }
 
 function firePriceCheck(): void {
+  if (injecting || isTypingInOverlay() || !hotkeyContextIsActive()) return
   const now = Date.now()
   if (now - lastPriceCheckFireAt < DEDUPE_MS) return
   lastPriceCheckFireAt = now
-  if (injecting) return
   releaseHotkeyKey(priceCheckCombo)
-  // No focus gate here: onPriceCheck (createPriceCheckHandler) runs ensureCorrectGameForHotkey,
-  // which is the single focus authority for this path (see fireTrigger above).
   if (onPriceCheck) onPriceCheck()
 }
 
@@ -126,19 +118,14 @@ function firePriceCheck(): void {
  *  registered by syncEscapeShortcut, and the uiohook fallback keydown branch
  *  below). Both can deliver for the same physical press - see DEDUPE_MS. */
 function fireEscape(): void {
+  if (injecting || isTypingInOverlay() || !hotkeyContextIsActive()) return
   const now = Date.now()
   if (now - lastEscapeFireAt < DEDUPE_MS) return
   lastEscapeFireAt = now
-  if (injecting) return
   // Secondary overlays (cheat sheets etc.) own Esc when visible - same
-  // precedence as the existing uiohook branch, and NOT gated on focus.
+  // precedence as the existing uiohook branch.
   if (hideFocusedOrAnyVisibleSecondaryOverlay()) return
-  if (!onEscape) return
-  void hasPoeOrOverlayFocus()
-    .then((ok) => {
-      if (ok && onEscape) onEscape()
-    })
-    .catch((err) => recordMainDiagnostic('hotkey-context:escape', err))
+  if (onEscape) onEscape()
 }
 
 /** Register/unregister the Escape globalShortcut so the OS consumes the key
@@ -206,18 +193,9 @@ function fireMatchingActionBindings(e: HookKeyEvent): void {
 // bindable keys) and the uiohook binding (international/OEM keys) so the guards
 // stay identical across both delivery paths.
 function runChatCommand(command: string, autoSubmit: boolean, combo: KeyCombo | null): void {
-  if (injecting || isTypingInOverlay()) return
-  // Defense-in-depth focus gate: even with the registration-time suspend check,
-  // races between focus events and key delivery could otherwise route a press to
-  // the wrong app's keystroke injection. Gate on PoE/overlay focus so unrelated
-  // apps see the raw key. Issues #18, #21.
-  void hasPoeOrOverlayFocus()
-    .then((ok) => {
-      if (!ok || injecting || isTypingInOverlay()) return
-      releaseHotkeyKey(combo)
-      sendChatCommand(command, autoSubmit)
-    })
-    .catch((e) => recordMainDiagnostic('hotkey-context:chat-command', e))
+  if (injecting || isTypingInOverlay() || !hotkeyContextIsActive()) return
+  releaseHotkeyKey(combo)
+  sendChatCommand(command, autoSubmit)
 }
 
 function runAppMacro(
@@ -226,25 +204,15 @@ function runAppMacro(
   presetId: string | undefined,
   combo: KeyCombo | null,
 ): void {
-  if (injecting || isTypingInOverlay() || !onAppMacro) return
-  void hasPoeOrOverlayFocus()
-    .then((ok) => {
-      if (!ok || injecting || isTypingInOverlay() || !onAppMacro) return
-      releaseHotkeyKey(combo)
-      onAppMacro(action, tag, presetId)
-    })
-    .catch((e) => recordMainDiagnostic('hotkey-context:app-macro', e))
+  if (injecting || isTypingInOverlay() || !onAppMacro || !hotkeyContextIsActive()) return
+  releaseHotkeyKey(combo)
+  onAppMacro(action, tag, presetId)
 }
 
 function runSecondaryOverlay(handler: () => void, combo: KeyCombo | null): void {
-  if (isTypingInOverlay()) return
-  void hasPoeOrOverlayFocus()
-    .then((ok) => {
-      if (!ok || isTypingInOverlay()) return
-      releaseHotkeyKey(combo)
-      handler()
-    })
-    .catch((e) => recordMainDiagnostic('hotkey-context:secondary-overlay', e))
+  if (isTypingInOverlay() || !hotkeyContextIsActive()) return
+  releaseHotkeyKey(combo)
+  handler()
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -285,10 +253,9 @@ export function startHotkeyListener(handler: () => void): void {
       if (e.keycode === UiohookKey.Escape) {
         fireEscape()
       }
-      // Trigger + price-check via uIOhook so the combo fires in BOTH PoE1 and PoE2,
-      // not just whichever game electron-overlay-window is attached to. The handlers
-      // themselves (ensureCorrectGameForHotkey) gate on the focused window's title,
-      // so presses in non-PoE apps are ignored downstream.
+      // Trigger + price-check also use uIOhook so bindings still work when
+      // globalShortcut cannot deliver. Their shared fire functions enforce the
+      // same foreground-context rule as the Electron callbacks.
       if (triggerCombo && matchesCombo(e, triggerCombo)) fireTrigger()
       if (priceCheckCombo && matchesCombo(e, priceCheckCombo)) firePriceCheck()
       // Chat commands / app macros / secondary overlays bound to international or
@@ -379,6 +346,13 @@ export function startHotkeyListener(handler: () => void): void {
 // set*() calls hijack the accelerator system-wide (e.g. F5 stops refreshing
 // browsers) even though we're nominally suspended. See issues #18, #21.
 let suspendDepth = 0
+
+/** Authorize gameplay hotkeys only while focus remains within the attached game
+ *  or one of Scalpel's gameplay overlays. Registration follows the same focus
+ *  lifecycle, and this dispatch-time check closes uIOhook and transition races. */
+function hotkeyContextIsActive(): boolean {
+  return suspendDepth === 0 && (OverlayController.targetHasFocus || isAnyScalpelBrowserWindowFocused())
+}
 
 /** Temporarily unregister all global shortcuts (recorder, input typing, etc.). */
 export function suspendHotkeys(): void {

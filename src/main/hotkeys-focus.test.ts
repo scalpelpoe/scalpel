@@ -1,20 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-// Covers the async foreground-focus gate (hasPoeOrOverlayFocus) and the
-// contextual hotkey paths that consult it: chat commands, app macros,
-// secondary overlays, and the ungated trigger/price-check delegation.
+// Covers the shared synchronous foreground-context gate and every hotkey
+// category that consults it.
 // Escape delivery (globalShortcut sync + uiohook fallback + dedupe) lives in
 // hotkeys.test.ts, whose resetModules-per-test harness can reset the
 // module-level dedupe stamp; this file's static-import harness cannot.
 
 const mock = vi.hoisted(() => {
   const state = {
-    focusedVersion: null as 1 | 2 | null,
     scalpelFocused: false,
     typingInOverlay: false,
     targetHasFocus: false,
   }
   const registered = new Map<string, () => void>()
+  const listeners: Record<string, Array<(event: never) => void>> = {}
   const keycodes: Record<string, number> = {}
   for (const [index, letter] of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').entries()) keycodes[letter] = 65 + index
   Object.assign(keycodes, {
@@ -59,17 +58,26 @@ const mock = vi.hoisted(() => {
     '9': 57,
   })
   const uIOhook = {
-    on: vi.fn(),
+    on: vi.fn((event: string, handler: (event: never) => void) => {
+      ;(listeners[event] ??= []).push(handler)
+    }),
     start: vi.fn(),
     stop: vi.fn(),
     keyToggle: vi.fn(),
     keyTap: vi.fn(),
   }
-  return { state, registered, keycodes, uIOhook }
+  const trigger = vi.fn()
+  return { state, registered, listeners, keycodes, uIOhook, trigger }
 })
 
 vi.mock('electron', () => ({
-  clipboard: { writeText: vi.fn() },
+  clipboard: {
+    readText: vi.fn(() => ''),
+    readHTML: vi.fn(() => ''),
+    writeText: vi.fn(),
+    write: vi.fn(),
+    clear: vi.fn(),
+  },
   globalShortcut: {
     register: vi.fn((accelerator: string, cb: () => void) => {
       mock.registered.set(accelerator, cb)
@@ -107,10 +115,6 @@ vi.mock('./diagnostics', () => ({
   registerDiagnosticProvider: vi.fn(),
 }))
 
-vi.mock('./game-detector', () => ({
-  detectFocusedPoeVersion: vi.fn(async () => mock.state.focusedVersion),
-}))
-
 vi.mock('./game-state', () => ({
   getPoeVersion: vi.fn(() => 1),
 }))
@@ -127,7 +131,7 @@ vi.mock('./windowing', () => ({
 }))
 
 import {
-  hasPoeOrOverlayFocus,
+  resumeHotkeys,
   setAppMacroHandler,
   setAppMacros,
   setChatCommands,
@@ -136,16 +140,20 @@ import {
   setPriceCheckHotkey,
   setSecondaryOverlayHotkeys,
   startHotkeyListener,
+  suspendHotkeys,
 } from './hotkeys'
 
-async function flushHotkey(): Promise<void> {
-  await Promise.resolve()
-  await Promise.resolve()
-  await Promise.resolve()
+function emitKeydown(event: { keycode: number; ctrlKey: boolean; shiftKey: boolean; altKey: boolean }): void {
+  for (const handler of mock.listeners.keydown ?? []) handler(event as never)
 }
 
+startHotkeyListener(() => mock.trigger())
+
+afterEach(() => {
+  vi.useRealTimers()
+})
+
 beforeEach(() => {
-  mock.state.focusedVersion = null
   mock.state.scalpelFocused = false
   mock.state.typingInOverlay = false
   mock.state.targetHasFocus = false
@@ -208,77 +216,139 @@ describe('hasPoeOrOverlayFocus', () => {
 })
 
 describe('contextual hotkey handlers', () => {
-  it('does not run app macros or release keys from an unrelated foreground app', async () => {
+  it('does not run app macros or release keys from an unrelated foreground app', () => {
     const handler = vi.fn()
     setAppMacroHandler(handler)
     setAppMacros([{ action: 'tag-item', hotkey: 'Ctrl+M', tag: 'map', presetId: 'preset-1' }])
 
     mock.registered.get('Ctrl+M')?.()
-    await flushHotkey()
 
     expect(handler).not.toHaveBeenCalled()
     expect(mock.uIOhook.keyToggle).not.toHaveBeenCalled()
   })
 
-  it('runs app macros when an exact PoE title is focused', async () => {
+  it('runs F-key app macros while PoE is focused', () => {
     const handler = vi.fn()
-    mock.state.focusedVersion = 2
+    mock.state.targetHasFocus = true
     setAppMacroHandler(handler)
-    setAppMacros([{ action: 'tag-item', hotkey: 'Ctrl+M', tag: 'map', presetId: 'preset-1' }])
+    setAppMacros([{ action: 'toggleRegexRemote', hotkey: 'F8' }])
 
-    mock.registered.get('Ctrl+M')?.()
-    await vi.waitFor(() => expect(handler).toHaveBeenCalledWith('tag-item', 'map', 'preset-1'))
+    mock.registered.get('F8')?.()
+
+    expect(handler).toHaveBeenCalledWith('toggleRegexRemote', undefined, undefined)
   })
 
-  it('runs secondary overlay hotkeys while a Scalpel window is focused', async () => {
+  it('runs secondary overlay hotkeys while a Scalpel gameplay window is focused', () => {
     const handler = vi.fn()
     mock.state.scalpelFocused = true
     setSecondaryOverlayHotkeys([{ accelerator: 'Ctrl+H', handler }])
 
     mock.registered.get('Ctrl+H')?.()
-    await vi.waitFor(() => expect(handler).toHaveBeenCalledOnce())
+    expect(handler).toHaveBeenCalledOnce()
   })
 
-  it('does not run secondary overlay hotkeys from an unrelated foreground app', async () => {
+  it('does not run secondary overlay hotkeys from an unrelated foreground app', () => {
     const handler = vi.fn()
     setSecondaryOverlayHotkeys([{ accelerator: 'Ctrl+H', handler }])
 
     mock.registered.get('Ctrl+H')?.()
-    await flushHotkey()
 
     expect(handler).not.toHaveBeenCalled()
     expect(mock.uIOhook.keyToggle).not.toHaveBeenCalled()
   })
 
-  it('does not inject chat commands from an unrelated foreground app', async () => {
+  it('does not inject chat commands from an unrelated foreground app', () => {
     setChatCommands([{ hotkey: 'Ctrl+L', command: '/hideout' }])
 
     mock.registered.get('Ctrl+L')?.()
-    await flushHotkey()
 
     expect(mock.uIOhook.keyToggle).not.toHaveBeenCalled()
     expect(mock.uIOhook.keyTap).not.toHaveBeenCalled()
   })
 
-  it('releases trigger and price-check keys and delegates to their handlers', async () => {
-    // fireTrigger/firePriceCheck deliberately do NOT gate on focus here: their
-    // handlers (createHotkeyHandler/createPriceCheckHandler) run
-    // ensureCorrectGameForHotkey, which is the single focus authority for these
-    // two paths. So at this layer we only assert key-release + delegation.
-    const trigger = vi.fn()
+  it('runs chat commands while PoE is focused without requiring overlay visibility', async () => {
+    vi.useFakeTimers()
+    mock.state.targetHasFocus = true
+    setChatCommands([{ hotkey: 'F5', command: '/hideout' }])
+
+    mock.registered.get('F5')?.()
+
+    expect(mock.uIOhook.keyTap).toHaveBeenCalledWith(mock.keycodes.Enter)
+    vi.advanceTimersByTime(51)
+    await Promise.resolve()
+    vi.useRealTimers()
+  })
+
+  it('gates trigger and price-check handlers and key release on foreground context', () => {
     const price = vi.fn()
-    startHotkeyListener(trigger)
     setHotkey('Ctrl+D')
     setPriceCheckHandler(price)
     setPriceCheckHotkey('Ctrl+P')
 
     mock.registered.get('Ctrl+D')?.()
     mock.registered.get('Ctrl+P')?.()
-    await flushHotkey()
 
-    expect(trigger).toHaveBeenCalledOnce()
+    expect(mock.trigger).not.toHaveBeenCalled()
+    expect(price).not.toHaveBeenCalled()
+    expect(mock.uIOhook.keyToggle).not.toHaveBeenCalled()
+
+    mock.state.targetHasFocus = true
+    mock.registered.get('Ctrl+D')?.()
+    mock.registered.get('Ctrl+P')?.()
+
+    expect(mock.trigger).toHaveBeenCalledOnce()
     expect(price).toHaveBeenCalledOnce()
     expect(mock.uIOhook.keyToggle).toHaveBeenCalledWith(mock.keycodes.D, 'up')
     expect(mock.uIOhook.keyToggle).toHaveBeenCalledWith(mock.keycodes.P, 'up')
+  })
+
+  it('rejects trigger and price-check delivery while typing in an overlay', () => {
+    const price = vi.fn()
+    mock.state.targetHasFocus = true
+    mock.state.typingInOverlay = true
+    setHotkey('Ctrl+D')
+    setPriceCheckHandler(price)
+    setPriceCheckHotkey('Ctrl+P')
+
+    mock.registered.get('Ctrl+D')?.()
+    mock.registered.get('Ctrl+P')?.()
+
+    expect(mock.trigger).not.toHaveBeenCalled()
+    expect(price).not.toHaveBeenCalled()
+    expect(mock.uIOhook.keyToggle).not.toHaveBeenCalled()
+  })
+
+  it('applies the same focus rule to uIOhook trigger and price-check delivery', () => {
+    vi.useFakeTimers()
+    const price = vi.fn()
+    setHotkey('Ctrl+D')
+    setPriceCheckHandler(price)
+    setPriceCheckHotkey('Ctrl+P')
+
+    const triggerEvent = { keycode: mock.keycodes.D, ctrlKey: true, shiftKey: false, altKey: false }
+    const priceEvent = { keycode: mock.keycodes.P, ctrlKey: true, shiftKey: false, altKey: false }
+    emitKeydown(triggerEvent)
+    emitKeydown(priceEvent)
+    expect(mock.trigger).not.toHaveBeenCalled()
+    expect(price).not.toHaveBeenCalled()
+
+    mock.state.targetHasFocus = true
+    vi.advanceTimersByTime(101)
+    emitKeydown(triggerEvent)
+    emitKeydown(priceEvent)
+    expect(mock.trigger).toHaveBeenCalledOnce()
+    expect(price).toHaveBeenCalledOnce()
+    vi.useRealTimers()
+  })
+
+  it('suspends uIOhook delivery even when PoE remains focused', () => {
+    mock.state.targetHasFocus = true
+    setHotkey('Ctrl+D')
+    suspendHotkeys()
+
+    emitKeydown({ keycode: mock.keycodes.D, ctrlKey: true, shiftKey: false, altKey: false })
+    expect(mock.trigger).not.toHaveBeenCalled()
+
+    resumeHotkeys()
   })
 })

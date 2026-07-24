@@ -15,11 +15,9 @@ import {
   findStrandBreakpoints,
 } from './filter/matcher'
 import { getCurrentFilter } from './filter-state'
-import { detectFocusedPoeVersion, detectOpenPoeVersions } from './game-detector'
 import { getPoeVersion } from './game-state'
-import { requestGameSwitch as stableRequestGameSwitch } from './game-switch'
 import { sendCtrlCToPoE } from './hotkeys'
-import { focusGameWindow, getOverlayAttachedVersion, getOverlayWindow, isTypingInOverlay, showOverlay } from './overlay'
+import { focusGameWindow, getOverlayWindow, showOverlay } from './overlay'
 import { readItemFromClipboard } from './trade/clipboard'
 import {
   getUniquesByBase,
@@ -31,16 +29,6 @@ import {
 } from './trade/prices'
 import { ensureStatsLoaded, matchItemMods } from './trade/trade'
 import { beginSession, decisionsForSession } from './learning'
-
-// ---- Injectable game-switch request ----------------------------------------
-// Defaults to the stable (restart-based) path. The experimental coordinator
-// overrides this at init time so hotkeys route through the in-process switch
-// without evaluation.ts importing from experimental/ (which would cycle).
-let requestGameSwitch: typeof stableRequestGameSwitch = stableRequestGameSwitch
-
-export function setGameSwitchRequest(fn: typeof stableRequestGameSwitch): void {
-  requestGameSwitch = fn
-}
 
 // ---- Tier group builder ----------------------------------------------------
 
@@ -350,6 +338,9 @@ let consecutiveClipboardFailures = 0
 async function captureItemFromClipboard(isElevated: () => boolean): Promise<PoeItem | null> {
   const restoreClip = snapshotClipboard()
 
+  // Hotkeys are also valid while a gameplay overlay owns focus. Hand input
+  // back to PoE before copying so that path is as immediate as game focus.
+  if (!OverlayController.targetHasFocus) focusGameWindow()
   clipboard.clear()
   await sendCtrlCToPoE()
 
@@ -390,60 +381,6 @@ async function captureItemFromClipboard(isElevated: () => boolean): Promise<PoeI
   return item
 }
 
-/** Before the hotkey handler does any work, confirm the overlay is attached to the
- *  PoE version that actually has foreground focus. If the other PoE is focused,
- *  show the restart-prompt modal -- electron-overlay-window can only attach once
- *  per process (its native tracker keeps static globals), so switching games
- *  requires an app relaunch.
- *
- *  Detect the focused PoE version *before* the targetHasFocus fast path because
- *  attachByTitle('Path of Exile') may prefix-match 'Path of Exile 2' on Windows,
- *  making targetHasFocus true even when the overlay is attached to the wrong game.
- *  Always returns false when a switch is needed: the current press is swallowed,
- *  and the user reopens the overlay from the correct game after restart. */
-export async function ensureCorrectGameForHotkey(store: Store<AppSettings>): Promise<boolean> {
-  // User typing in an overlay text field -- swallow so single-key hotkeys
-  // don't stomp the input. Otherwise if the overlay window itself is focused
-  // (user clicked into it), refocus PoE so the subsequent Ctrl+C reaches the
-  // game window.
-  if (isTypingInOverlay()) return false
-  if (getOverlayWindow()?.isFocused()) {
-    focusGameWindow()
-    return true
-  }
-
-  const v = await detectFocusedPoeVersion()
-  if (v) {
-    // Relaunch when the focused game differs from the in-memory version OR from
-    // the version the overlay actually attached to at startup. The attach check
-    // is a backstop for onboarding exits that bypass finish-onboarding (e.g. the
-    // titlebar X): in-memory may already be PoE2 (so the version check passes)
-    // while the overlay is still bound to PoE1, so results never surface until a
-    // relaunch rebinds the native tracker.
-    if (v === getPoeVersion() && v === getOverlayAttachedVersion()) return true
-    requestGameSwitch(store, v).catch((err) => console.error('[game-switch]', err))
-    return false
-  }
-
-  // No PoE window has foreground focus. If the overlay target has focus, the
-  // game we're attached to is in the foreground, so we can proceed.
-  if (OverlayController.targetHasFocus) return true
-
-  // No PoE window has focus at all. Check if exactly one PoE variant has windows
-  // open anywhere on the desktop. If yes and it differs from the current profile,
-  // that's a strong signal the user is on the wrong game version.
-  const runningVersions = await detectOpenPoeVersions()
-  if (runningVersions.size === 1) {
-    const [runningVersion] = [...runningVersions]
-    if (runningVersion !== getPoeVersion()) {
-      requestGameSwitch(store, runningVersion).catch((err) => console.error('[game-switch]', err))
-      return false
-    }
-  }
-
-  return false
-}
-
 /**
  * Core copy-and-evaluate flow shared by the main hotkey and the plugin IPC handler.
  * Captures an item from the clipboard, dispatches it to the filter/price-check pipeline,
@@ -474,7 +411,6 @@ export function createHotkeyHandler(store: Store<AppSettings>, isElevated: () =>
     hotkeyProcessing = true
 
     try {
-      if (!(await ensureCorrectGameForHotkey(store))) return
       lastCursorX = screen.getCursorScreenPoint().x
 
       // Flag the next overlay-data as "came from the filter hotkey" so the renderer
@@ -505,7 +441,6 @@ export function createPriceCheckHandler(store: Store<AppSettings>, isElevated: (
     hotkeyProcessing = true
 
     try {
-      if (!(await ensureCorrectGameForHotkey(store))) return
       lastCursorX = screen.getCursorScreenPoint().x
 
       const item = await captureItemFromClipboard(isElevated)
