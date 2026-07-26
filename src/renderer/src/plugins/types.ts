@@ -46,6 +46,14 @@ export type PluginContextFactoryDeps = {
   captureGameWindow: (
     region?: import('../../../plugin-sdk/src/types').GameRect,
   ) => Promise<import('../../../plugin-sdk/src/types').GameCapture | null>
+  captureGameWindowStreamFrame: (
+    pluginId: string,
+    region?: import('../../../plugin-sdk/src/types').GameRect,
+  ) => Promise<import('../../../plugin-sdk/src/types').GameCaptureStreamFrame>
+  resetGameWindowCaptureStream: (
+    pluginId: string,
+  ) => Promise<import('../../../plugin-sdk/src/types').GameCaptureStreamStatus>
+  releaseGameWindowCaptureStream: (pluginId: string) => Promise<void>
   registerOverlay: (pluginId: string, opts: import('../../../plugin-sdk/src/types').RegisterOverlayOptions) => void
   openOverlay: (pluginId: string) => void
   closeOverlay: (pluginId: string) => void

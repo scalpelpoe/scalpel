@@ -81,6 +81,7 @@ const EXPECTED_SDK_EXPORTS = [
 // types.test.ts; this catches implementation drift away from that type).
 const EXPECTED_CONTEXT_KEYS = [
   'captureGameWindow',
+  'captureGameWindowStreamFrame',
   'closeOverlay',
   'copyAndEvaluateItem',
   'fetch',
@@ -105,6 +106,8 @@ const EXPECTED_CONTEXT_KEYS = [
   'registerHotkey',
   'registerOverlay',
   'registerTab',
+  'releaseGameWindowCaptureStream',
+  'resetGameWindowCaptureStream',
   'setInteractiveRegion',
   'storage',
 ].sort()
@@ -146,6 +149,30 @@ function stubDeps(): PluginContextFactoryDeps {
     openTab: () => {},
     copyAndEvaluateItem: async () => null,
     captureGameWindow: async () => null,
+    captureGameWindowStreamFrame: async () => ({
+      capture: null,
+      status: {
+        backend: 'isolated-session-stream',
+        state: 'idle',
+        ready: false,
+        sessionGeneration: 0,
+        recoveryCount: 0,
+        openFailures: 0,
+        sourceResolveMisses: 0,
+        automaticRetrySuppressed: false,
+      },
+    }),
+    resetGameWindowCaptureStream: async () => ({
+      backend: 'isolated-session-stream',
+      state: 'idle',
+      ready: false,
+      sessionGeneration: 0,
+      recoveryCount: 0,
+      openFailures: 0,
+      sourceResolveMisses: 0,
+      automaticRetrySuppressed: false,
+    }),
+    releaseGameWindowCaptureStream: async () => {},
     registerOverlay: () => {},
     openOverlay: () => {},
     closeOverlay: () => {},

@@ -1,5 +1,12 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC_CHANNELS } from '@shared/contracts/ipc'
+import {
+  CAPTURE_BROKER_COMMAND_EVENT,
+  CAPTURE_BROKER_READY_EVENT,
+  CAPTURE_BROKER_RESPONSE_EVENT,
+  type CaptureBrokerCommand,
+  type CaptureBrokerResponse,
+} from '@shared/game-capture-stream-protocol'
 import type { BugReportResult, RendererDiagnosticPayload } from '@shared/diagnostics'
 import type { ExternalLinkTarget } from '@shared/external-link'
 import type {
@@ -968,6 +975,25 @@ export const api = {
     region?: import('../plugin-sdk/src/types').GameRect,
   ): Promise<import('../plugin-sdk/src/types').GameCapture | null> =>
     ipcRenderer.invoke('plugins:capture-game-window', region),
+  pluginCaptureGameWindowStreamFrame: (
+    pluginId: string,
+    region?: import('../plugin-sdk/src/types').GameRect,
+  ): Promise<import('../plugin-sdk/src/types').GameCaptureStreamFrame> =>
+    ipcRenderer.invoke('plugins:capture-game-window-stream-frame', pluginId, region),
+  pluginResetGameWindowCaptureStream: (
+    pluginId: string,
+  ): Promise<import('../plugin-sdk/src/types').GameCaptureStreamStatus> =>
+    ipcRenderer.invoke('plugins:reset-game-window-capture-stream', pluginId),
+  pluginReleaseGameWindowCaptureStream: (pluginId: string): Promise<void> =>
+    ipcRenderer.invoke('plugins:release-game-window-capture-stream', pluginId),
+  onCaptureBrokerCommand: (cb: (command: CaptureBrokerCommand) => void): (() => void) => {
+    const handler = (_event: Electron.IpcRendererEvent, command: CaptureBrokerCommand): void => cb(command)
+    ipcRenderer.on(CAPTURE_BROKER_COMMAND_EVENT, handler)
+    return () => ipcRenderer.removeListener(CAPTURE_BROKER_COMMAND_EVENT, handler)
+  },
+  captureBrokerReady: (): void => ipcRenderer.send(CAPTURE_BROKER_READY_EVENT),
+  captureBrokerRespond: (response: CaptureBrokerResponse): void =>
+    ipcRenderer.send(CAPTURE_BROKER_RESPONSE_EVENT, response),
 }
 
 contextBridge.exposeInMainWorld('api', api)

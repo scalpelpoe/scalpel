@@ -71,6 +71,9 @@ export function createPluginContext(deps: PluginContextFactoryDeps): ScalpelPlug
     openTab: () => deps.openTab(deps.pluginId),
     copyAndEvaluateItem: () => deps.copyAndEvaluateItem(),
     captureGameWindow: (region) => deps.captureGameWindow(region),
+    captureGameWindowStreamFrame: (region) => deps.captureGameWindowStreamFrame(deps.pluginId, region),
+    resetGameWindowCaptureStream: () => deps.resetGameWindowCaptureStream(deps.pluginId),
+    releaseGameWindowCaptureStream: () => deps.releaseGameWindowCaptureStream(deps.pluginId),
     log: (...args: unknown[]) => {
       if (DEBUG()) {
         // biome-ignore lint/suspicious/noConsole: gated behind DEBUG() debug logging

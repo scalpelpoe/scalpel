@@ -174,6 +174,10 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
         openOverlay: (pluginId) => void window.api.pluginOpenOverlay(pluginId),
         closeOverlay: (pluginId) => void window.api.pluginCloseOverlay(pluginId),
         captureGameWindow: (region) => window.api.pluginCaptureGameWindow(region),
+        captureGameWindowStreamFrame: (pluginId, region) =>
+          window.api.pluginCaptureGameWindowStreamFrame(pluginId, region),
+        resetGameWindowCaptureStream: (pluginId) => window.api.pluginResetGameWindowCaptureStream(pluginId),
+        releaseGameWindowCaptureStream: (pluginId) => window.api.pluginReleaseGameWindowCaptureStream(pluginId),
       })
       pluginDisposersRef.current.set(m.id, disposers)
       // PluginActivate may be async and may return a teardown fn (host runtime
@@ -227,6 +231,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     pendingOverlayRef.current.delete(pluginId)
     void window.api.pluginUnregisterHotkey(pluginId)
     void window.api.pluginUnregisterTab(pluginId)
+    void window.api.pluginReleaseGameWindowCaptureStream?.(pluginId)
   }, [])
 
   useEffect(() => {

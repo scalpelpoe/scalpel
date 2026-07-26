@@ -37,6 +37,7 @@ export default defineConfig({
           pinnedZone: resolve(__dirname, 'src/renderer/pinned-zone.html'),
           pluginOverlay: resolve(__dirname, 'src/renderer/plugin-overlay.html'),
           pluginAnnotationOverlay: resolve(__dirname, 'src/renderer/plugin-annotation-overlay.html'),
+          captureBroker: resolve(__dirname, 'src/renderer/capture-broker.html'),
         },
       },
     },

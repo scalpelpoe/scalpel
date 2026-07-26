@@ -1,7 +1,11 @@
-import { ipcMain } from 'electron'
-import type { GameCapture, GameRect } from '../../plugin-sdk/src/types'
+import { app, ipcMain } from 'electron'
+import type { GameCapture, GameCaptureStreamFrame, GameCaptureStreamStatus, GameRect } from '../../plugin-sdk/src/types'
 import { captureGameWindow, type CaptureFrame } from '../screen-capture/capture'
 import { bgraToRgba, cropFrame } from '../screen-capture/pixels'
+import { GameCaptureStreamBroker } from '../screen-capture/stream-broker'
+
+const streamBroker = new GameCaptureStreamBroker()
+let quitHookRegistered = false
 
 /** Map a BGRA CaptureFrame to the plugin-facing RGBA GameCapture, optionally
  *  cropping to `region` (game CSS px). Pure; the IPC handler is glue around it. */
@@ -42,4 +46,24 @@ export function registerPluginCaptureHandlers(): void {
       return frameToCapture(frame, region)
     },
   )
+  ipcMain.handle(
+    'plugins:capture-game-window-stream-frame',
+    async (evt, pluginId: string, region: GameRect | undefined): Promise<GameCaptureStreamFrame> =>
+      streamBroker.capture(`${pluginId}:${evt.sender.id}`, region),
+  )
+  ipcMain.handle(
+    'plugins:reset-game-window-capture-stream',
+    async (evt, pluginId: string): Promise<GameCaptureStreamStatus> =>
+      streamBroker.reset(`${pluginId}:${evt.sender.id}`),
+  )
+  ipcMain.handle(
+    'plugins:release-game-window-capture-stream',
+    async (evt, pluginId: string): Promise<void> => streamBroker.release(`${pluginId}:${evt.sender.id}`),
+  )
+  if (!quitHookRegistered) {
+    quitHookRegistered = true
+    app.on('will-quit', () => {
+      void streamBroker.dispose()
+    })
+  }
 }

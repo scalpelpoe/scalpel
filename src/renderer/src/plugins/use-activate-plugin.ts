@@ -81,6 +81,9 @@ export function useActivatePlugin(pluginId: string): ActivatedPlugin {
         openTab: () => {},
         copyAndEvaluateItem: () => window.api.pluginTriggerMainHotkey(),
         captureGameWindow: (region) => window.api.pluginCaptureGameWindow(region),
+        captureGameWindowStreamFrame: (region) => window.api.pluginCaptureGameWindowStreamFrame(pluginId, region),
+        resetGameWindowCaptureStream: () => window.api.pluginResetGameWindowCaptureStream(pluginId),
+        releaseGameWindowCaptureStream: () => window.api.pluginReleaseGameWindowCaptureStream(pluginId),
         fetch: window.fetch.bind(window),
         storage: {
           get: <T = unknown>(key: string): Promise<T | null> =>

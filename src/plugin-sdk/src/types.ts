@@ -120,6 +120,59 @@ export interface GameCapture {
   scale: number
 }
 
+export type GameCaptureStreamState = 'idle' | 'starting' | 'ready' | 'recovering' | 'suspended' | 'cooldown' | 'blocked'
+
+export type GameCaptureStreamFailureKind =
+  | 'source-unresolved'
+  | 'stream-start-failed'
+  | 'video-frame-failed'
+  | 'frame-read-failed'
+  | 'session-crashed'
+
+export type GameCaptureStreamFailureStage =
+  | 'resolve-source'
+  | 'get-display-media'
+  | 'first-video-frame'
+  | 'read-frame'
+  | 'capture-session'
+
+export interface GameCaptureStreamFailure {
+  kind: GameCaptureStreamFailureKind
+  stage: GameCaptureStreamFailureStage
+  message: string
+  name?: string
+}
+
+/**
+ * Current state of Scalpel's host-owned persistent game-window stream.
+ *
+ * The stream runs in a dedicated, in-memory Electron session rather than the
+ * plugin's renderer session. On a heavy media failure Scalpel destroys that
+ * session and performs one bounded recovery in a fresh partition. A second
+ * heavy failure opens the circuit breaker until the plugin explicitly resets
+ * the stream.
+ */
+export interface GameCaptureStreamStatus {
+  backend: 'isolated-session-stream'
+  state: GameCaptureStreamState
+  ready: boolean
+  sessionGeneration: number
+  recoveryCount: number
+  openFailures: number
+  sourceResolveMisses: number
+  automaticRetrySuppressed: boolean
+  sourceId?: string
+  frameSize?: { width: number; height: number }
+  gameSize?: { width: number; height: number }
+  nextRetryAt?: number
+  lastFailure?: GameCaptureStreamFailure
+}
+
+export interface GameCaptureStreamFrame {
+  capture: GameCapture | null
+  status: GameCaptureStreamStatus
+}
+
 export interface PricesApi {
   /**
    * Read the current poe.ninja price snapshot for the detected game + league.
@@ -233,6 +286,31 @@ export interface ScalpelPluginContext {
    * your registered hotkey while the target menu is open).
    */
   captureGameWindow(region?: GameRect): Promise<GameCapture | null>
+
+  /**
+   * Read the latest frame from Scalpel's host-owned persistent game-window
+   * stream. Unlike captureGameWindow(), this does not create a full-display
+   * desktopCapturer thumbnail for every call. The stream is independent of the
+   * plugin UI renderer and is automatically recovered once in a fresh,
+   * isolated Electron session after a heavy media failure.
+   *
+   * The returned status is authoritative even when capture is null. Plugins
+   * should respect cooldown/blocked states rather than creating their own
+   * retry loop or silently falling back to repeated one-shot capture.
+   */
+  captureGameWindowStreamFrame(region?: GameRect): Promise<GameCaptureStreamFrame>
+
+  /**
+   * Clear the host stream circuit breaker and start the next request from a
+   * fresh isolated session. Intended for an explicit user retry, not polling.
+   */
+  resetGameWindowCaptureStream(): Promise<GameCaptureStreamStatus>
+
+  /**
+   * Release this plugin's stream lease. The host stops capture when no plugin
+   * still holds a live lease; a later frame request starts it again.
+   */
+  releaseGameWindowCaptureStream(): Promise<void>
 
   /**
    * Switch the overlay to this plugin's tab. No-op if the tab isn't
