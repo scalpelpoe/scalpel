@@ -299,6 +299,15 @@ export interface CreateOverlayOptions {
   onAttachedGameVariant?: (variant: 1 | 2) => void
 }
 
+/** The multi-title strategy requires the compatible JS wrapper and native fork.
+ *  Packaging validates the native side; this runtime check gives startup a
+ *  synchronous, diagnosable failure instead of calling a mismatched ABI. */
+export function supportsMultiTitleOverlay(): boolean {
+  return (
+    typeof OverlayController.attachByTitles === 'function' && typeof OverlayController.setTargetTitles === 'function'
+  )
+}
+
 export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayOptions): BrowserWindow {
   setPoeVersion(version)
   overlayAttachedVersion = version

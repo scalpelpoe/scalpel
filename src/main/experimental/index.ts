@@ -13,7 +13,7 @@ import {
   hydrateActiveProfileSettings,
 } from '../profiles/profile-settings'
 import { applyProfileHydrationSideEffects, broadcastSettingUpdates } from '../settings-write'
-import { createOverlayWindow, getOverlayAttachedVersion, retargetForGame } from '../overlay'
+import { createOverlayWindow, getOverlayAttachedVersion, retargetForGame, supportsMultiTitleOverlay } from '../overlay'
 
 /** Resolved once on first access from the store's updateChannel at that point.
  *  Changing updateChannel mid-session has no effect - the multi-window
@@ -81,6 +81,11 @@ export function getGameSwitchCoordinator(store: Store<AppSettings>): GameSwitchC
 export function getOverlayAttachStrategy(store: Store<AppSettings>): OverlayAttachStrategy {
   if (!cachedOverlay) {
     if (resolveEnabled(store)) {
+      if (!supportsMultiTitleOverlay()) {
+        throw new Error(
+          'Invalid electron-overlay-window runtime: the required attachByTitles/setTargetTitles API is missing.',
+        )
+      }
       // Wire hotkey switch eagerly so the first hotkey switch before
       // getGameSwitchCoordinator is called still uses the in-process path.
       wireExperimentalHotkeySwitch()

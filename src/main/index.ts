@@ -277,16 +277,30 @@ if (!gotLock) {
 const installDir = IS_E2E ? process.cwd() : applyPendingUpdate()
 
 app.whenReady().then(() => {
-  if (!IS_E2E)
-    getOverlayAttachStrategy(store).createInitialOverlay((store.get(PROFILE_VERSION_KEY) as GameVariant) ?? 1)
-  setMainOverlayGetter(getOverlayWindow)
-  if (!IS_E2E) setOnLeaveScalpel(() => suspendHotkeys())
   createAppWindow(store)
-  if (!IS_E2E) createTray({ store, showAppWindow })
+  if (!IS_E2E) {
+    try {
+      createTray({ store, showAppWindow })
+    } catch (err) {
+      recordMainDiagnostic('tray-startup', err)
+      showAppWindow()
+    }
+  }
 
   registerScalpelInternalProtocol()
   registerScalpelPluginProtocol()
   registerCheatSheetProtocol()
+
+  setMainOverlayGetter(getOverlayWindow)
+  if (!IS_E2E) {
+    setOnLeaveScalpel(() => suspendHotkeys())
+    try {
+      getOverlayAttachStrategy(store).createInitialOverlay((store.get(PROFILE_VERSION_KEY) as GameVariant) ?? 1)
+    } catch (err) {
+      recordMainDiagnostic('overlay-startup', err)
+      showAppWindow()
+    }
+  }
 
   onFilterLoaded(() => {
     getOverlayWindow()?.webContents.send('filter-changed')
