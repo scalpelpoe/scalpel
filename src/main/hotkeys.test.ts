@@ -403,8 +403,8 @@ describe('scoped hotkey refresh', () => {
 
     setPoeVersion(1)
     hotkeys.refreshScopedHotkeys('test-switch')
+    overlayControllerState.targetHasFocus = true
     activeGlobalShortcuts.get('Ctrl+X')?.()
-    await flushEscapeGate()
 
     expect(handler).toHaveBeenCalledWith('openDust', undefined, undefined)
     const { registerDiagnosticProvider } = await import('./diagnostics')
@@ -444,19 +444,25 @@ describe('scoped hotkey refresh', () => {
     })
   })
 
-  it('rejects a stale scoped callback after the game changes', async () => {
+  it('rejects stale scoped chat and app callbacks after the game changes', async () => {
     const handler = vi.fn()
     const hotkeys = await loadHotkeys(() => {})
     const { setPoeVersion } = await import('./game-state')
+    const { uIOhook } = await import('uiohook-napi')
     setPoeVersion(1)
     hotkeys.setAppMacroHandler(handler)
+    hotkeys.setChatCommands([{ hotkey: 'Ctrl+M', command: '/menagerie' }])
     hotkeys.setAppMacros([{ hotkey: 'Ctrl+D', action: 'openDust' }])
-    const staleCallback = activeGlobalShortcuts.get('Ctrl+D')
+    const staleChatCallback = activeGlobalShortcuts.get('Ctrl+M')
+    const staleAppCallback = activeGlobalShortcuts.get('Ctrl+D')
 
+    overlayControllerState.targetHasFocus = true
+    vi.mocked(uIOhook.keyToggle).mockClear()
     setPoeVersion(2)
-    staleCallback?.()
-    await flushEscapeGate()
+    staleChatCallback?.()
+    staleAppCallback?.()
 
     expect(handler).not.toHaveBeenCalled()
+    expect(uIOhook.keyToggle).not.toHaveBeenCalled()
   })
 })

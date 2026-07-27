@@ -186,21 +186,29 @@ function fireMatchingActionBindings(e: HookKeyEvent): void {
 // The action bodies below are shared by the globalShortcut callback (Electron-
 // bindable keys) and the uiohook binding (international/OEM keys) so the guards
 // stay identical across both delivery paths.
-function runChatCommand(command: string, autoSubmit: boolean, combo: KeyCombo | null): void {
-  if (injecting || isTypingInOverlay() || !hotkeyContextIsActive()) return
+function runChatCommand(entry: ChatCommandConfig, autoSubmit: boolean, combo: KeyCombo | null): void {
+  if (
+    injecting ||
+    isTypingInOverlay() ||
+    !hotkeyContextIsActive() ||
+    !scopeAppliesTo(chatCommandEffectiveScope(entry), getPoeVersion())
+  )
+    return
   releaseHotkeyKey(combo)
-  sendChatCommand(command, autoSubmit)
+  sendChatCommand(entry.command, autoSubmit)
 }
 
-function runAppMacro(
-  action: string,
-  tag: string | undefined,
-  presetId: string | undefined,
-  combo: KeyCombo | null,
-): void {
-  if (injecting || isTypingInOverlay() || !onAppMacro || !hotkeyContextIsActive()) return
+function runAppMacro(entry: AppMacroConfig, combo: KeyCombo | null): void {
+  if (
+    injecting ||
+    isTypingInOverlay() ||
+    !onAppMacro ||
+    !hotkeyContextIsActive() ||
+    !scopeAppliesTo(appMacroEffectiveScope(entry), getPoeVersion())
+  )
+    return
   releaseHotkeyKey(combo)
-  onAppMacro(action, tag, presetId)
+  onAppMacro(entry.action, entry.tag, entry.presetId)
 }
 
 function runSecondaryOverlay(handler: () => void, combo: KeyCombo | null): void {
