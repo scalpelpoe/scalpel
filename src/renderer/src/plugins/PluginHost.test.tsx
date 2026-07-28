@@ -37,7 +37,7 @@ beforeEach(() => {
     pluginCaptureGameWindowStreamFrame: vi.fn(async () => ({
       capture: null,
       status: {
-        backend: 'isolated-session-stream',
+        backend: 'isolated-process-stream',
         state: 'idle',
         ready: false,
         sessionGeneration: 0,
@@ -48,7 +48,7 @@ beforeEach(() => {
       },
     })),
     pluginResetGameWindowCaptureStream: vi.fn(async () => ({
-      backend: 'isolated-session-stream',
+      backend: 'isolated-process-stream',
       state: 'idle',
       ready: false,
       sessionGeneration: 0,

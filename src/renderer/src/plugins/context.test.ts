@@ -26,7 +26,7 @@ const baseDeps = () => ({
   captureGameWindowStreamFrame: vi.fn(async () => ({
     capture: null,
     status: {
-      backend: 'isolated-session-stream' as const,
+      backend: 'isolated-process-stream' as const,
       state: 'idle' as const,
       ready: false,
       sessionGeneration: 0,
@@ -37,7 +37,7 @@ const baseDeps = () => ({
     },
   })),
   resetGameWindowCaptureStream: vi.fn(async () => ({
-    backend: 'isolated-session-stream' as const,
+    backend: 'isolated-process-stream' as const,
     state: 'idle' as const,
     ready: false,
     sessionGeneration: 0,

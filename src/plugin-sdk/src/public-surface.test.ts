@@ -152,7 +152,7 @@ function stubDeps(): PluginContextFactoryDeps {
     captureGameWindowStreamFrame: async () => ({
       capture: null,
       status: {
-        backend: 'isolated-session-stream',
+        backend: 'isolated-process-stream',
         state: 'idle',
         ready: false,
         sessionGeneration: 0,
@@ -163,7 +163,7 @@ function stubDeps(): PluginContextFactoryDeps {
       },
     }),
     resetGameWindowCaptureStream: async () => ({
-      backend: 'isolated-session-stream',
+      backend: 'isolated-process-stream',
       state: 'idle',
       ready: false,
       sessionGeneration: 0,

@@ -13,6 +13,14 @@ export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
     resolve: { alias: resolveAlias },
+    build: {
+      rollupOptions: {
+        input: {
+          index: resolve(__dirname, 'src/main/bootstrap.ts'),
+          'application-main': resolve(__dirname, 'src/main/index.ts'),
+        },
+      },
+    },
   },
   preload: {
     plugins: [externalizeDepsPlugin()],

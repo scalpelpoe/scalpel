@@ -146,14 +146,14 @@ export interface GameCaptureStreamFailure {
 /**
  * Current state of Scalpel's host-owned persistent game-window stream.
  *
- * The stream runs in a dedicated, in-memory Electron session rather than the
- * plugin's renderer session. On a heavy media failure Scalpel destroys that
- * session and performs one bounded recovery in a fresh partition. A second
- * heavy failure opens the circuit breaker until the plugin explicitly resets
- * the stream.
+ * The stream runs in a dedicated Electron browser process and in-memory
+ * renderer session rather than the plugin's renderer session. On a heavy media
+ * failure Scalpel destroys that process and performs one bounded recovery in a
+ * fresh process. A second heavy failure opens the circuit breaker until the
+ * plugin explicitly resets the stream.
  */
 export interface GameCaptureStreamStatus {
-  backend: 'isolated-session-stream'
+  backend: 'isolated-process-stream'
   state: GameCaptureStreamState
   ready: boolean
   sessionGeneration: number
@@ -292,7 +292,7 @@ export interface ScalpelPluginContext {
    * stream. Unlike captureGameWindow(), this does not create a full-display
    * desktopCapturer thumbnail for every call. The stream is independent of the
    * plugin UI renderer and is automatically recovered once in a fresh,
-   * isolated Electron session after a heavy media failure.
+   * isolated Electron browser process after a heavy media failure.
    *
    * The returned status is authoritative even when capture is null. Plugins
    * should respect cooldown/blocked states rather than creating their own
@@ -302,7 +302,7 @@ export interface ScalpelPluginContext {
 
   /**
    * Clear the host stream circuit breaker and start the next request from a
-   * fresh isolated session. Intended for an explicit user retry, not polling.
+   * fresh isolated process. Intended for an explicit user retry, not polling.
    */
   resetGameWindowCaptureStream(): Promise<GameCaptureStreamStatus>
 

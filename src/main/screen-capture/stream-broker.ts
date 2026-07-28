@@ -1,6 +1,7 @@
 import { OverlayController } from 'electron-overlay-window'
 import type { GameCapture, GameCaptureStreamFrame, GameCaptureStreamStatus, GameRect } from '../../plugin-sdk/src/types'
-import { CaptureStreamSessionError, ElectronCaptureStreamSession, type CaptureStreamSession } from './stream-session'
+import { ProcessCaptureStreamSession } from './process-session'
+import { CaptureStreamSessionError, type CaptureStreamSession } from './stream-session'
 
 const MAX_AUTOMATIC_HEAVY_ATTEMPTS = 2
 const SOURCE_RETRY_BASE_MS = 500
@@ -18,7 +19,7 @@ export interface GameCaptureStreamBrokerDeps {
 function defaultDeps(): GameCaptureStreamBrokerDeps {
   return {
     hasGameFocus: () => OverlayController.targetHasFocus,
-    createSession: (generation) => new ElectronCaptureStreamSession(generation),
+    createSession: (generation) => new ProcessCaptureStreamSession(generation),
     now: () => Date.now(),
     setTimer: (handler, delayMs) => setTimeout(handler, delayMs),
     clearTimer: (timer) => clearTimeout(timer),
@@ -132,7 +133,7 @@ export class GameCaptureStreamBroker {
   private status(): GameCaptureStreamStatus {
     const session = this.session
     return {
-      backend: 'isolated-session-stream',
+      backend: 'isolated-process-stream',
       state: this.state,
       ready: this.state === 'ready',
       sessionGeneration: this.sessionGeneration,
