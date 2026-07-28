@@ -15,6 +15,7 @@ import { app, type BrowserWindow, ipcMain } from 'electron'
 import { ELECTRON_RELEASES, GITHUB_RELEASES_API } from '@shared/endpoints'
 import type { InstallManifest } from '@shared/types'
 import { findBrickedMatch } from '@shared/version-match'
+import { buildUpdateBatch, getUpdateLaunchSpec } from './apply-update'
 import { selectListRelease } from './select-release'
 import { recordMainBreadcrumb, registerDiagnosticProvider } from '../diagnostics'
 import { stopHotkeyListener } from '../hotkeys'
@@ -465,7 +466,7 @@ ipcMain.on('save-overlay-state', (_event, state: Record<string, unknown>) => {
   }
 })
 
-ipcMain.handle('install-update', () => {
+ipcMain.handle('install-update', async () => {
   if (IS_DEV) return
   const stagingDir = getStagingDir()
   const asarNew = join(stagingDir, 'app.asar.new')
@@ -474,7 +475,6 @@ ipcMain.handle('install-update', () => {
   const pendingManifest = join(stagingDir, 'manifest.pending.json')
   const resourcesDir = process.resourcesPath || join(dirname(process.execPath), 'resources')
   const installDir = dirname(resourcesDir)
-  const asarPath = join(resourcesDir, 'app.asar')
   const asarUnpackedSrc = join(stagingDir, 'app.asar.unpacked')
   const asarUnpackedDest = join(resourcesDir, 'app.asar.unpacked')
   const exePath = process.execPath
@@ -494,60 +494,68 @@ ipcMain.handle('install-update', () => {
     return
   }
 
-  // Save the version we're updating to so we can show a banner after restart
+  let pendingVersion = updateAvailableVersion ?? 'unknown'
   try {
     const pending = JSON.parse(readFileSync(pendingManifest, 'utf8'))
-    writeFileSync(join(userDataDir, 'just-updated.json'), JSON.stringify({ version: pending.version }))
+    pendingVersion = pending.version
   } catch {
-    /* non-critical */
+    /* keep the last version reported by the update check */
   }
 
   const batPath = join(userDataDir, 'apply-update.bat')
-  // The batch runs with no console (DETACHED_PROCESS); `timeout` can exit immediately
-  // without a console, `ping` waits ~2s regardless.
-  const batLines = ['@echo off', 'ping -n 3 127.0.0.1 > nul']
-
-  if (isFullUpgrade) {
-    // Full Electron upgrade: extract the zip over the install directory, then copy asar.
-    // The zip contains electron.exe which needs to be renamed to match the installed exe name.
-    const electronExe = join(installDir, 'electron.exe')
-    batLines.push(
-      `powershell -NoProfile -Command "Expand-Archive -Path '${electronZip}' -DestinationPath '${installDir}' -Force"`,
-      `if exist "${electronExe}" (move /y "${electronExe}" "${exePath}")`,
-      `copy /y "${fullUpgradeAsar}" "${asarPath}"`,
-    )
-  } else {
-    // Asar-only update
-    batLines.push(`copy /y "${asarNew}" "${asarPath}"`)
-  }
-
-  // Copy unpacked native modules if present
-  if (existsSync(asarUnpackedSrc)) {
-    batLines.push(`xcopy /y /e /i "${asarUnpackedSrc}" "${asarUnpackedDest}"`)
-  }
-  // Update manifest
-  if (existsSync(pendingManifest)) {
-    batLines.push(`copy /y "${pendingManifest}" "${join(userDataDir, 'install-manifest.json')}"`)
-  }
-  // Clean up staging, relaunch, self-delete
-  batLines.push(
-    `rmdir /s /q "${stagingDir}"`,
-    `start "" "${isFullUpgrade ? join(installDir, 'Scalpel.exe') : exePath}"`,
-    `del "%~f0"`,
+  writeFileSync(
+    batPath,
+    buildUpdateBatch({
+      stagingDir,
+      userDataDir,
+      installDir,
+      resourcesDir,
+      exePath,
+      version: pendingVersion,
+      isFullUpgrade,
+      electronZip,
+      fullUpgradeAsar,
+      asarNew,
+      pendingManifest,
+      copyUnpacked: existsSync(asarUnpackedSrc),
+      asarUnpackedSrc,
+      asarUnpackedDest,
+    }),
   )
 
-  writeFileSync(batPath, batLines.join('\r\n'))
+  const elevatePath = join(resourcesDir, 'elevate.exe')
+  const writeProbePath = join(resourcesDir, `.scalpel-update-write-test-${process.pid}`)
+  let installWritable = false
+  try {
+    writeFileSync(writeProbePath, '')
+    unlinkSync(writeProbePath)
+    installWritable = true
+  } catch {
+    try {
+      unlinkSync(writeProbePath)
+    } catch {
+      /* probe was never created */
+    }
+  }
+  const launch = getUpdateLaunchSpec(batPath, resourcesDir, process.platform, existsSync(elevatePath), installWritable)
+  try {
+    const child = spawn(launch.command, launch.args, {
+      detached: true,
+      stdio: 'ignore',
+      windowsHide: true,
+    })
+    await new Promise<void>((resolve, reject) => {
+      child.once('spawn', resolve)
+      child.once('error', reject)
+    })
+    child.unref()
+  } catch (err) {
+    recordMainBreadcrumb(`updater: failed to launch apply helper: ${(err as Error).message}`)
+    console.error('[Updater] Failed to launch apply helper:', (err as Error).message)
+    return
+  }
 
-  // Run the batch detached with no console. DETACHED_PROCESS gives the child no
-  // console window at all, so nothing flashes. A VBS wrapper used to do the hiding,
-  // but AV heuristics flag app-written VBS as dropper behavior (#448).
-  spawn('cmd.exe', ['/c', batPath], {
-    detached: true,
-    stdio: 'ignore',
-    windowsHide: true,
-  }).unref()
-
-  recordMainBreadcrumb('updater: exit to apply update')
+  recordMainBreadcrumb(`updater: exit to apply update (${launch.elevated ? 'elevated' : 'direct'})`)
   stopHotkeyListener()
   app.exit(0)
 })
