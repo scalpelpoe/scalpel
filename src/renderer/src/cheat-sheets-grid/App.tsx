@@ -152,6 +152,7 @@ export function App(): JSX.Element {
             width={dims.w}
             height={dims.h}
             isCurrentZone={!!currentZone && (sheet.areaCodes?.includes(currentZone.areaCode) ?? false)}
+            minimized={minimized}
           />
         ))}
       </div>
@@ -315,22 +316,27 @@ function Thumbnail({
   width,
   height,
   isCurrentZone,
+  minimized,
 }: {
   categoryId: string
   sheet: { id: string; ext: string; areaCodes?: string[] }
   width: number
   height: number
   isCurrentZone: boolean
+  minimized: boolean
 }): JSX.Element {
   const ref = useRef<HTMLDivElement>(null)
   const fullSrc = `cheatsheet://${categoryId}/${sheet.id}.${sheet.ext}`
   const thumbSrc = `${fullSrc}?thumb=1`
 
   useEffect(() => {
-    if (isCurrentZone) {
-      ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
-    }
-  }, [isCurrentZone])
+    // While minimized the grid is still in the DOM, and scrollIntoView also
+    // scrolls the overflow-hidden Chrome root, shoving the header strip out
+    // of the collapsed window (#465). Keeping `minimized` in the deps
+    // re-homes the current-zone thumb when the window is restored.
+    if (!isCurrentZone || minimized) return
+    ref.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' })
+  }, [isCurrentZone, minimized])
 
   const ringStyle: React.CSSProperties = isCurrentZone
     ? { boxShadow: '0 0 0 2px #fbbf24, 0 0 8px rgba(251, 191, 36, 0.6)' }

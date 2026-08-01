@@ -131,6 +131,14 @@ describe('applyBaseModeToFilters', () => {
     expect(result.find((r) => r.id === 'explicit.stat_other')?.enabled).toBe(false)
   })
 
+  it('keeps the Mageblood Duplicates chip on by default (premium survives Base mode)', () => {
+    const input = [
+      f({ id: 'mageblood-duplicates', type: 'mageblood-dup', premium: true, enabled: true, value: 1, min: 1 }),
+    ]
+    const result = applyBaseModeToFilters(input, 'Unique', false)
+    expect(result.find((r) => r.id === 'mageblood-duplicates')?.enabled).toBe(true)
+  })
+
   it('enables a perfect-or-over-rolled unique explicit pinned to the exact roll', () => {
     // perfectRoll covers both perfect and over-rolled; pin min to the actual value.
     const input = [

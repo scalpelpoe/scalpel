@@ -72,3 +72,10 @@ export function deriveLearningContext(item: PoeItem): LearningContext {
     rungKeys: [GLOBAL_KEY, rungClass, rungAxis, rungInfluence],
   }
 }
+
+/** Scope at which a manual learned-preference pin applies (issue #479):
+ *  rarity|itemClass for non-uniques, the unique name for uniques. Both are
+ *  exactly the second rung, so pins ride the same key space as counters. */
+export function pinScopeKey(item: PoeItem): string {
+  return deriveLearningContext(item).rungKeys[1]
+}

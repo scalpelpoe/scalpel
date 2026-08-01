@@ -41,6 +41,10 @@ export async function aroundNativeDialog<T>(fn: () => Promise<T>): Promise<T> {
         // moveTop forces it to the front of the Z-order.
         w.moveTop()
       }
+      // Keep the eval overlay above the persistent whiteboard layer: it's the
+      // last moveTop, so it ends on top of any annotations.
+      const main = getMainOverlay()
+      if (main && !main.isDestroyed() && main.isVisible()) main.moveTop()
     }
   }
 }
@@ -61,17 +65,24 @@ function collectScalpelWindows(): BrowserWindow[] {
   return result
 }
 
-/** True iff focus is currently on any Scalpel-owned window: the main overlay
- *  or any registered secondary overlay. The single source of truth for "did
- *  the user actually leave the app?" - every blur/hide decision should defer
- *  to this so clicking from one Scalpel window to another doesn't trigger
- *  cross-overlay hides. Native dialogs count as Scalpel-active too. */
-export function isAnyScalpelWindowFocused(): boolean {
-  if (nativeDialogCount > 0) return true
+/** True iff an actual Scalpel BrowserWindow currently owns focus. Native OS
+ *  dialogs are intentionally excluded: callers that authorize keyboard input
+ *  must not treat a file picker as an injection target. */
+export function isAnyScalpelBrowserWindowFocused(): boolean {
   const focused = BrowserWindow.getFocusedWindow()
   if (!focused || focused.isDestroyed()) return false
   if (focused === getMainOverlay()) return true
   return isSecondaryOverlayWindow(focused)
+}
+
+/** True iff focus is currently within the logical Scalpel task. The single
+ *  source of truth for "did the user actually leave the app?" - every
+ *  blur/hide decision should defer to this so clicking from one Scalpel window
+ *  to another doesn't trigger cross-overlay hides. Native dialogs count as
+ *  Scalpel-active here so their owner is not hidden while they are open. */
+export function isAnyScalpelWindowFocused(): boolean {
+  if (nativeDialogCount > 0) return true
+  return isAnyScalpelBrowserWindowFocused()
 }
 
 /** True if the screen point lies inside any visible secondary overlay window.
@@ -126,24 +137,34 @@ export function restoreAllOnPoeFocus(): void {
   for (const state of overlays.values()) {
     if (!state.wasVisibleBeforeFocusLoss) continue
     if (!state.win || state.win.isDestroyed()) continue
+    if (state.spec.gateShow && !state.spec.gateShow()) continue
     state.win.show()
     state.win.moveTop()
   }
+  // Keep the main eval overlay above any restored persistent layer (the
+  // passthrough whiteboard) so it doesn't end up buried behind annotations.
+  const main = getMainOverlay()
+  if (main && !main.isDestroyed() && main.isVisible()) main.moveTop()
 }
 
 /** Esc handling: hide the focused overlay if any, else any visible overlay.
  *  Returns true if an overlay was hidden so the caller can short-circuit (we
  *  don't want Esc to also dismiss the main overlay when a secondary was up).
+ *  Overlays flagged `persistOverOthers` or pinned by the user (`userPinned`)
+ *  are exempt from both branches - they are pinned/persistent surfaces Esc
+ *  must not dismiss, whether or not they currently hold focus.
  *  Called from the kernel-level Esc handler in hotkeys.ts. */
 export function hideFocusedOrAnyVisibleSecondaryOverlay(): boolean {
   const focused = BrowserWindow.getFocusedWindow()
   for (const state of overlays.values()) {
+    if (state.persistOverOthers || state.userPinned) continue
     if (state.win && state.win === focused && state.win.isVisible()) {
       hideOverlayState(state)
       return true
     }
   }
   for (const state of overlays.values()) {
+    if (state.persistOverOthers || state.userPinned) continue
     if (state.win && !state.win.isDestroyed() && state.win.isVisible()) {
       hideOverlayState(state)
       return true

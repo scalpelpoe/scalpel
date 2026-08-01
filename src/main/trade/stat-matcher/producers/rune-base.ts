@@ -22,6 +22,14 @@ export function buildRuneBaseFilter(itemInfo: RuneBaseItemInfo | undefined): Sta
   if (itemInfo.itemClass === 'Maps') return []
   if (itemInfo.itemClass === 'Stackable Currency') return []
 
+  // A runeforged/runemastered unique trades as a distinct base (e.g. Runeseeker's
+  // Call on "Runemastered Runic Fork", a different market segment from the bare
+  // "Runic Fork" copy). Default the chip on so the search targets that variant via
+  // the discriminator form (issue #458). Rares keep it off: there the chip only
+  // composes onto the basetype chip, which itself defaults off (category search),
+  // so an on-by-default rune chip would be inert anyway.
+  const enabled = itemInfo.rarity === 'Unique'
+
   return [
     {
       id: 'misc.rune_base',
@@ -29,7 +37,7 @@ export function buildRuneBaseFilter(itemInfo: RuneBaseItemInfo | undefined): Sta
       value: null,
       min: null,
       max: null,
-      enabled: false,
+      enabled,
       type: 'misc',
     },
   ]

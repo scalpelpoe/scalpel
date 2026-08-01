@@ -22,6 +22,7 @@ vi.mock('electron', () => ({
 const mockFs = {
   files: new Map<string, string>(),
   bufs: new Map<string, Uint8Array>(),
+  failRenameFrom: null as string | null,
 }
 
 vi.mock('fs', () => ({
@@ -30,10 +31,31 @@ vi.mock('fs', () => ({
     if (v == null) throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
     return v
   },
-  existsSync: (p: string) => mockFs.files.has(p) || mockFs.bufs.has(p),
+  existsSync: (p: string) => {
+    if (mockFs.files.has(p) || mockFs.bufs.has(p)) return true
+    for (const k of mockFs.files.keys()) if (k.startsWith(`${p}/`) || k.startsWith(`${p}\\`)) return true
+    for (const k of mockFs.bufs.keys()) if (k.startsWith(`${p}/`) || k.startsWith(`${p}\\`)) return true
+    return false
+  },
   writeFileSync: (p: string, data: string | Uint8Array) => {
     if (typeof data === 'string') mockFs.files.set(p, data)
     else mockFs.bufs.set(p, data)
+  },
+  renameSync: (from: string, to: string) => {
+    if (mockFs.failRenameFrom === from) throw new Error('simulated rename failure')
+    const move = <T>(map: Map<string, T>): void => {
+      for (const key of [...map.keys()]) {
+        if (key === from) {
+          map.set(to, map.get(key) as T)
+          map.delete(key)
+        } else if (key.startsWith(`${from}/`) || key.startsWith(`${from}\\`)) {
+          map.set(to + key.slice(from.length), map.get(key) as T)
+          map.delete(key)
+        }
+      }
+    }
+    move(mockFs.bufs)
+    move(mockFs.files)
   },
   mkdirSync: () => {},
   rmSync: () => {},
@@ -42,6 +64,7 @@ vi.mock('fs', () => ({
 beforeEach(() => {
   mockFs.files.clear()
   mockFs.bufs.clear()
+  mockFs.failRenameFrom = null
   mockNetFetchFn.mockReset()
   vi.resetModules()
 })
@@ -184,6 +207,62 @@ describe('installFromRegistry', () => {
     const r = await installFromRegistry(entry)
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error.toLowerCase()).toContain('checksum')
+  })
+
+  it('preserves the existing plugin when a write throws (no delete on failure)', async () => {
+    // Pre-seed an older working install on disk.
+    const destPluginJs = join(TEST_USER_DATA, 'plugins', 'hello-world', 'plugin.js')
+    mockFs.bufs.set(destPluginJs, PLUGIN_BYTES)
+    mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'installed.json'), JSON.stringify(['hello-world']))
+
+    // Make the manifest write throw (staged into the .incoming temp dir).
+    const realSet = mockFs.files.set.bind(mockFs.files)
+    vi.spyOn(mockFs.files, 'set').mockImplementation((p: string, v: string) => {
+      if (p.endsWith('manifest.json')) throw new Error('disk full')
+      return realSet(p, v)
+    })
+
+    const newEntry = { ...validEntry, latestVersion: '2.0.0', sha256: NEW_SHA }
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v2.0.0/plugin.js': new Response(
+        NEW_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v2.0.0/manifest.json':
+        new Response(JSON.stringify({ ...matchingManifest, version: '2.0.0' })),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry(newEntry)
+
+    expect(r.ok).toBe(false)
+    // The live plugin.js is untouched (still the OLD bytes), not deleted.
+    expect(mockFs.bufs.get(destPluginJs)).toEqual(PLUGIN_BYTES)
+    vi.restoreAllMocks()
+  })
+
+  it('restores the previous plugin when the final swap rename throws', async () => {
+    const destPluginJs = join(TEST_USER_DATA, 'plugins', 'hello-world', 'plugin.js')
+    mockFs.bufs.set(destPluginJs, PLUGIN_BYTES)
+    mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'installed.json'), JSON.stringify(['hello-world']))
+    // Throw on the temp -> dest swap (after the old install was moved aside).
+    mockFs.failRenameFrom = join(TEST_USER_DATA, 'plugins', 'hello-world.incoming')
+
+    const newEntry = { ...validEntry, latestVersion: '2.0.0', sha256: NEW_SHA }
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v2.0.0/plugin.js': new Response(
+        NEW_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v2.0.0/manifest.json':
+        new Response(JSON.stringify({ ...matchingManifest, version: '2.0.0' })),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry(newEntry)
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('install write failed')
+    // The previous install was moved to backup, then restored to destDir.
+    expect(mockFs.bufs.get(destPluginJs)).toEqual(PLUGIN_BYTES)
   })
 
   it('overwrites an existing plugin in place (update path)', async () => {

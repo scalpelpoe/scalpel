@@ -1,0 +1,20 @@
+{
+  "01-city-of-sarn.webp": ["1_3_1"],
+  "02-slums.webp": ["1_3_2"],
+  "03-crematorium.webp": ["1_3_3_1"],
+  "04-sewers.webp": ["1_3_10_1"],
+  "05-marketplace.webp": ["1_3_5"],
+  "06-catacombs.webp": ["1_3_6"],
+  "07-battlefront.webp": ["1_3_7"],
+  "08-docks.webp": ["1_3_9"],
+  "09-solaris-temple-level-1.webp": ["1_3_8_1"],
+  "10-solaris-temple-level-2.webp": ["1_3_8_2"],
+  "11-ebony-barracks.webp": ["1_3_13"],
+  "12-lunaris-temple-level-1.webp": ["1_3_14_1"],
+  "13-lunaris-temple-level-2.webp": ["1_3_14_2"],
+  "14-imperial-gardens.webp": ["1_3_15"],
+  "15-library.webp": ["1_3_17_1"],
+  "16-archives.webp": ["1_3_17_2"],
+  "17-sceptre-of-god.webp": ["1_3_18_1"],
+  "18-upper-sceptre-of-god.webp": ["1_3_18_2"]
+}

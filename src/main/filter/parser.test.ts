@@ -199,6 +199,15 @@ Show
     expect(result.blocks[0].conditions[0].values).toEqual(['60'])
   })
 
+  it('handles Vestigial condition', () => {
+    const content = `Show
+    Vestigial True`
+
+    const result = parseFilterFile('test.filter', content)
+    expect(result.blocks[0].conditions[0].type).toBe('Vestigial')
+    expect(result.blocks[0].conditions[0].values).toEqual(['True'])
+  })
+
   it('records the dominant EOL on the FilterFile', () => {
     const crlf = parseFilterFile('t.filter', 'Show\r\n\tItemLevel >= 5\r\n')
     expect(crlf.eol).toBe('\r\n')

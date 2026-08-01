@@ -1,5 +1,6 @@
 import type {
   ImageElement as ImageEl,
+  LiveMirrorElement as MirrorEl,
   Pt,
   RadiusRingElement as RingEl,
   RulerElement as RulerEl,
@@ -11,6 +12,7 @@ import type {
 import type { GameSize } from '../coords'
 import {
   bakeImageFromTransformResult,
+  bakeLiveMirrorFromTransformResult,
   bakeShapeFromTransformResult,
   bakeStrokeFromTransformResult,
   bakeTextFromTransformResult,
@@ -18,6 +20,7 @@ import {
   type StrokeTransformResult,
 } from '../tools/transform'
 import { ImageElement } from './ImageElement'
+import { LiveMirrorElement } from './LiveMirrorElement'
 import { RadiusRingElement } from './RadiusRingElement'
 import { RulerElement } from './RulerElement'
 import { ShapeElement } from './ShapeElement'
@@ -136,6 +139,24 @@ const radiusRingKind: ElementKindDef<RingEl, BboxTransformResult> = {
   render: (el, ctx) => <RadiusRingElement key={el.id} element={el} size={ctx.size} version={ctx.version} />,
 }
 
+const liveMirrorKind: ElementKindDef<MirrorEl, BboxTransformResult> = {
+  applyDragDelta: (el, delta, size) => ({
+    ...el,
+    bbox: { ...el.bbox, x: el.bbox.x + delta.x / size.w, y: el.bbox.y + delta.y / size.h },
+  }),
+  bakeTransform: bakeLiveMirrorFromTransformResult,
+  render: (el, ctx) => (
+    <LiveMirrorElement
+      key={el.id}
+      element={el}
+      size={ctx.size}
+      draggable={ctx.draggable}
+      onDragEnd={(delta) => ctx.onDragEnd(el.id, delta)}
+      onTransformEnd={(next) => ctx.onTransformEnd(el.id, next)}
+    />
+  ),
+}
+
 // biome-ignore lint/suspicious/noExplicitAny: heterogeneous element-kind registry
 export const ELEMENT_KINDS: Record<WhiteboardElement['type'], ElementKindDef<any, any>> = {
   stroke: strokeKind,
@@ -144,6 +165,7 @@ export const ELEMENT_KINDS: Record<WhiteboardElement['type'], ElementKindDef<any
   image: imageKind,
   ruler: rulerKind,
   radiusRing: radiusRingKind,
+  liveMirror: liveMirrorKind,
 }
 
 /** Dispatch render to the right kind. The cast at the boundary is safe

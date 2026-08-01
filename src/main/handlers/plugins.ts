@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs'
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import type Store from 'electron-store'
 import type { PluginManifest } from '../../plugin-sdk/src/types'
@@ -8,6 +9,8 @@ import { getOverlayWindow, showOverlay } from '../overlay'
 import {
   disposePluginOverlay,
   hidePluginOverlay,
+  isPluginOverlayVisible,
+  reloadPluginOverlay,
   registerPluginAnnotationOverlay,
   registerPluginOverlay,
   showPluginOverlay,
@@ -21,6 +24,7 @@ import {
   setPluginOverlayHotkey,
 } from '../plugins/hotkey-registry'
 import { getRegisteredPluginTabs, removePluginTab, setPluginTab } from '../plugins/tab-registry'
+import { versionedPluginEntryUrl } from '../plugins/entry-url'
 import { installFromRegistry } from '../plugins/install-from-registry'
 import { installUnpacked } from '../plugins/install-unpacked'
 import { getInstalledPlugins, getUnpackedPlugins } from '../plugins/manager'
@@ -29,10 +33,18 @@ import { pluginEntryUrl } from '../plugins/plugin-protocol'
 import { fetchRegistry } from '../plugins/registry'
 import { deleteValue, getValue, listKeys, setValue } from '../plugins/storage'
 import { uninstallPlugin } from '../plugins/uninstall'
+import { getUnpackedSourceDir } from '../plugins/unpacked-list'
+import { type UnpackedFlowDeps, installUnpackedAndNotify, reloadUnpackedPlugin } from '../plugins/unpacked-flow'
 
 export interface InstalledPluginIpc {
   manifest: PluginManifest
   entryUrl: string
+}
+
+export interface UnpackedPluginIpc extends InstalledPluginIpc {
+  /** Absent for plugins side-loaded before Scalpel started tracking source
+   *  directories - those cannot be reloaded until loaded unpacked again. */
+  sourceDir?: string
 }
 
 export function register(store: Store<AppSettings>, isElevated: () => boolean = () => false): void {
@@ -48,6 +60,27 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     }
   }
 
+  // Broadcast to ALL windows (not just the overlay), the same way
+  // notifyTabsChanged does, so the standalone app-window Plugins tab refreshes
+  // its update badge + installed list too. Only the overlay has a PluginHost,
+  // so only it hot-swaps; other windows just refresh their plugin UI.
+  const broadcastPlugin = (channel: 'plugin-installed' | 'plugin-updated', payload: InstalledPluginIpc): void => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send(channel, payload)
+    }
+  }
+
+  const unpackedFlowDeps: UnpackedFlowDeps = {
+    installedIds: () => getInstalledPlugins().map((p) => p.manifest.id),
+    install: installUnpacked,
+    manifestOf: (id) => getInstalledPlugins().find((p) => p.manifest.id === id)?.manifest,
+    entryUrl: versionedPluginEntryUrl,
+    broadcast: broadcastPlugin,
+    reloadOverlay: reloadPluginOverlay,
+    sourceDirOf: getUnpackedSourceDir,
+    dirExists: existsSync,
+  }
+
   ipcMain.handle('plugins:list-installed', (): InstalledPluginIpc[] => {
     return getInstalledPlugins().map((p) => ({
       manifest: p.manifest,
@@ -55,11 +88,15 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     }))
   })
 
-  ipcMain.handle('plugins:list-unpacked', (): InstalledPluginIpc[] => {
-    return getUnpackedPlugins().map((p) => ({
-      manifest: p.manifest,
-      entryUrl: pluginEntryUrl(p.manifest.id),
-    }))
+  ipcMain.handle('plugins:list-unpacked', (): UnpackedPluginIpc[] => {
+    return getUnpackedPlugins().map((p) => {
+      const sourceDir = getUnpackedSourceDir(p.manifest.id)
+      return {
+        manifest: p.manifest,
+        entryUrl: pluginEntryUrl(p.manifest.id),
+        ...(sourceDir ? { sourceDir } : {}),
+      }
+    })
   })
 
   ipcMain.handle('plugins:get-installed', (_evt, pluginId: string): InstalledPluginIpc | null => {
@@ -140,17 +177,14 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     if (result.canceled || result.filePaths.length === 0) {
       return { ok: false as const, error: 'cancelled' }
     }
-    const installResult = installUnpacked(result.filePaths[0])
-    if (installResult.ok) {
-      const installed = getInstalledPlugins().find((p) => p.manifest.id === installResult.id)
-      if (installed) {
-        getOverlayWindow()?.webContents.send('plugin-installed', {
-          manifest: installed.manifest,
-          entryUrl: `${pluginEntryUrl(installed.manifest.id)}?v=${installed.manifest.version}`,
-        })
-      }
-    }
-    return installResult
+    return installUnpackedAndNotify(result.filePaths[0], unpackedFlowDeps)
+  })
+
+  // Re-copy a side-loaded plugin from the directory it came from and hot-swap
+  // it. Rebuild the plugin, hit Reload, run the new code - no app restart.
+  ipcMain.handle('plugins:reload-unpacked', (_evt, pluginId: string) => {
+    if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
+    return reloadUnpackedPlugin(pluginId, unpackedFlowDeps)
   })
 
   ipcMain.handle('plugins:fetch-registry', async () => {
@@ -176,10 +210,13 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     if (result.ok) {
       const installed = getInstalledPlugins().find((p) => p.manifest.id === result.id)
       if (installed) {
-        getOverlayWindow()?.webContents.send(channel, {
+        broadcastPlugin(channel, {
           manifest: installed.manifest,
-          entryUrl: `${pluginEntryUrl(installed.manifest.id)}?v=${installed.manifest.version}`,
+          entryUrl: versionedPluginEntryUrl(installed.manifest.id, installed.manifest.version),
         })
+        // The popped-out window does not listen for plugin-updated; reload it so
+        // it re-imports the new code instead of running stale.
+        if (channel === 'plugin-updated') reloadPluginOverlay(installed.manifest.id)
       }
     }
     return result
@@ -233,6 +270,10 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
     hidePluginOverlay(pluginId)
   })
+  ipcMain.handle('plugins:overlay-visible', (_evt, pluginId: string): boolean => {
+    if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
+    return isPluginOverlayVisible(pluginId)
+  })
 
   ipcMain.handle('plugins:uninstall', async (_evt, pluginId: string) => {
     const uninstallResult = uninstallPlugin(pluginId)
@@ -256,9 +297,15 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     notifyHotkeysChanged()
   })
 
-  ipcMain.handle('plugins:trigger-main-hotkey', async (): Promise<import('@shared/types').PoeItem | null> => {
-    return runMainHotkeyFlow(store, isElevated)
-  })
+  ipcMain.handle(
+    'plugins:trigger-main-hotkey',
+    async (
+      _evt,
+      opts?: { showOverlay?: boolean; dispatch?: boolean },
+    ): Promise<import('@shared/types').PoeItem | null> => {
+      return runMainHotkeyFlow(store, isElevated, opts)
+    },
+  )
 
   // Show the overlay BrowserWindow. Called from ctx.openTab() so plugins that
   // bind a hotkey can open the overlay even when no item is being inspected

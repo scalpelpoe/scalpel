@@ -4,12 +4,6 @@ import { RateLimitBar } from '../../components/primitives/RateLimitBar'
 import type { Listing } from '../../shared/trade-types'
 import { getTradeUrls } from '@shared/endpoints'
 
-/** Above this result count, the in-Scalpel Travel-to-Hideout action gets unreliable:
- *  the page's live results churn between our API fetch and the click, so the data-id
- *  we cached no longer resolves on the poe.com/trade DOM. We flag the results bar as a
- *  warning past this threshold. */
-const RESULTS_WARNING_THRESHOLD = 1000
-
 interface TradeResultsProps {
   tradeTotal: number | null
   tradeQueryId: string | null
@@ -22,18 +16,15 @@ interface TradeResultsProps {
   expandedListing: string | null
   setExpandedListing: (id: string | null) => void
   priceChipMinWidth: number
-  loggedIn: boolean
-  actionStatus: Record<string, 'pending' | 'success' | 'failed'>
-  setActionStatus: React.Dispatch<React.SetStateAction<Record<string, 'pending' | 'success' | 'failed'>>>
   rateLimitTiers: Array<{ used: number; max: number; window: number; penalty: number; lastUpdate?: number }>
   /** Item class forwarded to TradeListings (drives its display logic). Defaults to the
    *  maps flow; the waystone/tablet generators pass their own class. */
   itemClass?: string
 }
 
-/** Full trade-results panel for the map regex flow: the header bar (with the high-
- *  volume warning), error/empty states, `<TradeListings />`, and the rate-limit strip
- *  at the bottom. Visible only when `showTradeResults` is true in the parent. */
+/** Full trade-results panel for the map regex flow: the header bar, error/empty
+ *  states, `<TradeListings />`, and the rate-limit strip at the bottom. Visible only
+ *  when `showTradeResults` is true in the parent. */
 export function TradeResults({
   tradeTotal,
   tradeQueryId,
@@ -46,13 +37,9 @@ export function TradeResults({
   expandedListing,
   setExpandedListing,
   priceChipMinWidth,
-  loggedIn,
-  actionStatus,
-  setActionStatus,
   rateLimitTiers,
   itemClass = 'Maps',
 }: TradeResultsProps): JSX.Element {
-  const warnHighVolume = (tradeTotal ?? 0) > RESULTS_WARNING_THRESHOLD
   // Read poeVersion once for the "Open in Trade" URL. Version is stable per process
   // (we relaunch on game switch), so this one-shot lookup beats prop-drilling through
   // RegexTool -> RegexGenerator -> MapsGenerator -> body -> here.
@@ -64,39 +51,25 @@ export function TradeResults({
 
   return (
     <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-bg">
-      <div
-        className="flex items-center gap-2 px-[14px] py-[6px]"
-        style={warnHighVolume ? { background: 'var(--warn)' } : undefined}
-      >
-        <span
-          className="text-[11px] flex-1"
-          style={{
-            color: warnHighVolume ? 'var(--bg-solid)' : 'var(--text-dim)',
-            fontWeight: warnHighVolume ? 600 : undefined,
-          }}
-        >
-          {warnHighVolume
-            ? `${tradeTotal} results: Travel to hideout may be unreliable when there are a lot of results`
-            : tradeTotal != null
-              ? `${tradeTotal} result${tradeTotal !== 1 ? 's' : ''}`
-              : ''}
+      <div className="flex items-center gap-2 px-[14px] py-[6px]">
+        <span className="text-[11px] flex-1" style={{ color: 'var(--text-dim)' }}>
+          {tradeTotal != null ? `${tradeTotal} result${tradeTotal !== 1 ? 's' : ''}` : ''}
         </span>
+        {/* Primary action for this panel: with the in-Scalpel Travel/Whisper buttons
+            gone, the trade site is the only way to act on a listing, so this reads as
+            a real button rather than the dim secondary chip it used to be. */}
         {tradeQueryId && (
           <button
             onClick={() => window.api.openExternal(tradeUrls.webSearch(tradeLeague, tradeQueryId))}
-            className={
-              warnHighVolume
-                ? 'text-[10px] px-[10px] py-[5px] border-none cursor-pointer font-semibold bg-bg-card text-accent rounded-[3px]'
-                : 'text-[10px] px-2 py-[3px] border-none cursor-pointer font-semibold bg-white/[0.08] text-text-dim rounded-[3px]'
-            }
+            className="text-[12px] px-[12px] py-[6px] border-none cursor-pointer font-semibold bg-white/[0.10] text-accent rounded-[4px] shrink-0 whitespace-nowrap"
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = warnHighVolume ? 'var(--bg-hover)' : 'rgba(255,255,255,0.15)'
+              e.currentTarget.style.background = 'rgba(255,255,255,0.18)'
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = warnHighVolume ? 'var(--bg-card)' : 'rgba(255,255,255,0.08)'
+              e.currentTarget.style.background = 'rgba(255,255,255,0.10)'
             }}
           >
-            Open in Trade
+            Open in Trade to buy these
           </button>
         )}
       </div>
@@ -115,9 +88,6 @@ export function TradeResults({
             expandedListing={expandedListing}
             setExpandedListing={setExpandedListing}
             priceChipMinWidth={priceChipMinWidth}
-            loggedIn={loggedIn}
-            actionStatus={actionStatus}
-            setActionStatus={setActionStatus}
             queryId={tradeQueryId}
             league={tradeLeague}
             onLoadMore={tradeRemainingIds.length > 0 ? tradeLoadMore : undefined}

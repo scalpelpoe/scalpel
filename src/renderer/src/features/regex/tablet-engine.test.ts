@@ -4,12 +4,21 @@ import { generateTabletRegex } from './__fixtures__/poe2re/TabletResult'
 import type { Settings } from './__fixtures__/poe2re/Settings'
 import type { SelectOption } from './__fixtures__/poe2re/SelectOption'
 import { TABLET_MODS } from '@shared/data/regex/tablet-mods'
+import { generateBoundedValueRegex, generateNumberRegex } from './waystone-number-regex'
 
 function emptyArgs(): TabletBuildArgs {
   return {
     mods: TABLET_MODS,
-    rarity: { normal: false, magic: false },
-    type: { breach: false, delirium: false, irradiated: false, expedition: false, ritual: false, overseer: false },
+    rarity: { normal: false, magic: false, rare: false },
+    type: {
+      irradiated: false,
+      ritual: false,
+      delirium: false,
+      breach: false,
+      abyss: false,
+      temple: false,
+      overseer: false,
+    },
     uses: { enabled: false, value: 1 },
     selections: { want: new Set<number>(), wantMode: 'any', wantValues: {} },
     round10: false,
@@ -32,6 +41,8 @@ function asUpstream(a: TabletBuildArgs): Settings {
       resultSettings: { customText: '', autoCopy: false },
       tier: { min: 0, max: 0 },
       rarity: { corrupted: false, uncorrupted: false },
+      revives: { min: 0, max: 6 },
+      rarityFilter: { normal: false, magic: false, rare: false },
       modifier: {
         over100: false,
         round10: false,
@@ -71,10 +82,24 @@ describe('buildTabletRegex parity', () => {
       },
     },
     {
-      name: 'rarity both (drop)',
+      name: 'rarity all (drop)',
       mutate: (a) => {
         a.rarity.normal = true
         a.rarity.magic = true
+        a.rarity.rare = true
+      },
+    },
+    {
+      name: 'rarity rare',
+      mutate: (a) => {
+        a.rarity.rare = true
+      },
+    },
+    {
+      name: 'rarity magic + rare',
+      mutate: (a) => {
+        a.rarity.magic = true
+        a.rarity.rare = true
       },
     },
     {
@@ -91,9 +116,23 @@ describe('buildTabletRegex parity', () => {
       },
     },
     {
+      name: 'type abyss + temple',
+      mutate: (a) => {
+        a.type.abyss = true
+        a.type.temple = true
+      },
+    },
+    {
       name: 'type all (drop)',
       mutate: (a) => {
-        a.type.breach = a.type.delirium = a.type.irradiated = a.type.expedition = a.type.ritual = a.type.overseer = true
+        a.type.irradiated =
+          a.type.ritual =
+          a.type.delirium =
+          a.type.breach =
+          a.type.abyss =
+          a.type.temple =
+          a.type.overseer =
+            true
       },
     },
     {
@@ -131,17 +170,22 @@ describe('buildTabletRegex parity', () => {
       },
     },
     {
-      name: 'affix with value',
+      // TABLET_MODS[2] carries ranges [[30, 60]]; keep the value in-range so both
+      // sides exercise the bounded value(min-max) path. A rangeless mod is not a
+      // valid parity case here: upstream's real selectedOptionRegex always reads
+      // option.ranges[0][1] and cannot handle a mod without range data (only our
+      // engine guards that case) -- see the rangeless-fallback direct unit test below.
+      name: 'affix with value (ranged mod emits a bounded range)',
       mutate: (a) => {
-        a.selections.want = new Set([ids[0]])
-        a.selections.wantValues = { [ids[0]]: 30 }
+        a.selections.want = new Set([ids[2]])
+        a.selections.wantValues = { [ids[2]]: 40 }
       },
     },
     {
-      name: 'affix value round10',
+      name: 'affix value round10 (ranged mod, bounded range)',
       mutate: (a) => {
-        a.selections.want = new Set([ids[0]])
-        a.selections.wantValues = { [ids[0]]: 35 }
+        a.selections.want = new Set([ids[2]])
+        a.selections.wantValues = { [ids[2]]: 45 }
         a.round10 = true
       },
     },
@@ -173,6 +217,27 @@ describe('buildTabletRegex parity', () => {
   }
 })
 
+describe('buildTabletRegex: bounded value(min-max) matching', () => {
+  it('value-bearing mod emits a bounded range anchored on the range paren', () => {
+    const mod = TABLET_MODS.find((m) => m.ranges.length > 0)!
+    const a = emptyArgs()
+    a.selections.want = new Set([mod.id])
+    a.selections.wantValues = { [mod.id]: mod.ranges[0][0] }
+    const expectedRange = generateBoundedValueRegex(String(mod.ranges[0][0]), String(mod.ranges[0][1]), false, false)
+    expect(buildTabletRegex(a)).toBe(`"${expectedRange}.*${mod.regex}"`)
+  })
+
+  it('value on a rangeless mod falls back to the scalar >= regex', () => {
+    const mod = TABLET_MODS.find((m) => m.ranges.length === 0)!
+    const a = emptyArgs()
+    a.selections.want = new Set([mod.id])
+    a.selections.wantValues = { [mod.id]: 25 }
+    const expectedScalar = generateNumberRegex('25', false, false)
+    expect(buildTabletRegex(a)).toBe(`"${expectedScalar}.*${mod.regex}"`)
+    expect(buildTabletRegex(a)).not.toContain('\\(')
+  })
+})
+
 describe('buildTabletRegex specifics', () => {
   it('returns empty string when nothing selected', () => {
     expect(buildTabletRegex(emptyArgs())).toBe('')
@@ -183,6 +248,17 @@ describe('buildTabletRegex specifics', () => {
     a.uses.value = 14
     expect(buildTabletRegex(a)).toBe('"(1[4-8]) us"')
   })
+  it('emits rare rarity', () => {
+    const a = emptyArgs()
+    a.rarity.rare = true
+    expect(buildTabletRegex(a)).toBe('"y: r"')
+  })
+  it('emits abyss and temple type tokens', () => {
+    const a = emptyArgs()
+    a.type.abyss = true
+    a.type.temple = true
+    expect(buildTabletRegex(a)).toBe('"(byss|empl)"')
+  })
 })
 
 /**
@@ -191,6 +267,10 @@ describe('buildTabletRegex specifics', () => {
  * these anchor our output to the actual site, catching a systematic transcription
  * error in the fixture (which would pass parity). The customText case exercises the
  * engine's customText arg, which the TabletGenerator UI does not currently feed.
+ *
+ * Exception: the two multi-type cases ('"(tual|eac)"', '"(tual|eac|eer)"') were
+ * re-derived from upstream's 4.5.2 type-token reorder in TabletResult.ts source,
+ * not re-captured live. Re-capture on the next live-site golden refresh.
  */
 describe('buildTabletRegex golden (live poe2.re/tablet captures)', () => {
   const golden: Array<{ name: string; mutate: (a: TabletBuildArgs) => void; expected: string }> = [
@@ -221,7 +301,7 @@ describe('buildTabletRegex golden (live poe2.re/tablet captures)', () => {
         a.type.breach = true
         a.type.ritual = true
       },
-      expected: '"(eac|tual)"',
+      expected: '"(tual|eac)"',
     },
     {
       name: 'type breach + ritual + overseer',
@@ -230,7 +310,7 @@ describe('buildTabletRegex golden (live poe2.re/tablet captures)', () => {
         a.type.ritual = true
         a.type.overseer = true
       },
-      expected: '"(eac|tual|eer)"',
+      expected: '"(tual|eac|eer)"',
     },
     {
       name: 'uses 1',

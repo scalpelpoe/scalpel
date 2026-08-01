@@ -1,14 +1,20 @@
 import type { WaystoneMod } from '@shared/data/regex/waystone-mods'
-import { generateNumberRegex } from './waystone-number-regex'
+import { generateBoundedValueRegex, generateNumberRegex } from './waystone-number-regex'
+import { generateRarityRegex, type RaritySettings } from './rarity-regex'
 
 export interface WaystoneTier {
   min: number
   max: number
 }
 
-export interface WaystoneRarity {
+export interface WaystoneCorruption {
   corrupted: boolean
   uncorrupted: boolean
+}
+
+export interface WaystoneRevives {
+  min: number
+  max: number
 }
 
 export interface WaystoneQualifiers {
@@ -65,7 +71,9 @@ export interface WaystoneSelections {
 interface BuildArgs {
   mods: WaystoneMod[]
   tier: WaystoneTier
-  rarity: WaystoneRarity
+  corruption: WaystoneCorruption
+  rarity: RaritySettings
+  revives: WaystoneRevives
   qualifiers: WaystoneQualifiers
   quantities: WaystoneQuantities
   selections: WaystoneSelections
@@ -84,16 +92,35 @@ interface BuildArgs {
  *  output as extra whitespace between adjacent sections. Trade regex tolerates the
  *  extra space, and matching the upstream behavior keeps the parity test honest. */
 export function buildWaystoneRegex(args: BuildArgs): string {
-  const { mods, tier, rarity, qualifiers, quantities, selections, round10, over100, customText } = args
+  const { mods, tier, corruption, rarity, revives, qualifiers, quantities, selections, round10, over100, customText } =
+    args
   const parts = [
+    generateRarityRegex(rarity),
     buildTierRegex(tier),
+    buildReviveRegex(revives),
     buildModifierRegex(mods, selections, qualifiers, round10, over100),
-    buildRarityRegex(rarity),
+    buildCorruptionRegex(corruption),
     ...buildQuantifierRegexes(quantities, round10, over100),
     customText || null,
   ].filter((p): p is string => p !== null)
   if (parts.length === 0) return ''
   return parts.join(' ').trim()
+}
+
+/** Port of poe2.re's generateReviveRegex: matches the waystone's revive count line.
+ *  Inert at the full 0..6 span. */
+function buildReviveRegex(revives: WaystoneRevives): string | null {
+  if (revives.min > revives.max) return null
+  if (revives.min < 0 || revives.max < 0) return null
+  if (revives.min <= 0 && revives.max === 6) return null
+  const numbers = range(revives.min, revives.max + 1)
+  const regex =
+    numbers.length <= 1
+      ? numbers.join('')
+      : numbers.length > 2
+        ? `[${numbers[0]}-${numbers[numbers.length - 1]}]`
+        : `[${numbers.join('')}]`
+  return regex === '' ? '' : `"le: ${regex}"`
 }
 
 function buildTierRegex(tier: WaystoneTier): string | null {
@@ -119,17 +146,27 @@ function buildTierRegex(tier: WaystoneTier): string | null {
   const regexOver10 =
     numbersOver10.length <= 1 ? numbersOver10.join('') : `1[${numbersOver10.map((n) => n.toString()[1]).join('')}]`
 
-  const under10 = regexUnder10 === '' ? '' : `r ${regexUnder10}\\)`
-  const over10 = regexOver10 === '' ? '' : `${regexOver10}\\)`
+  // The "er " prefix pins each token to the "...er N)" tail of the waystone name line
+  // ("Waystone (Tier 9)") so a bare `1[0-6]\)` can't false-match other parenthesized
+  // numbers, e.g. "Uncut Skill Gem (Level 16)". poe2.re's July 2026 fix (commits
+  // 95f6c7d5 + 19031221) prepends "er " to the joined alternation, which via regex
+  // alternation precedence only reaches the first branch -- we prefix each branch
+  // instead, matching the fix's intent.
+  const under10 = regexUnder10 === '' ? '' : `er ${regexUnder10}\\)`
+  const over10 = regexOver10 === '' ? '' : `er ${regexOver10}\\)`
   const result = [under10, over10].filter((s) => s !== '').join('|')
   return result === '' ? null : `"${result}"`
 }
 
-/** poe2.re's selectedOptionRegex: a chosen magnitude prefixes the mod token. A
- *  falsy value (0 / undefined) yields the bare token, matching their `if (option.value)`. */
+/** poe2.re's selectedOptionRegex (current vintage): a chosen magnitude becomes a
+ *  bounded [value..modMax] range anchored on the "(min-max)" display's open paren.
+ *  A falsy value (0 / undefined) yields the bare token. Mods without range data
+ *  (upstream's UI cannot select those; ours guards) keep the legacy >= scalar form. */
 function modToken(mod: WaystoneMod, value: number | undefined, round10: boolean, over100: boolean): string {
   if (!value) return mod.regex
-  return `${generateNumberRegex(String(value), round10, over100)}.*${mod.regex}`
+  const rangeMax = mod.ranges[0]?.length === 2 ? mod.ranges[0][1] : undefined
+  if (rangeMax === undefined) return `${generateNumberRegex(String(value), round10, over100)}.*${mod.regex}`
+  return `${generateBoundedValueRegex(String(value), String(rangeMax), round10, over100)}.*${mod.regex}`
 }
 
 function buildModifierRegex(
@@ -166,10 +203,10 @@ function buildModifierRegex(
   return [goodPart, badPart].join(' ')
 }
 
-function buildRarityRegex(rarity: WaystoneRarity): string | null {
-  if (rarity.uncorrupted && rarity.corrupted) return null
-  if (rarity.corrupted) return 'corr'
-  if (rarity.uncorrupted) return '!corr'
+function buildCorruptionRegex(corruption: WaystoneCorruption): string | null {
+  if (corruption.uncorrupted && corruption.corrupted) return null
+  if (corruption.corrupted) return 'corr'
+  if (corruption.uncorrupted) return '!corr'
   return null
 }
 

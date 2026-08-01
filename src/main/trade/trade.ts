@@ -1,12 +1,15 @@
 import { app, net } from 'electron'
+import { CHART_ZONES } from '@shared/data/trade/charts'
+import { SCRYING_ORB_AREAS, SCRYING_ORB_DISCRIMINATOR } from '@shared/data/trade/scrying-orbs'
 import tabletModMap from '@shared/data/trade/tablet-mods.json'
 import { TRANSFIGURED_GEM_DISC } from '@shared/data/trade/transfigured-gems'
 import { getTradeUrls } from '@shared/endpoints'
-import { isClusterJewel, isSkillGem, splitRuneTier } from '@shared/poe-item'
+import { hasGeneratedName, isClusterJewel, isSkillGem, splitRuneTier } from '@shared/poe-item'
 import { recordMainBreadcrumb } from '../diagnostics'
 import { getPoeVersion } from '../game-state'
 import { getOverlayWindow } from '../overlay'
 import { harvestIcons } from './icon-cache'
+import { getUniquesByBase } from './prices'
 import { adjustRateLimits, RateLimiter } from './rate-limiter'
 import { normalizeTabletModKey, stripTabletMapScoping } from './stat-matcher/producers/tablets'
 
@@ -76,6 +79,10 @@ export function stripTradeTokens(s: string): string {
   return s.replace(/\[([^\]|]+)\|?([^\]]*)\]/g, (_, a: string, b: string) => b || a)
 }
 
+/** Special categories GGG tags onto a folded `explicitMods` entry. */
+const MOD_CATEGORY_FLAGS = ['fractured', 'crafted', 'desecrated', 'mutated'] as const
+export type ModCategory = (typeof MOD_CATEGORY_FLAGS)[number]
+
 /** A single entry in a trade-fetch item's `*Mods` array.
  *
  *  PoE1 (and, as of 2026-06, PoE2 *implicit* mods) send a plain string. PoE2's
@@ -84,12 +91,20 @@ export function stripTradeTokens(s: string): string {
  *  the per-mod tier/magnitude data that used to live only in `extended.mods`
  *  (now absent for explicits) is inlined under `mods`. Consumers must read the
  *  text via `modEntryText` rather than assuming a string -- treating the object
- *  as a string threw `t.replace is not a function` for every PoE2 search. */
+ *  as a string threw `t.replace is not a function` for every PoE2 search.
+ *
+ *  As of 2026-07, GGG additionally folds the whole explicit family into a
+ *  single `explicitMods` array on both /api/trade and /api/trade2: the
+ *  dedicated `fracturedMods`/`craftedMods`/`desecratedMods`/`mutatedMods`
+ *  arrays are gone, and each entry instead tags its own category via
+ *  `domain`/`flags`. See `modEntryCategory`. */
 export type FetchItemMod =
   | string
   | {
       description: string
       hash?: string
+      domain?: string
+      flags?: Partial<Record<ModCategory, boolean>>
       mods?: Array<{
         // name/tier are omitted for fixed unique rolls (only magnitudes present).
         name?: string
@@ -102,6 +117,22 @@ export type FetchItemMod =
 /** Display text of a `*Mods` entry regardless of which shape GGG sent. */
 export function modEntryText(e: FetchItemMod | undefined): string {
   return typeof e === 'string' ? e : (e?.description ?? '')
+}
+
+/** Which special category a folded `explicitMods` entry belongs to, or null for a
+ *  plain explicit. `domain` mirrors the flag for fractured/crafted/desecrated but
+ *  stays 'explicit' for foulborn (mutated), so `flags` is the authoritative signal. */
+export function modEntryCategory(e: FetchItemMod | undefined): ModCategory | null {
+  if (!e || typeof e === 'string') return null
+  for (const c of MOD_CATEGORY_FLAGS) if (e.flags?.[c]) return c
+  const d = e.domain as ModCategory | undefined
+  return d && (MOD_CATEGORY_FLAGS as readonly string[]).includes(d) ? d : null
+}
+
+/** Stripped text of every folded `explicitMods` entry in `cat`, or undefined if none. */
+export function pickCategory(mods: FetchItemMod[] | undefined, cat: ModCategory): string[] | undefined {
+  const out = (mods ?? []).filter((e) => modEntryCategory(e) === cat).map((e) => stripTradeTokens(modEntryText(e)))
+  return out.length > 0 ? out : undefined
 }
 
 // Calculated pseudos that PoE2's /api/trade2 rejects as native `pseudo.*` stat
@@ -158,9 +189,12 @@ interface TradeListing {
     baseType?: string
     explicitMods?: string[]
     implicitMods?: string[]
+    enchantMods?: string[]
+    runeMods?: string[]
     fracturedMods?: string[]
     foulbornMods?: string[]
     craftedMods?: string[]
+    desecratedMods?: string[]
     ilvl?: number
     sockets?: Array<{ group: number; sColour: string }>
     gemLevel?: number
@@ -174,6 +208,9 @@ interface TradeListing {
     modTiers?: Record<string, { tier: string; name: string; ranges: string }>
     rarity?: string
     mapProperties?: Array<{ name: string; value: string }>
+    areaLevel?: number
+    heistJob?: { skill: string; level: number }
+    chartZone?: string
   }
 }
 
@@ -671,17 +708,31 @@ export async function searchTrade(
     status: { option: isDivCard ? 'available' : tradeStatus },
   }
 
-  // Unid items have hidden mods, so any explicit/implicit/fractured/crafted/pseudo
-  // filter would never match -- the stat-filter loop below drops those when the
-  // unid chip is on. Computed up here too because an unidentified unique must skip
+  // Unid items hide rolled explicits, so the stat-filter loop below drops those
+  // when the unid chip is on (implicits/enchants/runes that stay visible still
+  // flow through). Computed up here too because an unidentified unique must skip
   // the name search (see the Unique branch).
   const unidEnabled = statFilters.some((f) => f.id === 'misc.identified' && f.enabled)
 
   // For uniques, search by name + base type
   // Strip "Foulborn " prefix from the trade search name
   if (item.rarity === 'Unique' && item.itemClass === 'Maps') {
-    // Unique maps: search by name only (type "Map" doesn't work with name)
-    query.name = item.name
+    // Unique maps: search by name only (type "Map" doesn't work with name).
+    // An unid unique map has name == baseType (e.g. "Machinarium Map"), which
+    // the trade API rejects as an unknown name, and map bases are not valid
+    // query.type values either (#470). Resolve the real unique name from the
+    // uniques-by-base data. Replica/Infused variants never drop unidentified
+    // (Heist curios and vendor recipes produce identified items), so prefer
+    // the droppable candidate on shared bases. (lookupBestUniquePrice in
+    // prices.ts picks by highest chaos value instead - different goal: price
+    // estimate there, a name the trade API accepts here.)
+    if (unidEnabled && item.name === item.baseType) {
+      const candidates = getUniquesByBase()[item.baseType] ?? []
+      const droppable = candidates.filter((n) => !/^(?:Replica|Infused)\s/.test(n))
+      query.name = droppable[0] ?? candidates[0] ?? item.name
+    } else {
+      query.name = item.name
+    }
   } else if (item.rarity === 'Unique' && item.itemClass === 'Stackable Currency') {
     // Captured beasts: a beast IS its own base, so the trade listing's typeLine is
     // the beast name and the name field is empty. Setting query.name would AND-filter
@@ -725,6 +776,13 @@ export async function searchTrade(
       ...(isValdoMap ? {} : { type_filters: { filters: { rarity: { option: 'nonunique' } } } }),
       map_filters: { filters: mapFilterObj },
     }
+  } else if (item.baseType === 'Scrying Orb') {
+    // Scrying Orbs are Stackable Currency but each is bound to a map area, so
+    // they price per area, not as a fungible stack (#513). The bare type covers
+    // every area; the map-area chip below narrows it to the discriminator form.
+    // Skipping the generic branch also keeps its `rarity: nonunique` type filter
+    // off a currency-frame item.
+    query.type = item.baseType
   } else if (item.itemClass === 'Divination Cards') {
     query.type = item.baseType
   } else if (isSkillGem(item)) {
@@ -759,6 +817,7 @@ export async function searchTrade(
       'defence.energy_shield': 'es',
       'defence.ward': 'ward',
       'defence.block': 'block',
+      'defence.base_percentile': 'base_defence_percentile',
     }
     for (const f of defenceFilters) {
       const key = idMap[f.id]
@@ -870,6 +929,27 @@ export async function searchTrade(
     }
   }
 
+  // Charts: a zone is its own trade type, expressed as a discriminator pair
+  // ({option: "SeaPillars", discriminator: "chart_coral_forest"}). This has to
+  // run AFTER the base-type block -- that block sets query.type to the plain
+  // "Coral Forest Chart" string, which would drop the zone. Same shape as the
+  // map and rune-base discriminator handling above.
+  const chartZoneFilter = statFilters.find((f) => f.id === 'misc.chart_zone' && f.enabled)
+  const chartZoneEntry = chartZoneFilter ? CHART_ZONES[chartZoneFilter.text] : undefined
+  if (chartZoneEntry) {
+    query.type = { option: chartZoneEntry.option, discriminator: chartZoneEntry.discriminator }
+  }
+
+  // Scrying Orbs: same deal, one trade type per bound map area. The API rejects
+  // the displayed "Scrying Orb (Dunes)" text as a base type -- only the opaque
+  // option id paired with the scrying_orb discriminator works. Runs after the
+  // base-type block for the same reason the chart one does.
+  const scryingAreaFilter = statFilters.find((f) => f.id === 'misc.scrying_area' && f.enabled)
+  const scryingAreaOption = scryingAreaFilter ? SCRYING_ORB_AREAS[scryingAreaFilter.text] : undefined
+  if (scryingAreaOption) {
+    query.type = { option: scryingAreaOption, discriminator: SCRYING_ORB_DISCRIMINATOR }
+  }
+
   // Add misc filters (quality, ilvl, corrupted, mirrored)
   const miscFiltersAll = statFilters.filter(
     (f) =>
@@ -925,6 +1005,8 @@ export async function searchTrade(
     'map_iir',
     'map_packsize',
     'map_completion_reward',
+    // PoE1 chart property filters
+    'chart_shape',
     // PoE2 waystone property filters
     'map_tier',
     'map_revives',
@@ -940,7 +1022,7 @@ export async function searchTrade(
     const mapQuery: Record<string, unknown> = {}
     for (const f of mapPropFilters) {
       const key = f.id.replace('map.', '')
-      if (key === 'map_completion_reward' && f.option) {
+      if ((key === 'map_completion_reward' || key === 'chart_shape') && f.option) {
         mapQuery[key] = { option: f.option }
       } else {
         mapQuery[key] = minMaxValue(f)
@@ -997,15 +1079,20 @@ export async function searchTrade(
     'pseudo.pseudo_map_more_map_drops',
     'pseudo.pseudo_map_more_card_drops',
   ])
-  // Unid items have hidden mods, so any explicit/implicit/fractured/crafted/pseudo
-  // filter would never match -- drop those when the unid chip is on. Enchants
-  // and imbues survive identification (cluster jewel passive count etc.), so
-  // those keep flowing through. `unidEnabled` is computed once near the top.
-  const survivesUnid = (f: StatFilter): boolean => f.type === 'enchant' || f.type === 'imbued'
+  // Unid items hide rolled explicits/crafted/pseudos, so those must not enter the
+  // query when the unid chip is on. Mods that remain visible on unid items still
+  // match trade listings: enchants/imbues/runes, and implicits — including every
+  // map-category implicit (Elder/Shaper influence, guardian "occupied by …", and
+  // Conqueror citadel lines like Al-Hezmin/Baran/Veritania/Drox).
+  // `unidEnabled` is computed once near the top.
+  const survivesUnid = (f: StatFilter): boolean =>
+    f.type === 'enchant' || f.type === 'imbued' || f.type === 'rune' || f.type === 'implicit'
   const enabledFilters = statFilters.filter(
     (f) =>
       f.enabled &&
       f.type !== 'timeless' &&
+      f.type !== 'mageblood-dup' &&
+      f.type !== 'mageblood-legacy' &&
       f.id !== 'misc.memory_level' &&
       f.id !== 'misc.area_level' &&
       f.id !== 'socket.white_sockets' &&
@@ -1082,6 +1169,65 @@ export async function searchTrade(
       type: 'and',
       filters: [{ id: timelessSpecific.id, value: { min: timelessSpecific.min, max: timelessSpecific.max } }],
     })
+  }
+
+  // Mageblood: each Mage's Legacy is its own trade stat id (the specific Legacy is
+  // baked into the id as an "|N" suffix; the trade index counts copies of that id).
+  // The stat-matcher post-processor collapses same-Legacy duplicates to one chip per
+  // distinct Legacy plus a synthetic Duplicates chip (duplicates = 4 - distinctCount).
+  // Only the "easy" cases (every Legacy row still enabled, so distinct + duplicates ==
+  // 4) get full count-group fidelity; anything else (a user-deselected Legacy row, or
+  // an inconsistent duplicate count) degrades to present-only filters.
+  // Legacy mods are explicit (hidden pre-ID), so an unidentified search must not leak
+  // them -- zero them out under unid exactly like the timeless block above.
+  const legacyChips = unidEnabled ? [] : statFilters.filter((f) => f.enabled && f.type === 'mageblood-legacy')
+  const dupChip = unidEnabled ? undefined : statFilters.find((f) => f.enabled && f.type === 'mageblood-dup')
+  if (legacyChips.length > 0) {
+    const knownCount = legacyChips.length
+    const dupCount = dupChip ? (dupChip.min ?? dupChip.value ?? 0) : 0
+    // Easy case = every Legacy still enabled, so distinct + duplicates == 4. This
+    // is strictly stronger than "<= 4", so it also guards against an inconsistent
+    // chip set claiming more than 4 total Legacies.
+    const isEasyCase = dupChip != null && dupCount > 0 && knownCount + dupCount === 4
+
+    if (knownCount === 4 && dupCount === 0) {
+      // All 4 Legacies distinct: each must appear at least once.
+      statGroups.push({
+        type: 'and',
+        filters: legacyChips.map((f) => ({ id: f.id, value: { min: 1 } })),
+      })
+    } else if (knownCount === 1 && dupCount === 3) {
+      // A single Legacy repeated 4 times: that Legacy must appear exactly 4 times.
+      statGroups.push({
+        type: 'and',
+        filters: legacyChips.map((f) => ({ id: f.id, value: { min: 4 } })),
+      })
+    } else {
+      // Hard cases and the 2+2 / 3+1 easy cases (which carry their exact-count
+      // constraint in the count group below) both emit present-only filters.
+      statGroups.push({
+        type: 'and',
+        filters: legacyChips.map((f) => ({ id: f.id })),
+      })
+    }
+
+    if (isEasyCase && (knownCount === 2 || knownCount === 3)) {
+      // 2 distinct + 2 duplicates: one Legacy has 3 copies, the other 1 (or 2+2) --
+      // total count across both Legacy ids must reach 4.
+      // 3 distinct + 1 duplicate: one Legacy has 2 copies, the other two have 1 each
+      // -- total count across all three must reach 7.
+      // Each Legacy is queried by its own suffixed id with a count bound (value:{min/
+      // max}); this is EE2's proven buildMageBloodNotFilter form and matches the live
+      // trade2 stat ids. The count-as-value semantics are inherited from EE2.
+      const countValue = knownCount === 2 ? 4 : 7
+      const perLegacyValues: Array<{ min?: number; max?: number }> =
+        knownCount === 2 ? [{ min: 1 }, { min: 2 }, { min: 3 }] : [{ min: 1 }, { min: 2 }, { max: 2 }]
+      statGroups.push({
+        type: 'count',
+        filters: legacyChips.flatMap((f) => perLegacyValues.map((v) => ({ id: f.id, value: { ...v } }))),
+        value: { min: countValue },
+      })
+    }
   }
 
   // Inscribed Ultimatum filters. Each enabled chip carries the API-internal id
@@ -1210,6 +1356,7 @@ export interface FetchEntry {
     craftedMods?: FetchItemMod[]
     desecratedMods?: FetchItemMod[]
     enchantMods?: FetchItemMod[]
+    runeMods?: FetchItemMod[]
     ilvl?: number
     sockets?: Array<{ group: number; sColour: string }>
     properties?: Array<{ name: string; values: Array<[string, number]>; type?: number }>
@@ -1265,13 +1412,26 @@ export function parseFetchedListings(fetchedEntries: FetchEntry[]): TradeListing
           // object form is what threw `t.replace is not a function` (#PoE2 fetch).
           const clean = (arr?: FetchItemMod[]): string[] | undefined =>
             arr?.map((e) => stripTradeTokens(modEntryText(e)))
-          const explicit = clean(r.item.explicitMods)
+          // GGG folded the whole explicit family into one `explicitMods` array (2026-07):
+          // the dedicated fracturedMods/craftedMods/desecratedMods/mutatedMods arrays are
+          // gone and each entry now carries its category on `flags`/`domain`. Split them
+          // back out or the listing preview colours a fractured mod as a plain explicit
+          // (#512). Legacy arrays are still merged in so a GGG rollback stays handled.
+          const folded = r.item.explicitMods ?? []
+          const inCategory = (cat: ModCategory | null): FetchItemMod[] =>
+            folded.filter((e) => modEntryCategory(e) === cat)
+          const merge = (legacy: FetchItemMod[] | undefined, cat: ModCategory): string[] | undefined => {
+            const out = clean([...(legacy ?? []), ...inCategory(cat)]) ?? []
+            return out.length > 0 ? out : undefined
+          }
+          const explicit = clean(inCategory(null))
           const implicit = clean(r.item.implicitMods)
           const enchant = clean(r.item.enchantMods)
-          const fractured = clean(r.item.fracturedMods)
-          const crafted = clean(r.item.craftedMods)
-          const foulborn = clean(r.item.mutatedMods)
-          const desecrated = clean(r.item.desecratedMods)
+          const rune = clean(r.item.runeMods)
+          const fractured = merge(r.item.fracturedMods, 'fractured')
+          const crafted = merge(r.item.craftedMods, 'crafted')
+          const foulborn = merge(r.item.mutatedMods, 'mutated')
+          const desecrated = merge(r.item.desecratedMods, 'desecrated')
           return {
             // Magic items (frameType 1) carry an empty `name`; their affixed
             // display name lives in `typeLine` (e.g. "Glaciated Prismatic Ring"),
@@ -1290,6 +1450,7 @@ export function parseFetchedListings(fetchedEntries: FetchEntry[]): TradeListing
             ],
             implicitMods: implicit,
             enchantMods: enchant,
+            runeMods: rune,
             fracturedMods: fractured,
             craftedMods: crafted,
             foulbornMods: foulborn,
@@ -1312,6 +1473,10 @@ export function parseFetchedListings(fetchedEntries: FetchEntry[]): TradeListing
             areaLevel: r.item.properties?.find((p) => p.name === 'Area Level')?.values?.[0]?.[0]
               ? parseInt(r.item.properties.find((p) => p.name === 'Area Level')!.values[0][0], 10)
               : undefined,
+            // Charts carry the zone name as an UNNAMED property (name: "") tagged
+            // with GGG's chart-zone type code 105, so the type is the only thing to
+            // match on -- the same trick the quality lookup above uses with type 6.
+            chartZone: r.item.properties?.find((p) => p.type === 105)?.values?.[0]?.[0],
             heistJob: (() => {
               const prop = r.item?.properties?.find((p) => p.type === 46)
               if (!prop?.values?.[0]?.[0] && !prop?.values?.[1]?.[0]) return undefined
@@ -1458,12 +1623,15 @@ export function buildGemTypeField(
 }
 
 /** Look up the bulk exchange ID for an item by its name or base type */
-export function getBulkExchangeId(name: string, baseType: string): string | null {
+export function getBulkExchangeId(name: string, baseType: string, rarity?: string): string | null {
   // Try exact name first (e.g. "Divine Orb", "Uncut Skill Gem (Level 20)"),
   // then base type. Map is picked per game: PoE1 uses the hand-maintained
   // legacy list, PoE2 uses EE2-sourced IDs.
   const bulkIdMap = getBulkExchangeIdMap(getPoeVersion())
-  let id = bulkIdMap[name] ?? bulkIdMap[baseType] ?? null
+  // Magic/Rare items show a randomly generated title that can collide with a
+  // real currency name (e.g. a Hypnotic Eye Jewel rolling "Ancient Orb", #501),
+  // so skip the name key for them -- only the base type can match.
+  let id = (hasGeneratedName(rarity) ? null : bulkIdMap[name]) ?? bulkIdMap[baseType] ?? null
   if (!id || id === 'sep') return null
   // Fix legacy zana- prefixed map IDs to current format
   if (id.startsWith('zana-map-tier-')) {
@@ -1485,6 +1653,9 @@ export function isBulkExchangeItem(itemClass: string, name: string, baseType: st
   if (regularTradeClasses.has(itemClass)) return false
   // Specific items with variable properties that need regular trade
   if (baseType === "Facetor's Lens") return false
+  // A Scrying Orb is Stackable Currency but carries a bound map area, so it is
+  // priced per area on regular search and has no exchange listing at all (#513).
+  if (baseType === 'Scrying Orb') return false
   // Beasts are "Stackable Currency" but have rarity Rare/Unique and need regular trade
   if (itemClass === 'Stackable Currency' && (_rarity === 'Rare' || _rarity === 'Unique')) return false
   // Modified map-class items (Magic/Rare/Unique) aren't stackable, so they can't be on
@@ -1502,7 +1673,7 @@ export function isBulkExchangeItem(itemClass: string, name: string, baseType: st
   // as a price reference -- the AngeBanner still surfaces independently (it
   // keys off isVendorExchangeItem), so they're still told to check Ange.
   if (getPoeVersion() === 2 && isVendorExchangeItem(2, itemClass, baseType, _rarity)) {
-    return getBulkExchangeId(name, baseType) != null
+    return getBulkExchangeId(name, baseType, _rarity) != null
   }
 
   const bulkClasses = new Set([
@@ -1517,7 +1688,7 @@ export function isBulkExchangeItem(itemClass: string, name: string, baseType: st
   ])
   if (bulkClasses.has(itemClass)) return true
   // Also check if we have a bulk ID for it (catches essences, fossils, boss frags, etc.)
-  return getBulkExchangeId(name, baseType) != null
+  return getBulkExchangeId(name, baseType, _rarity) != null
 }
 
 export async function searchBulkExchange(
@@ -1658,6 +1829,12 @@ async function fetchAndMapListings(ids: string[], queryId: string): Promise<Trad
           // receive the raw entry. Mirrors parseFetchedListings (#PoE2 fetch).
           explicitMods: (r.item.explicitMods ?? []).map((e) => stripTradeTokens(modEntryText(e))),
           implicitMods: r.item.implicitMods?.map((e) => stripTradeTokens(modEntryText(e))),
+          // The preview colours mods by these buckets; GGG folds them all into
+          // explicitMods now, so split them back out here too (#512).
+          fracturedMods: pickCategory(r.item.explicitMods, 'fractured'),
+          craftedMods: pickCategory(r.item.explicitMods, 'crafted'),
+          foulbornMods: pickCategory(r.item.explicitMods, 'mutated'),
+          desecratedMods: pickCategory(r.item.explicitMods, 'desecrated'),
           ilvl: r.item.ilvl,
           // ExpandedListing surfaces these flags as status chips (Corrupted, Mirrored,
           // Unidentified); the regular trade path includes them, so map-regex listings
@@ -1993,7 +2170,8 @@ const TABLET_MOD_LOOKUP = tabletModMap as Record<string, string>
 const TABLET_TYPE_BASE_NAMES: Record<string, string> = {
   breach: 'Breach Tablet',
   delirium: 'Delirium Tablet',
-  expedition: 'Expedition Tablet',
+  abyss: 'Abyss Tablet',
+  temple: 'Temple Tablet',
   ritual: 'Ritual Tablet',
   overseer: 'Overseer Tablet',
   irradiated: 'Irradiated Tablet',
@@ -2026,7 +2204,7 @@ export async function searchTabletsByRegex(
   wantTexts: string[],
   wantMode: 'any' | 'all',
   wantValues: Record<number, number>,
-  rarity: { normal: boolean; magic: boolean },
+  rarity: { normal: boolean; magic: boolean; rare: boolean },
   typeFlags: Record<string, boolean>,
   uses: { enabled: boolean; value: number },
   tradeStatus: string,
@@ -2040,8 +2218,8 @@ export async function searchTabletsByRegex(
   const statGroups = buildRegexStatGroups([], wantTexts, wantMode, {}, resolveTabletText)
 
   const typeFilterFilters: Record<string, unknown> = { category: { option: 'map.tablet' } }
-  if (rarity.magic && !rarity.normal) typeFilterFilters.rarity = { option: 'magic' }
-  if (rarity.normal && !rarity.magic) typeFilterFilters.rarity = { option: 'normal' }
+  const selectedRarities = (['normal', 'magic', 'rare'] as const).filter((k) => rarity[k])
+  if (selectedRarities.length === 1) typeFilterFilters.rarity = { option: selectedRarities[0] }
 
   // Single selected type flag narrows base type; multiple/none stays category-wide.
   const selectedTypes = Object.entries(typeFlags)

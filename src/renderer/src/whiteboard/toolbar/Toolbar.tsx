@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useWhiteboardStore, type Tool } from '../state/store'
 import { ToolButton } from './ToolButton'
 import { ColorPalette } from './ColorPalette'
@@ -11,7 +11,7 @@ import { PANEL_CHROME } from './panel-chrome'
 import { FontSizePicker } from './FontSizePicker'
 import { SaveCurrentDialog } from '../snapshots/SaveCurrentDialog'
 import { SnapshotLibrary } from '../snapshots/SnapshotLibrary'
-import { useDismissOnOutside } from '../state/use-dismiss-on-outside'
+import { useDismissOnOutside } from '../../shared/use-dismiss-on-outside'
 import { UnifiedPillArrow } from './pill-arrow'
 import { ToolMarker, ToolHighlighter, ToolEraser } from './tool-icons'
 import {
@@ -24,6 +24,7 @@ import {
   IconLayers,
   IconOpacity,
   IconRuler,
+  IconMirror,
 } from './icons'
 import { CAMERA_CONSTANTS } from '../canvas/poe-projection'
 import type { BoardSnapshot, BoardState } from '@shared/whiteboard-types'
@@ -94,6 +95,17 @@ function InkSubToolPicker({
   )
 }
 
+/** Shared spring overshoot curve, matching the rest of the toolbar's motion. */
+const SPRING = 'cubic-bezier(0.2, 1.4, 0.4, 1)'
+
+/** Milliseconds of passthrough idle before the bar collapses to the toggle. */
+const MINIMIZE_DELAY_MS = 2000
+
+/** Gap between the collapsed passthrough pill's right edge and the screen's
+ *  right edge when minimized, as a fraction of screen HEIGHT (so it tracks the
+ *  height-scaled PoE HUD across aspect ratios). Tuned in-app, then baked in. */
+const MINIMIZED_RIGHT_GAP_FRAC = 0.515
+
 export function Toolbar({ version }: ToolbarProps): JSX.Element {
   const tool = useWhiteboardStore((s) => s.tool)
   const setTool = useWhiteboardStore((s) => s.setTool)
@@ -104,8 +116,65 @@ export function Toolbar({ version }: ToolbarProps): JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const distanceSupported = CAMERA_CONSTANTS[version] !== null
 
+  // Passthrough auto-minimize: after a delay in play mode the bar collapses to
+  // just the passthrough toggle, slid toward the right edge by a height-relative
+  // gap (the PoE HUD scales with vertical resolution, so this stays aligned with
+  // the right HUD cluster across aspect ratios; a width-relative gap drifts).
+  const [minimized, setMinimized] = useState(false)
+  const [screenW, setScreenW] = useState(() => window.innerWidth)
+  const [screenH, setScreenH] = useState(() => window.innerHeight)
+  const [playToggleW, setPlayToggleW] = useState(0)
+  const playToggleRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (mode !== 'play') {
+      setMinimized(false)
+      return
+    }
+    const t = setTimeout(() => setMinimized(true), MINIMIZE_DELAY_MS)
+    return () => clearTimeout(t)
+  }, [mode])
+
+  // Track screen width and the passthrough button's width (its label, hence
+  // width, differs between edit and play) so the slide lands the pill the same
+  // gap from the right edge regardless of resolution.
+  useLayoutEffect(() => {
+    function measure(): void {
+      setScreenW(window.innerWidth)
+      setScreenH(window.innerHeight)
+      const el = playToggleRef.current
+      if (el) setPlayToggleW(el.getBoundingClientRect().width)
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [mode, minimized, version])
+
+  // Collapsed pill ~= the toggle plus the pill's left+right padding (p-2). The
+  // container is self-centered (translateX(-50%)), so its center sits at
+  // screenW/2 for any width; shifting the inner wrapper by this much puts the
+  // collapsed pill's right edge MINIMIZED_RIGHT_GAP_FRAC of the height from edge.
+  const COLLAPSED_PAD = 16
+  const rightGapPx = MINIMIZED_RIGHT_GAP_FRAC * screenH
+  const shiftPx =
+    minimized && playToggleW > 0 ? Math.round(screenW / 2 - rightGapPx - (playToggleW + COLLAPSED_PAD) / 2) : 0
+
   // Only report toolbar rects in Play mode. (See longer note on the panel
   // hit-testing contract previously in this file.)
+  const collectAndReport = useCallback(() => {
+    const el = containerRef.current
+    if (!el) return
+    if (useWhiteboardStore.getState().mode !== 'play') return
+    const rects: Array<{ left: number; top: number; width: number; height: number }> = []
+    for (const child of Array.from(el.children) as HTMLElement[]) {
+      const r = child.getBoundingClientRect()
+      if (r.width > 0 && r.height > 0) {
+        rects.push({ left: r.left, top: r.top, width: r.width, height: r.height })
+      }
+    }
+    window.api.whiteboard.reportToolbarRects(rects)
+  }, [])
+
   useLayoutEffect(() => {
     const el = containerRef.current
     if (!el) return
@@ -113,19 +182,8 @@ export function Toolbar({ version }: ToolbarProps): JSX.Element {
       window.api.whiteboard.clearToolbarRect()
       return
     }
-    function report(): void {
-      if (!el) return
-      const rects: Array<{ left: number; top: number; width: number; height: number }> = []
-      for (const child of Array.from(el.children) as HTMLElement[]) {
-        const r = child.getBoundingClientRect()
-        if (r.width > 0 && r.height > 0) {
-          rects.push({ left: r.left, top: r.top, width: r.width, height: r.height })
-        }
-      }
-      window.api.whiteboard.reportToolbarRects(rects)
-    }
-    report()
-    const ro = new ResizeObserver(report)
+    collectAndReport()
+    const ro = new ResizeObserver(collectAndReport)
     ro.observe(el)
     for (const child of Array.from(el.children) as HTMLElement[]) ro.observe(child)
     const mo = new MutationObserver(() => {
@@ -134,17 +192,27 @@ export function Toolbar({ version }: ToolbarProps): JSX.Element {
           ro.observe(child)
         } catch {}
       }
-      report()
+      collectAndReport()
     })
     mo.observe(el, { childList: true })
-    window.addEventListener('resize', report)
+    window.addEventListener('resize', collectAndReport)
     return () => {
       ro.disconnect()
       mo.disconnect()
-      window.removeEventListener('resize', report)
+      window.removeEventListener('resize', collectAndReport)
       window.api.whiteboard.clearToolbarRect()
     }
-  }, [mode])
+  }, [mode, collectAndReport])
+
+  // The slide/collapse is transform- and max-width-animated; a transform-only
+  // move (a calibration nudge) doesn't trip the ResizeObserver, so re-report
+  // immediately and once more after the transition settles.
+  useEffect(() => {
+    if (mode !== 'play') return
+    collectAndReport()
+    const id = setTimeout(collectAndReport, 460)
+    return () => clearTimeout(id)
+  }, [mode, minimized, collectAndReport])
 
   const undo = useWhiteboardStore((s) => s.undo)
   const redo = useWhiteboardStore((s) => s.redo)
@@ -453,7 +521,10 @@ export function Toolbar({ version }: ToolbarProps): JSX.Element {
   return (
     <div
       ref={containerRef}
-      className="absolute -translate-x-1/2 flex flex-col items-center gap-2 select-none"
+      // z-20 keeps the toolbar above the Stage canvas layer (z-10 in index.tsx)
+      // so it stays clickable; it is bounded to its own footprint, so canvas
+      // clicks elsewhere still reach the Stage.
+      className="absolute z-20 -translate-x-1/2 flex flex-col items-center gap-2 select-none"
       style={{ left: pos.left, bottom: pos.bottom }}
     >
       {contextualRowBody && (
@@ -480,94 +551,117 @@ export function Toolbar({ version }: ToolbarProps): JSX.Element {
        * bounce briefly enlarges the marker's clip-path region and would
        * otherwise show the icon's body dipping past the toolbar's bottom. */}
       <div
-        ref={mainPillRef}
-        className={`${PANEL_CHROME} relative z-10 p-2 flex gap-1 items-center`}
-        style={{ clipPath: 'inset(-9999px -9999px 0 -9999px round 22px)' }}
+        className="flex flex-col items-center gap-2"
+        style={{ transform: `translateX(${shiftPx}px)`, transition: `transform 420ms ${SPRING}` }}
       >
-        <ToolButton
-          icon={<IconCursor />}
-          title="Select"
-          active={tool === 'select'}
-          onClick={() => pickTool('select')}
-          dismissAnchor
-        />
-        <ToolButton
-          ref={penAnchorRef}
-          icon={PenSlotIcon}
-          title={tool === 'highlighter' ? 'Highlighter' : tool === 'eraser' ? 'Eraser' : 'Marker'}
-          /* Drop to the inactive (lower) position when a popover is open.
-           * The contextual ink pill is hidden in that state, so visually the
-           * marker should match. It re-mounts up when the popover closes. */
-          active={isPenFamily(tool) && !popoverOpen}
-          onClick={onPenSlotClick}
-          dismissAnchor
-          big
-        />
-        <ToolButton
-          ref={shapeAnchorRef}
-          icon={<IconShape variant={tool === 'shape' ? shapeVariant : 'rect'} />}
-          title="Shape"
-          active={tool === 'shape'}
-          onClick={() => pickTool('shape')}
-          dismissAnchor
-        />
-        <ToolButton
-          ref={textAnchorRef}
-          icon={<IconText />}
-          title="Text"
-          active={tool === 'text'}
-          onClick={() => pickTool('text')}
-          dismissAnchor
-        />
-        <ToolButton
-          ref={distanceAnchorRef}
-          icon={<IconRuler />}
-          title={distanceSupported ? 'Distance (ruler / radius)' : 'Distance - PoE2 support coming'}
-          active={tool === 'ruler' || tool === 'radiusRing'}
-          disabled={!distanceSupported}
-          onClick={onDistanceSlotClick}
-          dismissAnchor
-        />
-        <div className="w-px bg-border mx-1 self-stretch" />
-        <ToolButton icon={<IconUndo />} title="Undo" disabled={!canUndoNow} onClick={undo} />
-        <ToolButton icon={<IconRedo />} title="Redo" disabled={!canRedoNow} onClick={redo} />
-        <button
-          type="button"
-          className={[
-            'btn-ghost btn-bounce h-9 flex items-center justify-center gap-0.5',
-            confirmingClear ? 'min-w-9 px-2' : 'w-9',
-            elementCount === 0
-              ? 'opacity-30 cursor-not-allowed text-text-dim'
-              : confirmingClear
-                ? '!bg-danger !text-white cursor-pointer'
-                : 'text-text-dim hover:text-text cursor-pointer',
-          ].join(' ')}
-          title={confirmingClear ? 'Click again to confirm' : 'Clear all'}
-          disabled={elementCount === 0}
-          onClick={onClearAll}
+        <div
+          ref={mainPillRef}
+          className={`${PANEL_CHROME} relative z-10 p-2 flex gap-1 items-center`}
+          style={{ clipPath: 'inset(-9999px -9999px 0 -9999px round 22px)' }}
         >
-          <IconTrash />
-          {confirmingClear && <span className="font-bold text-sm leading-none">?</span>}
-        </button>
-        <div className="w-px bg-border mx-1 self-stretch" />
-        <ToolButton
-          ref={snapshotsAnchorRef}
-          icon={<IconLayers />}
-          title="Snapshots"
-          active={libOpen || pending !== null}
-          onClick={onToggleLibrary}
-          dismissAnchor
-        />
-        <ToolButton
-          ref={opacityAnchorRef}
-          icon={<IconOpacity />}
-          title="Opacity"
-          active={opacityOpen}
-          onClick={onToggleOpacity}
-          dismissAnchor
-        />
-        <div className="w-px bg-border mx-1 self-stretch" />
-        <PlayToggle />
+          <div
+            className="flex gap-1 items-center"
+            style={{
+              maxWidth: minimized ? 0 : 2000,
+              opacity: minimized ? 0 : 1,
+              overflow: minimized ? 'hidden' : 'visible',
+              transition: `max-width 420ms ${SPRING}, opacity 260ms ease`,
+            }}
+          >
+            <ToolButton
+              icon={<IconCursor />}
+              title="Select"
+              active={tool === 'select'}
+              onClick={() => pickTool('select')}
+              dismissAnchor
+            />
+            <ToolButton
+              ref={penAnchorRef}
+              icon={PenSlotIcon}
+              title={tool === 'highlighter' ? 'Highlighter' : tool === 'eraser' ? 'Eraser' : 'Marker'}
+              /* Drop to the inactive (lower) position when a popover is open.
+               * The contextual ink pill is hidden in that state, so visually the
+               * marker should match. It re-mounts up when the popover closes. */
+              active={isPenFamily(tool) && !popoverOpen}
+              onClick={onPenSlotClick}
+              dismissAnchor
+              big
+            />
+            <ToolButton
+              ref={shapeAnchorRef}
+              icon={<IconShape variant={tool === 'shape' ? shapeVariant : 'rect'} />}
+              title="Shape"
+              active={tool === 'shape'}
+              onClick={() => pickTool('shape')}
+              dismissAnchor
+            />
+            <ToolButton
+              ref={textAnchorRef}
+              icon={<IconText />}
+              title="Text"
+              active={tool === 'text'}
+              onClick={() => pickTool('text')}
+              dismissAnchor
+            />
+            <ToolButton
+              ref={distanceAnchorRef}
+              icon={<IconRuler />}
+              title={distanceSupported ? 'Distance (ruler / radius)' : 'Distance - PoE2 support coming'}
+              active={tool === 'ruler' || tool === 'radiusRing'}
+              disabled={!distanceSupported}
+              onClick={onDistanceSlotClick}
+              dismissAnchor
+            />
+            <ToolButton
+              icon={<IconMirror />}
+              title="Live mirror - capture a region and show it live"
+              active={tool === 'liveMirror'}
+              onClick={() => pickTool('liveMirror')}
+            />
+            <div className="w-px bg-border mx-1 self-stretch" />
+            <ToolButton icon={<IconUndo />} title="Undo" disabled={!canUndoNow} onClick={undo} />
+            <ToolButton icon={<IconRedo />} title="Redo" disabled={!canRedoNow} onClick={redo} />
+            <button
+              type="button"
+              className={[
+                'btn-ghost btn-bounce h-9 flex items-center justify-center gap-0.5',
+                confirmingClear ? 'min-w-9 px-2' : 'w-9',
+                elementCount === 0
+                  ? 'opacity-30 cursor-not-allowed text-text-dim'
+                  : confirmingClear
+                    ? '!bg-danger !text-white cursor-pointer'
+                    : 'text-text-dim hover:text-text cursor-pointer',
+              ].join(' ')}
+              title={confirmingClear ? 'Click again to confirm' : 'Clear all'}
+              disabled={elementCount === 0}
+              onClick={onClearAll}
+            >
+              <IconTrash />
+              {confirmingClear && <span className="font-bold text-sm leading-none">?</span>}
+            </button>
+            <div className="w-px bg-border mx-1 self-stretch" />
+            <ToolButton
+              ref={snapshotsAnchorRef}
+              icon={<IconLayers />}
+              title="Snapshots"
+              active={libOpen || pending !== null}
+              onClick={onToggleLibrary}
+              dismissAnchor
+            />
+            <ToolButton
+              ref={opacityAnchorRef}
+              icon={<IconOpacity />}
+              title="Opacity"
+              active={opacityOpen}
+              onClick={onToggleOpacity}
+              dismissAnchor
+            />
+            <div className="w-px bg-border mx-1 self-stretch" />
+          </div>
+          <div ref={playToggleRef} className="flex items-center">
+            <PlayToggle />
+          </div>
+        </div>
       </div>
       <SaveCurrentDialog
         open={pending !== null}

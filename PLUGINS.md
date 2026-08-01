@@ -164,6 +164,11 @@ interface ScalpelPluginContext {
   // Screen capture - returns null when PoE is not focused
   captureGameWindow(region?: GameRect): Promise<GameCapture | null>
 
+  // Cursor position in game CSS px from the game window's top-left, or null
+  // when there's no game window yet / the cursor is outside the window. Same
+  // space as setInteractiveRegion, so annotation overlays can place against it.
+  getCursorPosition(): Promise<{ x: number; y: number } | null>
+
   // Utilities
   fetch: typeof fetch                  // standard browser fetch
   openExternal(url: string): void      // open URL in system browser
@@ -371,6 +376,14 @@ machine only if your own code sends them. There is no runtime permission prompt.
 Registry curation is the gate - the Scalpel plugin registry requires review
 before a plugin is listed publicly.
 
+**Windows only.** `captureGameWindow` and `ctx.getCursorPosition` both read window
+geometry through Electron screen APIs that are only implemented on Windows. On
+Linux they resolve `null` unconditionally, the same value `captureGameWindow`
+returns when PoE isn't focused - a plugin can't tell the two cases apart from
+the return value alone. `getCursorPosition` is not focus-gated, so on Windows a
+`null` from it means only that the cursor is outside the game window (or the
+window has no bounds yet).
+
 ### Overlay windows
 
 A tab lives inside Scalpel's main overlay. `registerOverlay` instead gives your plugin its own **separate window** - the same kind of chrome'd, draggable, game-anchored window Scalpel uses for the whiteboard and cheat sheets. A plugin can register a tab, an overlay, or both (each at most once).
@@ -481,6 +494,10 @@ The SDK re-exports utilities Scalpel uses internally so you don't have to reimpl
 - `getDustInfo(item)` - dust value for a unique, including bonuses
 - `findRelated(itemName)` - curated related-items list lookup
 - `RARITY_COLORS` - hex tokens for rarity text colors
+
+**Map mods**
+
+- `MAP_MODS` - Scalpel's map-mod danger dataset (`id`, `regex`, `text`, `danger`, `nightmare`); `DANGER_COLORS` and `DANGER_LABELS` map a `Danger` to a hex color and a display label. The export names are locked by the SDK contract, but the dataset's *content* is resynced from an upstream vendor feed by `scripts/sync-regex-data.js` every league - don't hard-code specific `MapMod.id` values across league boundaries. This is PoE1 map mod data only; PoE2 waystones and tablets use separate datasets that aren't exposed to plugins yet. `MAP_MODS` still returns its full PoE1 list regardless of the running game, so a `poeVersions: [2]` plugin that reads it gets real-looking data that will never match a PoE2 item - not an empty array or an error.
 
 **Trend**
 

@@ -13,6 +13,7 @@ export interface Listing {
     explicitMods?: string[]
     implicitMods?: string[]
     enchantMods?: string[]
+    runeMods?: string[]
     fracturedMods?: string[]
     foulbornMods?: string[]
     craftedMods?: string[]
@@ -22,6 +23,7 @@ export interface Listing {
     gemLevel?: number
     quality?: number
     areaLevel?: number
+    chartZone?: string
     heistJob?: { skill: string; level: number }
     corrupted?: boolean
     mirrored?: boolean

@@ -31,14 +31,19 @@ import * as SDK from './index'
 // The exact runtime (value) exports of @scalpelpoe/plugin-sdk, sorted.
 const EXPECTED_SDK_EXPORTS = [
   'Button',
+  'DANGER_COLORS',
+  'DANGER_LABELS',
   'ErrorBanner',
   'ExternalLinkButton',
+  'FilterChip',
   'HotkeyField',
   'HotkeyRecorder',
   'InfoChip',
   'ItemChip',
   'Label',
   'LeagueDropdown',
+  'MAP_MODS',
+  'NIGHTMARE_REGROUPED',
   'Notice',
   'RARITY_COLORS',
   'RemoveButton',
@@ -87,6 +92,7 @@ const EXPECTED_CONTEXT_KEYS = [
   'gameConfig',
   'getCurrentItem',
   'getCurrentZone',
+  'getCursorPosition',
   'getLeague',
   'getLeagues',
   'getPoeVersion',
@@ -105,6 +111,7 @@ const EXPECTED_CONTEXT_KEYS = [
   'registerHotkey',
   'registerOverlay',
   'registerTab',
+  'setInteractiveRegion',
   'storage',
 ].sort()
 
@@ -145,6 +152,7 @@ function stubDeps(): PluginContextFactoryDeps {
     openTab: () => {},
     copyAndEvaluateItem: async () => null,
     captureGameWindow: async () => null,
+    getCursorPosition: async () => null,
     registerOverlay: () => {},
     openOverlay: () => {},
     closeOverlay: () => {},
@@ -165,5 +173,17 @@ describe('plugin public contract', () => {
   it('ScalpelPluginContext exposes exactly the locked keys', () => {
     const ctx = createPluginContext(stubDeps())
     expect(Object.keys(ctx).sort()).toEqual(EXPECTED_CONTEXT_KEYS)
+  })
+})
+
+describe('map-mod dataset export', () => {
+  it('ships a non-empty dataset with valid danger levels', async () => {
+    const sdk = await import('./index')
+    expect(sdk.MAP_MODS.length).toBeGreaterThan(0)
+    for (const mod of sdk.MAP_MODS) {
+      expect(sdk.DANGER_LABELS[mod.danger]).toBeTypeOf('string')
+      expect(sdk.DANGER_COLORS[mod.danger]).toMatch(/^#/)
+      expect(mod.text.length).toBeGreaterThan(0)
+    }
   })
 })

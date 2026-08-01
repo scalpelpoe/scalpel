@@ -20,7 +20,9 @@ import * as versionsHandlers from '../handlers/versions'
 import * as onlineSyncHandlers from '../handlers/online-sync'
 import * as pricesHandlers from '../handlers/prices'
 import { register as registerCheatSheets } from '../handlers/cheat-sheets'
+import { register as registerOverlayPin } from '../handlers/overlay-pin'
 import { register as registerWhiteboard } from '../handlers/whiteboard'
+import { register as registerScreen } from '../handlers/screen-source'
 import { register as registerClipboard } from '../handlers/clipboard'
 import { register as registerManifest } from '../handlers/manifest'
 import { register as registerPlugins } from '../handlers/plugins'
@@ -28,6 +30,7 @@ import { registerClientLogHandlers } from '../handlers/client-log'
 import { registerGameConfigHandlers } from '../handlers/game-config'
 import { registerPluginPriceHandlers } from '../handlers/plugin-prices'
 import { registerPluginCaptureHandlers } from '../handlers/plugin-capture'
+import { registerPluginCursorHandlers } from '../handlers/plugin-cursor'
 
 export interface IpcRegistrationDeps {
   store: Store<AppSettings>
@@ -50,7 +53,9 @@ export function registerAllIpc(deps: IpcRegistrationDeps): void {
   onlineSyncHandlers.register(store)
   pricesHandlers.register(store)
   registerCheatSheets()
+  registerOverlayPin()
   registerWhiteboard()
+  registerScreen()
   registerClipboard()
   registerManifest()
   registerPlugins(store, isElevated)
@@ -59,6 +64,7 @@ export function registerAllIpc(deps: IpcRegistrationDeps): void {
   registerGameConfigHandlers()
   registerPluginPriceHandlers(store)
   registerPluginCaptureHandlers()
+  registerPluginCursorHandlers()
   registerDiagnostics({ store, getAppWindow, showAppWindow })
 
   // ── Simple inline handlers ────────────────────────────────────────────────

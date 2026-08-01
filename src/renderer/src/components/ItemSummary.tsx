@@ -469,18 +469,20 @@ function SocketDisplay({ sockets, onRecolor }: { sockets: string; onRecolor?: ()
           </div>
         )
       })}
-      <button
-        onClick={onRecolor}
-        className="text-[9px] font-semibold text-accent border-none rounded-full cursor-pointer px-2 py-[2px] bg-white/[0.08]"
-        onMouseEnter={(e) => {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.15)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
-        }}
-      >
-        Recolor
-      </button>
+      {onRecolor && (
+        <button
+          onClick={onRecolor}
+          className="text-[9px] font-semibold text-accent border-none rounded-full cursor-pointer px-2 py-[2px] bg-white/[0.08]"
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.15)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+          }}
+        >
+          Recolor
+        </button>
+      )}
     </div>
   )
 }

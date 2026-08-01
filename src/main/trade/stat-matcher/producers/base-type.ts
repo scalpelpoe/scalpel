@@ -38,12 +38,17 @@ export function buildBaseTypeFilter(itemInfo: BaseTypeItemInfo | undefined): Sta
   // default the chip on -- a mod search that isn't scoped to the tablet type
   // returns cross-type noise. Uniques already returned above (searched by name).
   const isTablet = itemInfo.itemClass === 'Tablet'
+  // Charts price by zone, but the zone chip (misc.chart_zone) is a refinement of
+  // the base -- with it switched off the user should land on "all Coral Forest
+  // Charts", not "all charts". Same reasoning as tablets. When both chips are on
+  // the zone wins: trade.ts overwrites query.type with the discriminator form.
+  const isChart = itemInfo.itemClass === 'Chart'
   // The basetype chip always shows the BARE base ("Faithful Leggings"); the
   // separate misc.rune_base chip composes the "Runeforged"/"Runemastered" prefix
   // back on at query time. Rune bases default off like any other rare (category
   // search) -- the user pins the base + rune chips explicitly when narrowing.
   const baseTypeText = splitRuneTier(baseTypeCleaned).bare
-  const baseTypeEnabled = isSpecialMap || isCluster || isTablet || (isBaseItem && isOverqualitied)
+  const baseTypeEnabled = isSpecialMap || isCluster || isTablet || isChart || (isBaseItem && isOverqualitied)
 
   return [
     {

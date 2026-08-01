@@ -13,6 +13,7 @@ const fakeOverlay = {
   setBoundsProgrammaticOnce: vi.fn(),
   setSizeProgrammatic: vi.fn(),
   hideKeepingRestore: vi.fn(),
+  setPersistOverOthers: vi.fn(),
 }
 
 vi.mock('./windowing', () => ({
@@ -76,5 +77,15 @@ describe('plugin-overlay registry', () => {
     const spec = registeredSpecs.at(-1)
     expect(spec?.htmlEntry).toBe('plugin-annotation-overlay.html')
     expect(spec?.defaultAnchor()).toEqual({ fracX: 0, fracY: 0, fracW: 1, fracH: 1 })
+  })
+
+  it('annotation overlays register as persistent so the Esc sweep never hides them', () => {
+    registerPluginAnnotationOverlay('anno-persist')
+    expect(fakeOverlay.setPersistOverOthers).toHaveBeenCalledWith(true)
+  })
+
+  it('window-mode overlays are not persist-flagged (the user pins them via chrome)', () => {
+    registerPluginOverlay('win-demo', { title: 'Win' })
+    expect(fakeOverlay.setPersistOverOthers).not.toHaveBeenCalled()
   })
 })

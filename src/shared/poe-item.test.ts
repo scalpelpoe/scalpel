@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { splitRuneTier } from './poe-item'
+import { hasGeneratedName, splitRuneTier } from './poe-item'
 
 describe('splitRuneTier', () => {
   it('splits a Runeforged prefix from the base name', () => {
@@ -37,5 +37,35 @@ describe('splitRuneTier', () => {
       tier: null,
       bare: 'runeforged Faithful Leggings',
     })
+  })
+})
+
+describe('hasGeneratedName', () => {
+  it('is true for Magic', () => {
+    expect(hasGeneratedName('Magic')).toBe(true)
+  })
+
+  it('is true for Rare', () => {
+    expect(hasGeneratedName('Rare')).toBe(true)
+  })
+
+  it('is false for Normal', () => {
+    expect(hasGeneratedName('Normal')).toBe(false)
+  })
+
+  it('is false for Unique', () => {
+    expect(hasGeneratedName('Unique')).toBe(false)
+  })
+
+  it('is false for Currency', () => {
+    expect(hasGeneratedName('Currency')).toBe(false)
+  })
+
+  it('is false for Gem', () => {
+    expect(hasGeneratedName('Gem')).toBe(false)
+  })
+
+  it('is false for undefined', () => {
+    expect(hasGeneratedName(undefined)).toBe(false)
   })
 })

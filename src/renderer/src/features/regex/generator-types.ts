@@ -63,4 +63,13 @@ export interface GeneratorConfig {
 /** All generator keys across PoE1 + PoE2 registries. Single source of truth -- the
  *  per-version lists (GENERATORS_POE1/POE2) and the remote pad's GENERATOR_ORDER are
  *  the runtime registries; this is the type they conform to. */
-export type GeneratorKey = 'maps' | 'flasks' | 'waystones' | 'tablet' | 'vendor' | 'relic' | 'custom'
+export type GeneratorKey =
+  | 'maps'
+  | 'flasks'
+  | 'items'
+  | 'beasts'
+  | 'waystones'
+  | 'tablet'
+  | 'vendor'
+  | 'relic'
+  | 'custom'

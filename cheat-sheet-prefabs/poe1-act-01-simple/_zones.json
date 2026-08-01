@@ -1,0 +1,17 @@
+{
+  "01-twilight-strand.webp": ["1_1_1"],
+  "02-coast.webp": ["1_1_2"],
+  "03-tidal-island.webp": ["1_1_2a"],
+  "04-mud-flats.webp": ["1_1_3"],
+  "05-submerged-passage.webp": ["1_1_4_1"],
+  "06-flooded-depths.webp": ["1_1_4_0"],
+  "07-ledge.webp": ["1_1_5"],
+  "08-climb.webp": ["1_1_6"],
+  "09-lower-prison.webp": ["1_1_7_1"],
+  "10-upper-prison.webp": ["1_1_7_2"],
+  "11-prisoners-gate.webp": ["1_1_8"],
+  "12-ship-graveyard.webp": ["1_1_9"],
+  "13-ship-graveyard-cave.webp": ["1_1_9a"],
+  "14-cavern-of-wrath.webp": ["1_1_11_1"],
+  "15-cavern-of-anger.webp": ["1_1_11_2"]
+}

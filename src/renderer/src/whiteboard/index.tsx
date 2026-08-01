@@ -1,12 +1,15 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
+import type Konva from 'konva'
 import { Stage } from './canvas/Stage'
 import { Toolbar } from './toolbar/Toolbar'
 import { useWhiteboardStore } from './state/store'
 import { createDebouncedSaver } from './state/persistence'
 import { useReportInputFocus } from '../shared/use-report-input-focus'
 import type { BoardState } from '@shared/whiteboard-types'
+import { MirrorLayer } from './live-mirror/MirrorLayer'
 
 export function Whiteboard(): JSX.Element {
+  const stageRef = useRef<Konva.Stage>(null)
   const poeVersion = useWhiteboardStore((s) => s.poeVersion)
   const setPoeVersion = useWhiteboardStore((s) => s.setPoeVersion)
   const replaceAll = useWhiteboardStore((s) => s.replaceAll)
@@ -85,7 +88,18 @@ export function Whiteboard(): JSX.Element {
 
   return (
     <div className="w-full h-full relative bg-transparent">
-      <Stage />
+      {/* Explicit positive layering, bottom to top: the live-mirror video (z-0)
+          shows through the transparent Konva canvas (z-10), and the toolbar
+          (z-20, set on its own root) stays above the canvas so it keeps
+          receiving clicks. Positive z-indices are required - a negative z-index
+          on the video layer does not composite over the game in this
+          transparent overlay window. */}
+      <div className="absolute inset-0" style={{ zIndex: 0 }}>
+        <MirrorLayer stageRef={stageRef} />
+      </div>
+      <div className="absolute inset-0" style={{ zIndex: 10 }}>
+        <Stage stageRef={stageRef} />
+      </div>
       <Toolbar version={poeVersion} />
     </div>
   )

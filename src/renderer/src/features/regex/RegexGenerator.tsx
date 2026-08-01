@@ -17,8 +17,11 @@ import { InfoChip } from '../../shared/InfoChip'
 import { MapsGenerator } from './MapsGenerator'
 import { CustomGenerator } from './CustomGenerator'
 import { FlaskGenerator } from './FlaskGenerator'
+import { ItemsGenerator } from './ItemsGenerator'
+import { BeastsGenerator } from './BeastsGenerator'
 import { WaystonesGenerator } from './WaystonesGenerator'
 import { VendorGenerator } from './VendorGenerator'
+import { VendorPoe1Generator } from './VendorPoe1Generator'
 import { TabletGenerator } from './TabletGenerator'
 import { RelicGenerator } from './RelicGenerator'
 import { usePoeVersion } from '../../shared/poe-version-context'
@@ -43,11 +46,14 @@ interface Props {
  *       of these lists to avoid bundling this component tree; it silently omits
  *       any generator missing from that copy)
  *  The registry drives the tab strip, localStorage key, and preset scoping.
- *  Generator availability is per-game: PoE1 uses Maps + Flasks + Custom;
- *  PoE2 uses Waystones + Custom (no flasks UI yet, no PoE1 maps). */
+ *  Generator availability is per-game: PoE1 uses Maps + Vendor + Flasks + Custom;
+ *  PoE2 uses Waystones + Tablet + Vendor + Relic + Custom. */
 const GENERATORS_POE1 = [
   { key: 'maps', label: 'Maps' },
+  { key: 'vendor', label: 'Vendor' },
   { key: 'flasks', label: 'Flasks' },
+  { key: 'items', label: 'Items' },
+  { key: 'beasts', label: 'Beasts' },
   { key: 'custom', label: 'Custom' },
 ] as const satisfies readonly GeneratorConfig[]
 
@@ -116,6 +122,8 @@ export function RegexGenerator({ settings, update, tryHotkey }: Props): JSX.Elem
 
   const mapsRef = useRef<GeneratorHandle>(null)
   const flasksRef = useRef<GeneratorHandle>(null)
+  const itemsRef = useRef<GeneratorHandle>(null)
+  const beastsRef = useRef<GeneratorHandle>(null)
   const customRef = useRef<GeneratorHandle>(null)
   const waystonesRef = useRef<GeneratorHandle>(null)
   const tabletRef = useRef<GeneratorHandle>(null)
@@ -127,6 +135,10 @@ export function RegexGenerator({ settings, update, tryHotkey }: Props): JSX.Elem
         return mapsRef
       case 'flasks':
         return flasksRef
+      case 'items':
+        return itemsRef
+      case 'beasts':
+        return beastsRef
       case 'waystones':
         return waystonesRef
       case 'tablet':
@@ -479,12 +491,20 @@ export function RegexGenerator({ settings, update, tryHotkey }: Props): JSX.Elem
         return <MapsGenerator ref={mapsRef} {...sharedProps} />
       case 'flasks':
         return <FlaskGenerator ref={flasksRef} {...sharedProps} />
+      case 'items':
+        return <ItemsGenerator ref={itemsRef} {...sharedProps} />
+      case 'beasts':
+        return <BeastsGenerator ref={beastsRef} {...sharedProps} />
       case 'waystones':
         return <WaystonesGenerator ref={waystonesRef} {...sharedProps} />
       case 'tablet':
         return <TabletGenerator ref={tabletRef} {...sharedProps} />
       case 'vendor':
-        return <VendorGenerator ref={vendorRef} {...sharedProps} />
+        return poeVersion === 2 ? (
+          <VendorGenerator ref={vendorRef} {...sharedProps} />
+        ) : (
+          <VendorPoe1Generator ref={vendorRef} {...sharedProps} />
+        )
       case 'relic':
         return <RelicGenerator ref={relicRef} {...sharedProps} />
       case 'custom':

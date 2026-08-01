@@ -26,6 +26,16 @@ describe('PSEUDO_WEIGHT_GROUPS', () => {
     expect(PSEUDO_WEIGHT_GROUPS['pseudo.pseudo_total_life']).toContainEqual({ id: 'explicit.stat_str' })
   })
 
+  it('ingests rune.* entries so socketed runes feed pseudos', () => {
+    // GGG tags rune entries with type "augment" (not "rune"); detection is by id prefix.
+    _setStatEntries([{ id: 'rune.stat_2901986750', text: '#% to all Elemental Resistances', type: 'augment' }])
+    ensurePseudoMapBuilt()
+
+    expect(PSEUDO_WEIGHT_GROUPS['pseudo.pseudo_total_elemental_resistance']).toContainEqual({
+      id: 'rune.stat_2901986750',
+    })
+  })
+
   it('is cleared by _resetPseudoMap', () => {
     _setStatEntries([{ id: 'explicit.stat_fire', text: '+#% to Fire Resistance', type: 'explicit' }])
     ensurePseudoMapBuilt()

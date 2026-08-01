@@ -1,3 +1,4 @@
+import { resolve } from 'node:path'
 import type { StorybookConfig } from '@storybook/react-vite'
 
 /** Storybook config for the renderer. Stories live next to the components they
@@ -21,6 +22,15 @@ const config: StorybookConfig = {
     config.resolve = config.resolve ?? {}
     const dedupe = new Set([...(config.resolve.dedupe ?? []), 'react', 'react-dom'])
     config.resolve.dedupe = Array.from(dedupe)
+    // Mirror electron.vite.config.ts's path aliases; without them any story that
+    // (transitively) imports via @renderer/@shared/@main breaks Vite's dep scan
+    // and Storybook renders "No Preview" for every story.
+    config.resolve.alias = {
+      ...(config.resolve.alias ?? {}),
+      '@shared': resolve(process.cwd(), 'src/shared'),
+      '@main': resolve(process.cwd(), 'src/main'),
+      '@renderer': resolve(process.cwd(), 'src/renderer/src'),
+    }
     return config
   },
 }

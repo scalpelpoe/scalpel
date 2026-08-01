@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Github } from '@icon-park/react'
+import { Github, Refresh } from '@icon-park/react'
 import type { AppSettings, ProfileSettingValue, RuntimeSettings } from '@shared/types'
 import { GITHUB_REPO_URL, KOFI_URL } from '@shared/endpoints'
 import { reportDiagnosticError } from '@renderer/shared/diagnostics'
@@ -14,11 +14,18 @@ interface Props {
   settings: RuntimeSettings
   update: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
   updateProfile: <K extends 'league'>(key: K, value: ProfileSettingValue<K>) => Promise<void>
+  onSettingsChange: (s: RuntimeSettings) => void
   /** Dev-only: re-enter the onboarding flow to review it. Present in app mode only. */
   onShowOnboarding?: () => void
 }
 
-export function GeneralTab({ settings, update, updateProfile, onShowOnboarding }: Props): JSX.Element {
+export function GeneralTab({
+  settings,
+  update,
+  updateProfile,
+  onSettingsChange,
+  onShowOnboarding,
+}: Props): JSX.Element {
   const locale = useCurrentLocale()
   const [reportMessage, setReportMessage] = useState<string | null>(null)
   const [reporting, setReporting] = useState(false)
@@ -30,8 +37,25 @@ export function GeneralTab({ settings, update, updateProfile, onShowOnboarding }
   useEffect(() => {
     loadDebugLog()
   }, [])
+  const [refreshingLeagues, setRefreshingLeagues] = useState(false)
   const leagueOptions = resolveLeagueOptions(settings, settings.poeVersion)
   const activeLeague = settings.activeProfile?.league ?? ''
+
+  // Forced so it ignores the hourly cooldown. The main process broadcasts
+  // setting updates to every window except the sender, so this window has to
+  // pull the result back itself - a full re-read also picks up a profile that
+  // got migrated off a league the fetch says is gone.
+  const refreshLeagues = async (): Promise<void> => {
+    setRefreshingLeagues(true)
+    try {
+      await window.api.refreshLeagues(true)
+      onSettingsChange(await window.api.getSettings())
+    } catch {
+      /* keep the cached list on screen */
+    } finally {
+      setRefreshingLeagues(false)
+    }
+  }
 
   const reportBug = async (): Promise<void> => {
     setReporting(true)
@@ -99,7 +123,10 @@ export function GeneralTab({ settings, update, updateProfile, onShowOnboarding }
           <section>
             <label>{m.settings_league_label()}</label>
             <div className="setting-box mt-[6px] relative">
-              <span className="value">{activeLeague || PRIVATE_LEAGUE_LABEL}</span>
+              {/* flex-1 so the value eats the free space and both buttons sit
+                  together on the right; without it justify-between strands
+                  Change in the middle of the row. */}
+              <span className="value flex-1 min-w-0">{activeLeague || PRIVATE_LEAGUE_LABEL}</span>
               <button
                 className="primary"
                 onClick={() => {
@@ -109,6 +136,17 @@ export function GeneralTab({ settings, update, updateProfile, onShowOnboarding }
                 }}
               >
                 {m.common_change()}
+              </button>
+              {/* Sits above the full-box <select> overlay so the click lands
+                  on the button instead of opening the picker. */}
+              <button
+                className="primary relative z-10 flex items-center disabled:opacity-50"
+                onClick={refreshLeagues}
+                disabled={refreshingLeagues}
+                title={m.settings_league_refresh_title()}
+                aria-label={m.common_refresh()}
+              >
+                <Refresh theme="outline" size="13" fill="currentColor" spin={refreshingLeagues} className="flex" />
               </button>
               <select
                 id="league-select-unified"

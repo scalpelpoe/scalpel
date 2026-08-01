@@ -62,6 +62,7 @@ vi.mock('./evaluation', () => ({
 }))
 
 vi.mock('./hotkeys', () => ({
+  refreshScopedHotkeys: vi.fn(),
   setAppMacros: vi.fn(),
   setChatCommands: vi.fn(),
   setHotkey: vi.fn(),
@@ -93,6 +94,7 @@ describe('settings-write side effects', () => {
 
   it('updates process game state before refreshing prices during profile activation', async () => {
     const { refreshPrices } = await import('./trade/prices')
+    const { refreshScopedHotkeys } = await import('./hotkeys')
     const { applyProfileHydrationSideEffects } = await import('./settings-write')
     const observedVersions: number[] = []
     vi.mocked(refreshPrices).mockImplementation(() => {
@@ -116,6 +118,7 @@ describe('settings-write side effects', () => {
     applyProfileHydrationSideEffects(changes, { [PROFILE_VERSION_KEY]: 2 } as unknown as AppSettings)
 
     expect(observedVersions).toEqual([1])
+    expect(refreshScopedHotkeys).toHaveBeenCalledWith('settings-game-change')
   })
 
   it('refreshes prices on profile activation', async () => {

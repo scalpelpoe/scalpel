@@ -36,7 +36,7 @@ export function DismissibleTip({ id, children, dismissible = true }: Dismissible
       className="flex items-center gap-2 px-2.5 py-1.5 rounded text-[11px]"
       style={{
         background: 'rgba(200, 169, 110, 0.10)',
-        border: '1px solid rgba(200, 169, 110, 0.45)',
+        border: '1px solid rgba(200, 169, 110, 0.15)',
         color: 'var(--accent)',
       }}
     >

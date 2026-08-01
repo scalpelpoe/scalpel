@@ -35,6 +35,9 @@
         "name": "Amber Amulet"
       },
       {
+        "name": "Ape Talisman"
+      },
+      {
         "name": "Ashscale Talisman"
       },
       {
@@ -47,6 +50,12 @@
         "name": "Black Maw Talisman"
       },
       {
+        "name": "Black Widow Talisman"
+      },
+      {
+        "name": "Blood Viper Talisman"
+      },
+      {
         "name": "Blue Pearl Amulet"
       },
       {
@@ -54,6 +63,15 @@
       },
       {
         "name": "Breakrib Talisman"
+      },
+      {
+        "name": "Carrion Queen Talisman"
+      },
+      {
+        "name": "Chieftain Talisman"
+      },
+      {
+        "name": "Chimeral Talisman"
       },
       {
         "name": "Chrysalis Talisman"
@@ -65,7 +83,16 @@
         "name": "Clutching Talisman"
       },
       {
+        "name": "Cobra Talisman"
+      },
+      {
         "name": "Coral Amulet"
+      },
+      {
+        "name": "Craicic Talisman"
+      },
+      {
+        "name": "Croaker Talisman"
       },
       {
         "name": "Deadhand Talisman"
@@ -74,13 +101,40 @@
         "name": "Deep One Talisman"
       },
       {
+        "name": "Devourer Talisman"
+      },
+      {
         "name": "Fangjaw Talisman"
+      },
+      {
+        "name": "Farric Talisman"
+      },
+      {
+        "name": "Fenumal Talisman"
+      },
+      {
+        "name": "Flame Hellion Talisman"
       },
       {
         "name": "Focused Amulet"
       },
       {
+        "name": "Frost Hellion Talisman"
+      },
+      {
+        "name": "Gargantuan Talisman"
+      },
+      {
+        "name": "Goatman Talisman"
+      },
+      {
         "name": "Gold Amulet"
+      },
+      {
+        "name": "Goliath Talisman"
+      },
+      {
+        "name": "Great Maw Talisman"
       },
       {
         "name": "Greatwolf Talisman"
@@ -90,6 +144,9 @@
       },
       {
         "name": "Horned Talisman"
+      },
+      {
+        "name": "Hybrid Arachnid Talisman"
       },
       {
         "name": "Jade Amulet"
@@ -104,6 +161,12 @@
         "name": "Longtooth Talisman"
       },
       {
+        "name": "Lynx Talisman"
+      },
+      {
+        "name": "Magma Hound Talisman"
+      },
+      {
         "name": "Mandible Talisman"
       },
       {
@@ -116,13 +179,34 @@
         "name": "Monkey Twins Talisman"
       },
       {
+        "name": "Octopus Talisman"
+      },
+      {
         "name": "Onyx Amulet"
       },
       {
         "name": "Paua Amulet"
       },
       {
+        "name": "Pearlescent Amulet"
+      },
+      {
+        "name": "Pitbull Talisman"
+      },
+      {
+        "name": "Plagued Arachnid Talisman"
+      },
+      {
         "name": "Primal Skull Talisman"
+      },
+      {
+        "name": "Retch Talisman"
+      },
+      {
+        "name": "Rhex Talisman"
+      },
+      {
+        "name": "Rhoa Talisman"
       },
       {
         "name": "Rot Head Talisman"
@@ -131,10 +215,31 @@
         "name": "Rotfeather Talisman"
       },
       {
+        "name": "Sand Spitter Talisman"
+      },
+      {
+        "name": "Saqawine Talisman"
+      },
+      {
+        "name": "Savage Crab Talisman"
+      },
+      {
+        "name": "Scorpion Talisman"
+      },
+      {
+        "name": "Scrabbler Talisman"
+      },
+      {
         "name": "Seaglass Amulet"
       },
       {
+        "name": "Shield Crab Talisman"
+      },
+      {
         "name": "Simplex Amulet"
+      },
+      {
+        "name": "Spider Crab Talisman"
       },
       {
         "name": "Spinefuse Talisman"
@@ -143,10 +248,19 @@
         "name": "Splitnewt Talisman"
       },
       {
+        "name": "Squid Talisman"
+      },
+      {
+        "name": "Taurus Talisman"
+      },
+      {
         "name": "Three Hands Talisman"
       },
       {
         "name": "Three Rat Talisman"
+      },
+      {
+        "name": "Tiger Talisman"
       },
       {
         "name": "Turquoise Amulet"
@@ -158,7 +272,19 @@
         "name": "Unset Amulet"
       },
       {
+        "name": "Ursa Talisman"
+      },
+      {
+        "name": "Vulture Talisman"
+      },
+      {
+        "name": "Watcher Talisman"
+      },
+      {
         "name": "Wereclaw Talisman"
+      },
+      {
+        "name": "Wolf Alpha Talisman"
       },
       {
         "name": "Writhing Talisman"
@@ -2066,6 +2192,20 @@
       2,
       4
     ]
+  },
+  "Chart": {
+    "bases": [
+      {
+        "name": "Coral Forest Chart"
+      },
+      {
+        "name": "Coral Reef Chart"
+      },
+      {
+        "name": "Sandy Seabed Chart"
+      }
+    ],
+    "size": [1, 1]
   },
   "Claws": {
     "bases": [
@@ -4733,6 +4873,9 @@
           96,
           0
         ]
+      },
+      {
+        "name": "Ghostflame Blade"
       },
       {
         "name": "Gladius",

@@ -1,4 +1,5 @@
-import { CloseSmall, Minus, FullScreen } from '@icon-park/react'
+import { CloseSmall, FullScreen, Minus, Pin } from '@icon-park/react'
+import { useEffect, useState } from 'react'
 import appIcon from '../../../../resources/icon.png'
 
 interface ChromeProps {
@@ -25,6 +26,53 @@ interface ChromeProps {
    *  mounted against PoE's stash sidebar). Existing consumers are unaffected
    *  because this prop is optional and defaults to false. */
   flushLeft?: boolean
+}
+
+/** Active-icon gold - matches ACTIVE_COLOR in the cheat-sheets header. */
+const PIN_ACTIVE_COLOR = '#fbbf24'
+
+/** Self-contained pin toggle: exempts this window from the in-game Esc hide
+ *  sweep. Sender-resolved over IPC, so the component needs no overlay id and
+ *  consumers pass nothing. Renders nothing until the state loads (and never,
+ *  in bridge-less contexts like Storybook without the stub). */
+function PinToggle(): JSX.Element | null {
+  const [pinned, setPinned] = useState<boolean | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    void window.api
+      ?.getOverlayPinned?.()
+      .then((value) => {
+        if (!cancelled) setPinned(value)
+      })
+      // A rejected load leaves `pinned` null, so the button simply never renders.
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  if (pinned === null) return null
+  const toggle = (): void => {
+    // Optimistic: this window is the only surface showing the state.
+    const next = !pinned
+    setPinned(next)
+    window.api.setOverlayPinned(next)
+  }
+  return (
+    <button
+      onClick={toggle}
+      title={pinned ? 'Unpin (Esc closes this window again)' : 'Pin: keep open when pressing Esc'}
+      className={`btn-ghost shrink-0 w-6 h-6 flex items-center justify-center ${pinned ? '' : 'text-text-dim hover:text-text'}`}
+      style={
+        {
+          WebkitAppRegion: 'no-drag',
+          lineHeight: 0,
+          color: pinned ? PIN_ACTIVE_COLOR : undefined,
+        } as React.CSSProperties
+      }
+    >
+      <Pin size={14} theme="outline" fill="currentColor" />
+    </button>
+  )
 }
 
 /** Standard chrome for a secondary overlay window: rounded translucent card
@@ -76,6 +124,7 @@ export function Chrome({
               {headerEnd}
             </div>
           )}
+          <PinToggle />
           {onMinimize && (
             <button
               onClick={onMinimize}

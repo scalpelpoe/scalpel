@@ -6,10 +6,11 @@ export function buildMapEntries(_divineRate: number): MapEntry[] {
     .map((m) => {
       const mapCards: MapCardEntry[] = []
       for (const card of cards) {
-        if (card.weight <= 0 || card.price <= 0) continue
+        const weight = card.weight ?? 0
+        if (weight <= 0 || card.price <= 0) continue
         const dropsHere = card.drop.all_areas || card.drop.areas.some((a) => m.ids.includes(a))
         if (!dropsHere) continue
-        const dropRate = card.weight / DROPPOOL_WEIGHT
+        const dropRate = weight / DROPPOOL_WEIGHT
         const cardEv = card.price * dropRate
         mapCards.push({ card, dropRate, cardEv })
       }

@@ -1,0 +1,715 @@
+{
+  "_source": "https://github.com/XileHUD/poe_overlay/blob/main/data/poe1/Leveling/poe1-zone-registry.json",
+  "_license": "MIT (XileHUD). IDs match Client.txt casing as-is.",
+  "version": "2.0",
+  "game": "poe1",
+  "zonesByAct": [
+    {
+      "actNumber": 1,
+      "zones": [
+        {
+          "id": "1_1_1",
+          "name": "the twilight strand"
+        },
+        {
+          "id": "1_1_town",
+          "name": "lioneye's watch"
+        },
+        {
+          "id": "1_1_2",
+          "name": "the coast"
+        },
+        {
+          "id": "1_1_2a",
+          "name": "the tidal island"
+        },
+        {
+          "id": "1_1_3",
+          "name": "the mud flats"
+        },
+        {
+          "id": "1_1_3a",
+          "name": "the fetid pool"
+        },
+        {
+          "id": "1_1_4_1",
+          "name": "the submerged passage"
+        },
+        {
+          "id": "1_1_4_0",
+          "name": "the flooded depths"
+        },
+        {
+          "id": "1_1_5",
+          "name": "the ledge"
+        },
+        {
+          "id": "1_1_6",
+          "name": "the climb"
+        },
+        {
+          "id": "1_1_7_1",
+          "name": "the lower prison"
+        },
+        {
+          "id": "1_1_7_2",
+          "name": "the upper prison"
+        },
+        {
+          "id": "1_1_8",
+          "name": "prisoner's gate"
+        },
+        {
+          "id": "1_1_9",
+          "name": "the ship graveyard"
+        },
+        {
+          "id": "1_1_9a",
+          "name": "the ship graveyard cave"
+        },
+        {
+          "id": "1_1_11_1",
+          "name": "the cavern of wrath"
+        },
+        {
+          "id": "1_1_11_2",
+          "name": "the cavern of anger"
+        },
+        {
+          "id": "2_6_4_1",
+          "name": "the submerged passage"
+        },
+        {
+          "id": "2_6_11_1",
+          "name": "the cavern of wrath"
+        },
+        {
+          "id": "2_6_11_2",
+          "name": "the cavern of anger"
+        }
+      ]
+    },
+    {
+      "actNumber": 2,
+      "zones": [
+        {
+          "id": "1_2_1",
+          "name": "the southern forest"
+        },
+        {
+          "id": "1_2_town",
+          "name": "the forest encampment"
+        },
+        {
+          "id": "1_2_2",
+          "name": "the old fields"
+        },
+        {
+          "id": "1_2_2a",
+          "name": "the den"
+        },
+        {
+          "id": "1_2_3",
+          "name": "the crossroads"
+        },
+        {
+          "id": "1_2_4",
+          "name": "the broken bridge"
+        },
+        {
+          "id": "1_2_6_1",
+          "name": "the chamber of sins level 1"
+        },
+        {
+          "id": "1_2_6_2",
+          "name": "the chamber of sins level 2"
+        },
+        {
+          "id": "1_2_15",
+          "name": "the fellshrine ruins"
+        },
+        {
+          "id": "1_2_5_1",
+          "name": "the crypt level 1"
+        },
+        {
+          "id": "1_2_5_2",
+          "name": "the crypt level 2"
+        },
+        {
+          "id": "1_2_7",
+          "name": "the riverways"
+        },
+        {
+          "id": "1_2_8",
+          "name": "the northern forest"
+        },
+        {
+          "id": "1_2_9",
+          "name": "the western forest"
+        },
+        {
+          "id": "1_2_10",
+          "name": "the weaver's chambers"
+        },
+        {
+          "id": "1_2_11",
+          "name": "the vaal ruins"
+        },
+        {
+          "id": "1_2_12",
+          "name": "the wetlands"
+        },
+        {
+          "id": "1_2_13",
+          "name": "the dread thicket"
+        },
+        {
+          "id": "1_2_14_2",
+          "name": "the caverns"
+        },
+        {
+          "id": "1_2_14_3",
+          "name": "the ancient pyramid"
+        }
+      ]
+    },
+    {
+      "actNumber": 3,
+      "zones": [
+        {
+          "id": "1_3_1",
+          "name": "the city of sarn"
+        },
+        {
+          "id": "1_3_town",
+          "name": "the sarn encampment"
+        },
+        {
+          "id": "1_3_2",
+          "name": "the slums"
+        },
+        {
+          "id": "1_3_3_1",
+          "name": "the crematorium"
+        },
+        {
+          "id": "1_3_10_1",
+          "name": "the sewers"
+        },
+        {
+          "id": "1_3_5",
+          "name": "the marketplace"
+        },
+        {
+          "id": "1_3_6",
+          "name": "the catacombs"
+        },
+        {
+          "id": "1_3_7",
+          "name": "the battlefront"
+        },
+        {
+          "id": "1_3_8_1",
+          "name": "the solaris temple level 1"
+        },
+        {
+          "id": "1_3_8_2",
+          "name": "the solaris temple level 2"
+        },
+        {
+          "id": "1_3_9",
+          "name": "the docks"
+        },
+        {
+          "id": "1_3_13",
+          "name": "the ebony barracks"
+        },
+        {
+          "id": "1_3_14_1",
+          "name": "the lunaris temple level 1"
+        },
+        {
+          "id": "1_3_14_2",
+          "name": "the lunaris temple level 2"
+        },
+        {
+          "id": "1_3_15",
+          "name": "the imperial gardens"
+        },
+        {
+          "id": "1_3_17_1",
+          "name": "the library"
+        },
+        {
+          "id": "1_3_17_2",
+          "name": "the archives"
+        },
+        {
+          "id": "1_3_18_1",
+          "name": "the sceptre of god"
+        },
+        {
+          "id": "1_3_18_2",
+          "name": "the upper sceptre of god"
+        },
+        {
+          "id": "Labyrinth_Airlock",
+          "name": "aspirants' plaza"
+        }
+      ]
+    },
+    {
+      "actNumber": 4,
+      "zones": [
+        {
+          "id": "1_4_1",
+          "name": "the aqueduct"
+        },
+        {
+          "id": "1_4_town",
+          "name": "highgate"
+        },
+        {
+          "id": "1_4_2",
+          "name": "the dried lake"
+        },
+        {
+          "id": "1_4_3_1",
+          "name": "the mines level 1"
+        },
+        {
+          "id": "1_4_3_2",
+          "name": "the mines level 2"
+        },
+        {
+          "id": "1_4_3_3",
+          "name": "the crystal veins"
+        },
+        {
+          "id": "1_4_4_1",
+          "name": "kaom's dream"
+        },
+        {
+          "id": "1_4_4_3",
+          "name": "kaom's stronghold"
+        },
+        {
+          "id": "1_4_5_1",
+          "name": "daresso's dream"
+        },
+        {
+          "id": "1_4_5_2",
+          "name": "the grand arena"
+        },
+        {
+          "id": "1_4_6_1",
+          "name": "the belly of the beast level 1"
+        },
+        {
+          "id": "1_4_6_2",
+          "name": "the belly of the beast level 2"
+        },
+        {
+          "id": "1_4_6_3",
+          "name": "the harvest"
+        },
+        {
+          "id": "1_4_7",
+          "name": "the ascent"
+        },
+        {
+          "id": "Labyrinth_Airlock",
+          "name": "aspirants' plaza"
+        }
+      ]
+    },
+    {
+      "actNumber": 5,
+      "zones": [
+        {
+          "id": "1_5_1",
+          "name": "the slave pens"
+        },
+        {
+          "id": "1_5_town",
+          "name": "overseer's tower"
+        },
+        {
+          "id": "1_5_2",
+          "name": "the control blocks"
+        },
+        {
+          "id": "1_5_3",
+          "name": "oriath square"
+        },
+        {
+          "id": "1_5_4",
+          "name": "the templar courts"
+        },
+        {
+          "id": "1_5_5",
+          "name": "the chamber of innocence"
+        },
+        {
+          "id": "1_5_4b",
+          "name": "the torched courts"
+        },
+        {
+          "id": "1_5_3b",
+          "name": "the ruined square"
+        },
+        {
+          "id": "1_5_6",
+          "name": "the ossuary"
+        },
+        {
+          "id": "1_5_7",
+          "name": "the reliquary"
+        },
+        {
+          "id": "1_5_8",
+          "name": "the cathedral rooftop"
+        }
+      ]
+    },
+    {
+      "actNumber": 6,
+      "zones": [
+        {
+          "id": "2_6_town",
+          "name": "lioneye's watch"
+        },
+        {
+          "id": "2_6_1",
+          "name": "the twilight strand"
+        },
+        {
+          "id": "2_6_2",
+          "name": "the coast"
+        },
+        {
+          "id": "2_6_3",
+          "name": "the tidal island"
+        },
+        {
+          "id": "2_6_4",
+          "name": "the mud flats"
+        },
+        {
+          "id": "2_6_5",
+          "name": "the karui fortress"
+        },
+        {
+          "id": "2_6_6",
+          "name": "the ridge"
+        },
+        {
+          "id": "2_6_7_1",
+          "name": "the lower prison"
+        },
+        {
+          "id": "2_6_7_2",
+          "name": "shavronne's tower"
+        },
+        {
+          "id": "2_6_8",
+          "name": "prisoner's gate"
+        },
+        {
+          "id": "2_6_9",
+          "name": "the western forest"
+        },
+        {
+          "id": "2_6_10",
+          "name": "the riverways"
+        },
+        {
+          "id": "2_6_11",
+          "name": "the wetlands"
+        },
+        {
+          "id": "2_6_12",
+          "name": "the southern forest"
+        },
+        {
+          "id": "2_6_13",
+          "name": "the cavern of anger"
+        },
+        {
+          "id": "2_6_14",
+          "name": "the beacon"
+        },
+        {
+          "id": "2_6_15",
+          "name": "the brine king's reef"
+        }
+      ]
+    },
+    {
+      "actNumber": 7,
+      "zones": [
+        {
+          "id": "2_7_town",
+          "name": "the bridge encampment"
+        },
+        {
+          "id": "2_7_1",
+          "name": "the broken bridge"
+        },
+        {
+          "id": "2_7_2",
+          "name": "the crossroads"
+        },
+        {
+          "id": "2_7_3",
+          "name": "the fellshrine ruins"
+        },
+        {
+          "id": "2_7_4",
+          "name": "the crypt"
+        },
+        {
+          "id": "2_7_5_1",
+          "name": "the chamber of sins level 1"
+        },
+        {
+          "id": "2_7_5_2",
+          "name": "the chamber of sins level 2"
+        },
+        {
+          "id": "2_7_5_map",
+          "name": "maligaro's sanctum"
+        },
+        {
+          "id": "2_7_6",
+          "name": "the den"
+        },
+        {
+          "id": "2_7_7",
+          "name": "the ashen fields"
+        },
+        {
+          "id": "2_7_8",
+          "name": "the northern forest"
+        },
+        {
+          "id": "2_7_9",
+          "name": "the dread thicket"
+        },
+        {
+          "id": "2_7_10",
+          "name": "the causeway"
+        },
+        {
+          "id": "2_7_11",
+          "name": "the vaal city"
+        },
+        {
+          "id": "2_7_12_1",
+          "name": "the temple of decay level 1"
+        },
+        {
+          "id": "2_7_12_2",
+          "name": "the temple of decay level 2"
+        },
+        {
+          "id": "Labyrinth_Airlock",
+          "name": "aspirants' plaza"
+        }
+      ]
+    },
+    {
+      "actNumber": 8,
+      "zones": [
+        {
+          "id": "2_8_1",
+          "name": "the sarn ramparts"
+        },
+        {
+          "id": "2_8_town",
+          "name": "the sarn encampment"
+        },
+        {
+          "id": "2_8_2_1",
+          "name": "the toxic conduits"
+        },
+        {
+          "id": "2_8_2_2",
+          "name": "doedre's cesspool"
+        },
+        {
+          "id": "2_8_3",
+          "name": "the grand promenade"
+        },
+        {
+          "id": "2_8_5",
+          "name": "the bath house"
+        },
+        {
+          "id": "2_8_4",
+          "name": "the high gardens"
+        },
+        {
+          "id": "2_8_6",
+          "name": "the lunaris concourse"
+        },
+        {
+          "id": "2_8_7_1_",
+          "name": "the lunaris temple level 1"
+        },
+        {
+          "id": "2_8_7_2",
+          "name": "the lunaris temple level 2"
+        },
+        {
+          "id": "2_8_8",
+          "name": "the quay"
+        },
+        {
+          "id": "2_8_9",
+          "name": "the grain gate"
+        },
+        {
+          "id": "2_8_10",
+          "name": "the imperial fields"
+        },
+        {
+          "id": "2_8_11",
+          "name": "the solaris concourse"
+        },
+        {
+          "id": "2_8_12_1",
+          "name": "the solaris temple level 1"
+        },
+        {
+          "id": "2_8_12_2",
+          "name": "the solaris temple level 2"
+        },
+        {
+          "id": "2_8_13",
+          "name": "the harbour bridge"
+        },
+        {
+          "id": "2_8_14",
+          "name": "the hidden underbelly"
+        },
+        {
+          "id": "2_8_7_1",
+          "name": "the lunaris temple level 1"
+        }
+      ]
+    },
+    {
+      "actNumber": 9,
+      "zones": [
+        {
+          "id": "2_9_1",
+          "name": "the blood aqueduct"
+        },
+        {
+          "id": "2_9_town",
+          "name": "highgate"
+        },
+        {
+          "id": "2_9_2",
+          "name": "the descent"
+        },
+        {
+          "id": "2_9_3",
+          "name": "the vastiri desert"
+        },
+        {
+          "id": "2_9_4",
+          "name": "the oasis"
+        },
+        {
+          "id": "2_9_5",
+          "name": "the foothills"
+        },
+        {
+          "id": "2_9_6",
+          "name": "the boiling lake"
+        },
+        {
+          "id": "2_9_7",
+          "name": "the tunnel"
+        },
+        {
+          "id": "2_9_8",
+          "name": "the quarry"
+        },
+        {
+          "id": "2_9_9",
+          "name": "the refinery"
+        },
+        {
+          "id": "2_9_10_1",
+          "name": "the belly of the beast"
+        },
+        {
+          "id": "2_9_10_2",
+          "name": "the rotting core"
+        }
+      ]
+    },
+    {
+      "actNumber": 10,
+      "zones": [
+        {
+          "id": "2_10_town",
+          "name": "oriath docks"
+        },
+        {
+          "id": "2_10_1",
+          "name": "the cathedral rooftop"
+        },
+        {
+          "id": "2_10_2",
+          "name": "the ravaged square"
+        },
+        {
+          "id": "2_10_8",
+          "name": "the reliquary"
+        },
+        {
+          "id": "2_10_7",
+          "name": "the control blocks"
+        },
+        {
+          "id": "2_10_9",
+          "name": "the ossuary"
+        },
+        {
+          "id": "2_10_3",
+          "name": "the torched courts"
+        },
+        {
+          "id": "2_10_4",
+          "name": "the desecrated chambers"
+        },
+        {
+          "id": "2_10_5",
+          "name": "the canals"
+        },
+        {
+          "id": "2_10_6",
+          "name": "the feeding trough"
+        },
+        {
+          "id": "Labyrinth_Airlock",
+          "name": "aspirants' plaza"
+        }
+      ]
+    },
+    {
+      "actNumber": 11,
+      "zones": [
+        {
+          "id": "2_11_endgame_town",
+          "name": "karui shores"
+        }
+      ]
+    }
+  ]
+}

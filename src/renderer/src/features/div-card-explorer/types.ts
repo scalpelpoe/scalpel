@@ -2,7 +2,8 @@ export interface DivCard {
   art: string
   name: string
   price: number
-  weight: number
+  /** Absent for cards upstream could not resolve a drop weight for. */
+  weight?: number
   stack: number
   reward: string
   drop: { areas: string[]; min_level: number; monsters: string[]; text: string; all_areas?: boolean }

@@ -54,6 +54,37 @@ export const ITEM_CLASS_TO_CATEGORY: Record<string, string> = {
   // PoE2 waystones (the maps of PoE2). Property block (tier/rarity/packsize/...)
   // searches via map_filters; monster affixes via the normal explicit matcher.
   Waystones: 'map.waystone',
+  // PoE1 charts (Allflame league). Routing through the category leaves
+  // query.type unset so the zone chip can pin it to the discriminator form;
+  // without this entry the generic branch would hard-set query.type to the
+  // base type and the zone could not override it cleanly.
+  Chart: 'chart',
+}
+
+// ─── Item Class to Trade-Stat Qualifier ───────────────────────────────────────
+
+// Item class -> the trailing trade-stat qualifier its mods should prefer. The trade
+// API tags otherwise-identical display text (e.g. "#% increased Duration") with
+// "(Charm)"/"(Flask)"/"(Jewel)" to disambiguate; the clipboard carries only the bare
+// text, so we tell the matcher which qualified variant to pick (issue #397).
+export const QUALIFIER_BY_ITEM_CLASS: Record<string, string> = {
+  Charms: 'Charm',
+  // PoE1 flask copies say "Flasks"; PoE2 splits the class into "Life Flasks" /
+  // "Mana Flasks", so all three must point at the "(Flask)" qualifier (issue #466).
+  Flasks: 'Flask',
+  'Life Flasks': 'Flask',
+  'Mana Flasks': 'Flask',
+  Jewels: 'Jewel',
+  'Abyss Jewels': 'Jewel',
+  // PoE1 staff-block twin is tagged "(Staves)" on the trade API; prefer it for
+  // staves so unique staff searches don't land on the untagged jewel id.
+  Staves: 'Staves',
+  Warstaves: 'Staves',
+  // A corrupted shield's "+#% Chance to Block" implicit is published only as
+  // "+#% Chance to Block (Shields)" -- unlike the staff block implicit there is
+  // no unqualified twin for the explicit-stat fallback to land on, so without
+  // this the row is dropped entirely.
+  Shields: 'Shields',
 }
 
 const ARMOUR_CLASSES = new Set([

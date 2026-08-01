@@ -99,6 +99,7 @@ export interface PoeItem {
   blighted: boolean
   uberBlighted?: boolean
   scourged: boolean
+  vestigial?: boolean
   zanaMemory: boolean
   implicitCount: number
   gemLevel: number
@@ -108,6 +109,7 @@ export interface PoeItem {
   explicits: string[]
   implicits: string[]
   enchants: string[]
+  runes?: string[]
   imbues: string[]
   grantedSkills?: string[]
   memoryStrands?: number
@@ -147,6 +149,16 @@ export interface PoeItem {
   ultimatumChallenge?: string
   ultimatumRewardText?: string
   ultimatumRequired?: string
+  /** Chart zone name as printed on the clipboard, e.g. "Sea Pillars". PoE1
+   *  `Chart` item class only. Part of the chart's trade identity: the trade API
+   *  indexes each zone as its own type + discriminator. */
+  chartZone?: string
+  /** Chart shape, e.g. "Straight". PoE1 `Chart` item class only. */
+  chartShape?: string
+  /** Map area a Scrying Orb is bound to, e.g. "Dunes", from its "Map Area:"
+   *  line. Part of the orb's trade identity: the trade API indexes each area as
+   *  its own type + discriminator (see shared/data/trade/scrying-orbs.ts). */
+  scryingArea?: string
 }
 
 export interface Zone {

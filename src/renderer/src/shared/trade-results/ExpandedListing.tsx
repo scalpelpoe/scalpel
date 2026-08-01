@@ -27,6 +27,7 @@ function copyItemToClipboard(d: Listing['itemData'] & {}, rarity: string, btn: H
   if (d.name && d.name !== d.baseType) lines.push(d.name)
   if (d.baseType) lines.push(d.baseType)
   lines.push('--------')
+  if (d.chartZone) lines.push(d.chartZone)
   if (d.ilvl) lines.push(`Item Level: ${d.ilvl}`)
   if (d.grantedSkills?.length) {
     lines.push('--------')
@@ -160,9 +161,10 @@ export function ExpandedListing({ listing: l, itemClass, itemName, itemRarity }:
           </div>
         )}
 
-        {/* Heist contract info */}
-        {(d.areaLevel || d.heistJob) && (
+        {/* Chart zone / Heist contract info */}
+        {(d.chartZone || d.areaLevel || d.heistJob) && (
           <div className="text-[10px] text-text-dim flex gap-2">
+            {d.chartZone && <span className="text-text font-semibold">{d.chartZone}</span>}
             {d.areaLevel && (
               <span>
                 Area Level: <span className="text-text font-semibold">{d.areaLevel}</span>
@@ -239,6 +241,15 @@ export function ExpandedListing({ listing: l, itemClass, itemName, itemRarity }:
           <div className="mt-1 pt-1 w-full" style={MOD_SEPARATOR}>
             {d.enchantMods.map((mod, mi) => (
               <ModLine key={mi} text={mod} color={MOD_COLORS.enchant} />
+            ))}
+          </div>
+        )}
+
+        {/* Rune mods (PoE2 socketed runes) */}
+        {d.runeMods && d.runeMods.length > 0 && (
+          <div className="mt-1 pt-1 w-full" style={MOD_SEPARATOR}>
+            {d.runeMods.map((mod, mi) => (
+              <ModLine key={mi} text={mod} color={MOD_COLORS.rune} />
             ))}
           </div>
         )}

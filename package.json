@@ -1,6 +1,6 @@
 {
   "name": "scalpel",
-  "version": "0.9.15",
+  "version": "1.0.2-rc1",
   "description": "Path of Exile's First Fourth-Party Tool",
   "author": "Scalpel",
   "license": "AGPL-3.0-only",
@@ -20,8 +20,10 @@
     "build:i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/shared/paraglide",
     "validate:premium-mods": "node scripts/validate-premium-mods.mjs",
     "build-tier-data": "node scripts/build-tier-data.js",
+    "build-defence-bounds": "node scripts/build-defence-bounds.js",
     "sync-regex": "node scripts/sync-regex-data.js",
     "sync-prefabs": "node scripts/sync-prefabs.js",
+    "sync-league": "node scripts/sync-league-data.js",
     "dist:win": "npm run build && electron-builder --win --x64",
     "dist:linux": "npm run build && electron-builder --linux AppImage --x64",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json",
@@ -38,8 +40,7 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "active-win": "^9.0.0",
-    "electron-overlay-window": "^4.0.2",
+    "electron-overlay-window": "github:scalpelpoe/electron-overlay-window#db989812d62d6e988e915e25d772fc5c34aebdbb",
     "electron-store": "^8.2.0",
     "konva": "^9.3.22",
     "react-konva": "^18.2.14",

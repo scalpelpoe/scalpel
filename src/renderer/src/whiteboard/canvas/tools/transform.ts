@@ -1,5 +1,11 @@
 import type Konva from 'konva'
-import type { ImageElement, ShapeElement, StrokeElement, TextElement } from '@shared/whiteboard-types'
+import type {
+  ImageElement,
+  LiveMirrorElement,
+  ShapeElement,
+  StrokeElement,
+  TextElement,
+} from '@shared/whiteboard-types'
 import type { GameSize } from '../coords'
 
 export interface StrokeTransformResult {
@@ -128,14 +134,15 @@ export function bakeTextFromTransformResult(el: TextElement, next: BboxTransform
   }
 }
 
-export function bakeImageFromTransformResult(
-  el: ImageElement,
+/** Bake a top-left-origin bbox element (image, live mirror) from a Transformer
+ *  result: new top-left from positionPx, dimensions scaled, rotation applied.
+ *  `...el` is spread so element-specific fields (e.g. a mirror's `source`,
+ *  an image's `src`) survive. */
+function bakeTopLeftBbox<T extends { bbox: { x: number; y: number; w: number; h: number }; rotation: number }>(
+  el: T,
   next: BboxTransformResult,
   size: GameSize,
-): ImageElement {
-  // Image renders with its rotation pivot at the bbox top-left (Konva.Image's
-  // natural origin), so `positionPx` is the new top-left. Same shape as the
-  // text bake without the per-element font-size rescale.
+): T {
   const oldWpx = el.bbox.w * size.w
   const oldHpx = el.bbox.h * size.h
   const sxAbs = Math.abs(next.scaleX)
@@ -150,4 +157,24 @@ export function bakeImageFromTransformResult(
     },
     rotation: next.rotationRad,
   }
+}
+
+/** Image renders with its rotation pivot at the bbox top-left (Konva.Image's
+ *  natural origin), so `positionPx` is the new top-left. Same shape as the
+ *  text bake without the per-element font-size rescale. */
+export function bakeImageFromTransformResult(
+  el: ImageElement,
+  next: BboxTransformResult,
+  size: GameSize,
+): ImageElement {
+  return bakeTopLeftBbox(el, next, size)
+}
+
+/** Top-left origin like image, so `positionPx` is the new top-left. */
+export function bakeLiveMirrorFromTransformResult(
+  el: LiveMirrorElement,
+  next: BboxTransformResult,
+  size: GameSize,
+): LiveMirrorElement {
+  return bakeTopLeftBbox(el, next, size)
 }

@@ -140,6 +140,24 @@ describe('lookupPriceForItem (variant-aware)', () => {
     expect(price?.chaosValue).toBe(1)
   })
 
+  it('does not price a Rare item whose generated title collides with a currency name (#501)', () => {
+    _setPricesForTests([{ name: 'Ancient Orb', chaos: 350 }])
+    const price = lookupPriceForItem(
+      baseItem({
+        name: 'Ancient Orb',
+        baseType: 'Hypnotic Eye Jewel',
+        rarity: 'Rare',
+        itemClass: 'Abyss Jewels',
+      }),
+    )
+    expect(price).toBeUndefined()
+    // Same name, but a real Currency-rarity item still resolves.
+    const currencyPrice = lookupPriceForItem(
+      baseItem({ name: 'Ancient Orb', baseType: 'Ancient Orb', rarity: 'Currency', itemClass: 'Stackable Currency' }),
+    )
+    expect(currencyPrice?.chaosValue).toBe(350)
+  })
+
   it('legacy lookupPrice still works for callers without item context', () => {
     _setPricesForTests([
       { name: 'Hatred', variant: '21 20c', chaos: 50 },

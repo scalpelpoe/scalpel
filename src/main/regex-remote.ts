@@ -13,6 +13,10 @@ export interface RegexRemoteApplyDeps {
   /** Defer the paste until after focus settles. Real wiring uses setTimeout;
    *  tests pass a synchronous implementation. */
   defer: (fn: () => void) => void
+  /** Resolve what this preset should paste. Beasts presets re-derive against
+   *  live prices; everything else returns preset.regex unchanged. Optional so
+   *  callers that never see a Beasts preset can omit it. */
+  resolveRegex?: (preset: RegexPreset) => string | undefined
 }
 
 // ---- Overlay registration ---------------------------------------------------
@@ -113,7 +117,9 @@ export function toggleRegexRemote(): void {
  *  No-ops on an unknown id or a preset with no regex. */
 export function applyRegexPreset(presetId: string, deps: RegexRemoteApplyDeps): void {
   const preset = deps.getPresets().find((p) => p.id === presetId)
-  if (!preset?.regex) return
+  if (!preset) return
+  const regex = deps.resolveRegex?.(preset) ?? preset.regex
+  if (!regex) return
   deps.focusGame()
-  deps.defer(() => deps.paste(preset.regex as string))
+  deps.defer(() => deps.paste(regex))
 }

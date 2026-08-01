@@ -32,7 +32,7 @@ export function PluginTabHost({ pluginTabs, activeId, onPluginError }: Props): J
   return (
     <PluginErrorBoundary pluginId={activeId} onError={onPluginError}>
       <div className="flex flex-col flex-1 min-h-0">
-        {tab.overlay && (
+        {tab.overlay && tab.overlay.mode !== 'annotation' && (
           <div className="flex justify-end px-2 py-1 shrink-0">
             <button
               type="button"

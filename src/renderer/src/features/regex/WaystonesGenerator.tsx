@@ -18,16 +18,17 @@ import { InfoChip } from '../../shared/InfoChip'
 import { WAYSTONE_MODS } from '@shared/data/regex/waystone-mods'
 import {
   buildWaystoneRegex,
+  type WaystoneCorruption,
   type WaystoneQualifiers,
   type WaystoneQuantities,
-  type WaystoneRarity,
+  type WaystoneRevives,
   type WaystoneTier,
 } from './waystone-engine'
+import type { RaritySettings } from './rarity-regex'
 import { generateWaystonePresetTags } from './waystone-preset-tags'
 import { useRegexTrade } from './useRegexTrade'
 import { WaystoneTierPicker } from './WaystoneTierPicker'
 import { TradeResults } from './TradeResults'
-import { useAuth } from '../../shared/use-auth'
 import type { RegexPreset } from '@shared/types'
 import type { GeneratorHandle, GeneratorProps } from './generator-types'
 
@@ -73,9 +74,16 @@ export const WaystonesGenerator = forwardRef<GeneratorHandle, GeneratorProps>(fu
   const [tierMin, setTierMin] = usePersistedNumber(key('waystone-tier-min'), 1)
   const [tierMax, setTierMax] = usePersistedNumber(key('waystone-tier-max'), 16)
 
-  // Rarity flags. Both checked = no constraint (matches poe2.re behavior).
+  // Corruption flags. Both checked = no constraint (matches poe2.re behavior).
   const [corrupted, setCorrupted] = usePersistedBool(key('waystone-corrupted'), false)
   const [uncorrupted, setUncorrupted] = usePersistedBool(key('waystone-uncorrupted'), false)
+
+  // Rarity filter (normal/magic/rare). All-or-none checked = no constraint.
+  const [rarityNormal, setRarityNormal] = usePersistedBool(key('waystone-rarity-normal'), false)
+  const [rarityMagic, setRarityMagic] = usePersistedBool(key('waystone-rarity-magic'), false)
+  const [rarityRare, setRarityRare] = usePersistedBool(key('waystone-rarity-rare'), false)
+  const [revivesMin, setRevivesMin] = usePersistedNumber(key('waystone-revives-min'), 0)
+  const [revivesMax, setRevivesMax] = usePersistedNumber(key('waystone-revives-max'), 6)
 
   // Monster-pack qualifier flags.
   const [delirious, setDelirious] = usePersistedBool(key('waystone-delirious'), false)
@@ -108,8 +116,6 @@ export const WaystonesGenerator = forwardRef<GeneratorHandle, GeneratorProps>(fu
   // ---- Trade state ----------------------------------------------------------
   const trade = useRegexTrade()
   const [expandedListing, setExpandedListing] = useState<string | null>(null)
-  const [actionStatus, setActionStatus] = useState<Record<string, 'pending' | 'success' | 'failed'>>({})
-  const { loggedIn } = useAuth()
   const [tradePanel, setTradePanel] = useState<TradePanel>(null)
 
   const priceChipMinWidth = useMemo(() => {
@@ -119,7 +125,9 @@ export const WaystonesGenerator = forwardRef<GeneratorHandle, GeneratorProps>(fu
 
   // Build derived regex
   const tier: WaystoneTier = { min: tierMin, max: tierMax }
-  const rarity: WaystoneRarity = { corrupted, uncorrupted }
+  const corruption: WaystoneCorruption = { corrupted, uncorrupted }
+  const rarity: RaritySettings = { normal: rarityNormal, magic: rarityMagic, rare: rarityRare }
+  const revives: WaystoneRevives = { min: revivesMin, max: revivesMax }
   const qualifiers: WaystoneQualifiers = { delirious, anyPack }
   const quantities: WaystoneQuantities = {
     packSize: packSize || null,
@@ -131,7 +139,9 @@ export const WaystonesGenerator = forwardRef<GeneratorHandle, GeneratorProps>(fu
   const regex = buildWaystoneRegex({
     mods: WAYSTONE_MODS,
     tier,
+    corruption,
     rarity,
+    revives,
     qualifiers,
     quantities,
     selections: { want, avoid, wantMode, wantValues, avoidValues },
@@ -151,7 +161,9 @@ export const WaystonesGenerator = forwardRef<GeneratorHandle, GeneratorProps>(fu
       want,
       avoid,
       tier: { min: tierMin, max: tierMax },
-      rarity: { corrupted, uncorrupted },
+      corruption: { corrupted, uncorrupted },
+      rarityFilter: { normal: rarityNormal, magic: rarityMagic, rare: rarityRare },
+      revives: { min: revivesMin, max: revivesMax },
       delirious,
       anyPack,
       quantities: { packSize, monsterEffectiveness, monsterRarity, itemRarity, dropChance },
@@ -165,6 +177,11 @@ export const WaystonesGenerator = forwardRef<GeneratorHandle, GeneratorProps>(fu
       tierMax,
       corrupted,
       uncorrupted,
+      rarityNormal,
+      rarityMagic,
+      rarityRare,
+      revivesMin,
+      revivesMax,
       delirious,
       anyPack,
       packSize,
@@ -229,6 +246,11 @@ export const WaystonesGenerator = forwardRef<GeneratorHandle, GeneratorProps>(fu
           tierMax,
           corrupted: corrupted ? 1 : 0,
           uncorrupted: uncorrupted ? 1 : 0,
+          rarityNormal: rarityNormal ? 1 : 0,
+          rarityMagic: rarityMagic ? 1 : 0,
+          rarityRare: rarityRare ? 1 : 0,
+          revivesMin,
+          revivesMax,
           delirious: delirious ? 1 : 0,
           anyPack: anyPack ? 1 : 0,
           packSize,
@@ -249,6 +271,11 @@ export const WaystonesGenerator = forwardRef<GeneratorHandle, GeneratorProps>(fu
         setTierMax(q.tierMax && q.tierMax > 0 ? q.tierMax : 16)
         setCorrupted(!!q.corrupted)
         setUncorrupted(!!q.uncorrupted)
+        setRarityNormal(!!q.rarityNormal)
+        setRarityMagic(!!q.rarityMagic)
+        setRarityRare(!!q.rarityRare)
+        setRevivesMin(q.revivesMin == null ? 0 : q.revivesMin)
+        setRevivesMax(q.revivesMax == null ? 6 : q.revivesMax)
         setDelirious(!!q.delirious)
         setAnyPack(!!q.anyPack)
         setPackSize(q.packSize ?? 0)
@@ -359,6 +386,8 @@ export const WaystonesGenerator = forwardRef<GeneratorHandle, GeneratorProps>(fu
   const qualifierActiveCount =
     (tierActive ? 1 : 0) +
     (corrupted || uncorrupted ? 1 : 0) +
+    (rarityNormal || rarityMagic || rarityRare ? 1 : 0) +
+    (revivesMin > 0 || revivesMax < 6 ? 1 : 0) +
     quantityActiveCount +
     (delirious ? 1 : 0) +
     (anyPack ? 1 : 0) +
@@ -480,9 +509,6 @@ export const WaystonesGenerator = forwardRef<GeneratorHandle, GeneratorProps>(fu
           expandedListing={expandedListing}
           setExpandedListing={setExpandedListing}
           priceChipMinWidth={priceChipMinWidth}
-          loggedIn={loggedIn}
-          actionStatus={actionStatus}
-          setActionStatus={setActionStatus}
           rateLimitTiers={trade.rateLimitTiers}
           itemClass="Waystones"
         />
@@ -608,6 +634,37 @@ export const WaystonesGenerator = forwardRef<GeneratorHandle, GeneratorProps>(fu
               </QualifierSection>
 
               <QualifierSection label="RARITY">
+                <ToggleRow label="Normal" checked={rarityNormal} onChange={setRarityNormal} />
+                <ToggleRow label="Magic" checked={rarityMagic} onChange={setRarityMagic} alt />
+                <ToggleRow label="Rare" checked={rarityRare} onChange={setRarityRare} />
+              </QualifierSection>
+
+              <QualifierSection label="REVIVES">
+                <div className="flex items-center gap-2 px-3 py-[6px]">
+                  <span className="text-[11px] flex-1 text-text">Min revives</span>
+                  <ScrubInput
+                    value={revivesMin}
+                    placeholder="0"
+                    step={1}
+                    onChange={(v) => setRevivesMin(v == null ? 0 : Math.max(0, Math.min(6, v)))}
+                  />
+                </div>
+                <div className="flex items-center gap-2 px-3 py-[6px]" style={{ background: 'rgba(255,255,255,0.02)' }}>
+                  <span className="text-[11px] flex-1 text-text">Max revives</span>
+                  <ScrubInput
+                    value={revivesMax}
+                    placeholder="6"
+                    step={1}
+                    onChange={(v) => setRevivesMax(v == null ? 6 : Math.max(0, Math.min(6, v)))}
+                  />
+                </div>
+                <p className="text-[10px] text-text-dim px-3 py-[6px] m-0">
+                  Setting min and max revives to 0 finds 6+ modifier waystones. There is no way to search for exactly 8
+                  mods.
+                </p>
+              </QualifierSection>
+
+              <QualifierSection label="CORRUPTION">
                 <ToggleRow label="Corrupted" checked={corrupted} onChange={setCorrupted} />
                 <ToggleRow label="Uncorrupted" checked={uncorrupted} onChange={setUncorrupted} alt />
               </QualifierSection>

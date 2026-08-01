@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { Rect as KonvaRect, Stage as KonvaStage, Layer, Transformer } from 'react-konva'
 import type Konva from 'konva'
 import type { KonvaEventObject } from 'konva/lib/Node'
@@ -10,7 +10,7 @@ import { applyDragDelta, bakeTransform, renderElement } from './elements/registr
 import { readOsClipboardForPaste, writeElementsToOsClipboard } from '../state/os-clipboard'
 import { createTextAt, measureTextBbox } from './tools/text'
 import type { ImageElement, StrokeElement as StrokeEl, TextElement, WhiteboardElement } from '@shared/whiteboard-types'
-import { ContextMenu, type ContextMenuEntry } from './ContextMenu'
+import { ContextMenu, type ContextMenuEntry } from '../../components/primitives/ContextMenu'
 import { appendPoint, commitStroke, getStagePointer, startStroke, type PenSession } from './tools/pen'
 import { applyErase } from './tools/eraser'
 import { elementAabbPx, elementsInMarquee, pickTopElement } from './tools/select'
@@ -24,11 +24,15 @@ import {
 } from './tools/shape'
 import { commitRuler, startRuler, updateRulerEnd, type RulerSession } from './tools/ruler'
 import { commitRadius, startRadius, updateRadiusEnd, type RadiusSession } from './tools/radius'
+import { commitMirror, startMirror, updateMirrorEnd, type MirrorSession } from './tools/mirror'
 import { RulerElement } from './elements/RulerElement'
 import { RadiusRingElement } from './elements/RadiusRingElement'
 import { applyRingEdit, applyRulerEdit, type RingEdit, type RulerEdit } from './tools/distance-edit'
 import { DistanceEditHandles, DISTANCE_HANDLE } from './elements/DistanceEditHandles'
 import { screenToGround } from './poe-projection'
+import { cssEscape } from './css-escape'
+import { SourceGhost, SOURCE_GHOST_ID } from './elements/SourceGhost'
+import { moveSource, resizeSourceFromPx, destHeightForSourceAspect } from './tools/source-edit'
 
 const SHAPE_STROKE_WIDTH_NORM = 0.0035
 /** Per-step stagger applied when pasting via keyboard. Each successive paste
@@ -213,26 +217,23 @@ const ROTATE_CURSOR_SVG =
   "<svg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' stroke-linecap='round' stroke-linejoin='round'><path d='M 12 4 A 8 8 0 1 1 4 12' fill='none' stroke='black' stroke-width='3.5'/><path d='M 2.5 14.5 L 5 12 L 7.5 14.5 Z' fill='black' stroke='black' stroke-width='3.5'/><path d='M 12 4 A 8 8 0 1 1 4 12' fill='none' stroke='white' stroke-width='1.8'/><path d='M 2.5 14.5 L 5 12 L 7.5 14.5 Z' fill='white' stroke='white' stroke-width='1.8'/></svg>"
 const ROTATE_CURSOR = `url("data:image/svg+xml;utf8,${encodeURIComponent(ROTATE_CURSOR_SVG)}") 12 12, grab`
 
-function cssEscape(id: string): string {
-  return id.replace(/[^a-zA-Z0-9_-]/g, (c) => `\\${c}`)
-}
-
 type EditSession = { id: string; el: 'radiusRing'; edit: RingEdit } | { id: string; el: 'ruler'; edit: RulerEdit }
 
-export function Stage(): JSX.Element {
+export function Stage({ stageRef }: { stageRef: RefObject<Konva.Stage> }): JSX.Element {
   const [size, setSize] = useState({ w: window.innerWidth, h: window.innerHeight })
-  const stageRef = useRef<Konva.Stage>(null)
   const sessionRef = useRef<PenSession | null>(null)
   const shapeSessionRef = useRef<ShapeSession | null>(null)
   const marqueeSessionRef = useRef<{ anchorPx: { x: number; y: number }; cursorPx: { x: number; y: number } } | null>(
     null,
   )
   const transformerRef = useRef<Konva.Transformer>(null)
+  const ghostTransformerRef = useRef<Konva.Transformer>(null)
   const [, forceRender] = useState(0)
 
   const elements = useWhiteboardStore((s) => s.elements)
   const drawingsOpacity = useWhiteboardStore((s) => s.drawingsOpacity)
   const tool = useWhiteboardStore((s) => s.tool)
+  const mode = useWhiteboardStore((s) => s.mode)
   const color = useWhiteboardStore((s) => s.color)
   const widthN = useWhiteboardStore((s) => s.width)
   const shapeVariant = useWhiteboardStore((s) => s.shapeVariant)
@@ -249,6 +250,7 @@ export function Stage(): JSX.Element {
   const rulerSessionRef = useRef<RulerSession | null>(null)
   const radiusSessionRef = useRef<RadiusSession | null>(null)
   const editSessionRef = useRef<EditSession | null>(null)
+  const mirrorSessionRef = useRef<MirrorSession | null>(null)
   const poeVersion = useWhiteboardStore((s) => s.poeVersion)
   const erasingRef = useRef(false)
   const erasedThisPassRef = useRef(false)
@@ -280,7 +282,18 @@ export function Stage(): JSX.Element {
       .filter((n): n is Konva.Node => !!n)
     tr.nodes(nodes)
     tr.getLayer()?.batchDraw()
-  }, [selectedIds, elements])
+  }, [selectedIds, elements, mode])
+
+  useEffect(() => {
+    const stage = stageRef.current
+    const tr = ghostTransformerRef.current
+    if (!stage || !tr) return
+    const sel = selectedIds.length === 1 ? elements.find((e2) => e2.id === selectedIds[0]) : null
+    const show = tool === 'select' && sel?.type === 'liveMirror'
+    const node = show ? stage.findOne(`#${SOURCE_GHOST_ID}`) : null
+    tr.nodes(node ? [node] : [])
+    tr.getLayer()?.batchDraw()
+  }, [selectedIds, elements, tool, mode])
 
   // The Transformer's resize/rotate handles only respond in select mode, so
   // leaving a selection bound while the user switches to a drawing tool just
@@ -374,6 +387,7 @@ export function Stage(): JSX.Element {
       let cur: Konva.Node | null = e?.target ?? null
       while (cur) {
         if (cur.getClassName?.() === 'Transformer') return
+        if (cur.id?.() === SOURCE_GHOST_ID) return
         cur = cur.getParent() ?? null
       }
       const pt = getStagePointer(stage)
@@ -462,6 +476,15 @@ export function Stage(): JSX.Element {
         anchorPx: pt,
         size,
       })
+      forceRender((n) => n + 1)
+      return
+    }
+    if (tool === 'liveMirror') {
+      const stage = stageRef.current
+      if (!stage) return
+      const pt = getStagePointer(stage)
+      if (!pt) return
+      mirrorSessionRef.current = startMirror({ anchorPx: pt })
       forceRender((n) => n + 1)
       return
     }
@@ -557,6 +580,15 @@ export function Stage(): JSX.Element {
       forceRender((n) => n + 1)
       return
     }
+    if (mirrorSessionRef.current) {
+      const stage = stageRef.current
+      if (!stage) return
+      const pt = getStagePointer(stage)
+      if (!pt) return
+      updateMirrorEnd(mirrorSessionRef.current, pt)
+      forceRender((n) => n + 1)
+      return
+    }
     if (rulerSessionRef.current) {
       const stage = stageRef.current
       if (!stage) return
@@ -633,6 +665,18 @@ export function Stage(): JSX.Element {
       const finished = commitShape(shapeSessionRef.current, size)
       shapeSessionRef.current = null
       if (finished) addElement(finished)
+      forceRender((n) => n + 1)
+      return
+    }
+    if (mirrorSessionRef.current) {
+      const finished = commitMirror(mirrorSessionRef.current, size)
+      mirrorSessionRef.current = null
+      if (finished) {
+        addElement(finished)
+        setSelectedIds([finished.id])
+      }
+      // Drop back to select so the user can immediately move/scale the mirror.
+      useWhiteboardStore.getState().setTool('select')
       forceRender((n) => n + 1)
       return
     }
@@ -729,6 +773,18 @@ export function Stage(): JSX.Element {
   const inProgressRing =
     radiusSessionRef.current && poeVersion !== null ? commitRadius(radiusSessionRef.current, size) : null
 
+  const inProgressMirror = mirrorSessionRef.current
+    ? (() => {
+        const s = mirrorSessionRef.current
+        const r = bboxFromAnchorAndCursor(s.anchorPx, s.cursorPx, false, 'bbox')
+        return { x: r.x, y: r.y, w: r.w, h: r.h }
+      })()
+    : null
+
+  const mirrorSelected =
+    selectedIds.length === 1 && elements.find((e2) => e2.id === selectedIds[0])?.type === 'liveMirror'
+  const MIRROR_ANCHORS = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+
   return (
     <>
       <KonvaStage
@@ -743,12 +799,56 @@ export function Stage(): JSX.Element {
         onTouchEnd={onPointerUp}
         onContextMenu={onContextMenu}
       >
+        {mode === 'edit' &&
+          mirrorSelected &&
+          tool === 'select' &&
+          (() => {
+            const mirror = elements.find((e2) => e2.id === selectedIds[0])
+            if (mirror?.type !== 'liveMirror') return null
+            return (
+              <Layer>
+                <SourceGhost
+                  element={mirror}
+                  size={size}
+                  onMove={(delta) =>
+                    updateElement(mirror.id, (curr) =>
+                      curr.type === 'liveMirror' ? { ...curr, source: moveSource(curr.source, delta, size) } : curr,
+                    )
+                  }
+                  onResize={(next) =>
+                    updateElement(mirror.id, (curr) => {
+                      if (curr.type !== 'liveMirror') return curr
+                      const rectPx = {
+                        x: next.positionPx.x,
+                        y: next.positionPx.y,
+                        w: curr.source.w * size.w * Math.abs(next.scaleX),
+                        h: curr.source.h * size.h * Math.abs(next.scaleY),
+                      }
+                      const source = resizeSourceFromPx(rectPx, size)
+                      return {
+                        ...curr,
+                        source,
+                        bbox: { ...curr.bbox, h: destHeightForSourceAspect(curr.bbox, source) },
+                      }
+                    })
+                  }
+                />
+                <Transformer
+                  ref={ghostTransformerRef}
+                  rotateEnabled={false}
+                  keepRatio={false}
+                  flipEnabled={false}
+                  enabledAnchors={MIRROR_ANCHORS}
+                />
+              </Layer>
+            )
+          })()}
         <Layer opacity={drawingsOpacity} listening={true}>
           {elements.map((el) =>
             renderElement(el, {
               size,
               version: poeVersion,
-              draggable: tool === 'select',
+              draggable: tool === 'select' && mode === 'edit',
               editingTextId,
               onDragEnd: (id, delta) => updateElement(id, (curr) => applyDragDelta(curr, delta, size)),
               onTransformEnd: (id, next) => updateElement(id, (curr) => bakeTransform(curr, next, size)),
@@ -756,7 +856,7 @@ export function Stage(): JSX.Element {
             }),
           )}
         </Layer>
-        <Layer listening={false}>
+        <Layer listening={false} visible={mode === 'edit'}>
           {inProgressEl && <StrokeElement element={inProgressEl} size={size} listening={false} />}
           {inProgressShape && <ShapeElement element={inProgressShape} size={size} listening={false} />}
           {inProgressRuler && (
@@ -778,18 +878,33 @@ export function Stage(): JSX.Element {
               perfectDrawEnabled={false}
             />
           )}
+          {inProgressMirror && (
+            <KonvaRect
+              x={inProgressMirror.x}
+              y={inProgressMirror.y}
+              width={inProgressMirror.w}
+              height={inProgressMirror.h}
+              fill="rgba(56, 189, 248, 0.10)"
+              stroke="#38bdf8"
+              strokeWidth={1}
+              dash={[6, 4]}
+              listening={false}
+              perfectDrawEnabled={false}
+            />
+          )}
         </Layer>
-        <Layer>
+        <Layer visible={mode === 'edit'}>
           <Transformer
             ref={transformerRef}
-            rotateEnabled={true}
-            keepRatio={false}
+            rotateEnabled={!mirrorSelected}
+            keepRatio={mirrorSelected}
+            enabledAnchors={mirrorSelected ? MIRROR_ANCHORS : undefined}
             flipEnabled={false}
             rotateAnchorCursor={ROTATE_CURSOR}
           />
         </Layer>
         {(() => {
-          if (selectedIds.length !== 1) return null
+          if (mode !== 'edit' || selectedIds.length !== 1) return null
           const el = elements.find((e2) => e2.id === selectedIds[0])
           if (!el || (el.type !== 'ruler' && el.type !== 'radiusRing')) return null
           return (

@@ -11,8 +11,10 @@ export interface RegisteredTab {
   icon: string
   render: (container: HTMLElement) => (() => void) | void
   /** Present when the plugin also registered an overlay window; drives the
-   *  "pop out" button in the tab content pane. */
-  overlay?: { title: string; icon?: string }
+   *  "pop out" button in the tab content pane. `mode` is only shown for
+   *  'window' overlays - 'annotation' overlays are click-through surfaces
+   *  with no chrome, so popping one out shows nothing. */
+  overlay?: { title: string; icon?: string; mode?: 'window' | 'annotation' }
 }
 
 export interface PluginHostProps {
@@ -27,7 +29,7 @@ export interface PluginHostProps {
   onOpenExternal: (url: string) => void
   onTabsChange: (tabs: RegisteredTab[]) => void
   onOpenPluginTab: (pluginId: string) => void
-  onCopyAndEvaluateItem: () => Promise<PoeItem | null>
+  onCopyAndEvaluateItem: (opts?: { showOverlay?: boolean; dispatch?: boolean }) => Promise<PoeItem | null>
   onPluginError?: (id: string, error: Error) => void
   onPluginUnloaded?: (pluginId: string) => void
 }
@@ -36,7 +38,9 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
   const [tabs, setTabs] = useState<RegisteredTab[]>([])
   const loadedRef = useRef(false)
   const pluginHotkeyHandlersRef = useRef<Map<string, () => void>>(new Map())
-  const pendingOverlayRef = useRef<Map<string, { title: string; icon?: string }>>(new Map())
+  const pendingOverlayRef = useRef<Map<string, { title: string; icon?: string; mode?: 'window' | 'annotation' }>>(
+    new Map(),
+  )
   // Per-plugin unsubscribe fns the host collected by wrapping ctx subscriptions,
   // plus the optional teardown fn the plugin returned from activate(). Both are
   // drained by unloadPlugin so a reload (or uninstall) leaves nothing running.
@@ -158,11 +162,13 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
           void window.api.pluginRegisterHotkey(pluginId, opts.label)
         },
         openTab: (pluginId) => onOpenPluginTabRef.current(pluginId),
-        copyAndEvaluateItem: () => onCopyAndEvaluateItemRef.current(),
+        copyAndEvaluateItem: (opts) => onCopyAndEvaluateItemRef.current(opts),
         registerOverlay: (pluginId, opts) => {
-          pendingOverlayRef.current.set(pluginId, { title: opts.title, icon: opts.icon })
+          pendingOverlayRef.current.set(pluginId, { title: opts.title, icon: opts.icon, mode: opts.mode })
           setTabs((prev) =>
-            prev.map((t) => (t.pluginId === pluginId ? { ...t, overlay: { title: opts.title, icon: opts.icon } } : t)),
+            prev.map((t) =>
+              t.pluginId === pluginId ? { ...t, overlay: { title: opts.title, icon: opts.icon, mode: opts.mode } } : t,
+            ),
           )
           void window.api.pluginRegisterOverlay(pluginId, {
             title: opts.title,
@@ -174,6 +180,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
         openOverlay: (pluginId) => void window.api.pluginOpenOverlay(pluginId),
         closeOverlay: (pluginId) => void window.api.pluginCloseOverlay(pluginId),
         captureGameWindow: (region) => window.api.pluginCaptureGameWindow(region),
+        getCursorPosition: () => window.api.pluginGetCursorPosition(),
       })
       pluginDisposersRef.current.set(m.id, disposers)
       // PluginActivate may be async and may return a teardown fn (host runtime

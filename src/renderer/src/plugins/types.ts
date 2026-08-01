@@ -42,10 +42,14 @@ export type PluginContextFactoryDeps = {
   ) => void
   registerHotkey: (pluginId: string, opts: { label: string }, handler: () => void) => void
   openTab: (pluginId: string) => void
-  copyAndEvaluateItem: () => Promise<import('@shared/types').PoeItem | null>
+  copyAndEvaluateItem: (opts?: {
+    showOverlay?: boolean
+    dispatch?: boolean
+  }) => Promise<import('@shared/types').PoeItem | null>
   captureGameWindow: (
     region?: import('../../../plugin-sdk/src/types').GameRect,
   ) => Promise<import('../../../plugin-sdk/src/types').GameCapture | null>
+  getCursorPosition: () => Promise<{ x: number; y: number } | null>
   registerOverlay: (pluginId: string, opts: import('../../../plugin-sdk/src/types').RegisterOverlayOptions) => void
   openOverlay: (pluginId: string) => void
   closeOverlay: (pluginId: string) => void

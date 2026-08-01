@@ -18,9 +18,7 @@ import {
   ensureProfileForGame,
   getEffectiveSettings,
   getProfileBackedSetting,
-  getProfileById,
   listProfileSummaries,
-  persistProfileSwitchForRestart,
   renameProfile,
   writeActiveRegexPresetsByGameVariant,
   type ProfileChangedSetting,
@@ -29,6 +27,7 @@ import {
 } from '../profiles/profile-settings'
 import { getOverlayAttachedVersion } from '../overlay'
 import { shouldRelaunchAfterOnboarding } from '../onboarding-relaunch'
+import { getGameSwitchCoordinator } from '../experimental'
 
 export function register(store: Store<AppSettings>): void {
   ipcMain.handle('get-settings', () => getEffectiveSettings(store))
@@ -111,34 +110,14 @@ export function register(store: Store<AppSettings>): void {
   })
 
   ipcMain.handle('set-active-profile', async (event, id: string, restartIfNeeded = false) => {
-    const profile = getProfileById(id)
-    if (!profile) return { ok: false as const, error: 'Profile not found' }
-
-    const current = store.get('poeVersion') === 2 ? 2 : 1
-    if (profile.gameVariant !== current) {
-      if (!restartIfNeeded) {
-        return { ok: false as const, requiresRestart: true as const, targetGame: profile.gameVariant }
-      }
-
-      if (!app.isPackaged) {
-        applySetting(store, 'activeProfileId', id, event.sender)
-        console.warn(`[profile-switch] target=PoE${profile.gameVariant}; restart dev to re-attach`)
-        return { ok: true as const, settings: getEffectiveSettings(store), devRestartRequired: true as const }
-      }
-
-      persistProfileSwitchForRestart(store, profile)
-      app.relaunch()
-      app.quit()
-      return { ok: true as const, restarting: true as const }
-    }
-
-    applySetting(store, 'activeProfileId', id, event.sender)
-    return { ok: true as const, settings: getEffectiveSettings(store) }
+    return getGameSwitchCoordinator(store).applyProfileSwitch(store, id, restartIfNeeded, event.sender)
   })
 
-  ipcMain.handle('refresh-leagues', async (event) => {
+  // `force` skips the hourly cooldown - the settings Refresh button is a
+  // deliberate user action, so it must always hit the network.
+  ipcMain.handle('refresh-leagues', async (event, force = false) => {
     const previous = getEffectiveSettings(store)
-    const changed = await refreshLeagues(store)
+    const changed = await refreshLeagues(store, undefined, { force })
     const settings = getEffectiveSettings(store)
     const changes: ProfileChangedSetting[] = changed.map((key) => {
       if (key === 'activeProfile') return { key, value: settings.activeProfile, reason: 'migration' }
@@ -151,9 +130,8 @@ export function register(store: Store<AppSettings>): void {
     }
   })
 
-  // Regex presets live in a per-version slot. The relaunch-on-game-switch flow
-  // (ensureCorrectGameForHotkey) means `poeVersion` is stable for the lifetime
-  // of this process, so it's safe to capture the active key once and reuse it.
+  // Regex presets live in a per-version slot. Resolve the active slot at each
+  // operation because multi-title attachment can switch games in-process.
   const regexPresetsKey = (): 'regexPresetsPoe1' | 'regexPresetsPoe2' =>
     store.get('poeVersion') === 2 ? 'regexPresetsPoe2' : 'regexPresetsPoe1'
 

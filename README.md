@@ -14,10 +14,11 @@ Path of Exile's first ever fourth-party tool. An overlay to edit your filter, pr
 - **Cheat Sheets** - Use prefabs (PoE1 Leagues, PoE2 Leveling Guide) or add your own. Or just add pictures of Greg.
 - **View in Wiki/PoEDB/Ninja** - Don't like what Scalpel has to say about an item? Try the other sites.
 - **Art Mode** - Bind an app hotkey in settings to launch an artboard on top of the game - draw, add shapes, text and images. I don't know who would want this besides content creators but it's really fucking cool.
-- **Plugins (beta)** - Browse and install from Settings → Plugins, or build your own. 
+- **Plugins (beta)** - Browse and install from Settings → Plugins, or build your own.
 - **And more** - Scrollable stash tabs, filter checkpoints, cool themes etc.
 
 **PoE1 Only:**
+
 - **Dust Explorer** - Easily filter uniques to find the best ones to dust
 - **Div Card Explorer** - EV calculator for div cards on maps with live prices (s/o [Maps of Exile](https://github.com/deathbeam/maps-of-exile) and the Forbidden Library)
 - **Socket Recolor** - Easily calculate cost of recoloring sockets on items
@@ -33,6 +34,20 @@ See [PLUGINS.md](PLUGINS.md) for information on how to build a plugin. Please jo
 ## Official Releases
 
 Pre-built releases are available on the [Releases](https://github.com/scalpelpoe/scalpel/releases) page.
+
+### Arch Linux (AUR)
+
+Scalpel is also available on the AUR:
+
+- [`scalpel-poe-bin`](https://aur.archlinux.org/packages/scalpel-poe-bin) - pre-built stable release; recommended
+- [`scalpel-poe`](https://aur.archlinux.org/packages/scalpel-poe) - stable release built from source
+- [`scalpel-poe-git`](https://aur.archlinux.org/packages/scalpel-poe-git) - latest development version built from Git
+
+For example, using [`paru`](https://github.com/morganamilo/paru):
+
+```sh
+paru -S scalpel-poe-bin
+```
 
 ## FAQ
 
@@ -57,7 +72,7 @@ The PoE2 era has begun for Scalpel. Enjoy 0.5 and all the new content and please
 ## Screenshots
 
 | | |
-|---|---|
+| --- | --- |
 | ![Filter Editor](.github/screenshots/filter-editor.png) | ![Price Check](.github/screenshots/price-check.png) |
 | ![Economy Audit](.github/screenshots/audit-currency.png) | ![Dust Explorer](.github/screenshots/dust-explorer.png) |
 | ![Div Card Explorer](.github/screenshots/div-cards.png) | ![Socket Recolor](.github/screenshots/sockets.png) |

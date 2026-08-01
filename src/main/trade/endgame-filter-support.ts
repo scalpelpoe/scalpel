@@ -4,18 +4,22 @@ import { app } from 'electron'
 import bundled from '@shared/data/trade/endgame-filter-support.json'
 import { ENDGAME_FILTER_SUPPORT_URL } from '@shared/endpoints'
 
-/** Which PoE2 trade2 "Endgame Filters" GGG actually indexes for search changes
- *  league-to-league (live-probed, not announced). Hard-coding it in source means
- *  a full app release to flip one flag, so the allowlist is remote-overridable
- *  the same way premium-mods / tier-data are: bundled offline floor -> userData
- *  cache -> raw.githubusercontent main on launch. A push to main re-enables (or
- *  suppresses) a chip for all users without a rebuild. */
+/** Which trade "Endgame Filters" GGG actually indexes for search changes
+ *  league-to-league (live-probed, not announced). That covers the PoE2 waystone
+ *  keys and, since the Allflame league, the PoE1 chart keys under the renamed
+ *  "Map/Chart Filters" group. Hard-coding it in source means a full app release
+ *  to flip one flag, so the allowlist is remote-overridable the same way
+ *  premium-mods / tier-data are: bundled offline floor -> userData cache ->
+ *  raw.githubusercontent main on launch. A push to main re-enables (or
+ *  suppresses) a chip for all users without a rebuild. The chip ids are not
+ *  namespaced by game, so adding a key here affects every producer (PoE1 or
+ *  PoE2) that emits it, not just the one you're reasoning about. */
 
 const SCHEMA_VERSION = 1
 
 interface EndgameFilterSupport {
   schemaVersion: number
-  /** Chip ids (e.g. "map.map_tier") whose trade2 key returns results. */
+  /** Chip ids (e.g. "map.map_tier") whose trade key returns results. */
   indexedKeys: string[]
 }
 

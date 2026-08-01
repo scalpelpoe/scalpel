@@ -140,10 +140,10 @@ export function DivCardExplorer({ onSelectItem }: Props): JSX.Element {
         if (card.price <= 0) continue
         const dropsHere = card.drop.all_areas || card.drop.areas.some((a) => m.ids.includes(a))
         if (!dropsHere) continue
-        const hasWeight = card.weight != null && card.weight > 0
+        const weight = card.weight ?? 0
         const isFlagged = flaggedCards.has(card.name)
-        const dropRate = hasWeight ? (card.weight / DROPPOOL_WEIGHT) * DROPS_PER_MAP : 0
-        const cardEv = hasWeight && !isFlagged ? card.price * dropRate : 0
+        const dropRate = weight > 0 ? (weight / DROPPOOL_WEIGHT) * DROPS_PER_MAP : 0
+        const cardEv = weight > 0 && !isFlagged ? card.price * dropRate : 0
         mapCards.push({ card, dropRate, cardEv })
       }
       mapCards.sort((a, b) => b.cardEv - a.cardEv)

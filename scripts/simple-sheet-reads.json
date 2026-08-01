@@ -1,0 +1,1156 @@
+{
+  "_source": "Distilled from the Zone Read sections of Cyclon's Definitiv Guide (https://www.definitivguide.com). Used with permission. Edit tips here, then run: node scripts/build-simple-sheets.mjs",
+  "acts": [
+    {
+      "act": 1,
+      "zones": [
+        {
+          "name": "The Twilight Strand",
+          "codes": [
+            "1_1_1"
+          ],
+          "tip": "Walk east / north-east along the coastline - Hillock is always at the far east end.",
+          "layout": "01-twilight-strand-1.webp"
+        },
+        {
+          "name": "The Coast",
+          "codes": [
+            "1_1_2"
+          ],
+          "tip": "WP and exits sit at water level. Walk east/NE, drop a layer down for each ledge up. Long Coast? Log out and re-instance.",
+          "layout": "02-coast-8.webp"
+        },
+        {
+          "name": "The Tidal Island",
+          "codes": [
+            "1_1_2a"
+          ],
+          "tip": "Go left/west at the start; if you face a ledge, turn around and take the east side to Hailrake.",
+          "layout": "03-tidal-island-2.webp"
+        },
+        {
+          "name": "The Mud Flats",
+          "codes": [
+            "1_1_3"
+          ],
+          "tip": "The 3 nests form a triangle. Identify the variant (East/North/South), then chase quest markers in that direction.",
+          "layout": "04-mud-flats-5.webp"
+        },
+        {
+          "name": "The Submerged Passage",
+          "codes": [
+            "1_1_4_1"
+          ],
+          "tip": "Follow the zone and portal at the bridge - or portal when Flooded Depths appears on the minimap, then find the bridge.",
+          "layout": "05-submerged-passage-6.webp"
+        },
+        {
+          "name": "The Flooded Depths",
+          "codes": [
+            "1_1_4_0"
+          ],
+          "tip": "Note which directions the zone dead-ends toward - the Deep Dweller is in the opposite direction.",
+          "layout": "06-flooded-depths-4.webp"
+        },
+        {
+          "name": "The Ledge",
+          "codes": [
+            "1_1_5"
+          ],
+          "tip": "Always take the goat passage for the XP: hug the mountain-side wall through it, then the water-side wall to dodge Kuduku.",
+          "layout": "07-ledge-2.webp"
+        },
+        {
+          "name": "The Climb",
+          "codes": [
+            "1_1_6"
+          ],
+          "tip": "Follow the west edge - 5 slopes/ledges to the exit; the Legion monolith sits before the last two.",
+          "layout": "08-climb-4.webp"
+        },
+        {
+          "name": "The Lower Prison",
+          "codes": [
+            "1_1_7_1"
+          ],
+          "tip": "Check north-east first: dead end = East variant. Trial straight from the WP = exit south-west; trial facing NW = exit far east.",
+          "layout": "09-lower-prison-4.webp"
+        },
+        {
+          "name": "The Upper Prison",
+          "codes": [
+            "1_1_7_2"
+          ],
+          "tip": "Check north-east first - dead end means turn around. Then follow the outer wall to the exit.",
+          "layout": "10-upper-prison-4.webp"
+        },
+        {
+          "name": "Prisoner's Gate",
+          "codes": [
+            "1_1_8"
+          ],
+          "tip": "The exit is always layers below the entrance: find the ledge side (opposite the mountain wall) and follow the slopes down.",
+          "layout": "11-prisoners-gate-8.webp"
+        },
+        {
+          "name": "The Ship Graveyard",
+          "codes": [
+            "1_1_9"
+          ],
+          "tip": "Follow the cliff side. Portal the Cave entrance when you see it; grab the WP at Cavern of Wrath - whichever comes first.",
+          "layout": "12-ship-graveyard-1.webp"
+        },
+        {
+          "name": "The Ship Graveyard Cave",
+          "codes": [
+            "1_1_9a"
+          ],
+          "tip": "The Allflame sits diagonal from the entrance - zig-zag along that diagonal, avoiding dead ends.",
+          "layout": "13-ship-graveyard-cave-1.webp"
+        },
+        {
+          "name": "The Cavern of Wrath",
+          "codes": [
+            "1_1_11_1"
+          ],
+          "tip": "Follow the water - the river flows in the direction the zone extends.",
+          "layout": "14-cavern-of-wrath-1.webp"
+        },
+        {
+          "name": "The Cavern of Anger",
+          "codes": [
+            "1_1_11_2"
+          ],
+          "tip": "Follow the water; the exit is the north-east corner. Upper bridge dead-ends = go NE along the west edge, else go east.",
+          "layout": "15-cavern-of-anger-1.webp"
+        }
+      ]
+    },
+    {
+      "act": 2,
+      "zones": [
+        {
+          "name": "The Southern Forest",
+          "codes": [
+            "1_2_1"
+          ],
+          "tip": "Follow the cliff side / east edge north to town. Great XP catch-up zone - dense easy blue packs.",
+          "layout": "01-southern-forest.webp"
+        },
+        {
+          "name": "The Old Fields",
+          "codes": [
+            "1_2_2"
+          ],
+          "tip": "Follow the road; the Crossroads exit is at its end. If the road fades, keep its direction to pick it up again.",
+          "layout": "02-old-fields-3.webp"
+        },
+        {
+          "name": "The Crossroads",
+          "codes": [
+            "1_2_3"
+          ],
+          "tip": "Static: the WP is central. Chamber of Sins NW of it, Broken Bridge NE, Fellshrine Ruins SE.",
+          "layout": "03-crossroads.webp"
+        },
+        {
+          "name": "The Chamber of Sins Level 1",
+          "codes": [
+            "1_2_6_1"
+          ],
+          "tip": "The WP sits next to the passage down. Find the inner circular room, then take the passage behind the WP.",
+          "layout": "04-chamber-of-sins-1-1.webp"
+        },
+        {
+          "name": "The Chamber of Sins Level 2",
+          "codes": [
+            "1_2_6_2"
+          ],
+          "tip": "Head south-east to find the trial; Fidelitas' arena reads from the trial's position and facing.",
+          "layout": "05-chamber-of-sins-2-3.webp"
+        },
+        {
+          "name": "The Riverways",
+          "codes": [
+            "1_2_7"
+          ],
+          "tip": "Follow the road. Wetlands exit is NW of the WP along the worn path. WP seconds after entering? Reset the instance.",
+          "layout": "06-riverways-2.webp"
+        },
+        {
+          "name": "The Western Forest",
+          "codes": [
+            "1_2_9"
+          ],
+          "tip": "Follow the road to the WP. Weaver opposite side of the road (spiderwebs), Alira same side via the pebble path, Blackguards at road's end.",
+          "layout": "07-western-forest-1.webp"
+        },
+        {
+          "name": "The Weaver's Chambers",
+          "codes": [
+            "1_2_10"
+          ],
+          "tip": "Follow the left wall from the entrance, always going west first.",
+          "layout": "08-weavers-chamber-1.webp"
+        },
+        {
+          "name": "The Broken Bridge",
+          "codes": [
+            "1_2_4"
+          ],
+          "tip": "Follow the road to Kraityn's camp. Optional: 3 exiles guard a jewellery stash in the left corner of the broken castle.",
+          "layout": "09-broken-bridge-1.webp"
+        },
+        {
+          "name": "The Wetlands",
+          "codes": [
+            "1_2_12"
+          ],
+          "tip": "Move north to find Oak - check NW first, then NE. His camp is the only big structure; zig-zag edges on the minimap mark it.",
+          "layout": "10-wetlands-3.webp"
+        },
+        {
+          "name": "The Fellshrine Ruins",
+          "codes": [
+            "1_2_15"
+          ],
+          "tip": "Follow the road through 3 walls; at the big ruin head NE into the Crypt. If the road splits, take the path leading east.",
+          "layout": "11-fellshrine-ruins.webp"
+        },
+        {
+          "name": "The Crypt Level 1",
+          "codes": [
+            "1_2_5_1"
+          ],
+          "tip": "WP below the start room's midline = follow the wall opposite it; WP above = the wall behind it. That wall finds trial and exit.",
+          "layout": "12-crypt-1.webp"
+        },
+        {
+          "name": "The Crypt Level 2",
+          "codes": [
+            "1_2_5_2"
+          ],
+          "tip": "Move the way the starting room exits (east or south) until the altar room; when forced, turn and follow the wall.",
+          "layout": "13-crypt-2-3.webp"
+        },
+        {
+          "name": "The Vaal Ruins",
+          "codes": [
+            "1_2_11"
+          ],
+          "tip": "Walk forward; at every dead end or edge, turn the way the zone continues and keep walking.",
+          "layout": "14-vaal-ruins-6.webp"
+        },
+        {
+          "name": "The Northern Forest",
+          "codes": [
+            "1_2_8"
+          ],
+          "tip": "Walk north to the WP, then follow the waterside east edge north to Caverns (west edge if water fully wraps the WP).",
+          "layout": "15-northern-forest-2.webp"
+        },
+        {
+          "name": "The Caverns",
+          "codes": [
+            "1_2_14_2"
+          ],
+          "tip": "Take the 2 bridges west, south to the corner, then east to the WP room. Exit is in one of 3 corners - check east, north, west.",
+          "layout": "16-cavern-1.webp"
+        },
+        {
+          "name": "The Ancient Pyramid",
+          "codes": [
+            "1_2_14_3"
+          ],
+          "tip": "3 floors. Floor 1: check the corners; floors 2-3: the staircase up is diagonally opposite the entrance.",
+          "layout": "17-ancient-pyramid-2.webp"
+        }
+      ]
+    },
+    {
+      "act": 3,
+      "zones": [
+        {
+          "name": "The City of Sarn",
+          "codes": [
+            "1_3_1"
+          ],
+          "tip": "Move NE to Clarissa (pillar by the first staircase), stay on the upper part for kills, then drop to the town entrance.",
+          "layout": "01-city-of-sarn.webp"
+        },
+        {
+          "name": "The Slums",
+          "codes": [
+            "1_3_2"
+          ],
+          "tip": "Go the direction that is not the dead end at the start; the exit is in a north corner.",
+          "layout": "02-slums-1.webp"
+        },
+        {
+          "name": "The Crematorium",
+          "codes": [
+            "1_3_3_1"
+          ],
+          "tip": "Check west first: dead end = East variant; open south = South variant. Piety and the trial show through the fog.",
+          "layout": "03-crematorium-4.webp"
+        },
+        {
+          "name": "The Sewers",
+          "codes": [
+            "1_3_10_1"
+          ],
+          "tip": "Fairly linear to the WP. Big room after the WP = 3rd bust left of the exit; small room = 3rd bust south.",
+          "layout": "04-sewers-2.webp"
+        },
+        {
+          "name": "The Marketplace",
+          "codes": [
+            "1_3_5"
+          ],
+          "tip": "Water west of the entrance = zone extends north, else west. Find the arch for the WP, then follow the east wall to Battlefront.",
+          "layout": "05-marketplace-6.webp"
+        },
+        {
+          "name": "The Catacombs",
+          "codes": [
+            "1_3_6"
+          ],
+          "tip": "Move east if you can, north otherwise - the trial extends north/east and shows up fast.",
+          "layout": "06-catacombs-2.webp"
+        },
+        {
+          "name": "The Battlefront",
+          "codes": [
+            "1_3_7"
+          ],
+          "tip": "Move NW for the WP (1st layer). Docks entrance north of the WP; Solaris Temple at the river's end on the 2nd layer.",
+          "layout": "07-battlefront-1.webp"
+        },
+        {
+          "name": "The Docks",
+          "codes": [
+            "1_3_9"
+          ],
+          "tip": "You spawn near a corner - follow the wall the other way until the Thaumetic Dust. Every dead end holds a blue pack.",
+          "layout": "08-docks-4.webp"
+        },
+        {
+          "name": "The Solaris Temple Level 1",
+          "codes": [
+            "1_3_8_1"
+          ],
+          "tip": "Walk forward, turning the way the zone extends at each wall. The WP's corner points toward the exit side.",
+          "layout": "09-solaris-temple-1-6.webp"
+        },
+        {
+          "name": "The Solaris Temple Level 2",
+          "codes": [
+            "1_3_8_2"
+          ],
+          "tip": "Follow the red carpet. Check west first for the gap-dash skip; otherwise head the way the zone extends.",
+          "layout": "10-solaris-temple-2-6.webp"
+        },
+        {
+          "name": "The Ebony Barracks",
+          "codes": [
+            "1_3_13"
+          ],
+          "tip": "Move north-east; semi-static. On the second visit the Imperial Gardens exit is always east of the WP.",
+          "layout": "11-ebony-barracks-2.webp"
+        },
+        {
+          "name": "The Lunaris Temple Level 1",
+          "codes": [
+            "1_3_14_1"
+          ],
+          "tip": "Follow the red carpet. First door faces south = exit NE corner; faces north = exit NW. The carpet forks the correct way.",
+          "layout": "12-lunaris-temple-1-2.webp"
+        },
+        {
+          "name": "The Lunaris Temple Level 2",
+          "codes": [
+            "1_3_14_2"
+          ],
+          "tip": "Semi-static. At the wagons by the 3rd staircase, go the side with only one wagon; gates line up on north layouts.",
+          "layout": "13-lunaris-temple-2-5.webp"
+        },
+        {
+          "name": "The Imperial Gardens",
+          "codes": [
+            "1_3_15"
+          ],
+          "tip": "Follow the road to the WP. Library NW along the road, Sceptre of God NE via the wagons, trial off-road in the north corner.",
+          "layout": "14-imperial-garden-2.webp"
+        },
+        {
+          "name": "The Library",
+          "codes": [
+            "1_3_17_1"
+          ],
+          "tip": "Find the WP and Siosa, then head the way the zone extends - the Archives room only opens from south or west.",
+          "layout": "15-library-4.webp"
+        },
+        {
+          "name": "The Archives",
+          "codes": [
+            "1_3_17_2"
+          ],
+          "tip": "Traverse clockwise; each golden page sits in a book alcove - quest markers appear when close, skip markerless dead ends.",
+          "layout": "16-archives-2.webp"
+        },
+        {
+          "name": "The Sceptre of God",
+          "codes": [
+            "1_3_18_1"
+          ],
+          "tip": "3 floors; stay in the inner square and check corners clockwise - no door icon on approach means wrong corner.",
+          "layout": "17-sceptre-of-god-3.webp"
+        },
+        {
+          "name": "The Upper Sceptre of God",
+          "codes": [
+            "1_3_18_2"
+          ],
+          "tip": "Same corner rules as below; balcony corners never hold the staircase. Floor 3: walk center, then NE past the cage.",
+          "layout": "18-upper-sceptre-of-god-1.webp"
+        }
+      ]
+    },
+    {
+      "act": 4,
+      "zones": [
+        {
+          "name": "The Aqueduct",
+          "codes": [
+            "1_4_1"
+          ],
+          "tip": "Two parallel walkways over the water - when yours ends, a bridge crosses to the other. Dead ends hold blue packs.",
+          "layout": "01-aqueduct.webp"
+        },
+        {
+          "name": "The Dried Lake",
+          "codes": [
+            "1_4_2"
+          ],
+          "tip": "Move toward the book icon the moment it appears - Voll's arena shows on the minimap early in 9/10 runs.",
+          "layout": "02-dried-lake-4.webp"
+        },
+        {
+          "name": "The Mines Level 1",
+          "codes": [
+            "1_4_3_1"
+          ],
+          "tip": "Move north-west when you can, otherwise just follow the zone.",
+          "layout": "03-mines.webp"
+        },
+        {
+          "name": "The Mines Level 2",
+          "codes": [
+            "1_4_3_2"
+          ],
+          "tip": "Follow the outer-edge path to Deshret's spirit (quest icon), then continue; hit the south edge = exit is the east corner.",
+          "layout": "04-mines-2-5.webp"
+        },
+        {
+          "name": "The Crystal Veins",
+          "codes": [
+            "1_4_3_3"
+          ],
+          "tip": "The final room opens from south and west. South variant: stick to the edge opposite the first passage's direction.",
+          "layout": "05-crystal-veins-4.webp"
+        },
+        {
+          "name": "Daresso's Dream",
+          "codes": [
+            "1_4_5_1"
+          ],
+          "tip": "Move east when you can, else south until east opens again; at the east edge go north. Two single-exit rooms = go west in room 3.",
+          "layout": "06-daressos-dream-3.webp"
+        },
+        {
+          "name": "The Grand Arena",
+          "codes": [
+            "1_4_5_2"
+          ],
+          "tip": "Arenas chained by corridors: cross each arena straight; at splits take north (or west-into-north).",
+          "layout": "07-grand-arena-4.webp"
+        },
+        {
+          "name": "Kaom's Dream",
+          "codes": [
+            "1_4_4_1"
+          ],
+          "tip": "Linear S-shaped path - just follow it; take the lava-fall skips when they appear.",
+          "layout": "08-kaoms-dream-1.webp"
+        },
+        {
+          "name": "Kaom's Stronghold",
+          "codes": [
+            "1_4_4_3"
+          ],
+          "tip": "Linear snake. Big rock on the east side = walk straight north (that variant has a second staircase up).",
+          "layout": "09-kaoms-stronghold-2.webp"
+        },
+        {
+          "name": "The Belly of the Beast Level 1",
+          "codes": [
+            "1_4_6_1"
+          ],
+          "tip": "Move west if you can, else north, else east; turn around at dead ends and repeat.",
+          "layout": "10-belly-of-the-beast-2.webp"
+        },
+        {
+          "name": "The Belly of the Beast Level 2",
+          "codes": [
+            "1_4_6_2"
+          ],
+          "tip": "Move west to a dead end to identify the variant, then work north whenever possible.",
+          "layout": "11-belly-of-the-beast-2-4.webp"
+        },
+        {
+          "name": "The Harvest",
+          "codes": [
+            "1_4_6_3"
+          ],
+          "tip": "Static layout. One boss east of the WP, two west; log or portal between kills to save walking and refresh flasks.",
+          "layout": "12-harvest.webp"
+        },
+        {
+          "name": "The Ascent",
+          "codes": [
+            "1_4_7"
+          ],
+          "tip": "Move north over the long bridge, hug the east edge past the encampment, then west at the curve to the lever.",
+          "layout": "13-ascent.webp"
+        }
+      ]
+    },
+    {
+      "act": 5,
+      "zones": [
+        {
+          "name": "The Slave Pens",
+          "codes": [
+            "1_5_1"
+          ],
+          "tip": "Stick to the left wall from the start; at the fence wall go east, take the next opening south, then west to Overseer Krow.",
+          "layout": "01-slave-pens-1.webp"
+        },
+        {
+          "name": "The Control Blocks",
+          "codes": [
+            "1_5_2"
+          ],
+          "tip": "U-pattern start = 2-trench variant: dash east through the trench, grab the Miasmeter north, keep east. Else rooms run north.",
+          "layout": "02-control-blocks-3.webp"
+        },
+        {
+          "name": "Oriath Square",
+          "codes": [
+            "1_5_3"
+          ],
+          "tip": "Move NW past the bridge, west at the crossing, then NW again to the Templar Courts door."
+        },
+        {
+          "name": "The Templar Courts",
+          "codes": [
+            "1_5_4"
+          ],
+          "tip": "Exit is parallel to the entrance: follow the inner wall east to the courtroom, continue east, then north at entrance height.",
+          "layout": "03-templar-courts.webp"
+        },
+        {
+          "name": "The Chamber of Innocence",
+          "codes": [
+            "1_5_5"
+          ],
+          "tip": "Stick to the outer wall. The first elevated section curving south marks the boss passage - else the next passage south.",
+          "layout": "04-chamber-of-innocence-2.webp"
+        },
+        {
+          "name": "The Torched Courts",
+          "codes": [
+            "1_5_4b"
+          ],
+          "tip": "Reverse of Templar Courts: work east to the courtroom, then west one corridor at a time (corridor west, corridor north, repeat).",
+          "layout": "05-torched-courts.webp"
+        },
+        {
+          "name": "The Ruined Square",
+          "codes": [
+            "1_5_3b"
+          ],
+          "tip": "Static: S-pattern to the WP. Blood fountain straight west of it; Rooftop NE of the fountain, Reliquary south.",
+          "layout": "06-ruined-square.webp"
+        },
+        {
+          "name": "The Ossuary",
+          "codes": [
+            "1_5_6"
+          ],
+          "tip": "Double bridge north = North variant, else the zone loops south. Follow the inner wall to the Tomb, then lever back or log.",
+          "layout": "07-ossuary-1.webp"
+        },
+        {
+          "name": "The Reliquary",
+          "codes": [
+            "1_5_7"
+          ],
+          "tip": "Pick a rotation and run the outer edge - quest items sit in the north, east and south corners. Ignore the vault.",
+          "layout": "08-reliquary.webp"
+        },
+        {
+          "name": "The Cathedral Rooftop",
+          "codes": [
+            "1_5_8"
+          ],
+          "tip": "Move north-east through the center of the roof; rarely a blocked middle forces the east/west walkway.",
+          "layout": "09-cathedral-rooftop.webp"
+        }
+      ]
+    },
+    {
+      "act": 6,
+      "zones": [
+        {
+          "name": "The Twilight Strand",
+          "codes": [
+            "2_6_1"
+          ],
+          "tip": "Full-clear: sweep east-west-east to uncover the whole minimap instead of following the edges.",
+          "layout": "01-twilight-strand-1.webp"
+        },
+        {
+          "name": "The Coast",
+          "codes": [
+            "2_6_2"
+          ],
+          "tip": "Act 1 rules hold: WP and exits at water level. Spot the direction the zone extends and beeline it.",
+          "layout": "02-coast-1.webp"
+        },
+        {
+          "name": "The Mud Flats",
+          "codes": [
+            "2_6_4"
+          ],
+          "tip": "Move east to the edge - the Dishonoured Queen waits at the old Submerged entrance (Nessa marks it). Then north edge east to Karui Fortress.",
+          "layout": "03-mud-flats-2.webp"
+        },
+        {
+          "name": "The Karui Fortress",
+          "codes": [
+            "2_6_5"
+          ],
+          "tip": "Static: east to Tukohama's arena, exit north after the kill, east again, then north to the Ridge exit.",
+          "layout": "04-karui-fortress.webp"
+        },
+        {
+          "name": "The Tidal Island",
+          "codes": [
+            "2_6_3"
+          ],
+          "tip": "Go west first; on an equal-width ledge turn around and take the east side to the storage chest.",
+          "layout": "05-tidal-island-4.webp"
+        },
+        {
+          "name": "The Ridge",
+          "codes": [
+            "2_6_6"
+          ],
+          "tip": "Follow the right wall from the start. WP west of the entrance = East variant; ignore side passages until the zone curves.",
+          "layout": "06-ridge-2.webp"
+        },
+        {
+          "name": "The Lower Prison",
+          "codes": [
+            "2_6_7_1"
+          ],
+          "tip": "Follow the right wall from the WP to the trial, then backtrack or keep following it to Shavronne's Tower.",
+          "layout": "07-lower-prison-4.webp"
+        },
+        {
+          "name": "Shavronne's Tower",
+          "codes": [
+            "2_6_7_2"
+          ],
+          "tip": "4 floors + rooftop: follow the left wall on each floor; floor exits face NW/NE, the last is a walkway to a ladder.",
+          "layout": "08-shavronnes-tower-3.webp"
+        },
+        {
+          "name": "Prisoner's Gate",
+          "codes": [
+            "2_6_8"
+          ],
+          "tip": "Follow the road toward Western Forest; Abberath's arena is in the side zone beyond the ledge, on the upper part.",
+          "layout": "09-prisoners-gate-3.webp"
+        },
+        {
+          "name": "The Western Forest",
+          "codes": [
+            "2_6_9"
+          ],
+          "tip": "Follow the road - a straight reverse of the Act 2 run, no side objectives.",
+          "layout": "10-western-forest.webp"
+        },
+        {
+          "name": "The Riverways",
+          "codes": [
+            "2_6_10"
+          ],
+          "tip": "Follow the road. The pebble path at the WP leads to Wetlands; at the blockage head south for Southern Forest.",
+          "layout": "11-riverways.webp"
+        },
+        {
+          "name": "The Wetlands",
+          "codes": [
+            "2_6_11"
+          ],
+          "tip": "Follow the left wall to the boss arena (broken WP on the way). River curving north-east = arena on the north edge.",
+          "layout": "12-wetlands-2.webp"
+        },
+        {
+          "name": "The Southern Forest",
+          "codes": [
+            "2_6_12"
+          ],
+          "tip": "Move east to the big mountain wall, then south-east along it; Cavern of Anger sits in the south-east corner.",
+          "layout": "13-southern-forest.webp"
+        },
+        {
+          "name": "The Cavern of Anger",
+          "codes": [
+            "2_6_13"
+          ],
+          "tip": "Follow the east edge. Zone extends east = hug the south edge; north = read the stair room's facing for the exit corner.",
+          "layout": "14-cavern-of-anger-1.webp"
+        },
+        {
+          "name": "The Beacon",
+          "codes": [
+            "2_6_14"
+          ],
+          "tip": "North edge to the open beach, NE to the lighthouse ramp; walk the pillars into range, light the beacon, then set sail.",
+          "layout": "15-beacon-1.webp"
+        },
+        {
+          "name": "The Brine King's Reef",
+          "codes": [
+            "2_6_15"
+          ],
+          "tip": "Follow the east edge south-west; when the book icon pops, head north to the arena (early icon = NE corner).",
+          "layout": "16-brine-kings-reef-3.webp"
+        }
+      ]
+    },
+    {
+      "act": 7,
+      "zones": [
+        {
+          "name": "The Broken Bridge",
+          "codes": [
+            "2_7_1"
+          ],
+          "tip": "Follow the road (north, then east). The dirty lockbox waits in the castle ruins behind the broken WP.",
+          "layout": "01-broken-bridge-1.webp"
+        },
+        {
+          "name": "The Crossroads",
+          "codes": [
+            "2_7_2"
+          ],
+          "tip": "Follow the road to the WP: Chamber of Sins north, Fellshrine Ruins south. Old Fields is blocked off.",
+          "layout": "02-crossroads.webp"
+        },
+        {
+          "name": "The Fellshrine Ruins",
+          "codes": [
+            "2_7_3"
+          ],
+          "tip": "Follow the road to the Crypt entrance - same as Act 2; the Sanctum icon pops when you pass its entrance.",
+          "layout": "03-fellshrine-ruins.webp"
+        },
+        {
+          "name": "The Crypt",
+          "codes": [
+            "2_7_4"
+          ],
+          "tip": "Same wall rule as Act 2 (WP below midline = opposite wall). Open the sarcophagus to reach the second half.",
+          "layout": "04-crypt-5.webp"
+        },
+        {
+          "name": "The Chamber of Sins Level 1",
+          "codes": [
+            "2_7_5_1"
+          ],
+          "tip": "The WP is next to the level 2 passage. Walk south, east, south to spot the circle room through the wall.",
+          "layout": "05-chamber-of-sins-3.webp"
+        },
+        {
+          "name": "Maligaro's Sanctum",
+          "codes": [
+            "2_7_5_map"
+          ],
+          "tip": ""
+        },
+        {
+          "name": "The Chamber of Sins Level 2",
+          "codes": [
+            "2_7_5_2"
+          ],
+          "tip": "Not the Act 2 pattern: south room dead-ends = go north-west-north to the trial, then follow the west edge to the walkway.",
+          "layout": "06-chamber-of-sins-2-2.webp"
+        },
+        {
+          "name": "The Den",
+          "codes": [
+            "2_7_6"
+          ],
+          "tip": "Go the direction the zone starts you in, then turn 90 degrees right at the first intersection (NW starts turn left instead).",
+          "layout": "07-den-3.webp"
+        },
+        {
+          "name": "The Ashen Fields",
+          "codes": [
+            "2_7_7"
+          ],
+          "tip": "The entrance is right by the WP - follow the road south-west straight to Ralakesh's arena.",
+          "layout": "08-ashen-fields.webp"
+        },
+        {
+          "name": "The Northern Forest",
+          "codes": [
+            "2_7_8"
+          ],
+          "tip": "Move south-west to the west edge, then north along it; portal at Dread Thicket when you spot it and continue.",
+          "layout": "09-northern-forest-4.webp"
+        },
+        {
+          "name": "The Causeway",
+          "codes": [
+            "2_7_10"
+          ],
+          "tip": "Move along the west edge north-east. Curved east early = stick to the inner edge, west when it opens; after the WP go south.",
+          "layout": "10-causeway-1.webp"
+        },
+        {
+          "name": "The Vaal City",
+          "codes": [
+            "2_7_11"
+          ],
+          "tip": "Move north-west, rounding walls westward; if a wall runs long, take its opening east then south-east to the WP.",
+          "layout": "11-vaal-city-2.webp"
+        },
+        {
+          "name": "The Dread Thicket",
+          "codes": [
+            "2_7_9"
+          ],
+          "tip": ""
+        },
+        {
+          "name": "The Temple of Decay Level 1",
+          "codes": [
+            "2_7_12_1"
+          ],
+          "tip": "Floor 1: follow the zone south-east. Floor 2 is an 8-shape: pick a wall and follow the outer edge - exit diagonal opposite.",
+          "layout": "12-temple-of-decay-1-3.webp"
+        },
+        {
+          "name": "The Temple of Decay Level 2",
+          "codes": [
+            "2_7_12_2"
+          ],
+          "tip": "The stairs point at the intact bridge on each floor; dash skills cross the broken ones. Then outer edge to the next stairs.",
+          "layout": "13-temple-of-decay-2-3.webp"
+        }
+      ]
+    },
+    {
+      "act": 8,
+      "zones": [
+        {
+          "name": "The Sarn Ramparts",
+          "codes": [
+            "2_8_1"
+          ],
+          "tip": "East to the rampart wall, north along it, up at the broken section, then walk the wall top to the staircase down.",
+          "layout": "01-sarn-ramparts-1.webp"
+        },
+        {
+          "name": "The Toxic Conduits",
+          "codes": [
+            "2_8_2_1"
+          ],
+          "tip": "Go opposite the way the sewer door swings (or just always west first), then north whenever you can.",
+          "layout": "02-toxic-conduit-3.webp"
+        },
+        {
+          "name": "Doedre's Cesspool",
+          "codes": [
+            "2_8_2_2"
+          ],
+          "tip": "Cross the first bridge, west into the curve; a room splitting west = West variant (west edge south to the arena), else read south/east.",
+          "layout": "03-doedres-cespool-1.webp"
+        },
+        {
+          "name": "The Quay",
+          "codes": [
+            "2_8_8"
+          ],
+          "tip": "Follow the left/waterside edge to the sealed casket; at splits pick west (else south) to the resurrection site, then backtrack.",
+          "layout": "04-quay-2.webp"
+        },
+        {
+          "name": "The Grain Gate",
+          "codes": [
+            "2_8_9"
+          ],
+          "tip": "Zones linked by indoor passages marked with corpses. Enter west of the WP = first passage north; south of it = passage west.",
+          "layout": "05-grain-gate-2.webp"
+        },
+        {
+          "name": "The Hidden Underbelly",
+          "codes": [
+            "2_8_14"
+          ],
+          "tip": "Stick to the west edge heading south; the curved tunnel's T-split points to Solaris (north) and Bathhouse (south).",
+          "layout": "06-hidden-underbelly-2.webp"
+        },
+        {
+          "name": "The Solaris Concourse",
+          "codes": [
+            "2_8_11"
+          ],
+          "tip": "Battlefront rules. Orient first: a massive dashable wall = dock spawn, go north; house edge = backtrack, then north to the temple.",
+          "layout": "07-solaris-concourse-2.webp"
+        },
+        {
+          "name": "The Solaris Temple Level 1",
+          "codes": [
+            "2_8_12_1"
+          ],
+          "tip": "Move east to the WP. WP in the west corner = exit north behind it; east corner = north, then the room splitting west.",
+          "layout": "08-solaris-temple-1-2.webp"
+        },
+        {
+          "name": "The Solaris Temple Level 2",
+          "codes": [
+            "2_8_12_2"
+          ],
+          "tip": "Head south; if the room below the start continues west, follow the north edge west to Dialla's room, else east.",
+          "layout": "09-solaris-temple-2-1.webp"
+        },
+        {
+          "name": "The Bath House",
+          "codes": [
+            "2_8_5"
+          ],
+          "tip": "Portal the first room. Start facing east = south spawn: exit NE, trial NW corner; High Gardens exit north of the trial.",
+          "layout": "10-bathhouse-4.webp"
+        },
+        {
+          "name": "The High Gardens",
+          "codes": [
+            "2_8_4"
+          ],
+          "tip": "One long snaking path - stay on the lower layer; the steps to the boss door appear after the long north-east stretch.",
+          "layout": "11-high-gardens.webp"
+        },
+        {
+          "name": "The Lunaris Concourse",
+          "codes": [
+            "2_8_6"
+          ],
+          "tip": "Ebony Barracks rules: WP north-east of the entrance, Lunaris Temple north-west of the WP, Harbour Bridge south-east.",
+          "layout": "12-lunaris-concourse-1.webp"
+        },
+        {
+          "name": "The Lunaris Temple Level 1",
+          "codes": [
+            "2_8_7_1"
+          ],
+          "tip": "Follow the carpet north-east to the banks room, then follow its fork while hugging the west edge.",
+          "layout": "13-lunaris-temple-1-1.webp"
+        },
+        {
+          "name": "The Lunaris Temple Level 2",
+          "codes": [
+            "2_8_7_2"
+          ],
+          "tip": "Semi-static: at the flower pots by the 3rd staircase, go the side with only one pot; gates line up on north layouts.",
+          "layout": "14-lunaris-temple-2-6.webp"
+        },
+        {
+          "name": "The Harbour Bridge",
+          "codes": [
+            "2_8_13"
+          ],
+          "tip": "Linear: walk the middle of the bridge north-east until night turns to day at the boss door.",
+          "layout": "15-harbour-bridge.webp"
+        }
+      ]
+    },
+    {
+      "act": 9,
+      "zones": [
+        {
+          "name": "The Blood Aqueduct",
+          "codes": [
+            "2_9_1"
+          ],
+          "tip": "Move north-east; when a walkway ends, bridge across and keep going. Side passages hold guaranteed magic packs.",
+          "layout": "01-blood-aqueduct.webp"
+        },
+        {
+          "name": "The Descent",
+          "codes": [
+            "2_9_2"
+          ],
+          "tip": "3 layers via supply hoists. Layer 1 exit is NE along the west edge; an east tunnel off the hoist = vertical variant, go SE.",
+          "layout": "02-descent-1.webp"
+        },
+        {
+          "name": "The Vastiri Desert",
+          "codes": [
+            "2_9_3"
+          ],
+          "tip": "The WP is always east of the entrance - find it first; the storm chest sits N/E/S/W of it, then on to Foothills.",
+          "layout": "03-vastiri-desert-3.webp"
+        },
+        {
+          "name": "The Oasis",
+          "codes": [
+            "2_9_4"
+          ],
+          "tip": "Stick to the east edge: starting at the north corner go south, else north. East-edge spawn = sand pit in the west corner.",
+          "layout": "04-oasis-3.webp"
+        },
+        {
+          "name": "The Foothills",
+          "codes": [
+            "2_9_5"
+          ],
+          "tip": "Semi-static, extends north-east. WP and Boiling Lake on the 2nd layer north edge; Tunnel exit on the 4th layer NE corner.",
+          "layout": "05-foothills.webp"
+        },
+        {
+          "name": "The Boiling Lake",
+          "codes": [
+            "2_9_6"
+          ],
+          "tip": "Head north-east into the north corner - stone statues and the two sulphur fountains (minimap smiley) mark the Basilisk.",
+          "layout": "06-boiling-lake.webp"
+        },
+        {
+          "name": "The Tunnel",
+          "codes": [
+            "2_9_7"
+          ],
+          "tip": "Linear: the trial is the first tunnel splitting east/west, then follow the zone north-east to the exit.",
+          "layout": "07-tunnel-1.webp"
+        },
+        {
+          "name": "The Quarry",
+          "codes": [
+            "2_9_8"
+          ],
+          "tip": "NE to the WP, NE again for Refinery or Garukhan. Refinery east of the WP = arena SW; arena east = Refinery north.",
+          "layout": "08-quarry-1.webp"
+        },
+        {
+          "name": "The Refinery",
+          "codes": [
+            "2_9_9"
+          ],
+          "tip": "The boss arena is the north corner - follow the east edge; cross outdoor areas through the opposite door, moving north-east.",
+          "layout": "09-refinery-3.webp"
+        },
+        {
+          "name": "The Belly of the Beast",
+          "codes": [
+            "2_9_10_1"
+          ],
+          "tip": "Huge twisted tunnels: the north entrance curves east, then split NW, NW again at the cross, then the west tunnel.",
+          "layout": "10-belly-of-the-beast-6.webp"
+        },
+        {
+          "name": "The Rotting Core",
+          "codes": [
+            "2_9_10_2"
+          ],
+          "tip": "Main room: south-west, take the SECOND tunnel to the Core. Dreams are linear - Shavronne/Maligaro NW, Doedre NE.",
+          "layout": "11-rotting-core-3.webp"
+        }
+      ]
+    },
+    {
+      "act": 10,
+      "zones": [
+        {
+          "name": "The Cathedral Rooftop",
+          "codes": [
+            "2_10_1"
+          ],
+          "tip": "Bannon is right by the entrance; then head south-east through the roof's middle (east scaffold if blocked) to the exit.",
+          "layout": "01-cathedral-rooftop-1.webp"
+        },
+        {
+          "name": "The Ravaged Square",
+          "codes": [
+            "2_10_2"
+          ],
+          "tip": "Static. Blood fountain SE of the entrance, WP north-east of it - dash the broken north bridge or cross the lower one.",
+          "layout": "02-ruined-square.webp"
+        },
+        {
+          "name": "The Torched Courts",
+          "codes": [
+            "2_10_3"
+          ],
+          "tip": "Reverse of Act 5: corridors east to the edge, south to the courtroom, then west (south rooms first) and north at entrance height.",
+          "layout": "03-torched-courts.webp"
+        },
+        {
+          "name": "The Desecrated Chambers",
+          "codes": [
+            "2_10_4"
+          ],
+          "tip": "Chamber of Innocence rules: west along the north edge; the passage below the first south-curving elevation is the boss room.",
+          "layout": "04-desecrated-chambers-1.webp"
+        },
+        {
+          "name": "The Control Blocks",
+          "codes": [
+            "2_10_7"
+          ],
+          "tip": "West along the north edge to the arena in the NW corner - or dash the first trench and read its direction for the fast route.",
+          "layout": "05-control-blocks-3.webp"
+        },
+        {
+          "name": "The Ossuary",
+          "codes": [
+            "2_10_9"
+          ],
+          "tip": "Follow one edge to the trial. The Bone Pits beyond are 8- or infinity-shaped; read the start corner after the first curve.",
+          "layout": "06-ossuary-2.webp"
+        },
+        {
+          "name": "The Canals",
+          "codes": [
+            "2_10_5"
+          ],
+          "tip": "Follow the zone, north when you can. West tunnel at the first T dead-ends = East variant; dash skills skip the broken bridge.",
+          "layout": "07-canals-3.webp"
+        },
+        {
+          "name": "The Feeding Trough",
+          "codes": [
+            "2_10_6"
+          ],
+          "tip": "Static: two walkways along the blood canal - take the west one (crafting recipe plus Sin) straight north-east to Kitava.",
+          "layout": "08-feeding-through.webp"
+        }
+      ]
+    }
+  ]
+}

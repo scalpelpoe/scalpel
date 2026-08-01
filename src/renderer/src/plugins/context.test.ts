@@ -23,6 +23,7 @@ const baseDeps = () => ({
   openTab: vi.fn(),
   copyAndEvaluateItem: vi.fn(async () => null),
   captureGameWindow: vi.fn(async () => null),
+  getCursorPosition: vi.fn(async () => null),
   registerOverlay: vi.fn(),
   openOverlay: vi.fn(),
   closeOverlay: vi.fn(),
@@ -202,6 +203,20 @@ describe('createPluginContext openTab + copyAndEvaluateItem', () => {
     await ctx.copyAndEvaluateItem()
     expect(deps.copyAndEvaluateItem).toHaveBeenCalled()
   })
+
+  it('forwards the showOverlay option to deps', async () => {
+    const deps = baseDeps()
+    const ctx = createPluginContext(deps)
+    await ctx.copyAndEvaluateItem({ showOverlay: false })
+    expect(deps.copyAndEvaluateItem).toHaveBeenCalledWith({ showOverlay: false })
+  })
+
+  it('forwards both showOverlay and dispatch options to deps', async () => {
+    const deps = baseDeps()
+    const ctx = createPluginContext(deps)
+    await ctx.copyAndEvaluateItem({ showOverlay: false, dispatch: false })
+    expect(deps.copyAndEvaluateItem).toHaveBeenCalledWith({ showOverlay: false, dispatch: false })
+  })
 })
 
 describe('createPluginContext captureGameWindow', () => {
@@ -211,6 +226,16 @@ describe('createPluginContext captureGameWindow', () => {
     const region = { x: 1, y: 2, width: 3, height: 4 }
     await ctx.captureGameWindow(region)
     expect(captureGameWindow).toHaveBeenCalledWith(region)
+  })
+})
+
+describe('createPluginContext getCursorPosition', () => {
+  it('forwards getCursorPosition to the dep', async () => {
+    const getCursorPosition = vi.fn().mockResolvedValue({ x: 12, y: 34 })
+    const ctx = createPluginContext({ ...baseDeps(), getCursorPosition })
+
+    await expect(ctx.getCursorPosition()).resolves.toEqual({ x: 12, y: 34 })
+    expect(getCursorPosition).toHaveBeenCalled()
   })
 })
 

@@ -127,6 +127,7 @@ export const IPC_CHANNELS = {
     OPEN_VIEW_EVENT: 'open-view',
     OPEN_LINK_PENDING_EVENT: 'open-link-pending',
     OVERLAY_HIDE_EVENT: 'overlay-hide',
+    OVERLAY_SHOW_EVENT: 'overlay-show',
     GAME_BOUNDS_EVENT: 'game-bounds',
     OVERLAY_DETACH_EVENT: 'overlay-detach',
     OVERLAY_REATTACH_EVENT: 'overlay-reattach',
@@ -225,8 +226,10 @@ export const IPC_CHANNELS = {
     UNREGISTER_TAB: 'plugins:unregister-tab',
     LIST_REGISTERED_TABS: 'plugins:list-registered-tabs',
     INSTALL_UNPACKED: 'plugins:install-unpacked',
+    RELOAD_UNPACKED: 'plugins:reload-unpacked',
     FETCH_REGISTRY: 'plugins:fetch-registry',
     INSTALL_FROM_REGISTRY: 'plugins:install-from-registry',
+    UPDATE_FROM_REGISTRY: 'plugins:update-from-registry',
     UNINSTALL: 'plugins:uninstall',
     UNREGISTER_HOTKEY: 'plugins:unregister-hotkey',
     GAME_CONFIG_READ: 'plugins:game-config-read',
@@ -246,6 +249,7 @@ export const IPC_CHANNELS = {
     CLOSE_OVERLAY: 'plugins:close-overlay',
     MACRO_EVENT: 'plugin-macro',
     INSTALLED_EVENT: 'plugin-installed',
+    UPDATED_EVENT: 'plugin-updated',
     UNINSTALLED_EVENT: 'plugin-uninstalled',
     HOTKEYS_CHANGED_EVENT: 'plugin-hotkeys-changed',
     TABS_CHANGED_EVENT: 'plugin-tabs-changed',
@@ -274,6 +278,12 @@ export const IPC_CHANNELS = {
     READ_IMAGE: 'clipboard:read-image',
     OPEN_EXTERNAL: 'open-external',
     ELEVATION_HINT_EVENT: 'elevation-hint',
+  },
+
+  SCREEN: {
+    GET_GAME_WINDOW_SOURCE: 'screen:get-game-window-source',
+    SOURCE_INVALIDATED_EVENT: 'screen:source-invalidated',
+    SOURCE_MAYBE_STALE_EVENT: 'screen:source-maybe-stale',
   },
 } as const
 

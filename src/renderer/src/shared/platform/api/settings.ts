@@ -8,7 +8,7 @@
 
 import type { AppSettings, RuntimeSettings } from '@shared/contracts/settings'
 import type { PoeProfileSummary, ProfileSettingKey, ProfileSettingValue } from '@shared/contracts/profiles'
-import type { GameVariant } from '@shared/contracts/core'
+import type { GameVariant } from '@shared/contracts/game-variant'
 
 export function getSettings(): Promise<RuntimeSettings> {
   return window.api.getSettings()
@@ -88,8 +88,8 @@ export function setActiveProfile(
   return window.api.setActiveProfile(id, restartIfNeeded)
 }
 
-export function refreshLeagues(): Promise<{ leaguesPoe1: string[]; leaguesPoe2: string[] }> {
-  return window.api.refreshLeagues()
+export function refreshLeagues(force = false): Promise<{ leaguesPoe1: string[]; leaguesPoe2: string[] }> {
+  return window.api.refreshLeagues(force)
 }
 
 export function onGameSwitchPrompt(cb: (target: 1 | 2) => void): () => void {

@@ -1,6 +1,6 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, test } from 'vitest'
 // CJS module; import its pure exports.
-import { buildCompact } from '../../../../scripts/build-tier-data.js'
+import { buildCompact, buildDesecrated, normKey } from '../../../../scripts/build-tier-data.js'
 
 const mbb = {
   Rings: {
@@ -87,4 +87,52 @@ describe('buildCompact', () => {
     const out = buildCompact(mbb, mods, baseItems)
     expect(out.mods.some((m) => m.n === 'Junk')).toBe(false)
   })
+})
+
+test('buildDesecrated ladders a single-stat desecrated mod by normalized key', () => {
+  const mods = {
+    a: {
+      domain: 'desecrated',
+      required_level: 65,
+      text: '(74-89)% increased [Spell] Damage with [Spell|Spells] that cost Life',
+      stats: [{ id: 'x', min: 74, max: 89 }],
+    },
+    b: {
+      domain: 'desecrated',
+      required_level: 65,
+      text: '(148-178)% increased [Spell] Damage with [Spell|Spells] that cost Life',
+      stats: [{ id: 'x', min: 148, max: 178 }],
+    },
+    c: { domain: 'item', required_level: 1, text: '+(10-14) to maximum Mana', stats: [{ id: 'm', min: 10, max: 14 }] },
+  }
+  const ds = buildDesecrated(mods)
+  const key = normKey('(74-89)% increased [Spell] Damage with [Spell|Spells] that cost Life')
+  expect(key).toBe('#% INCREASED SPELL DAMAGE WITH SPELLS THAT COST LIFE')
+  const mod = ds.mods.find((m) => m.key === key)
+  expect(mod?.tiers).toEqual([
+    { min: 74, max: 89, lvl: 65 },
+    { min: 148, max: 178, lvl: 65 },
+  ])
+  expect(ds.mods.some((m) => m.key.includes('MANA'))).toBe(false)
+})
+
+test('normKey collapses +N (OCR) and +(N-M) (template) to the same key', () => {
+  // The leading + is consumed in both the plain-number and the range form, so an
+  // OCR-read "+174 to Spirit" matches the dataset template "+(35-50) to Spirit".
+  expect(normKey('+(35-50) to Spirit')).toBe('# TO SPIRIT')
+  expect(normKey('+(35-50) to Spirit')).toBe(normKey('+174 to Spirit'))
+})
+
+test('buildDesecrated stores positive (absolute) ranges for negative "reduced" mods', () => {
+  const mods = {
+    r: {
+      domain: 'desecrated',
+      required_level: 1,
+      text: '(25-35)% reduced Effect of Curses on You',
+      stats: [{ id: 'curse_effect_+%', min: -35, max: -25 }],
+    },
+  }
+  const ds = buildDesecrated(mods)
+  const mod = ds.mods.find((m) => m.key === '#% REDUCED EFFECT OF CURSES ON YOU')
+  expect(mod?.tiers).toEqual([{ min: 25, max: 35, lvl: 1 }])
 })

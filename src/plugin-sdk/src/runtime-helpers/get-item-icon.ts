@@ -1,4 +1,5 @@
 import { POE_CDN } from '../../../shared/endpoints'
+import { hasGeneratedName } from '../../../shared/poe-item'
 import type { PoeItem } from '../../../shared/types'
 import { getScalpelGlobal } from './scalpel-global'
 
@@ -9,11 +10,15 @@ export function getItemIcon(item: PoeItem): string | null {
     const art = divCardArtMap.get(item.baseType) ?? divCardArtMap.get(item.name)
     if (art) return `${POE_CDN}/image/divination-card/${art}.png`
   }
+  // Magic/Rare items show a randomly generated title that can collide with a
+  // real currency/unique name (e.g. a Hypnotic Eye Jewel rolling "Ancient
+  // Orb", #501), so skip the name-based hops for them entirely.
+  const generatedName = hasGeneratedName(item.rarity)
   // Try exact name first (unique maps, special items)
-  if (iconMap[item.name]) return iconMap[item.name]
+  if (!generatedName && iconMap[item.name]) return iconMap[item.name]
   // Strip Foulborn/Imbued prefix for unique variant lookups
   const strippedName = item.name.replace(/^(Foulborn|Imbued) /, '')
-  if (strippedName !== item.name && iconMap[strippedName]) return iconMap[strippedName]
+  if (!generatedName && strippedName !== item.name && iconMap[strippedName]) return iconMap[strippedName]
   // Map variants: blighted/zana have distinct icons keyed by prefix
   if (item.itemClass === 'Maps' && item.baseType.startsWith('Map (Tier')) {
     if (item.zanaMemory) {
@@ -26,12 +31,16 @@ export function getItemIcon(item: PoeItem): string | null {
     }
   }
   if (iconMap[item.baseType]) return iconMap[item.baseType]
-  // Magic items: name includes affixes, try substrings against icon map
-  const words = item.name.split(' ')
-  for (let len = words.length; len > 0; len--) {
-    for (let start = 0; start + len <= words.length; start++) {
-      const candidate = words.slice(start, start + len).join(' ')
-      if (iconMap[candidate]) return iconMap[candidate]
+  // Magic items: name includes affixes, try substrings against icon map. A
+  // Rare title's words have no relation to its base (the collision this
+  // gates against), so this only runs for Magic.
+  if (item.rarity === 'Magic') {
+    const words = item.name.split(' ')
+    for (let len = words.length; len > 0; len--) {
+      for (let start = 0; start + len <= words.length; start++) {
+        const candidate = words.slice(start, start + len).join(' ')
+        if (iconMap[candidate]) return iconMap[candidate]
+      }
     }
   }
   return null

@@ -22,7 +22,10 @@ import {
 const GENERATOR_ORDER: Record<1 | 2, Array<{ key: string; label: string }>> = {
   1: [
     { key: 'maps', label: 'Maps' },
+    { key: 'vendor', label: 'Vendor' },
     { key: 'flasks', label: 'Flasks' },
+    { key: 'items', label: 'Items' },
+    { key: 'beasts', label: 'Beasts' },
     { key: 'custom', label: 'Custom' },
   ],
   2: [

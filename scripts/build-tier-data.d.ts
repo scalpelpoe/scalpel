@@ -15,11 +15,33 @@ export interface CompactDataset {
   bases: Record<string, number>
 }
 
+export interface DesecratedTier {
+  min: number
+  max: number
+  lvl: number
+}
+
+export interface DesecratedMod {
+  key: string
+  tiers: DesecratedTier[]
+}
+
+export interface DesecratedDataset {
+  schemaVersion: number
+  mods: DesecratedMod[]
+}
+
 export declare function buildCompact(
   modsByBase: Record<string, unknown>,
   mods: Record<string, unknown>,
   baseItems: Record<string, unknown>,
 ): CompactDataset
+
+export declare function stripMarkup(text: string): string
+
+export declare function normKey(text: string): string
+
+export declare function buildDesecrated(mods: Record<string, unknown>): DesecratedDataset
 
 export declare function sha256(str: string): string
 

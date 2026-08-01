@@ -32,6 +32,14 @@ const FILES = [
   'mapmods/GeneratedTypes.ts',
   // Re-mapped on save: upstream stores it in src/generated/, we put it under flaskmods/.
   { from: 'GeneratedFlaskMods.ts', to: 'flaskmods/GeneratedFlaskMods.ts' },
+  // PoE1 vendor gems (Vendor tab gem list + gem regex tokens).
+  'gems/Generated.Gems.English.ts',
+  'gems/GeneratedTypes.ts',
+  // PoE1 Items tab (rare crafting mods + magic name matching).
+  { from: 'GeneratedItemBases.ts', to: 'item/GeneratedItemBases.ts' },
+  { from: 'GeneratedItemMods.ts', to: 'item/GeneratedItemMods.ts' },
+  // PoE1 Beasts tab (bestiary regex fragments + craft recipes).
+  { from: 'GeneratedBeastRegex.ts', to: 'beast/GeneratedBeastRegex.ts' },
 ]
 
 const ATTRIBUTION = `// Data sourced from poe-vendor-string (https://github.com/${REPO})
@@ -49,7 +57,12 @@ function fetch(url) {
           res.resume()
           return reject(new Error(`HTTP ${res.statusCode} for ${url}`))
         }
+        // Without an explicit encoding, a multi-byte character split across two
+        // chunk boundaries decodes as mojibake. Beast names carry the first
+        // non-ASCII join key in synced data ("Black Morrigan" with an accented o),
+        // and that name has to match poe.ninja's string exactly.
         let data = ''
+        res.setEncoding('utf8')
         res.on('data', (chunk) => {
           data += chunk
         })

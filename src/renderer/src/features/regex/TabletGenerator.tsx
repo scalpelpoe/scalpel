@@ -21,7 +21,6 @@ import { buildTabletRegex } from './tablet-engine'
 import { generateTabletPresetTags, TYPE_LABELS, type TabletTagState } from './tablet-preset-tags'
 import { useRegexTrade } from './useRegexTrade'
 import { TradeResults } from './TradeResults'
-import { useAuth } from '../../shared/use-auth'
 import type { RegexPreset } from '@shared/types'
 import type { GeneratorHandle, GeneratorProps } from './generator-types'
 
@@ -69,6 +68,7 @@ export const TabletGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
 
   const [normal, setNormal] = usePersistedBool(key('tablet-normal'), false)
   const [magic, setMagic] = usePersistedBool(key('tablet-magic'), false)
+  const [rare, setRare] = usePersistedBool(key('tablet-rare'), false)
   const [typeFlags, setTypeFlags] = usePersistedJSON<Record<string, boolean>>(key('tablet-type'), {})
   const [usesEnabled, setUsesEnabled] = usePersistedBool(key('tablet-uses-enabled'), false)
   const [usesValue, setUsesValue] = usePersistedNumber(key('tablet-uses-value'), 1)
@@ -82,8 +82,6 @@ export const TabletGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
   // ---- Trade state -----------------------------------------------------------
   const trade = useRegexTrade()
   const [expandedListing, setExpandedListing] = useState<string | null>(null)
-  const [actionStatus, setActionStatus] = useState<Record<string, 'pending' | 'success' | 'failed'>>({})
-  const { loggedIn } = useAuth()
 
   const priceChipMinWidth = useMemo(() => {
     const maxDigits = trade.listings.reduce((max, l) => Math.max(max, l.price ? String(l.price.amount).length : 0), 0)
@@ -91,17 +89,18 @@ export const TabletGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
   }, [trade.listings])
 
   const type = {
-    breach: !!typeFlags.breach,
-    delirium: !!typeFlags.delirium,
     irradiated: !!typeFlags.irradiated,
-    expedition: !!typeFlags.expedition,
     ritual: !!typeFlags.ritual,
+    delirium: !!typeFlags.delirium,
+    breach: !!typeFlags.breach,
+    abyss: !!typeFlags.abyss,
+    temple: !!typeFlags.temple,
     overseer: !!typeFlags.overseer,
   }
 
   const regex = buildTabletRegex({
     mods: TABLET_MODS,
-    rarity: { normal, magic },
+    rarity: { normal, magic, rare },
     type,
     uses: { enabled: usesEnabled, value: usesValue },
     selections: { want, wantMode, wantValues },
@@ -113,9 +112,9 @@ export const TabletGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
   }, [regex, onRegexChange])
 
   const tagState: TabletTagState = useMemo(
-    () => ({ want, rarity: { normal, magic }, type, uses: { enabled: usesEnabled, value: usesValue } }),
+    () => ({ want, rarity: { normal, magic, rare }, type, uses: { enabled: usesEnabled, value: usesValue } }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [want, normal, magic, typeFlags, usesEnabled, usesValue],
+    [want, normal, magic, rare, typeFlags, usesEnabled, usesValue],
   )
 
   const onAutoTagsChangeRef = useRef(onAutoTagsChange)
@@ -142,11 +141,13 @@ export const TabletGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
         qualifiers: {
           normal: normal ? 1 : 0,
           magic: magic ? 1 : 0,
-          breach: type.breach ? 1 : 0,
-          delirium: type.delirium ? 1 : 0,
+          rare: rare ? 1 : 0,
           irradiated: type.irradiated ? 1 : 0,
-          expedition: type.expedition ? 1 : 0,
           ritual: type.ritual ? 1 : 0,
+          delirium: type.delirium ? 1 : 0,
+          breach: type.breach ? 1 : 0,
+          abyss: type.abyss ? 1 : 0,
+          temple: type.temple ? 1 : 0,
           overseer: type.overseer ? 1 : 0,
           usesEnabled: usesEnabled ? 1 : 0,
           usesValue,
@@ -160,12 +161,14 @@ export const TabletGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
         const q = preset.qualifiers ?? {}
         setNormal(!!q.normal)
         setMagic(!!q.magic)
+        setRare(!!q.rare)
         setTypeFlags({
-          breach: !!q.breach,
-          delirium: !!q.delirium,
           irradiated: !!q.irradiated,
-          expedition: !!q.expedition,
           ritual: !!q.ritual,
+          delirium: !!q.delirium,
+          breach: !!q.breach,
+          abyss: !!q.abyss,
+          temple: !!q.temple,
           overseer: !!q.overseer,
         })
         setUsesEnabled(!!q.usesEnabled)
@@ -232,7 +235,7 @@ export const TabletGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
     .sort((a, b) => (promotedTags.has(a.key) ? 0 : 1) - (promotedTags.has(b.key) ? 0 : 1))
 
   const qualifierCount =
-    (normal || magic ? 1 : 0) +
+    (normal || magic || rare ? 1 : 0) +
     TYPE_LABELS.reduce((n, [k]) => n + (type[k] ? 1 : 0), 0) +
     (usesEnabled ? 1 : 0) +
     (round10 ? 1 : 0)
@@ -286,13 +289,12 @@ export const TabletGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
               setSearch('')
               const wantTexts = TABLET_MODS.filter((m) => want.has(m.id)).map((m) => m.text)
               setExpandedListing(null)
-              setActionStatus({})
               await trade.runSearch(() =>
                 window.api.tabletRegexTrade({
                   wantTexts,
                   wantMode,
                   wantValues,
-                  rarity: { normal, magic },
+                  rarity: { normal, magic, rare },
                   typeFlags,
                   uses: { enabled: usesEnabled, value: usesValue },
                 }),
@@ -341,9 +343,6 @@ export const TabletGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
           expandedListing={expandedListing}
           setExpandedListing={setExpandedListing}
           priceChipMinWidth={priceChipMinWidth}
-          loggedIn={loggedIn}
-          actionStatus={actionStatus}
-          setActionStatus={setActionStatus}
           rateLimitTiers={trade.rateLimitTiers}
           itemClass="Tablet"
         />
@@ -440,6 +439,7 @@ export const TabletGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
           <QualifierSection label="RARITY">
             <ToggleRow label="Normal" checked={normal} onChange={setNormal} />
             <ToggleRow label="Magic" checked={magic} onChange={setMagic} alt />
+            <ToggleRow label="Rare" checked={rare} onChange={setRare} />
           </QualifierSection>
           <QualifierSection label="TYPE">
             {TYPE_LABELS.map(([k, label], i) => (

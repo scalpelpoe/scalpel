@@ -15,8 +15,8 @@ permissions:
 jobs:
   release-win:
     if: ${{ github.event_name == 'push' }}
-    # Pinned: windows-latest rotated to an image where node-gyp can't locate
-    # Visual Studio to rebuild active-win. windows-2022 has the working toolchain.
+    # Pinned: windows-latest rotated to an image where node-gyp couldn't locate
+    # Visual Studio to rebuild native dependencies. windows-2022 has the working toolchain.
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
@@ -98,6 +98,9 @@ jobs:
     if: ${{ github.event_name == 'push' && !contains(github.ref_name, 'alpha') && !contains(github.ref_name, 'beta') && !contains(github.ref_name, 'rc') && !contains(github.ref_name, '-exp') }}
     runs-on: ubuntu-latest
     container: archlinux:latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - name: Install packaging tools
         run: |
@@ -144,6 +147,24 @@ jobs:
           ssh_private_key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
           commit_message: "chore: update scalpel-poe to ${{ github.ref_name }}"
           ssh_keyscan_types: rsa,ecdsa,ed25519
+      - name: Open pull request for updated AUR metadata
+        uses: peter-evans/create-pull-request@v8
+        with:
+          base: main
+          branch: bot/update-aur-packages
+          delete-branch: true
+          add-paths: |
+            packaging/aur/scalpel-poe-bin/PKGBUILD
+            packaging/aur/scalpel-poe-bin/.SRCINFO
+            packaging/aur/scalpel-poe/PKGBUILD
+            packaging/aur/scalpel-poe/.SRCINFO
+          commit-message: "chore(aur): update packages to ${{ github.ref_name }}"
+          title: "chore(aur): update packages to ${{ github.ref_name }}"
+          body: |
+            Automated follow-up to the ${{ github.ref_name }} release.
+
+            This synchronizes the release-based AUR package recipes in `main`
+            with the metadata published to the AUR.
   publish-aur-git:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.publish_git_aur }}
     runs-on: ubuntu-latest

@@ -54,6 +54,10 @@ export function createPluginContext(deps: PluginContextFactoryDeps): ScalpelPlug
     },
     openOverlay: () => deps.openOverlay(deps.pluginId),
     closeOverlay: () => deps.closeOverlay(deps.pluginId),
+    // Interactive regions are owned by the annotation-overlay window process
+    // (see use-activate-plugin); the main-overlay context never renders the
+    // annotation surface, so this is inert here.
+    setInteractiveRegion: () => {},
     fetch: window.fetch.bind(window),
     storage: {
       get: <T = unknown>(key: string): Promise<T | null> => deps.storage.get(key) as Promise<T | null>,
@@ -65,8 +69,9 @@ export function createPluginContext(deps: PluginContextFactoryDeps): ScalpelPlug
     prices: deps.prices,
     openExternal: deps.openExternal,
     openTab: () => deps.openTab(deps.pluginId),
-    copyAndEvaluateItem: () => deps.copyAndEvaluateItem(),
+    copyAndEvaluateItem: (opts) => deps.copyAndEvaluateItem(opts),
     captureGameWindow: (region) => deps.captureGameWindow(region),
+    getCursorPosition: () => deps.getCursorPosition(),
     log: (...args: unknown[]) => {
       if (DEBUG()) {
         // biome-ignore lint/suspicious/noConsole: gated behind DEBUG() debug logging

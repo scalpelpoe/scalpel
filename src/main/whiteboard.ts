@@ -168,6 +168,9 @@ ipcMain.on('whiteboard:set-mode', (_event, mode: 'edit' | 'play') => {
   currentMode = mode
   ensureModeHook()
   applyMode()
+  // Persist the whiteboard over other surfaces only while in passthrough; in
+  // edit mode it's interactive and must not linger under or over the eval.
+  overlay?.setPersistOverOthers(mode === 'play')
   if (mode === 'play') {
     // Entering passthrough makes the window click-through, but it still holds OS
     // keyboard focus from whatever click toggled the mode - so PoE wouldn't get
@@ -176,6 +179,12 @@ ipcMain.on('whiteboard:set-mode', (_event, mode: 'edit' | 'play') => {
     try {
       OverlayController.focusTarget()
     } catch {}
+  } else {
+    // Edit-reclaim: edit mode reclaims interactivity, so dismiss any open eval
+    // overlay (hideOverlay no-ops if it isn't showing) to avoid both fighting
+    // for clicks. Dynamic import keeps the static module graph free of the
+    // overlay <-> whiteboard cycle (overlay.ts already imports us dynamically).
+    import('./overlay').then(({ hideOverlay }) => hideOverlay()).catch(() => {})
   }
 })
 

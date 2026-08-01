@@ -31,7 +31,11 @@ const POE1_RULES: BulkExchangeRules = {
     'Divination Cards',
     'Map Fragments',
   ]),
-  exceptions: new Set<string>(),
+  exceptions: new Set([
+    // Bound to a map area, so it has no fungible stack to exchange -- Faustus
+    // does not carry it and the banner would be a dead end (#513).
+    'Scrying Orb',
+  ]),
   baseTypes: new Set([
     // Delirium
     'Delirium Orb',

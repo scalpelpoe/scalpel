@@ -35,6 +35,30 @@ const VALUE_BEARING_VALUELESS_STATS = new Set([
 // scripts/build-tablet-mods.js. Tablets are PoE2-only.
 const TABLET_MODS = tabletMods as Record<string, string>
 
+// PoE2 0.3 Overseer tablets can carry boss-pool encounter mods that share their
+// clipboard text with the regular encounter mods but are indexed under a SEPARATE
+// trade stat (the id carrying the legacy "Areas with Powerful Map Bosses..." text).
+// Type-filtered probes 2026-07-03 show the boss ids index ONLY Overseer Tablets and
+// the regular ids index all bases, so the flat text table alone must default to the
+// regular id and the boss id is chosen by the advanced-mod suffix name, which is
+// unique per pool -- "of Worship"/"of Crystals"/"of Compartments"/"of Wisps" are the
+// boss suffixes. Simple-copy items (no advanced mods) keep the regular-id default:
+// some results in the right base segment beats guaranteed zero.
+const BOSS_POOL_TABLET_MODS: Record<string, { suffixName: string; statId: string }> = {
+  'map contains an additional shrine': { suffixName: 'of Worship', statId: 'explicit.stat_3042527515' },
+  'map contains # additional shrines': { suffixName: 'of Worship', statId: 'explicit.stat_3042527515' },
+  'map contains an additional essence': { suffixName: 'of Crystals', statId: 'explicit.stat_2162684861' },
+  'map contains # additional essences': { suffixName: 'of Crystals', statId: 'explicit.stat_2162684861' },
+  'map contains an additional strongbox': { suffixName: 'of Compartments', statId: 'explicit.stat_3040603554' },
+  'map contains # additional strongboxes': { suffixName: 'of Compartments', statId: 'explicit.stat_3040603554' },
+  // Azmeri: the regular mod's value-1 roll keeps its digit ("contains 1 additional", probed),
+  // so the an-form text only comes from the boss mod and the flat table already routes it to
+  // the boss id (same-id no-op kept for symmetry). The numeric entry IS load-bearing: an
+  // "of Wisps" roll above 1 would otherwise land on the regular numeric stat.
+  'map contains an additional azmeri spirit': { suffixName: 'of Wisps', statId: 'explicit.stat_775597083' },
+  'map contains # additional azmeri spirit': { suffixName: 'of Wisps', statId: 'explicit.stat_775597083' },
+}
+
 /** Number-normalized lookup key. MUST stay in sync with normalizeKey in
  *  scripts/build-tablet-mods.js. */
 export function normalizeTabletModKey(text: string): string {
@@ -70,11 +94,13 @@ export function buildTabletFilters(ctx: MatchContext): StatFilter[] {
   const out: StatFilter[] = []
   for (const mod of explicits) {
     const cleaned = mod.trim()
+    const advMod = advancedMods ? findAdvMod(advancedMods, cleaned, 'explicit') : undefined
     let id: string
     let value: number | null
 
     let aggregated: boolean | undefined
-    const mappedId = TABLET_MODS[normalizeTabletModKey(cleaned)]
+    const key = normalizeTabletModKey(cleaned)
+    const mappedId = TABLET_MODS[key]
     if (mappedId) {
       id = mappedId
       const numMatch = cleaned.match(/[+-]?\d+(?:\.\d+)?/)
@@ -100,7 +126,9 @@ export function buildTabletFilters(ctx: MatchContext): StatFilter[] {
       aggregated = matched.aggregated
     }
 
-    const advMod = advancedMods ? findAdvMod(advancedMods, cleaned, 'explicit') : undefined
+    // The shared-text boss-pool mod is identified by its suffix name; see BOSS_POOL_TABLET_MODS.
+    const bossPool = BOSS_POOL_TABLET_MODS[key]
+    if (bossPool && advMod?.name === bossPool.suffixName) id = bossPool.statId
 
     // Value-bearing valueless stats: pull the rolled count from the advanced-mod range
     // (fallback: the first integer in the cleaned line) so the otherwise-null row carries

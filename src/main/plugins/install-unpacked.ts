@@ -33,9 +33,11 @@ export function installUnpacked(sourceDir: string): InstallResult {
     copyFileSync(manifestPath, join(destDir, 'manifest.json'))
     copyFileSync(entryPath, join(destDir, 'plugin.js'))
 
-    // Append to installed.json and unpacked.json if new.
+    // Append to installed.json and unpacked.json if new. The source dir rides
+    // along so the Developer settings can re-copy from it (Reload) without
+    // making the author pick the directory again.
     addInstalledId(id)
-    addUnpackedId(id)
+    addUnpackedId(id, sourceDir)
   } catch (e) {
     rmSync(destDir, { recursive: true, force: true })
     return { ok: false, error: `install write failed: ${(e as Error).message}` }

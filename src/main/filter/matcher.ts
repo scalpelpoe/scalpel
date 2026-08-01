@@ -118,6 +118,9 @@ function evaluateCondition(cond: FilterCondition, item: PoeItem): ConditionResul
     case 'Scourged':
       return boolMatch(item.scourged, values[0]) ? 'pass' : 'fail'
 
+    case 'Vestigial':
+      return boolMatch(item.vestigial ?? false, values[0]) ? 'pass' : 'fail'
+
     case 'AlternateQuality':
       return boolMatch(item.alternateQuality ?? false, values[0]) ? 'pass' : 'fail'
 

@@ -1,20 +1,62 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { closeAllOverlaysOnPoeExit } from './focus'
+const { focusHolder } = vi.hoisted(() => ({ focusHolder: { current: null as unknown } }))
+vi.mock('electron', () => ({
+  BrowserWindow: { getFocusedWindow: () => focusHolder.current },
+  screen: { getDisplayNearestPoint: () => ({ scaleFactor: 1 }) },
+}))
+import {
+  aroundNativeDialog,
+  closeAllOverlaysOnPoeExit,
+  hideFocusedOrAnyVisibleSecondaryOverlay,
+  isAnyScalpelBrowserWindowFocused,
+  isAnyScalpelWindowFocused,
+  restoreAllOnPoeFocus,
+} from './focus'
 import { type OverlayState, overlays } from './state'
 
-function fakeState(opts: { visible: boolean; wasVisible: boolean }): OverlayState {
+describe('native-dialog focus', () => {
+  it('keeps the logical app active without treating the dialog as a focused BrowserWindow', async () => {
+    focusHolder.current = null
+    let closeDialog!: () => void
+    const dialog = aroundNativeDialog(
+      () =>
+        new Promise<void>((resolve) => {
+          closeDialog = resolve
+        }),
+    )
+
+    expect(isAnyScalpelWindowFocused()).toBe(true)
+    expect(isAnyScalpelBrowserWindowFocused()).toBe(false)
+
+    closeDialog()
+    await dialog
+    expect(isAnyScalpelWindowFocused()).toBe(false)
+  })
+})
+
+function fakeState(opts: {
+  visible: boolean
+  wasVisible?: boolean
+  persist?: boolean
+  gateShow?: () => boolean
+  userPinned?: boolean
+}): OverlayState {
   return {
-    spec: {} as unknown as OverlayState['spec'],
+    spec: { gateShow: opts.gateShow } as unknown as OverlayState['spec'],
     win: {
       isDestroyed: () => false,
       isVisible: () => opts.visible,
       hide: vi.fn(),
+      show: vi.fn(),
+      moveTop: vi.fn(),
     } as unknown as OverlayState['win'],
     snapGhostActive: false,
     inProgrammaticMove: false,
     programmaticSettleTimer: null,
     isResizing: false,
-    wasVisibleBeforeFocusLoss: opts.wasVisible,
+    wasVisibleBeforeFocusLoss: opts.wasVisible ?? false,
+    persistOverOthers: opts.persist ?? false,
+    userPinned: opts.userPinned ?? false,
   }
 }
 
@@ -53,6 +95,8 @@ describe('closeAllOverlaysOnPoeExit', () => {
       programmaticSettleTimer: null,
       isResizing: false,
       wasVisibleBeforeFocusLoss: true,
+      persistOverOthers: false,
+      userPinned: false,
     }
     overlays.set('destroyed', destroyed)
 
@@ -69,9 +113,131 @@ describe('closeAllOverlaysOnPoeExit', () => {
       programmaticSettleTimer: null,
       isResizing: false,
       wasVisibleBeforeFocusLoss: true,
+      persistOverOthers: false,
+      userPinned: false,
     }
     overlays.set('nowin', noWin)
 
     expect(() => closeAllOverlaysOnPoeExit()).not.toThrow()
+  })
+})
+
+describe('hideFocusedOrAnyVisibleSecondaryOverlay - persistOverOthers', () => {
+  beforeEach(() => {
+    overlays.clear()
+    focusHolder.current = null
+  })
+
+  it('does not hide a persistent visible overlay via the any-visible sweep', () => {
+    const wb = fakeState({ visible: true, persist: true })
+    overlays.set('whiteboard', wb)
+    const hid = hideFocusedOrAnyVisibleSecondaryOverlay()
+    expect(hid).toBe(false)
+    expect(wb.win?.hide).not.toHaveBeenCalled()
+  })
+
+  it('still hides a non-persistent visible overlay', () => {
+    const cs = fakeState({ visible: true, persist: false })
+    overlays.set('cheatsheet', cs)
+    const hid = hideFocusedOrAnyVisibleSecondaryOverlay()
+    expect(hid).toBe(true)
+    expect(cs.win?.hide).toHaveBeenCalled()
+  })
+
+  it('hides the non-persistent overlay and leaves the persistent one alone', () => {
+    const wb = fakeState({ visible: true, persist: true })
+    const cs = fakeState({ visible: true, persist: false })
+    overlays.set('whiteboard', wb)
+    overlays.set('cheatsheet', cs)
+    const hid = hideFocusedOrAnyVisibleSecondaryOverlay()
+    expect(hid).toBe(true)
+    expect(cs.win?.hide).toHaveBeenCalled()
+    expect(wb.win?.hide).not.toHaveBeenCalled()
+  })
+
+  it('does not hide a persistent overlay even when it is focused', () => {
+    const pz = fakeState({ visible: true, persist: true })
+    focusHolder.current = pz.win
+    overlays.set('pinned-zone', pz)
+    const hid = hideFocusedOrAnyVisibleSecondaryOverlay()
+    expect(hid).toBe(false)
+    expect(pz.win?.hide).not.toHaveBeenCalled()
+  })
+
+  it('focused persistent overlay falls through to hiding another visible non-persistent overlay', () => {
+    const pz = fakeState({ visible: true, persist: true })
+    const cs = fakeState({ visible: true, persist: false })
+    focusHolder.current = pz.win
+    overlays.set('pinned-zone', pz)
+    overlays.set('cheatsheet', cs)
+    const hid = hideFocusedOrAnyVisibleSecondaryOverlay()
+    expect(hid).toBe(true)
+    expect(cs.win?.hide).toHaveBeenCalled()
+    expect(pz.win?.hide).not.toHaveBeenCalled()
+  })
+
+  it('does not hide a user-pinned overlay via the any-visible sweep', () => {
+    const pinned = fakeState({ visible: true, userPinned: true })
+    overlays.set('pinned', pinned)
+    const hid = hideFocusedOrAnyVisibleSecondaryOverlay()
+    expect(hid).toBe(false)
+    expect(pinned.win?.hide).not.toHaveBeenCalled()
+  })
+
+  it('does not hide a user-pinned overlay even when it is focused', () => {
+    const pinned = fakeState({ visible: true, userPinned: true })
+    focusHolder.current = pinned.win
+    overlays.set('pinned', pinned)
+    const hid = hideFocusedOrAnyVisibleSecondaryOverlay()
+    expect(hid).toBe(false)
+    expect(pinned.win?.hide).not.toHaveBeenCalled()
+  })
+
+  it('user-pinned overlay falls through to hiding a non-pinned overlay', () => {
+    const pinned = fakeState({ visible: true, userPinned: true })
+    const plain = fakeState({ visible: true })
+    overlays.set('pinned', pinned)
+    overlays.set('plain', plain)
+    const hid = hideFocusedOrAnyVisibleSecondaryOverlay()
+    expect(hid).toBe(true)
+    expect(plain.win?.hide).toHaveBeenCalled()
+    expect(pinned.win?.hide).not.toHaveBeenCalled()
+  })
+})
+
+describe('restoreAllOnPoeFocus', () => {
+  beforeEach(() => {
+    overlays.clear()
+    focusHolder.current = null
+  })
+
+  it('restores a state with wasVisible=true and no gateShow', () => {
+    const cs = fakeState({ visible: false, wasVisible: true })
+    overlays.set('cheatsheet', cs)
+
+    restoreAllOnPoeFocus()
+
+    expect(cs.win?.show).toHaveBeenCalled()
+    expect(cs.win?.moveTop).toHaveBeenCalled()
+  })
+
+  it('skips a state with wasVisible=true and gateShow returning false', () => {
+    const pinned = fakeState({ visible: false, wasVisible: true, gateShow: () => false })
+    overlays.set('pinned-zone', pinned)
+
+    restoreAllOnPoeFocus()
+
+    expect(pinned.win?.show).not.toHaveBeenCalled()
+    expect(pinned.win?.moveTop).not.toHaveBeenCalled()
+  })
+
+  it('restores a state with wasVisible=true and gateShow returning true', () => {
+    const pinned = fakeState({ visible: false, wasVisible: true, gateShow: () => true })
+    overlays.set('pinned-zone', pinned)
+
+    restoreAllOnPoeFocus()
+
+    expect(pinned.win?.show).toHaveBeenCalled()
+    expect(pinned.win?.moveTop).toHaveBeenCalled()
   })
 })

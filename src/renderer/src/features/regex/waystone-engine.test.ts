@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { buildWaystoneRegex, type WaystoneQuantities } from './waystone-engine'
-import { generateNumberRegex } from './waystone-number-regex'
+import { generateBoundedValueRegex, generateNumberRegex } from './waystone-number-regex'
 import { generateWaystoneRegex } from './__fixtures__/poe2re/WaystoneResult'
 import type { SelectOption } from './__fixtures__/poe2re/SelectOption'
 import type { Settings } from './__fixtures__/poe2re/Settings'
@@ -31,6 +31,11 @@ function makeSettings(overrides: {
   tierMax?: number
   corrupted?: boolean
   uncorrupted?: boolean
+  rarityNormal?: boolean
+  rarityMagic?: boolean
+  rarityRare?: boolean
+  revivesMin?: number
+  revivesMax?: number
   delirious?: boolean
   anyPack?: boolean
   packSize?: number | null
@@ -73,6 +78,15 @@ function makeSettings(overrides: {
       rarity: {
         corrupted: overrides.corrupted ?? false,
         uncorrupted: overrides.uncorrupted ?? false,
+      },
+      revives: {
+        min: overrides.revivesMin ?? 0,
+        max: overrides.revivesMax ?? 6,
+      },
+      rarityFilter: {
+        normal: overrides.rarityNormal ?? false,
+        magic: overrides.rarityMagic ?? false,
+        rare: overrides.rarityRare ?? false,
       },
       modifier: {
         over100: overrides.over100 ?? false,
@@ -149,8 +163,16 @@ function makeSettings(overrides: {
     },
     tablet: {
       resultSettings: { customText: '', autoCopy: false },
-      rarity: { normal: false, magic: false },
-      type: { breach: false, delirium: false, irradiated: false, expedition: false, ritual: false, overseer: false },
+      rarity: { normal: false, magic: false, rare: false },
+      type: {
+        irradiated: false,
+        ritual: false,
+        delirium: false,
+        breach: false,
+        abyss: false,
+        temple: false,
+        overseer: false,
+      },
       modifier: { usesRemaining: false, numUsesRemaining: 1, affixes: [], affixSelectType: 'any', round10: false },
     },
   }
@@ -161,9 +183,18 @@ function ours(overrides: Parameters<typeof makeSettings>[0]): string {
   return buildWaystoneRegex({
     mods: WAYSTONE_MODS,
     tier: { min: overrides.tierMin ?? 1, max: overrides.tierMax ?? 16 },
-    rarity: {
+    corruption: {
       corrupted: overrides.corrupted ?? false,
       uncorrupted: overrides.uncorrupted ?? false,
+    },
+    rarity: {
+      normal: overrides.rarityNormal ?? false,
+      magic: overrides.rarityMagic ?? false,
+      rare: overrides.rarityRare ?? false,
+    },
+    revives: {
+      min: overrides.revivesMin ?? 0,
+      max: overrides.revivesMax ?? 6,
     },
     qualifiers: {
       delirious: overrides.delirious ?? false,
@@ -233,10 +264,21 @@ const CASES: Case[] = [
   { label: 'tier 8-9 (two-value under-10)', args: { tierMin: 8, tierMax: 9 } },
   { label: 'tier 7-13 (spans the boundary)', args: { tierMin: 7, tierMax: 13 } },
 
-  // Rarity
+  // Corruption
   { label: 'corrupted only', args: { corrupted: true } },
   { label: 'uncorrupted only', args: { uncorrupted: true } },
-  { label: 'both rarity (no-op)', args: { corrupted: true, uncorrupted: true } },
+  { label: 'both corruption (no-op)', args: { corrupted: true, uncorrupted: true } },
+
+  // Rarity filter (normal/magic/rare)
+  { label: 'rarity normal only', args: { rarityNormal: true } },
+  { label: 'rarity magic + rare', args: { rarityMagic: true, rarityRare: true } },
+  { label: 'rarity all three (no-op)', args: { rarityNormal: true, rarityMagic: true, rarityRare: true } },
+
+  // Revives
+  { label: 'revives 0..6 is inert', args: { revivesMin: 0, revivesMax: 6 } },
+  { label: 'revives min 2 max 6', args: { revivesMin: 2, revivesMax: 6 } },
+  { label: 'revives exactly 3..3', args: { revivesMin: 3, revivesMax: 3 } },
+  { label: 'revives 2..3', args: { revivesMin: 2, revivesMax: 3 } },
 
   // Prefixes (any vs all)
   { label: 'one prefix any', args: { prefixIds: [FIRE], prefixSelectType: 'any' } },
@@ -309,28 +351,109 @@ const CASES: Case[] = [
   { label: 'custom text only', args: { customText: 'foo' } },
   { label: 'custom text + tier', args: { tierMin: 2, tierMax: 16, customText: 'bar' } },
 
-  // Per-mod magnitude values
-  { label: 'prefix value 20 (any)', args: { prefixIds: [FIRE], wantValues: { [FIRE]: 20 } } },
-  { label: 'prefix value 24 raw', args: { prefixIds: [FIRE], wantValues: { [FIRE]: 24 } } },
-  { label: 'prefix value 24 round10', args: { prefixIds: [FIRE], wantValues: { [FIRE]: 24 }, round10: true } },
-  { label: 'prefix value 24 over100', args: { prefixIds: [FIRE], wantValues: { [FIRE]: 24 }, over100: true } },
-  { label: 'prefix value 150', args: { prefixIds: [FIRE], wantValues: { [FIRE]: 150 } } },
+  // Per-mod magnitude values. Values are kept within each mod's ranges[0] max
+  // (FIRE/ENFEEBLE 5-20, BLEEDING 4-10) so the parity path exercises the bounded
+  // range form on both sides -- out-of-range values fall back to a scalar regex,
+  // and our fallback intentionally deviates from upstream's (see
+  // generateBoundedValueRegex's over100 note), so that path gets direct unit
+  // coverage below instead of a parity comparison.
+  { label: 'prefix value 5 (any)', args: { prefixIds: [FIRE], wantValues: { [FIRE]: 5 } } },
+  { label: 'prefix value 12 raw', args: { prefixIds: [FIRE], wantValues: { [FIRE]: 12 } } },
+  { label: 'prefix value 12 round10', args: { prefixIds: [FIRE], wantValues: { [FIRE]: 12 }, round10: true } },
+  { label: 'prefix value 20 (range max)', args: { prefixIds: [FIRE], wantValues: { [FIRE]: 20 } } },
   {
     label: 'two prefixes values (all)',
-    args: { prefixIds: [FIRE, ENFEEBLE], wantValues: { [FIRE]: 20, [ENFEEBLE]: 30 }, prefixSelectType: 'all' },
+    args: { prefixIds: [FIRE, ENFEEBLE], wantValues: { [FIRE]: 20, [ENFEEBLE]: 10 }, prefixSelectType: 'all' },
   },
-  { label: 'suffix value 30', args: { suffixIds: [BLEEDING], avoidValues: { [BLEEDING]: 30 } } },
+  { label: 'suffix value 7', args: { suffixIds: [BLEEDING], avoidValues: { [BLEEDING]: 7 } } },
   {
     label: 'prefix + suffix values (any) round10',
     args: {
       prefixIds: [FIRE],
       suffixIds: [BLEEDING],
-      wantValues: { [FIRE]: 25 },
-      avoidValues: { [BLEEDING]: 35 },
+      wantValues: { [FIRE]: 15 },
+      avoidValues: { [BLEEDING]: 8 },
       round10: true,
     },
   },
 ]
+
+describe('waystone-engine: bounded value(min-max) matching', () => {
+  it('value-bearing mod emits a bounded range anchored on the range paren', () => {
+    const fireMod = WAYSTONE_MODS.find((m) => m.id === FIRE)!
+    const result = buildWaystoneRegex({
+      mods: WAYSTONE_MODS,
+      tier: { min: 1, max: 16 },
+      corruption: { corrupted: false, uncorrupted: false },
+      rarity: { normal: false, magic: false, rare: false },
+      revives: { min: 0, max: 6 },
+      qualifiers: { delirious: false, anyPack: false },
+      quantities: {
+        packSize: null,
+        monsterEffectiveness: null,
+        monsterRarity: null,
+        itemRarity: null,
+        dropChance: null,
+      },
+      selections: {
+        want: new Set([FIRE]),
+        avoid: new Set(),
+        wantMode: 'any',
+        wantValues: { [FIRE]: 15 },
+        avoidValues: {},
+      },
+      round10: false,
+      over100: false,
+    })
+    const expectedRange = generateBoundedValueRegex('15', String(fireMod.ranges[0][1]), false, false)
+    expect(result).toBe(`"${expectedRange}.*${fireMod.regex}"`)
+  })
+
+  it('value on a rangeless mod falls back to the scalar >= regex', () => {
+    // Rangeless mods exist in the vendor data (ranges: []), but the picker's
+    // waystoneRangeHint gate hides the value input for them, so the engine guard is
+    // only reachable via stale persisted values -- construct one to exercise it.
+    const rangelessMod = { ...WAYSTONE_MODS.find((m) => m.id === FIRE)!, id: 999999, ranges: [] }
+    const result = buildWaystoneRegex({
+      mods: [rangelessMod],
+      tier: { min: 1, max: 16 },
+      corruption: { corrupted: false, uncorrupted: false },
+      rarity: { normal: false, magic: false, rare: false },
+      revives: { min: 0, max: 6 },
+      qualifiers: { delirious: false, anyPack: false },
+      quantities: {
+        packSize: null,
+        monsterEffectiveness: null,
+        monsterRarity: null,
+        itemRarity: null,
+        dropChance: null,
+      },
+      selections: {
+        want: new Set([999999]),
+        avoid: new Set(),
+        wantMode: 'any',
+        wantValues: { 999999: 25 },
+        avoidValues: {},
+      },
+      round10: false,
+      over100: false,
+    })
+    const expectedScalar = generateNumberRegex('25', false, false)
+    expect(result).toBe(`"${expectedScalar}.*${rangelessMod.regex}"`)
+    expect(result).not.toContain('\\(')
+  })
+
+  it('over100 widens the scalar fallback for an out-of-range value', () => {
+    const fireMod = WAYSTONE_MODS.find((m) => m.id === FIRE)!
+    // 24 exceeds FIRE's range max (20), so generateBoundedValueRegex falls back to
+    // the scalar generateNumberRegex, where over100 still applies (documented
+    // deviation from upstream in waystone-number-regex.ts). Only 10-99 (2-digit)
+    // scalar values get the over100 widening; 3-digit inputs use a different branch.
+    const withOver100 = generateBoundedValueRegex('24', String(fireMod.ranges[0][1]), false, true)
+    const withoutOver100 = generateBoundedValueRegex('24', String(fireMod.ranges[0][1]), false, false)
+    expect(withOver100).not.toBe(withoutOver100)
+  })
+})
 
 describe('waystone-engine: affix-agnostic selection', () => {
   it('SUFFIX mod in want set appears in the positive (non-negated) output', () => {
@@ -338,7 +461,9 @@ describe('waystone-engine: affix-agnostic selection', () => {
     const result = buildWaystoneRegex({
       mods: WAYSTONE_MODS,
       tier: { min: 1, max: 16 },
-      rarity: { corrupted: false, uncorrupted: false },
+      corruption: { corrupted: false, uncorrupted: false },
+      rarity: { normal: false, magic: false, rare: false },
+      revives: { min: 0, max: 6 },
       qualifiers: { delirious: false, anyPack: false },
       quantities: {
         packSize: null,
@@ -367,7 +492,9 @@ describe('waystone-engine: affix-agnostic selection', () => {
     const result = buildWaystoneRegex({
       mods: WAYSTONE_MODS,
       tier: { min: 1, max: 16 },
-      rarity: { corrupted: false, uncorrupted: false },
+      corruption: { corrupted: false, uncorrupted: false },
+      rarity: { normal: false, magic: false, rare: false },
+      revives: { min: 0, max: 6 },
       qualifiers: { delirious: false, anyPack: false },
       quantities: {
         packSize: null,
@@ -403,7 +530,9 @@ describe('waystone-engine: Quantity & yield quantifiers', () => {
     buildWaystoneRegex({
       mods: WAYSTONE_MODS,
       tier: { min: 1, max: 16 },
-      rarity: { corrupted: false, uncorrupted: false },
+      corruption: { corrupted: false, uncorrupted: false },
+      rarity: { normal: false, magic: false, rare: false },
+      revives: { min: 0, max: 6 },
       qualifiers: { delirious: false, anyPack: false },
       quantities,
       selections: { want: new Set(), avoid: new Set(), wantMode: 'any', wantValues: {}, avoidValues: {} },
@@ -436,7 +565,9 @@ describe('waystone-engine: Quantity & yield quantifiers', () => {
     const out = buildWaystoneRegex({
       mods: WAYSTONE_MODS,
       tier: { min: 1, max: 16 },
-      rarity: { corrupted: false, uncorrupted: false },
+      corruption: { corrupted: false, uncorrupted: false },
+      rarity: { normal: false, magic: false, rare: false },
+      revives: { min: 0, max: 6 },
       qualifiers: { delirious: false, anyPack: false },
       quantities: { ...noQuant, monsterRarity: 50 },
       selections: { want: new Set(), avoid: new Set(), wantMode: 'any', wantValues: {}, avoidValues: {} },
@@ -446,6 +577,100 @@ describe('waystone-engine: Quantity & yield quantifiers', () => {
     expect(out).toBe(`"er rar.*${generateNumberRegex('50', false, true)}%"`)
     // over100=true must widen vs over100=false for a 10-99 threshold.
     expect(generateNumberRegex('50', false, true)).not.toBe(generateNumberRegex('50', false, false))
+  })
+})
+
+describe('waystone-engine: rarity + revives ordering and inert bounds', () => {
+  const build = (over: {
+    tier?: { min: number; max: number }
+    rarity?: { normal: boolean; magic: boolean; rare: boolean }
+    revives?: { min: number; max: number }
+  }): string =>
+    buildWaystoneRegex({
+      mods: WAYSTONE_MODS,
+      tier: over.tier ?? { min: 1, max: 16 },
+      corruption: { corrupted: false, uncorrupted: false },
+      rarity: over.rarity ?? { normal: false, magic: false, rare: false },
+      revives: over.revives ?? { min: 0, max: 6 },
+      qualifiers: { delirious: false, anyPack: false },
+      quantities: {
+        packSize: null,
+        monsterEffectiveness: null,
+        monsterRarity: null,
+        itemRarity: null,
+        dropChance: null,
+      },
+      selections: { want: new Set(), avoid: new Set(), wantMode: 'any', wantValues: {}, avoidValues: {} },
+      round10: false,
+      over100: false,
+    })
+
+  it('emits rarity before tier', () => {
+    const out = build({ rarity: { normal: false, magic: true, rare: true }, tier: { min: 5, max: 16 } })
+    expect(out.startsWith('"y: (m|r)" ')).toBe(true)
+  })
+
+  it('revives 0..6 is inert', () => {
+    const out = build({ revives: { min: 0, max: 6 } })
+    expect(out).not.toContain('le:')
+  })
+
+  it('revives min 2 max 6 emits "le: [2-6]"', () => {
+    const out = build({ revives: { min: 2, max: 6 } })
+    expect(out).toBe('"le: [2-6]"')
+  })
+
+  it('revives exactly 3..3 emits "le: 3"', () => {
+    const out = build({ revives: { min: 3, max: 3 } })
+    expect(out).toBe('"le: 3"')
+  })
+
+  it('revives 2..3 emits "le: [23]"', () => {
+    const out = build({ revives: { min: 2, max: 3 } })
+    expect(out).toBe('"le: [23]"')
+  })
+})
+
+describe('waystone-engine: tier token (poe2.re July 2026 "er " fix)', () => {
+  it('tier 12-15 emits "er 1[2345]\\)" (over-10 only)', () => {
+    expect(ours({ tierMin: 12, tierMax: 15 })).toBe('"er 1[2345]\\)"')
+  })
+
+  it('tier 8-9 emits "er [89]\\)" (under-10 only)', () => {
+    expect(ours({ tierMin: 8, tierMax: 9 })).toBe('"er [89]\\)"')
+  })
+
+  it('tier 16-16 emits "er 16\\)" (single over-10 value)', () => {
+    expect(ours({ tierMin: 16, tierMax: 16 })).toBe('"er 16\\)"')
+  })
+
+  it('tier 5-10 emits "er [5-9]\\)|er 10\\)" (each branch prefixed)', () => {
+    expect(ours({ tierMin: 5, tierMax: 10 })).toBe('"er [5-9]\\)|er 10\\)"')
+  })
+
+  it('tier 2-16 emits "er [2-9]\\)|er 1[0123456]\\)" (each branch prefixed)', () => {
+    expect(ours({ tierMin: 2, tierMax: 16 })).toBe('"er [2-9]\\)|er 1[0123456]\\)"')
+  })
+
+  // Behavioral: the "er " prefix pins the token to the "...er N)" tail of a waystone
+  // name line so it can't false-match other parenthesized numbers (the upstream bug).
+  it('tier 8-9 token matches waystone tier names, magic or not, no anchor', () => {
+    const inner = ours({ tierMin: 8, tierMax: 9 }).slice(1, -1)
+    const re = new RegExp(inner, 'i')
+    expect(re.test('Waystone (Tier 9)')).toBe(true)
+    expect(re.test('Waystone (Tier 8) of Rain')).toBe(true)
+  })
+
+  it('tier 12-15 token matches "Waystone (Tier 13)"', () => {
+    const inner = ours({ tierMin: 12, tierMax: 15 }).slice(1, -1)
+    const re = new RegExp(inner, 'i')
+    expect(re.test('Waystone (Tier 13)')).toBe(true)
+  })
+
+  it('tier 12-15 token does NOT match "Uncut Skill Gem (Level 13)" (the false-positive class the upstream fix targets)', () => {
+    const inner = ours({ tierMin: 12, tierMax: 15 }).slice(1, -1)
+    const re = new RegExp(inner, 'i')
+    expect(re.test('Uncut Skill Gem (Level 13)')).toBe(false)
   })
 })
 
@@ -464,7 +689,7 @@ describe('waystone-engine: parity with poe2.re reference implementation', () => 
     const tokens = WAYSTONE_MODS.filter((m) => m.id === FIRE || m.id === ENFEEBLE)
       .map((m) => m.regex)
       .join('|')
-    const expected = `"r [2-9]\\)|1[0123456]\\)" "${tokens}"`
+    const expected = `"er [2-9]\\)|er 1[0123456]\\)" "${tokens}"`
     expect(theirs(args)).toBe(expected)
     expect(ours(args)).toBe(expected)
   })

@@ -229,11 +229,6 @@
       "confidence": "verified",
       "note": "rarity/life/quantity roll negative to positive; the rolled set is the item"
     },
-    "Mageblood": {
-      "mode": "all_explicits",
-      "confidence": "verified",
-      "note": "0.5: 4x random Legacy of # mods plus a duplicate-stacking effect mod; the rolled Legacies are the item"
-    },
     "Astramentis": {
       "mode": "stat_list",
       "confidence": "verified",
@@ -436,6 +431,49 @@
         }
       ],
       "note": "stat_list overrides the generic Unique-Tablet all_explicits rule: the two 2-5-range chase mods are the premium signature; the collapse-time and pack-size drawback rows are shown but off. The chase mods have valueless trade text (no # for \"an additional ...\") but trade2 applies a numeric value filter on them (probe-confirmed: stat_2734787892 min:5 -> 474 vs 1873 unfiltered). tablets.ts adopts the rolled count from advanced-mod data for these stat ids so the prefill:1 can pin the exact roll (issue #417)."
+    },
+    "Rite of Passage": {
+      "mode": "stat_list",
+      "confidence": "verified",
+      "mods": [
+        {
+          "id": "explicit.stat_3403424702",
+          "text": "Possessed by Spirit Of The Bear for # seconds on use"
+        },
+        {
+          "id": "explicit.stat_1685559578",
+          "text": "Possessed by Spirit Of The Boar for # seconds on use"
+        },
+        {
+          "id": "explicit.stat_2839557359",
+          "text": "Possessed by Spirit Of The Cat for # seconds on use"
+        },
+        {
+          "id": "explicit.stat_300107724",
+          "text": "Possessed by Spirit Of The Owl for # seconds on use"
+        },
+        {
+          "id": "explicit.stat_3463873033",
+          "text": "Possessed by Spirit Of The Ox for # seconds on use"
+        },
+        {
+          "id": "explicit.stat_3763491818",
+          "text": "Possessed by Spirit Of The Primate for # seconds on use"
+        },
+        {
+          "id": "explicit.stat_3181677174",
+          "text": "Possessed by Spirit Of The Serpent for # seconds on use"
+        },
+        {
+          "id": "explicit.stat_3685424517",
+          "text": "Possessed by Spirit Of The Stag for # seconds on use"
+        },
+        {
+          "id": "explicit.stat_3504441212",
+          "text": "Possessed by Spirit Of The Wolf for # seconds on use"
+        }
+      ],
+      "note": "unique Golden Charm (issue #463): rolls exactly one Possessed-by-Spirit line and the spirit variant is the price signature, so all nine per-spirit ids are primary - only the rolled one ever surfaces as a row (probe-confirmed each id returns only Rite of Passage listings). The tenth roll, \"Possessed by a random Spirit for 20 seconds on use\", is not indexed on trade2, so that variant prices name-only. Duration (10-20s) keeps the default producer bounds."
     }
   },
   "itemClassRules": [

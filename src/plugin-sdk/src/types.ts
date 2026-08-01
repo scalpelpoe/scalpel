@@ -204,13 +204,36 @@ export interface ScalpelPluginContext {
   closeOverlay(): void
 
   /**
+   * Annotation overlays only. Declare the screen region (in overlay/game CSS px,
+   * measured from the overlay's top-left) that should receive mouse input. While
+   * the cursor is inside it, Scalpel flips the otherwise click-through overlay
+   * interactive so clicks land on your elements; everywhere else the overlay
+   * stays click-through and clicks pass to the game. Pass null to clear it. Call
+   * this from your overlay's render code (re-call when the region moves or
+   * resizes); it is a no-op for 'window'-mode overlays, which are already
+   * interactive.
+   */
+  setInteractiveRegion(rect: { x: number; y: number; width: number; height: number } | null): void
+
+  /**
    * Trigger the same flow Scalpel's main hotkey runs: send Ctrl+C to PoE,
    * read the clipboard, parse the item, fire onCurrentItem for everyone
    * (other plugins + Scalpel's filter/price-check views), and resolve to
    * the parsed item. Returns null when the clipboard doesn't contain a
    * recognisable PoE item.
+   *
+   * `opts.showOverlay` defaults to true, opening Scalpel's main overlay after
+   * a successful capture. A plugin with its own overlay will usually want
+   * `false` here, otherwise Scalpel's main overlay opens on top of it.
+   *
+   * `opts.dispatch` defaults to true. Set it to `false` for a private read: the
+   * parsed item is returned to the caller alone, Scalpel's filter and
+   * price-check views do not update, other plugins' `onCurrentItem` does not
+   * fire, and no filter needs to be loaded (a plugin-only read doesn't require
+   * one). Use this when your plugin wants the hovered item without touching
+   * anyone else's view.
    */
-  copyAndEvaluateItem(): Promise<PoeItem | null>
+  copyAndEvaluateItem(opts?: { showOverlay?: boolean; dispatch?: boolean }): Promise<PoeItem | null>
 
   /**
    * Capture the focused game window as raw RGBA pixels for the plugin to OCR or
@@ -221,6 +244,15 @@ export interface ScalpelPluginContext {
    * your registered hotkey while the target menu is open).
    */
   captureGameWindow(region?: GameRect): Promise<GameCapture | null>
+
+  /**
+   * The cursor's position in game CSS px, measured from the game window's
+   * top-left - the same coordinate space as setInteractiveRegion and
+   * GameCapture.origin, so an annotation overlay can position against it
+   * directly. Resolves to null when PoE is not focused or the cursor is
+   * outside the game window. One-shot: call it from your hotkey handler.
+   */
+  getCursorPosition(): Promise<{ x: number; y: number } | null>
 
   /**
    * Switch the overlay to this plugin's tab. No-op if the tab isn't

@@ -23,7 +23,6 @@ import { ModList } from './ModList'
 import { ScrubInput } from '../../components/primitives/ScrubInput'
 import { generatePresetTags } from './preset-tags'
 import { InfoChip } from '../../shared/InfoChip'
-import { useAuth } from '../../shared/use-auth'
 import type { RegexPreset } from '@shared/types'
 import type { GeneratorHandle, GeneratorProps } from './generator-types'
 import { zebraRowBg } from '../../shared/utils'
@@ -111,8 +110,6 @@ export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functio
   // ---- Trade state ---------------------------------------------------------
   const trade = useRegexTrade()
   const [expandedListing, setExpandedListing] = useState<string | null>(null)
-  const [actionStatus, setActionStatus] = useState<Record<string, 'pending' | 'success' | 'failed'>>({})
-  const { loggedIn } = useAuth()
   const [tradeOriginator, setTradeOriginator] = useState(false)
   const [tradeCorrupted8mod, setTradeCorrupted8mod] = useState(false)
 
@@ -190,7 +187,6 @@ export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functio
   // ---- Trade search --------------------------------------------------------
   const searchMapTrade = async (tier: number, nightmare: boolean): Promise<void> => {
     setExpandedListing(null)
-    setActionStatus({})
     const avoidTexts = MAP_MODS.filter((m) => avoid.has(m.id)).map((m) => m.text)
     const wantTexts = MAP_MODS.filter((m) => want.has(m.id)).map((m) => m.text)
     const qualObj: Record<string, number> = {}
@@ -304,6 +300,7 @@ export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functio
               </>
             }
             active={showTierPicker || showTradeResults}
+            solidInactive={!showTierPicker && !showTradeResults && regex.trim().length > 0}
             onClick={() => {
               if (showTradeResults) {
                 setPanel(null)
@@ -399,9 +396,6 @@ export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functio
           expandedListing,
           setExpandedListing,
           priceChipMinWidth,
-          loggedIn,
-          actionStatus,
-          setActionStatus,
           rateLimitTiers: trade.rateLimitTiers,
         }}
       />

@@ -81,6 +81,22 @@ describe('PluginsSection installed icon', () => {
   })
 })
 
+it('renders the auto-update toggle and flips pluginAutoUpdate', async () => {
+  installApi([])
+  const update = vi.fn()
+  const settings = { appMacros: [], pluginAutoUpdate: false } as unknown as RuntimeSettings
+  const { findByText } = render(
+    <PluginsSection onError={() => {}} settings={settings} update={update} tryHotkey={() => true} />,
+  )
+  // The clickable element is the toggle row (role=button); the label sits above
+  // it. Scope to the toggle's own section so installed-row action buttons are
+  // not matched.
+  const label = await findByText('Auto-update plugins')
+  const row = label.closest('[role="button"]') as HTMLElement
+  fireEvent.click(row)
+  expect(update).toHaveBeenCalledWith('pluginAutoUpdate', true)
+})
+
 describe('PluginsSection update button', () => {
   it('shows an Update button when the registry has a newer version and calls update', async () => {
     const pluginUpdateFromRegistry = vi.fn(async () => ({ ok: true as const, id: 'demo' }))

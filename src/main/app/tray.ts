@@ -5,7 +5,7 @@ import type Store from 'electron-store'
 import type { AppSettings, GameVariant } from '@shared/types'
 import { m } from '@shared/paraglide/messages.js'
 import { PROFILE_VERSION_KEY } from '../profiles/profile-settings'
-import { requestGameSwitch } from '../game-switch'
+import { getGameSwitchCoordinator } from '../experimental'
 import { createAndOpenBugReport, recordMainDiagnostic } from '../diagnostics'
 
 function resolveAppIconPath(iconExt: 'icon.ico' | 'icon.png'): string | null {
@@ -52,7 +52,7 @@ function buildMenu(): Menu {
     { label: m.tray_current_game({ game: current }), enabled: false },
     {
       label: m.tray_switch_game({ game: other }),
-      click: () => requestGameSwitch(store, other),
+      click: () => getGameSwitchCoordinator(store).requestGameSwitch(store, other),
     },
     { type: 'separator' },
     {

@@ -48,7 +48,7 @@ export const TRANSFIGURED_GEM_DISC: Record<string, string> = {
   'Cremation of Exhuming': 'alt_x',
   'Cremation of the Volcano': 'alt_y',
   'Cyclone of Tumult': 'alt_x',
-  'Dark Pact of Trarthus': 'alt_x',
+  'Dark Bargain of Trarthus': 'alt_x',
   'Detonate Dead of Chain Reaction': 'alt_y',
   'Detonate Dead of Scavenging': 'alt_x',
   'Discharge of Misery': 'alt_x',

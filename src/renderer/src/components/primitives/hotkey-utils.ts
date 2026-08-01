@@ -1,4 +1,11 @@
-import { PHYSICAL_PREFIX, decodePhysicalToken, encodePhysicalKey, isPhysicalCode } from '@shared/hotkey-tokens'
+import {
+  NUMPAD_CODE_TO_TOKEN,
+  NUMPAD_TOKEN_LABELS,
+  PHYSICAL_PREFIX,
+  decodePhysicalToken,
+  encodePhysicalKey,
+  isPhysicalCode,
+} from '@shared/hotkey-tokens'
 
 export function keyEventToAccelerator(e: KeyboardEvent): string | null {
   const KEY_MAP: Record<string, string> = {
@@ -34,6 +41,13 @@ export function keyEventToAccelerator(e: KeyboardEvent): string | null {
 function keyPart(e: KeyboardEvent, namedKeys: Record<string, string>): string {
   const named = namedKeys[e.key]
   if (named != null) return named
+  // With NumLock off, numpad keys emit named e.key values (ArrowDown, Home, Delete,
+  // etc.) and must keep recording as those - that IS what the key does in that
+  // state - so this check must stay after the named lookup above. With NumLock on,
+  // e.key is a single char ("2", ".", "+") not in the named map, so it falls
+  // through here and records by code instead.
+  const numpad = NUMPAD_CODE_TO_TOKEN[e.code as keyof typeof NUMPAD_CODE_TO_TOKEN]
+  if (numpad != null) return numpad
   // OEM/punctuation/international keys carry different glyphs across layouts, so
   // bind them by physical position (KeyboardEvent.code) while keeping the typed
   // glyph for display. Letters and digits stay in their plain Electron form so
@@ -54,6 +68,14 @@ export function prettyHotkey(accelerator: string | undefined | null): string {
   if (idx !== -1) {
     const decoded = decodePhysicalToken(accelerator.slice(idx))
     if (decoded) display = accelerator.slice(0, idx) + decoded.glyph
+  }
+  // The numpad token, when present, is always the final segment and contains no
+  // '+', so swap it for its display label without disturbing the rest.
+  const lastPlus = display.lastIndexOf('+')
+  const lastSegment = lastPlus === -1 ? display : display.slice(lastPlus + 1)
+  const numpadLabel = NUMPAD_TOKEN_LABELS[lastSegment]
+  if (numpadLabel != null) {
+    display = lastPlus === -1 ? numpadLabel : display.slice(0, lastPlus + 1) + numpadLabel
   }
   return display.replace(/CommandOrControl/g, 'Ctrl')
 }

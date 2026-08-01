@@ -32,6 +32,15 @@ function getItemSizes(): Record<string, [number, number]> {
   return _itemSizes
 }
 
+/** Drop the per-version base-type and item-size caches so the next access
+ *  rebuilds from the now-current game's class sheet. Needed only by the
+ *  in-process game switch (experimental multi-window); a relaunch switch
+ *  rebuilds them from scratch in the new process. */
+export function invalidateClipboardCaches(): void {
+  _staticBaseTypes = null
+  _itemSizes = null
+}
+
 /** Add base types extracted from the loaded filter */
 export function registerFilterBaseTypes(baseTypes: string[]): void {
   _filterBaseTypes = new Set(baseTypes)
@@ -121,12 +130,17 @@ function escapeRegex(s: string): string {
 // stat family, so the stat lines beneath these headers belong in enchants[].
 const ENHANCEMENT_HEADER = /^\{\s*(?:Corruption\s+)?Enhancement\b[^}]*\}$/i
 
+// PoE2 socketed-rune mods carry a trailing " (rune)" tag in both basic and
+// advanced clipboard copies (" (added rune)" is an editor-only variant with no
+// trade group; routed the same). Captured into runes[] and kept out of explicits.
+const RUNE_SUFFIX = /\s*\((?:rune|added rune)\)\s*$/i
+
 /** Strip advanced-mod roll-range notation ("41(39-42)%" -> "41%"), variant
  *  alternatives ("Bladefall(Fireball-Divine Blast)" -> "Bladefall"), and the
  *  trailing "Unscalable Value" suffix from a single advanced-mod stat line. */
 function cleanAdvancedModLine(line: string): string {
   return line
-    .replace(/(-?\d+(?:\.\d+)?)\(-?\d+(?:\.\d+)?(?:--?\d+(?:\.\d+)?)?\)/g, '$1')
+    .replace(/(-?\d+(?:\.\d+)?)\([-+]?\d+(?:\.\d+)?(?:-[-+]?\d+(?:\.\d+)?)?\)/g, '$1')
     .replace(/([a-zA-Z]\w*)\s*\([^)]*\)/g, '$1')
     .replace(/\s*[—–-]+\s*Unscalable Value$/i, '')
     .trim()
@@ -307,6 +321,32 @@ export function parseItemText(text: string): PoeItem | null {
   const mapMoreMaps = extractNum(allLines, 'More Maps:')
   const mapMoreDivCards = extractNum(allLines, 'More Divination Cards:')
 
+  // Charts print the zone name as the first line of the property section, above
+  // "Area Level:". It is the only line in that section without a "Key: value"
+  // shape, which is what makes it identifiable -- Expedition Logbooks put their
+  // "Area Level:" line first in the same position, so the colon check is what
+  // keeps them apart (the itemClass gate already does, belt and braces).
+  const chartZone = (() => {
+    if (itemClass !== 'Chart') return undefined
+    for (const section of sections.slice(1)) {
+      const sectionLines = section
+        .split('\n')
+        .map((l) => l.trim())
+        .filter(Boolean)
+      if (!sectionLines.some((l) => l.startsWith('Area Level:'))) continue
+      const first = sectionLines[0]
+      return first && !first.includes(':') ? first : undefined
+    }
+    return undefined
+  })()
+  const chartShape = itemClass === 'Chart' ? extractStr(allLines, 'Chart Shape:') : undefined
+
+  // A Scrying Orb is bound to one map area ("Map Area: Dunes"), which is its
+  // whole trade identity -- the API indexes each area as a separate type. Gated
+  // on the base so an unrelated future item printing the same line can't emit a
+  // chip that resolves to nothing.
+  const scryingArea = baseType === 'Scrying Orb' ? extractStr(allLines, 'Map Area:') : undefined
+
   const memoryStrands = extractNum(allLines, 'Memory Strands:')
 
   // Heist blueprints: "Wings Revealed: 3/4"
@@ -434,6 +474,9 @@ export function parseItemText(text: string): PoeItem | null {
   const transfigured = isGemClass && allLines.some((l) => l === 'Transfigured')
   const vaalGem = isGemClass && rarity === 'Gem' && allLines.some((l) => l.startsWith('Souls Per Use:'))
   const scourged = allLines.some((l) => l.includes('Scourge'))
+  // Vestigial uniques (3.27 Legion, replaces incubators). Marker line is the
+  // expected form; unverified against a real in-game item copy yet.
+  const vestigial = allLines.some((l) => l === 'Vestigial' || l === 'Vestigial Item')
   const zanaMemory = allLines.some((l) => l.toLowerCase().includes("originator's memories"))
   const implicitCount = allLines.filter((l) => l.endsWith('(implicit)')).length
 
@@ -479,6 +522,7 @@ export function parseItemText(text: string): PoeItem | null {
   const explicits: string[] = []
   const implicits: string[] = []
   const enchants: string[] = []
+  const runes: string[] = []
   parseModSections(sections, explicits, implicits, itemClass)
 
   // Parse logbook factions and bosses from section text
@@ -576,6 +620,10 @@ export function parseItemText(text: string): PoeItem | null {
         enchants.push(line.replace(/\s*\(enchant\)$/, '').trim())
         continue
       }
+      if (RUNE_SUFFIX.test(line) && !line.startsWith('(')) {
+        runes.push(line.replace(RUNE_SUFFIX, '').trim())
+        continue
+      }
       if (inEnhancement && !line.startsWith('(')) {
         enchants.push(cleanAdvancedModLine(line))
         continue
@@ -646,6 +694,7 @@ export function parseItemText(text: string): PoeItem | null {
     blighted,
     uberBlighted,
     scourged,
+    vestigial,
     zanaMemory,
     implicitCount,
     gemLevel,
@@ -655,6 +704,7 @@ export function parseItemText(text: string): PoeItem | null {
     explicits,
     implicits,
     enchants,
+    runes,
     imbues,
     ...(grantedSkills.length > 0 ? { grantedSkills } : {}),
     ...(memoryStrands != null ? { memoryStrands } : {}),
@@ -672,6 +722,9 @@ export function parseItemText(text: string): PoeItem | null {
     ...(mapGold != null ? { mapGold } : {}),
     ...(mapMagicMonsters != null ? { mapMagicMonsters } : {}),
     ...(mapRareMonsters != null ? { mapRareMonsters } : {}),
+    ...(chartZone != null ? { chartZone } : {}),
+    ...(chartShape != null ? { chartShape } : {}),
+    ...(scryingArea != null ? { scryingArea } : {}),
     ...(physDamageMin != null ? { physDamageMin, physDamageMax } : {}),
     ...(eleDamageAvg != null ? { eleDamageAvg } : {}),
     ...(chaosDamageAvg != null ? { chaosDamageAvg } : {}),
@@ -705,6 +758,15 @@ function extractNum(lines: string[], prefix: string): number | null {
   if (!line) return null
   const match = line.replace(prefix, '').match(/\d+/)
   return match ? parseInt(match[0], 10) : null
+}
+
+/** Like `extractNum` but returns the trimmed remainder of the line -- for label
+ *  lines whose value is text ("Chart Shape: Straight"). */
+function extractStr(lines: string[], prefix: string): string | undefined {
+  const line = lines.find((l) => l.startsWith(prefix))
+  if (!line) return undefined
+  const value = line.slice(prefix.length).trim()
+  return value || undefined
 }
 
 /** Like `extractNum` but keeps decimal precision -- for lines like "Attacks per
@@ -860,12 +922,22 @@ function parseModSections(sections: string[], explicits: string[], implicits: st
         (isCharm && /\d/.test(l)),
     )
     if (hasRealMods || !isFlavourOrMeta(modSections[i])) {
-      lines
-        .filter((l) => !l.endsWith('(implicit)'))
-        .forEach((l) => {
-          // Strip advanced roll range notation: "41(39-42)%" -> "41%"
-          explicits.push(l.replace(/(\d+(?:\.\d+)?)\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g, '$1'))
-        })
+      const modLines = lines
+        // Socketed-rune lines (" (rune)") are captured separately into runes[] and
+        // matched against rune.*, so drop them here the same way implicits are.
+        .filter((l) => !l.endsWith('(implicit)') && !RUNE_SUFFIX.test(l))
+        // Strip advanced roll range notation: "41(39-42)%" -> "41%"
+        .map((l) => l.replace(/(\d+(?:\.\d+)?)\(\d+(?:\.\d+)?-\d+(?:\.\d+)?\)/g, '$1'))
+      for (let li = 0; li < modLines.length; li++) {
+        explicits.push(modLines[li])
+        // A mod too long for the item panel wraps onto the next line. A basic
+        // (Ctrl+C) copy has no advanced-mod headers to group the halves, so offer
+        // the pair joined as well. Every real mod line starts with a capital, a
+        // digit or a sign, so a lowercase start is always the previous line
+        // spilling over. The leftover half-line row is dropped downstream by
+        // dropFragmentDuplicates.
+        if (li > 0 && /^[a-z]/.test(modLines[li])) explicits.push(`${modLines[li - 1]}\n${modLines[li]}`)
+      }
       break
     }
   }
@@ -940,19 +1012,21 @@ function parseAdvancedMods(text: string): AdvancedMod[] {
       currentMod.lines.push(line)
 
       // Forbidden Shako-style rolling supports: when a "Socketed Gems are Supported by"
-      // line carries the "Unscalable Value" suffix, the trade API stores it under the
-      // explicit.indexable_support_* family rather than the regular explicit.stat_*
-      // family. Both share identical display text in the stat dictionary, so without
-      // this signal the matcher coin-flips between them.
-      if (/^Socketed Gems are Supported by Level/i.test(line) && /\bUnscalable Value\b/i.test(line)) {
+      // line carries a rolled Level N(min-max) bracket AND "Unscalable Value", the trade
+      // API stores it under explicit.indexable_support_* rather than explicit.stat_*.
+      // Elder hybrids also say "Unscalable Value" but have a fixed Level N with no
+      // bracket — those must stay on the craftable stat_* ids.
+      if (/^Socketed Gems are Supported by Level \d+\(/i.test(line) && /\bUnscalable Value\b/i.test(line)) {
         currentMod.randomSupport = true
       }
 
       // Parse roll ranges: "41(39-42)%", "+140(130-144)", "-18(-20--10)%", or the
       // single-value form a corruption-overrolled fixed mod uses ("85(75)%" -- the
-      // value exceeds the listed base). The "-max" half is optional; when absent the
-      // base is a single value, so min === max (issue #378).
-      const rangeMatches = line.matchAll(/(-?\d+(?:\.\d+)?)\((-?\d+(?:\.\d+)?)(?:-(-?\d+(?:\.\d+)?))?\)/g)
+      // value exceeds the listed base). Either bound may carry a leading "+" or "-"
+      // sign because hybrid mods roll across zero ("+17(-40-+40)%" on Ventor's res).
+      // The "-max" half is optional; when absent the base is a single value, so
+      // min === max (issue #378).
+      const rangeMatches = line.matchAll(/(-?\d+(?:\.\d+)?)\(([-+]?\d+(?:\.\d+)?)(?:-([-+]?\d+(?:\.\d+)?))?\)/g)
       for (const rm of rangeMatches) {
         const min = parseFloat(rm[2])
         currentMod.ranges.push({

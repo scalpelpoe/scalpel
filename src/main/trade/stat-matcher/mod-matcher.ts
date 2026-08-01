@@ -2,7 +2,7 @@ import { STAT_ID_REMAPS } from '../stat-exceptions'
 import { NUMERIC_CAPTURE, statTextToPattern, statTextToRelaxedPattern } from './pattern'
 import type { StatEntry } from './stats-cache'
 import { getStatEntries } from './stats-cache'
-import { generateTextVariants } from './text-variants'
+import { foldedChanceForms, generateTextVariants } from './text-variants'
 
 /** Direct text-to-stat mappings for mods where clipboard text is completely different
  *  from the trade API stat text (e.g. corruption implicits with different wording) */
@@ -22,6 +22,12 @@ const BLOCKED_STAT_IDS = new Set([
   'explicit.stat_3664950032', // "#% increased Quantity of Gold Dropped by Slain Enemies" (duplicate, broken)
 ])
 
+/** True when the `#` placeholders are a contiguous min-max roll range
+ *  ("Adds # to #" / "Adds #-#"), not independent magnitudes in one line. */
+function isMinMaxRangeStat(statText: string): boolean {
+  return /#\s*(?:to|-)\s*#/.test(statText.replace(/\s+/g, ' '))
+}
+
 /** Forbidden Shako-style randomized supports live under the `indexable_support_*`
  *  stat family, which shares display text with regular `stat_*` entries. We always
  *  filter one or the other out so the matcher doesn't coin-flip between them:
@@ -33,7 +39,7 @@ const INDEXABLE_SUPPORT_RE = /^[a-z]+\.indexable_support_\d+/
 export function matchModToStat(
   modText: string,
   preferLocal = false,
-  modType: 'explicit' | 'crafted' | 'implicit' | 'enchant' | 'imbued' | 'sanctum' | 'skill' = 'explicit',
+  modType: 'explicit' | 'crafted' | 'implicit' | 'enchant' | 'imbued' | 'sanctum' | 'skill' | 'rune' = 'explicit',
   preferIndexableSupport = false,
   preferQualifier: string | null = null,
 ): { statId: string; value: number | null; option?: number; aggregated?: boolean } | null {
@@ -59,7 +65,7 @@ const TRAILING_QUALIFIER_RE = /\s*\(([^)]+)\)\s*$/
 function _matchModToStat(
   modText: string,
   preferLocal = false,
-  modType: 'explicit' | 'crafted' | 'implicit' | 'enchant' | 'imbued' | 'sanctum' | 'skill' = 'explicit',
+  modType: 'explicit' | 'crafted' | 'implicit' | 'enchant' | 'imbued' | 'sanctum' | 'skill' | 'rune' = 'explicit',
   preferIndexableSupport = false,
   preferQualifier: string | null = null,
 ): { statId: string; value: number | null; option?: number; aggregated?: boolean } | null {
@@ -87,6 +93,7 @@ function _matchModToStat(
       option?: number
       aggregated?: boolean
       _textLen: number
+      _patternLen: number
     } | null = null
     let localMatch: {
       statId: string
@@ -94,6 +101,7 @@ function _matchModToStat(
       option?: number
       aggregated?: boolean
       _textLen: number
+      _patternLen: number
     } | null = null
     let qualifiedMatch: {
       statId: string
@@ -101,6 +109,7 @@ function _matchModToStat(
       option?: number
       aggregated?: boolean
       _textLen: number
+      _patternLen: number
     } | null = null
 
     for (const entry of statEntries) {
@@ -118,17 +127,27 @@ function _matchModToStat(
       const pattern = statTextToPattern(textForPattern)
       const match = normalizedVariant.match(pattern)
       if (match) {
-        // For stats with two numeric values (e.g. "Adds # to # Damage"), average them
+        // For min-max roll stats (e.g. "Adds # to # Damage"), average the two
+        // numbers -- the trade site indexes that average. Other multi-# stats
+        // (e.g. "#% chance … Spend at least # Life") are independent magnitudes;
+        // averaging them (50+200)/2=125 breaks Exact Values searches for Kitava's
+        // Thirst foulborn / similar uniques. Prefer the first # (the primary
+        // filter the trade UI exposes).
         const numericCaptures = Array.from(match)
           .slice(1)
           .filter((v) => v && NUMERIC_CAPTURE.test(v))
         const rawValue = match[1]
         let value: number | null
-        const aggregated = numericCaptures.length >= 2
+        const aggregated = numericCaptures.length >= 2 && isMinMaxRangeStat(entry.text)
         if (aggregated) {
           value = numericCaptures.reduce((sum, v) => sum + parseFloat(v), 0) / numericCaptures.length
         } else {
-          value = rawValue && NUMERIC_CAPTURE.test(rawValue) ? parseFloat(rawValue) : null
+          value =
+            numericCaptures.length > 0
+              ? parseFloat(numericCaptures[0])
+              : rawValue && NUMERIC_CAPTURE.test(rawValue)
+                ? parseFloat(rawValue)
+                : null
         }
         // Restore negative sign when matching via sign-flipped variant
         if (isNegativeMod && value != null && value > 0) value = -value
@@ -154,6 +173,11 @@ function _matchModToStat(
           option,
           aggregated: aggregated || undefined,
           _textLen: entry.text.length,
+          // Length of the text actually pattern-matched (the "(Local)"/category
+          // qualifier stripped). Used to compare specificity across the local
+          // and non-local buckets, where _textLen would unfairly credit the
+          // "(Local)" suffix.
+          _patternLen: textForPattern.length,
         }
         if (isLocal) {
           if (!localMatch || entry.text.length > localMatch._textLen) localMatch = result
@@ -161,7 +185,13 @@ function _matchModToStat(
           // Only the requested category's qualified entry is a candidate; entries
           // for other categories (e.g. "(Flask)" when matching a charm) are ignored
           // so they can't pollute the plain bucket once their qualifier is stripped.
-          if (qualifier === preferQualifier && (!qualifiedMatch || entry.text.length > qualifiedMatch._textLen))
+          // Compare case-insensitively so PoE1 "(Staves)" matches prefer "Staves"
+          // and PoE2 "(Jewel)" still matches prefer "Jewel".
+          if (
+            preferQualifier &&
+            qualifier.toLowerCase() === preferQualifier.toLowerCase() &&
+            (!qualifiedMatch || entry.text.length > qualifiedMatch._textLen)
+          )
             qualifiedMatch = result
         } else {
           if (!nonLocalMatch || entry.text.length > nonLocalMatch._textLen) nonLocalMatch = result
@@ -170,9 +200,43 @@ function _matchModToStat(
     }
 
     let result = nonLocalMatch
-    if (preferLocal && localMatch) result = localMatch
-    else if (qualifiedMatch) result = qualifiedMatch
+    // preferLocal flips to the "(Local)" twin of a global lookalike (#399), but
+    // only when the local match is at least as specific as the best non-local
+    // one. A strictly more-specific non-local match must win: e.g. the glove
+    // enchant "Break #% increased Armour" vs the local "#% increased Armour",
+    // where the local pattern only matched by letting its "#" swallow the word
+    // "Break" -- preferring local there searches the wrong stat (#449).
+    if (preferLocal && localMatch && (!nonLocalMatch || localMatch._patternLen >= nonLocalMatch._patternLen)) {
+      result = localMatch
+    } else if (qualifiedMatch) {
+      result = qualifiedMatch
+    }
     if (result) return result
+  }
+
+  // Fallback: a mod whose "#% chance to" clause the trade API folded out of the
+  // stat text it publishes -- "Melee Hits have 11% chance to Fortify" is indexed
+  // as "Melee Hits Fortify" (stat_1166417447). The chance is still the filter's
+  // value (probe: min 101 returns nothing, min 1 returns the 10-15% rolls), but
+  // the stat text has no "#" for the pattern to capture it from, so restore it
+  // here. Only "#"-less stats are candidates: a lookalike with its own roll
+  // ("Bow Attacks fire # additional Arrows") would swallow the chance and search
+  // the wrong number. Runs after the exact pass so a mod whose chance clause the
+  // API *did* publish ("Melee Hits which Stun have #% chance to Fortify") always
+  // matches its own stat first.
+  const folded = foldedChanceForms(modText)
+  if (folded) {
+    for (const text of folded.texts) {
+      const normalized = text.replace(/\s+/g, ' ')
+      for (const entry of statEntries) {
+        if (!entry.id.startsWith(typePrefix)) continue
+        if (BLOCKED_STAT_IDS.has(entry.id)) continue
+        if (preferIndexableSupport ? !INDEXABLE_SUPPORT_RE.test(entry.id) : INDEXABLE_SUPPORT_RE.test(entry.id))
+          continue
+        if (entry.text.includes('#') || entry.text.includes('(Local)')) continue
+        if (statTextToPattern(entry.text).test(normalized)) return { statId: entry.id, value: folded.value }
+      }
+    }
   }
 
   // Fallback: try relaxed patterns where hardcoded numbers in stat text become wildcards.
@@ -209,6 +273,11 @@ function _matchModToStat(
   //            "#% chance to gain Alchemist's Genius when you use a Flask" ("of the
   //            Essence" belt suffix has a hidden 100% chance, so the clipboard drops
   //            the leading "#% chance to ")
+  // Digits are stripped on BOTH sides: synthesis implicits like
+  // "Intimidate Enemies for 4 seconds on Hit with Attacks" hide the 100% chance
+  // but keep a fixed "4" in display text, while the trade stat keeps both
+  // "#% chance to" and that same "4". Stripping only the clipboard left the
+  // hardcoded duration digit on the stat side and broke endsWith.
   for (const variant of textVariants) {
     let bestMatch: { statId: string; value: number | null; aggregated?: boolean; _textLen: number } | null = null
     for (const entry of statEntries) {
@@ -216,7 +285,7 @@ function _matchModToStat(
       if (BLOCKED_STAT_IDS.has(entry.id)) continue
       if (preferIndexableSupport ? !INDEXABLE_SUPPORT_RE.test(entry.id) : INDEXABLE_SUPPORT_RE.test(entry.id)) continue
       if (entry.text.includes('(Local)')) continue
-      const statPlain = entry.text.replace(/#/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
+      const statPlain = entry.text.replace(/#/g, '').replace(/\d+/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
       const variantPlain = variant.replace(/\d+/g, '').replace(/\s+/g, ' ').trim().toLowerCase()
       if (variantPlain.length <= 10) continue
       // The chunk this fallback lets the clipboard hide is always an unscalable

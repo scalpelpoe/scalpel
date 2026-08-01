@@ -69,7 +69,9 @@ interface PresetTagState {
   want: Set<number>
   avoid: Set<number>
   tier: { min: number; max: number }
-  rarity: { corrupted: boolean; uncorrupted: boolean }
+  corruption: { corrupted: boolean; uncorrupted: boolean }
+  rarityFilter: { normal: boolean; magic: boolean; rare: boolean }
+  revives: { min: number; max: number }
   delirious: boolean
   anyPack: boolean
   /** "Quantity & yield" thresholds (0/null = unset). */
@@ -111,10 +113,28 @@ export function generateWaystonePresetTags(state: PresetTagState): RegexPresetTa
     })
   }
 
-  if (state.rarity.corrupted && !state.rarity.uncorrupted) {
+  if (state.corruption.corrupted && !state.corruption.uncorrupted) {
     tags.push({ text: 'corr', color: TAB_COLORS.qualifiers, source: 'qualifier', sourceId: 'corrupted' })
-  } else if (state.rarity.uncorrupted && !state.rarity.corrupted) {
+  } else if (state.corruption.uncorrupted && !state.corruption.corrupted) {
     tags.push({ text: '!corr', color: TAB_COLORS.qualifiers, source: 'qualifier', sourceId: 'uncorrupted' })
+  }
+
+  if (state.rarityFilter.normal) {
+    tags.push({ text: 'Normal', color: TAB_COLORS.qualifiers, source: 'qualifier', sourceId: 'rarityNormal' })
+  }
+  if (state.rarityFilter.magic) {
+    tags.push({ text: 'Magic', color: TAB_COLORS.qualifiers, source: 'qualifier', sourceId: 'rarityMagic' })
+  }
+  if (state.rarityFilter.rare) {
+    tags.push({ text: 'Rare', color: TAB_COLORS.qualifiers, source: 'qualifier', sourceId: 'rarityRare' })
+  }
+  if (state.revives.min > 0 || state.revives.max < 6) {
+    tags.push({
+      text: `revives ${state.revives.min}-${state.revives.max}`,
+      color: TAB_COLORS.qualifiers,
+      source: 'qualifier',
+      sourceId: 'revives',
+    })
   }
 
   for (const [key, label] of QUANTITY_TAG_LABELS) {

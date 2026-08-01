@@ -5,9 +5,11 @@ import { BENEFICIAL_NEGATIVE_KEYWORDS } from '@shared/data/trade/beneficial-nega
 import { isClusterJewel } from '@shared/poe-item'
 import type { ModTier } from '@shared/data/tiers/types'
 import type { StatFilter } from '../../trade'
+import { resolveStaffBlockAttackStatId } from '../../stat-exceptions'
 import { findAdvMod } from '../adv-mods'
 import { computeValueBounds } from '../bounds'
 import { isDefenseMod, isLocalMod, isLowPriority } from '../classification'
+import { QUALIFIER_BY_ITEM_CLASS } from '../item-classes'
 import type { MatchContext } from '../context'
 import { matchModToStat } from '../mod-matcher'
 import { accumulatePseudo, PSEUDO_CONTRIBUTIONS, type PseudoContribution } from '../pseudo'
@@ -18,19 +20,15 @@ import { accumulatePseudo, PSEUDO_CONTRIBUTIONS, type PseudoContribution } from 
 // Pin min=max=value for any mod whose cleaned text starts with "+N to Level of".
 export const GEM_LEVEL_MOD = /^\+\d+ to Level of /i
 
+/** Elder / influence hybrids: "Socketed Gems are Supported by Level N X" is a
+ *  fixed unscalable level that shares an advanced-mod block with a rolled
+ *  "% increased …" companion. The support line must keep Level N as its search
+ *  value — never inherit the companion's (min-max) bracket or T1 widening. */
+export const SOCKETED_SUPPORT_LEVEL_MOD = /^Socketed Gems are Supported by Level \d+/i
+
 // Tinctures: disambiguate duplicate stat texts (e.g. "#% increased effect" has two stat IDs)
 const TINCTURE_STAT_REMAP: Record<string, string> = {
   'explicit.stat_2448920197': 'explicit.stat_3529940209', // "#% increased effect" -> tincture-specific variant
-}
-
-// Item class -> the trailing trade-stat qualifier its mods should prefer. The trade
-// API tags otherwise-identical display text (e.g. "#% increased Duration") with
-// "(Charm)"/"(Flask)"/"(Jewel)" to disambiguate; the clipboard carries only the bare
-// text, so we tell the matcher which qualified variant to pick (issue #397).
-const QUALIFIER_BY_ITEM_CLASS: Record<string, string> = {
-  Charms: 'Charm',
-  Flasks: 'Flask',
-  Jewels: 'Jewel',
 }
 
 // Rarity is an important PoE2 mod that should default on, so it overrides the
@@ -132,11 +130,32 @@ function mergeDuplicateStats(rows: StatFilter[], pct: number): StatFilter[] {
  *  substring fallback in mod-matcher resolves them to the SAME stat id as the
  *  joined row but with a null value. The joined row carries the real value, so a
  *  same-id sibling with a null value (and no option) is always that artifact --
- *  drop it. Genuine hybrid mods are unaffected: their lines match DIFFERENT stat
- *  ids, so no value-bearing sibling shares the fragment's id. */
+ *  drop it. A fragment can also match a DIFFERENT (longer) stat id than the
+ *  joined row via the same substring fallback (e.g. Watcher's Eye's "affected by
+ *  Purity of Lightning" half-line lands on an unrelated, longer stat text), so the
+ *  same-id check above misses it -- but its text is always verbatim one of the
+ *  joined row's lines, so a second rule drops any valueless row whose text is
+ *  exactly one of another row's "\n"-separated segments. Genuine hybrid mods are
+ *  unaffected: their lines only get dropped when the joined text itself matched a
+ *  real stat, in which case the joined row is the correct single stat. */
 export function dropFragmentDuplicates(rows: StatFilter[]): StatFilter[] {
   const idsWithValue = new Set(rows.filter((r) => r.value != null).map((r) => r.id))
-  return rows.filter((r) => r.value != null || r.option != null || !idsWithValue.has(r.id))
+  // Physical lines of any row that survived as a "\n"-joined multi-line mod. A
+  // fragment can match a DIFFERENT (longer) stat id than the joined row via the
+  // substring fallback, so the same-id check above misses it -- but its text is
+  // always verbatim one of the joined row's lines.
+  const joinedSegments = new Set<string>()
+  for (const r of rows) {
+    if (!r.text?.includes('\n')) continue
+    for (const seg of r.text.split('\n')) {
+      const trimmed = seg.trim()
+      if (trimmed) joinedSegments.add(trimmed)
+    }
+  }
+  return rows.filter(
+    (r) =>
+      r.value != null || r.option != null || (!idsWithValue.has(r.id) && !joinedSegments.has(r.text?.trim() ?? '')),
+  )
 }
 
 export function processExplicits(ctx: MatchContext): StatFilter[] {
@@ -243,6 +262,11 @@ export function processExplicits(ctx: MatchContext): StatFilter[] {
         matched.statId = 'explicit.stat_554899692'
       }
 
+      // PoE1 staff-block: jewels use untagged stat_1778298516; staves use
+      // stat_1001829678 "(Staves)". Pin by item class so jewel searches aren't
+      // forced onto the staves id (and unique staves still get the Staves twin).
+      matched.statId = resolveStaffBlockAttackStatId(matched.statId, itemInfo?.itemClass)
+
       // Determine if this value is fixed or rolled, and capture tier/range for display
       // Fixed values (min === max in tier range, or no range) use exact match
       // Rolled values use percentage-based min
@@ -284,16 +308,26 @@ export function processExplicits(ctx: MatchContext): StatFilter[] {
             : null
           if (normRange && normRange.min === normRange.max) isFixedValue = true
           if (!range && advMod.ranges.length === 0) isFixedValue = true
-          if (advMod.tier > 0) matchedTier = advMod.tier
-          if (normRange && normRange.min !== normRange.max) matchedRange = { min: normRange.min, max: normRange.max }
+          // Elder hybrid support lines: the shared AdvancedMod only carries the
+          // companion "% increased" (min-max) ranges. Level N must stay a fixed
+          // search value — never inherit sibling brackets / T1 widening (that made
+          // Burning support search min=31 from T1 31-35, Concentrated Level 16
+          // search min=14 via 90% floor). Also ignore a coincidental value match
+          // (Level 16 + 16% Area Damage sharing the same AdvancedMod.ranges entry).
+          if (SOCKETED_SUPPORT_LEVEL_MOD.test(cleaned)) {
+            isFixedValue = true
+          } else {
+            if (advMod.tier > 0) matchedTier = advMod.tier
+            if (normRange && normRange.min !== normRange.max) matchedRange = { min: normRange.min, max: normRange.max }
+            // Capture the full per-stat ranges and mod name for tier-ladder resolution.
+            advModRanges = advMod.ranges
+            advModName = advMod.name
+            advModMult = advMod.magnitudeMultiplier
+          }
           if (normRange && itemInfo?.rarity === 'Unique' && matched.value != null) {
             perfectRoll =
               normRange.min === normRange.max ? matched.value > normRange.max : matched.value >= normRange.max
           }
-          // Capture the full per-stat ranges and mod name for tier-ladder resolution.
-          advModRanges = advMod.ranges
-          advModName = advMod.name
-          advModMult = advMod.magnitudeMultiplier
         }
       }
       // For negative values: "reduced" mods use min (trade API expects min for beneficial reduction),
@@ -386,6 +420,12 @@ export function processExplicits(ctx: MatchContext): StatFilter[] {
       // with strictly-better pricier listings. Placed after T1 widening so T1 logic
       // cannot undo the exact pin.
       if (GEM_LEVEL_MOD.test(cleaned) && matched.value != null) {
+        minValue = matched.value
+        maxValue = matched.value
+      }
+      // Same pin for "Socketed Gems are Supported by Level N …" (Elder hybrids etc.).
+      // Support level is discrete/fixed; T1 companion widening must not rewrite it.
+      if (SOCKETED_SUPPORT_LEVEL_MOD.test(cleaned) && matched.value != null) {
         minValue = matched.value
         maxValue = matched.value
       }

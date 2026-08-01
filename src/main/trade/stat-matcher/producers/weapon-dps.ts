@@ -55,7 +55,7 @@ export function buildWeaponDpsFilters(
         value: pdps,
         min: Math.floor(pdps * pct),
         max: null,
-        enabled: true,
+        enabled: false,
         type: 'weapon',
         aggregated: true,
       })
@@ -66,7 +66,7 @@ export function buildWeaponDpsFilters(
         value: edps,
         min: Math.floor(edps * pct),
         max: null,
-        enabled: true,
+        enabled: false,
         type: 'weapon',
         aggregated: true,
       })
@@ -88,7 +88,7 @@ export function buildWeaponDpsFilters(
         value: totalDps,
         min: Math.floor(totalDps * pct),
         max: null,
-        enabled: false,
+        enabled: true,
         type: 'weapon',
         aggregated: true,
       })

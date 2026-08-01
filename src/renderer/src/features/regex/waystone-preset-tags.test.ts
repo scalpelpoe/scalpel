@@ -15,7 +15,9 @@ function state(
     want: new Set<number>(),
     avoid: new Set<number>(),
     tier: { min: 1, max: 16 },
-    rarity: { corrupted: false, uncorrupted: false },
+    corruption: { corrupted: false, uncorrupted: false },
+    rarityFilter: { normal: false, magic: false, rare: false },
+    revives: { min: 0, max: 6 },
     delirious: false,
     anyPack: false,
     quantities: { packSize: null, monsterEffectiveness: null, monsterRarity: null, itemRarity: null, dropChance: null },
@@ -48,5 +50,25 @@ describe('generateWaystonePresetTags value suffixes', () => {
     const tags = generateWaystonePresetTags(state({ avoid: new Set([BLEED.id]) }))
     const tag = tags.find((t) => t.sourceId === BLEED.id)
     expect(tag?.text.includes('>=')).toBe(false)
+  })
+})
+
+describe('generateWaystonePresetTags rarity + revives', () => {
+  it('emits a tag per selected rarity filter', () => {
+    const tags = generateWaystonePresetTags(state({ rarityFilter: { normal: false, magic: true, rare: true } }))
+    expect(tags.some((t) => t.sourceId === 'rarityMagic' && t.text === 'Magic')).toBe(true)
+    expect(tags.some((t) => t.sourceId === 'rarityRare' && t.text === 'Rare')).toBe(true)
+    expect(tags.some((t) => t.sourceId === 'rarityNormal')).toBe(false)
+  })
+
+  it('emits a revives tag when the range is narrower than 0-6', () => {
+    const tags = generateWaystonePresetTags(state({ revives: { min: 2, max: 6 } }))
+    const tag = tags.find((t) => t.sourceId === 'revives')
+    expect(tag?.text).toBe('revives 2-6')
+  })
+
+  it('omits the revives tag at the inert 0-6 default', () => {
+    const tags = generateWaystonePresetTags(state({ revives: { min: 0, max: 6 } }))
+    expect(tags.some((t) => t.sourceId === 'revives')).toBe(false)
   })
 })

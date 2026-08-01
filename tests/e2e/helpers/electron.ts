@@ -1,8 +1,8 @@
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { writeFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { mkdirSync, writeFileSync } from 'node:fs'
 
 export interface ScalpelE2EApp {
   app: ElectronApplication
@@ -14,6 +14,9 @@ export interface ScalpelE2EApp {
 export interface ScalpelE2EOptions {
   /** Pre-seeded electron-store config values written to config.json before launch. */
   seedConfig?: Record<string, unknown>
+  /** Extra files written under userData before launch, keyed by relative path
+   *  (e.g. `plugins/installed.json`). Parent directories are created. */
+  seedFiles?: Record<string, string>
 }
 
 const CONFIG_FILE = 'config.json'
@@ -23,6 +26,11 @@ export async function launchScalpelE2E(opts?: ScalpelE2EOptions): Promise<Scalpe
   try {
     if (opts?.seedConfig) {
       writeFileSync(join(userDataDir, CONFIG_FILE), JSON.stringify(opts.seedConfig))
+    }
+    for (const [rel, contents] of Object.entries(opts?.seedFiles ?? {})) {
+      const target = join(userDataDir, rel)
+      mkdirSync(dirname(target), { recursive: true })
+      writeFileSync(target, contents)
     }
     const app = await electron.launch({
       args: [join(process.cwd(), 'out/main/index.js')],

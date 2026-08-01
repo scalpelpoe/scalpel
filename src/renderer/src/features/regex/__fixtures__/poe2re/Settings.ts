@@ -18,6 +18,14 @@ export interface Settings {
       corrupted: boolean
       uncorrupted: boolean
     }
+    revives: {
+      min: number
+      max: number
+    }
+    /** Upstream calls this `waystone.rarity` and calls corruption `state`; this
+     *  fixture's older vintage already uses `rarity` for corruption, so the
+     *  normal/magic/rare filter lives here under a distinct name. */
+    rarityFilter: { normal: boolean; magic: boolean; rare: boolean }
     modifier: {
       over100: boolean
       round10: boolean
@@ -91,13 +99,14 @@ export interface Settings {
   }
   tablet: {
     resultSettings: ResultSettings
-    rarity: { normal: boolean; magic: boolean }
+    rarity: { normal: boolean; magic: boolean; rare: boolean }
     type: {
-      breach: boolean
-      delirium: boolean
       irradiated: boolean
-      expedition: boolean
       ritual: boolean
+      delirium: boolean
+      breach: boolean
+      abyss: boolean
+      temple: boolean
       overseer: boolean
     }
     modifier: {

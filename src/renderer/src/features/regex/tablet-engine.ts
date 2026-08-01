@@ -1,16 +1,19 @@
 import type { TabletMod } from '@shared/data/regex/tablet-mods'
-import { generateNumberRegex } from './waystone-number-regex'
+import { generateBoundedValueRegex, generateNumberRegex } from './waystone-number-regex'
+import { generateRarityRegex } from './rarity-regex'
 
 export interface TabletRarity {
   normal: boolean
   magic: boolean
+  rare: boolean
 }
 export interface TabletType {
-  breach: boolean
-  delirium: boolean
   irradiated: boolean
-  expedition: boolean
   ritual: boolean
+  delirium: boolean
+  breach: boolean
+  abyss: boolean
+  temple: boolean
   overseer: boolean
 }
 export interface TabletUses {
@@ -36,7 +39,7 @@ export interface TabletBuildArgs {
  *  Mirrors output bug-for-bug; see tablet-engine.test.ts for the parity check. */
 export function buildTabletRegex(args: TabletBuildArgs): string {
   const result = [
-    rarityRegex(args.rarity),
+    generateRarityRegex(args.rarity),
     typeRegex(args.type),
     args.uses.enabled ? usesRemainingRegex(args.uses.value) : null,
     ...modifierRegex(args.mods, args.selections, args.round10),
@@ -46,11 +49,14 @@ export function buildTabletRegex(args: TabletBuildArgs): string {
   return result.join(' ').trim()
 }
 
-/** Mirrors poe2.re selectedOptionRegex: a chosen magnitude prefixes the mod token.
- *  A falsy value yields the bare regex (matches their `if (option.value)`). */
+/** Mirrors poe2.re selectedOptionRegex (current vintage): bounded [value..modMax]
+ *  range anchored on the range paren; bare regex for falsy values; legacy scalar
+ *  form for rangeless mods (unreachable via the UI, guarded for stale presets). */
 function affixToken(mod: TabletMod, value: number | undefined, round10: boolean): string {
   if (!value) return mod.regex
-  return `${generateNumberRegex(String(value), round10, false)}.*${mod.regex}`
+  const rangeMax = mod.ranges[0]?.length === 2 ? mod.ranges[0][1] : undefined
+  if (rangeMax === undefined) return `${generateNumberRegex(String(value), round10, false)}.*${mod.regex}`
+  return `${generateBoundedValueRegex(String(value), String(rangeMax), round10, false)}.*${mod.regex}`
 }
 
 function modifierRegex(mods: TabletMod[], selections: TabletSelections, round10: boolean): string[] {
@@ -62,24 +68,19 @@ function modifierRegex(mods: TabletMod[], selections: TabletSelections, round10:
   return [`"${affixes.join('|')}"`]
 }
 
-function rarityRegex(rarity: TabletRarity): string | null {
-  if ((rarity.normal && rarity.magic) || (!rarity.normal && !rarity.magic)) return null
-  const result = [rarity.normal ? 'n' : '', rarity.magic ? 'm' : ''].filter((e) => e.length > 0).join('|')
-  if (result.length === 0) return null
-  if (result.length === 1) return `"y: ${result}"`
-  return `"y: (${result})"`
-}
-
 function typeRegex(type: TabletType): string | null {
-  const all = type.breach && type.delirium && type.irradiated && type.expedition && type.ritual && type.overseer
-  const none = !type.breach && !type.delirium && !type.irradiated && !type.expedition && !type.ritual && !type.overseer
+  const all =
+    type.irradiated && type.ritual && type.delirium && type.breach && type.abyss && type.temple && type.overseer
+  const none =
+    !type.irradiated && !type.ritual && !type.delirium && !type.breach && !type.abyss && !type.temple && !type.overseer
   if (all || none) return null
   const result = [
-    type.breach ? 'eac' : '',
-    type.delirium ? 'liri' : '',
     type.irradiated ? 'rra' : '',
-    type.expedition ? 'xped' : '',
     type.ritual ? 'tual' : '',
+    type.delirium ? 'liri' : '',
+    type.breach ? 'eac' : '',
+    type.abyss ? 'byss' : '',
+    type.temple ? 'empl' : '',
     type.overseer ? 'eer' : '',
   ]
     .filter((e) => e.length > 0)

@@ -27,6 +27,7 @@ import {
 } from './app-window/onboarding-steps'
 import { AppSettingsWrapper } from './app-window/AppSettingsWrapper'
 import { AppUpdateBanner } from './app-window/AppUpdateBanner'
+import { LinuxDisclaimerBanner } from './components/LinuxDisclaimerBanner'
 import { GameSwitchModal } from './components/GameSwitchModal'
 import { PoeVersionProvider } from './shared/poe-version-context'
 
@@ -180,6 +181,7 @@ export function AppWindow(): JSX.Element {
         />
       )}
       <AppUpdateBanner />
+      <LinuxDisclaimerBanner platform={settings?.platform} />
       <div
         className="flex-1 overflow-y-auto overflow-x-hidden flex justify-center"
         style={{

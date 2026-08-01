@@ -1,25 +1,25 @@
 // Data sourced from poe-vendor-string (https://github.com/veiset/poe-vendor-string)
 // Used with permission. All credit to veiset and contributors.
 export interface Token<T> {
-  id: number
-  regex: string
-  rawText: string
-  generalizedText: string
-  options: T
+  id: number,
+  regex: string,
+  rawText: string,
+  generalizedText: string,
+  options: T,
 }
 export interface TokenOptimization {
-  ids: number[]
-  regex: string
-  weight: number
-  count: number
+  ids: number[],
+  regex: string,
+  weight: number,
+  count: number,
 }
 export interface Regex<T> {
-  tokens: Token<T>[]
-  optimizationTable: { [ids: string]: TokenOptimization }
+  tokens: Token<T>[],
+  optimizationTable: {[ids: string]: TokenOptimization },
 }
 export interface MapModsTokenOption {
-  scary: number
-  nm: boolean
-  prefix: boolean
-  rewards?: string[]
+  scary: number,
+  nm: boolean,
+  prefix: boolean,
+  rewards?: string[],
 }

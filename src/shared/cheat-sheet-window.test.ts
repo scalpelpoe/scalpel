@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { clampRectToScreen } from './cheat-sheet-window'
+import { clampRectToScreen, restoreTargetRect } from './cheat-sheet-window'
 
 const SCREEN = { x: 0, y: 0, width: 1920, height: 1080 }
 
@@ -28,5 +28,58 @@ describe('clampRectToScreen', () => {
     const screen = { x: 1920, y: 0, width: 1920, height: 1080 }
     const r = { x: 1900, y: 900, width: 460, height: 270 }
     expect(clampRectToScreen(r, screen)).toEqual({ x: 1920, y: 810, width: 460, height: 270 })
+  })
+})
+
+describe('restoreTargetRect', () => {
+  it('round-trips an unmoved strip back to the exact pre-minimize rect', () => {
+    const preMinimize = { x: 760, y: 564, width: 460, height: 270 }
+    const strip = {
+      x: preMinimize.x + preMinimize.width - 220,
+      y: preMinimize.y + preMinimize.height - 34,
+      width: 220,
+      height: 34,
+    }
+    expect(restoreTargetRect(strip, { width: 460, height: 270 }, SCREEN)).toEqual(preMinimize)
+  })
+
+  it('grows from the strip current position after it was dragged, preserving the bottom-right corner', () => {
+    const strip = { x: 1000, y: 800, width: 220, height: 34 }
+    expect(restoreTargetRect(strip, { width: 460, height: 270 }, SCREEN)).toEqual({
+      x: 760,
+      y: 564,
+      width: 460,
+      height: 270,
+    })
+  })
+
+  it('clamps a strip parked near the top edge so the header stays on-screen', () => {
+    const strip = { x: 500, y: 10, width: 220, height: 34 }
+    expect(restoreTargetRect(strip, { width: 460, height: 270 }, SCREEN)).toEqual({
+      x: 260,
+      y: 0,
+      width: 460,
+      height: 270,
+    })
+  })
+
+  it('clamps a strip parked near the left edge so the header stays on-screen', () => {
+    const strip = { x: 5, y: 800, width: 220, height: 34 }
+    expect(restoreTargetRect(strip, { width: 460, height: 270 }, SCREEN)).toEqual({
+      x: 0,
+      y: 564,
+      width: 460,
+      height: 270,
+    })
+  })
+
+  it('caps a size larger than the display and anchors it to the origin', () => {
+    const strip = { x: 1800, y: 1000, width: 220, height: 34 }
+    expect(restoreTargetRect(strip, { width: 4000, height: 3000 }, SCREEN)).toEqual({
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 1080,
+    })
   })
 })

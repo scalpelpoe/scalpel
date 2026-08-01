@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { CheatSheetCategory } from '@shared/types'
+import { DEFINITIV_GUIDE_URL } from '@shared/endpoints'
+import { m } from '@shared/paraglide/messages.js'
 import { usePoeVersion } from '@renderer/shared/poe-version-context'
 
 /** Lists the bundled starter packs (PREFAB_PACKS, scoped to the active PoE
@@ -15,7 +17,15 @@ export function PrefabPicker({
   importedSlugs: Set<string>
   onImport: (cat: CheatSheetCategory) => void
 }): JSX.Element | null {
-  const [packs, setPacks] = useState<Array<{ slug: string; name: string; imageCount: number; poeVersion?: 1 | 2 }>>([])
+  const [packs, setPacks] = useState<
+    Array<{
+      slug: string
+      name: string
+      imageCount: number
+      poeVersion?: 1 | 2
+      group?: 'leveling-complete' | 'leveling-simple'
+    }>
+  >([])
   const [importing, setImporting] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const poeVersion = usePoeVersion()
@@ -51,22 +61,44 @@ export function PrefabPicker({
     }
   }
 
+  // Three picker sections driven by each pack's _group.txt sidecar.
+  const sections = [
+    { label: m.settings_cs_packs_leveling_complete(), packs: visible.filter((p) => p.group === 'leveling-complete') },
+    { label: m.settings_cs_packs_leveling_simple(), packs: visible.filter((p) => p.group === 'leveling-simple') },
+    { label: m.settings_cs_packs_other(), packs: visible.filter((p) => p.group === undefined) },
+  ].filter((s) => s.packs.length > 0)
+
   return (
-    <section>
-      <label>Starter packs</label>
-      <div className="mt-[6px] flex flex-wrap gap-2">
-        {visible.map((p) => (
-          <button
-            key={p.slug}
-            disabled={importing !== null}
-            onClick={() => handleImport(p)}
-            className="text-[11px] px-3 py-1.5 disabled:opacity-40 disabled:cursor-default"
-          >
-            {importing === p.slug ? `Importing ${p.name}...` : `+ ${p.name} (${p.imageCount})`}
-          </button>
-        ))}
-      </div>
+    <>
+      {sections.map((s) => (
+        <section key={s.label}>
+          <label>{s.label}</label>
+          <div className="mt-[6px] flex flex-wrap gap-2">
+            {s.packs.map((p) => (
+              <button
+                key={p.slug}
+                disabled={importing !== null}
+                onClick={() => handleImport(p)}
+                className="text-[11px] px-3 py-1.5 disabled:opacity-40 disabled:cursor-default"
+              >
+                {importing === p.slug ? `Importing ${p.name}...` : `+ ${p.name} (${p.imageCount})`}
+              </button>
+            ))}
+          </div>
+        </section>
+      ))}
       {error && <div className="text-[10px] text-danger mt-1">{error}</div>}
-    </section>
+      {visible.some((p) => p.slug.startsWith('poe1-act-')) && (
+        <div className="text-[10px] text-text-dim mt-1">
+          {m.settings_cs_poe1_pack_credit()}{' '}
+          <button
+            onClick={() => window.api.openExternal(DEFINITIV_GUIDE_URL)}
+            className="underline bg-transparent border-0 p-0 text-text-dim cursor-pointer"
+          >
+            definitivguide.com
+          </button>
+        </div>
+      )}
+    </>
   )
 }

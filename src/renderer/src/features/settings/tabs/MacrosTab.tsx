@@ -145,7 +145,18 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
                       updateCmd({ hotkey, scope })
                     }}
                   />
-                  <CommandInput value={cmd.command} onChange={(command) => updateCmd({ command })} />
+                  <CommandInput
+                    value={cmd.command}
+                    onChange={(command) => {
+                      const scope = narrowScopeForCrossGameConflict(
+                        settings,
+                        cmd.hotkey,
+                        { kind: 'chat', index: i },
+                        currentGame,
+                      )
+                      updateCmd({ command, scope })
+                    }}
+                  />
                   <RemoveButton
                     onClick={() =>
                       update(
@@ -227,8 +238,20 @@ export function MacrosTab({ settings, update, tryHotkey }: Props): JSX.Element {
                   <select
                     value={macro.action}
                     onChange={(e) => {
+                      const scope = narrowScopeForCrossGameConflict(
+                        settings,
+                        macro.hotkey,
+                        { kind: 'appmacro', index: i },
+                        currentGame,
+                      )
                       const macros = [...(settings.appMacros ?? [])]
-                      macros[i] = { ...macros[i], action: e.target.value, presetId: undefined, tag: undefined }
+                      macros[i] = {
+                        ...macros[i],
+                        action: e.target.value,
+                        presetId: undefined,
+                        tag: undefined,
+                        scope,
+                      }
                       update('appMacros', macros)
                     }}
                     className="text-[11px] flex-1 min-w-0 rounded h-[34px] box-border"

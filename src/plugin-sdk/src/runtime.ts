@@ -3,8 +3,10 @@
 // so plugins don't reimplement them.
 //
 // Only PURE functions live here. State-bound helpers (iconMap, IPC-backed
-// hooks), large JSON-data modules, and React components belong to a later
-// plan that handles the shared-state plumbing.
+// hooks) and React components belong to a later plan that handles the
+// shared-state plumbing. The map-mods dataset below is the one large
+// JSON-data module exported so far - it's static and locked by the SDK
+// contract, so it doesn't need that plumbing.
 
 export { ErrorBanner } from '../../renderer/src/components/ErrorBanner'
 export { LeagueDropdown } from '../../renderer/src/components/LeagueDropdown'
@@ -14,6 +16,7 @@ export { Slider } from '../../renderer/src/components/primitives/Slider'
 export { Textarea } from '../../renderer/src/components/primitives/Textarea'
 export { TextInput } from '../../renderer/src/components/primitives/TextInput'
 export { RemoveButton } from '../../renderer/src/components/RemoveButton'
+export { FilterChip } from '../../renderer/src/components/primitives/FilterChip'
 export { ScrubInput } from '../../renderer/src/components/primitives/ScrubInput'
 export { HotkeyField } from '../../renderer/src/components/primitives/HotkeyField'
 export { HotkeyRecorder } from '../../renderer/src/components/primitives/HotkeyRecorder'
@@ -46,6 +49,8 @@ export { RARITY_COLORS } from '../../shared/rarity-colors'
 export type { ModTier, TierLadder, TierStat } from '../../shared/data/tiers/types'
 export type { PoeItem, Zone } from '../../shared/types'
 export { compareVersions, versionMatches } from '../../shared/version-match'
+export type { Danger, MapMod } from '../../shared/data/regex/map-mods'
+export { DANGER_COLORS, DANGER_LABELS, MAP_MODS, NIGHTMARE_REGROUPED } from '../../shared/data/regex/map-mods'
 
 export { ItemChip } from './components/ItemChip'
 export { getItemIcon } from './runtime-helpers/get-item-icon'

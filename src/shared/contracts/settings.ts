@@ -1,10 +1,11 @@
 import type { MacroScope } from '../macro-scope'
 import type { ThemePalette } from '../theme/palette'
-import type { GameVariant, AppLocale, TradePriceOption, AdaptiveMode } from './core'
+import type { AppLocale, TradePriceOption, AdaptiveMode } from './core'
 import type { CheatSheetsSettings } from './overlay'
 import type { RegexPreset } from './regex'
 import type { PoeProfile } from './profiles'
 import type { HideableTabKey } from './items'
+import type { GameVariant } from './game-variant'
 
 export interface LegacyAppSettings {
   filterPathPoe1?: string
@@ -67,6 +68,9 @@ export interface AppSettings {
   hiddenPluginTabIds?: string[]
   developerMode?: boolean
   pluginRegistryUrl?: string
+  /** When true, opted-in: outdated registry plugins update silently in the
+   *  background (curated registry only). Default false. */
+  pluginAutoUpdate: boolean
   themeId: string
   customThemePalette: ThemePalette | null
   locale: AppLocale
@@ -83,6 +87,23 @@ export interface AppSettings {
   currencyLabelsAsText: boolean
 }
 
+// Spelled out instead of `NodeJS.Platform`: the plugin-sdk build compiles
+// this file with `types: []` (no Node ambients in scope), so the namespace
+// reference would fail to resolve there. Members mirror Node's Platform type.
+export type NodePlatform =
+  | 'aix'
+  | 'android'
+  | 'darwin'
+  | 'freebsd'
+  | 'haiku'
+  | 'linux'
+  | 'openbsd'
+  | 'sunos'
+  | 'win32'
+  | 'cygwin'
+  | 'netbsd'
+
 export interface RuntimeSettings extends AppSettings {
   activeProfile: PoeProfile | null
+  platform: NodePlatform
 }

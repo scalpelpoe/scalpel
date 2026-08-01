@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
-import { extname } from 'node:path'
-import { dialog, ipcMain } from 'electron'
+import { extname, join } from 'node:path'
+import { app, dialog, ipcMain } from 'electron'
 import { PREFAB_PACKS } from '@shared/data/cheat-sheet-prefabs'
 import { CHEAT_SHEET_PREFAB_BASE_URL } from '@shared/endpoints'
 import {
@@ -21,6 +21,16 @@ import { setPinnedZoneContentHeight, setPinnedZoneRendererVisible } from '../pin
 import { aroundNativeDialog } from '../windowing'
 
 const ALLOWED_EXTS = new Set(['png', 'jpg', 'jpeg', 'webp', 'gif'])
+
+/** Dev-only stand-in for fetchImageBuffer: raw.githubusercontent.com only
+ *  serves what's already pushed to main, so a not-yet-pushed pack would 404
+ *  during local testing. The repo working tree has the same files on disk,
+ *  so read them from there instead. */
+function readLocalPrefabImage(relPath: string): { buffer: Buffer; ext: string } {
+  const filePath = join(app.getAppPath(), 'cheat-sheet-prefabs', relPath)
+  const raw = extname(filePath).slice(1).toLowerCase()
+  return { buffer: readFileSync(filePath), ext: raw === 'jpeg' ? 'jpg' : raw }
+}
 
 export function register(): void {
   ipcMain.handle(
@@ -74,7 +84,9 @@ export function register(): void {
       const categoryId = generateCategoryId()
       const sheets: Array<{ id: string; ext: string; areaCodes?: string[] }> = []
       for (const img of pack.images) {
-        const { buffer, ext } = await fetchImageBuffer(CHEAT_SHEET_PREFAB_BASE_URL + img.path)
+        const { buffer, ext } = app.isPackaged
+          ? await fetchImageBuffer(CHEAT_SHEET_PREFAB_BASE_URL + img.path)
+          : readLocalPrefabImage(img.path)
         const id = generateSheetId()
         saveSheetBuffer(categoryId, id, ext, buffer)
         sheets.push({ id, ext, areaCodes: img.areaCodes.length > 0 ? img.areaCodes : undefined })
@@ -85,12 +97,19 @@ export function register(): void {
 
   ipcMain.handle(
     'cheat-sheet:list-prefabs',
-    (): Array<{ slug: string; name: string; imageCount: number; poeVersion?: 1 | 2 }> => {
+    (): Array<{
+      slug: string
+      name: string
+      imageCount: number
+      poeVersion?: 1 | 2
+      group?: 'leveling-complete' | 'leveling-simple'
+    }> => {
       return PREFAB_PACKS.map((p) => ({
         slug: p.slug,
         name: p.name,
         imageCount: p.images.length,
         poeVersion: p.poeVersion,
+        group: p.group,
       }))
     },
   )

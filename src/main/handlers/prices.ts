@@ -11,8 +11,10 @@ import { findMatchingBlocks } from '../filter/matcher'
 import { getCurrentFilter, onFilterLoaded } from '../filter-state'
 import { getPoeVersion } from '../game-state'
 import { getProfileBackedSetting } from '../profiles/profile-settings'
+import { getBeastPrices } from '../trade/beast-prices'
 import { loadIconCache } from '../trade/icon-cache'
 import {
+  fetchJson,
   getGemNames,
   getUniquesByBase,
   lookupBestUniquePrice,
@@ -53,6 +55,10 @@ function getBaseToClass(): Record<string, string> {
     _baseToClass = map
   }
   return _baseToClass
+}
+
+export function invalidateBaseToClassCache(): void {
+  _baseToClass = null
 }
 
 /** Div card name -> reward text, built once from static economy data. */
@@ -112,6 +118,14 @@ function findItemClassInFilter(baseType: string): string {
 // gems from poe.ninja get picked up).
 const SEARCHABLE_CACHE_TTL = 6 * 60 * 60 * 1000
 let searchableCache: { filter: FilterFile; items: SearchableItem[]; computedAt: number } | null = null
+
+/** Drop the searchable-items cache so it rebuilds against the new game's data.
+ *  On the common switch path the filter reference changes (filter reload) and
+ *  the cache self-invalidates, but a profile with no filter keeps the previous
+ *  reference; nulling here covers that edge for the in-process game switch. */
+export function invalidateSearchableItemsCache(): void {
+  searchableCache = null
+}
 
 /** Evaluate a synthetic item against the filter and return the full Continue
  *  chain in file order, ending with the primary non-Continue match. When no
@@ -474,6 +488,14 @@ export function register(store: Store<AppSettings>): void {
       }
       return result
     },
+  )
+
+  // Bestiary regex tab. Lazy: only fires when that tab mounts or the user hits
+  // Refresh, so sessions that never open it never pay the request. League is
+  // read from the store here rather than passed by the renderer, matching
+  // buildSearchableItems.
+  ipcMain.handle('get-beast-prices', (_event, force?: boolean) =>
+    getBeastPrices(getProfileBackedSetting(store, 'league'), fetchJson, force === true),
   )
 
   ipcMain.handle('get-searchable-items', async (): Promise<SearchableItem[]> => {

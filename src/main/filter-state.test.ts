@@ -3,7 +3,9 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const MOCK_USER_DATA = vi.hoisted(() => `${process.env.TEMP ?? process.cwd()}\\scalpel-filter-state-${Date.now()}`)
+const MOCK_USER_DATA = vi.hoisted(() =>
+  require('node:path').join(require('node:os').tmpdir(), `scalpel-filter-state-${Date.now()}`),
+)
 
 vi.mock('electron', () => ({
   app: { getPath: vi.fn(() => MOCK_USER_DATA) },

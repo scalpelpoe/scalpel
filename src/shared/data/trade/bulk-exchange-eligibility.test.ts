@@ -20,3 +20,13 @@ describe('isVendorExchangeItem (PoE2 / Ange)', () => {
     expect(isVendorExchangeItem(2, 'Body Armours', 'Ornate Ringmail')).toBe(false)
   })
 })
+
+describe('isVendorExchangeItem (PoE1 / Faustus)', () => {
+  it('routes stackable currency to the exchange', () => {
+    expect(isVendorExchangeItem(1, 'Stackable Currency', 'Chaos Orb', 'Currency')).toBe(true)
+  })
+
+  it('excludes Scrying Orbs -- Faustus has no listing for a map-bound orb (#513)', () => {
+    expect(isVendorExchangeItem(1, 'Stackable Currency', 'Scrying Orb', 'Currency')).toBe(false)
+  })
+})

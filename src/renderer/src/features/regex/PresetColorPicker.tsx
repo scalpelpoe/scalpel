@@ -50,7 +50,12 @@ export function PresetColorPicker({
           return createPortal(
             <>
               <div className="fixed inset-0 z-[9998]" onClick={() => setOpen(false)} />
+              {/* Portaled to body, so the overlay's panel-rect poll doesn't see it via the
+                  wrapper -- self-tag (same hook ContextMenu uses) or every swatch hanging
+                  past the panel's bottom edge is click-through to the game. Short tabs
+                  (Custom) hit this; taller ones only worked because the menu fit inside. */}
               <div
+                data-context-menu=""
                 className="fixed -translate-x-full z-[9999] bg-bg-card border border-border rounded-md p-1.5 shadow-[0_4px_16px_rgba(0,0,0,0.5)] flex flex-col gap-1 w-max"
                 style={{ left: pos.left, top: pos.top }}
               >

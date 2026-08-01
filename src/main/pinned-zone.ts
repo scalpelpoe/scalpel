@@ -16,6 +16,12 @@ let onAnchorChangedFn: ((a: OverlayAnchor) => void) | undefined
  *  consults this so a stale match-list event can't reveal the overlay after
  *  the user has explicitly toggled pinning off. */
 let pinnedEnabled = false
+/** The renderer's last self-report - true when it rendered at least one
+ *  matching sheet for the current (sticky) zone. This is the gateShow source
+ *  of truth: a shown transparent window with no content still captures mouse
+ *  input over its whole bounds (issue #464), so every show path must check
+ *  this before actually revealing the window. */
+let rendererVisible = false
 
 export function registerPinnedZoneOverlay(deps: {
   storedAnchor: () => OverlayAnchor | undefined
@@ -30,7 +36,12 @@ export function registerPinnedZoneOverlay(deps: {
     storedAnchor: () => storedAnchorGetter(),
     onAnchorChanged: (a) => onAnchorChangedFn?.(a),
     onFirstShow: (win) => sendCurrentZoneTo(win),
+    gateShow: () => rendererVisible,
   })
+  // The pinned zone map is a persistent pinned surface: Esc must never
+  // dismiss it (it would stay gone until the next zone change). It hides
+  // via unpinning, a no-match zone, or PoE blur - not the Esc sweep.
+  overlay.setPersistOverOthers(true)
   forwardZoneChangesTo(() => overlay?.getWindow() ?? null)
   return overlay
 }
@@ -62,6 +73,7 @@ export function applyPinnedZoneEnabled(enabled: boolean): void {
  *  re-enters a matching zone - the pinned-zone-only path is uniquely
  *  vulnerable because no other overlay self-hides from its renderer. */
 export function setPinnedZoneRendererVisible(visible: boolean): void {
+  rendererVisible = visible
   if (!overlay) return
   if (visible && !pinnedEnabled) return
   if (visible) {

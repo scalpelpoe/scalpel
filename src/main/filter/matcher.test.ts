@@ -185,6 +185,38 @@ describe('evaluateBlock', () => {
     const result = evaluateBlock(block, item)
     expect(result.hasUnknowns).toBe(true)
   })
+
+  it('matches Vestigial True against a vestigial item', () => {
+    const block = makeBlock({ conditions: [makeCond('Vestigial', ['True'])] })
+    const item = makeItem({ vestigial: true })
+    expect(evaluateBlock(block, item).matches).toBe(true)
+  })
+
+  it('fails Vestigial False against a vestigial item', () => {
+    const block = makeBlock({ conditions: [makeCond('Vestigial', ['False'])] })
+    const item = makeItem({ vestigial: true })
+    expect(evaluateBlock(block, item).matches).toBe(false)
+  })
+
+  it('fails Vestigial True against a non-vestigial item', () => {
+    const block = makeBlock({ conditions: [makeCond('Vestigial', ['True'])] })
+    const item = makeItem({ vestigial: false })
+    expect(evaluateBlock(block, item).matches).toBe(false)
+  })
+
+  it('matches Vestigial False against a non-vestigial item', () => {
+    const block = makeBlock({ conditions: [makeCond('Vestigial', ['False'])] })
+    const item = makeItem({ vestigial: false })
+    expect(evaluateBlock(block, item).matches).toBe(true)
+  })
+
+  it('treats undefined vestigial as false', () => {
+    const trueBlock = makeBlock({ conditions: [makeCond('Vestigial', ['True'])] })
+    const falseBlock = makeBlock({ conditions: [makeCond('Vestigial', ['False'])] })
+    const item = makeItem()
+    expect(evaluateBlock(trueBlock, item).matches).toBe(false)
+    expect(evaluateBlock(falseBlock, item).matches).toBe(true)
+  })
 })
 
 describe('findMatchingBlocks', () => {

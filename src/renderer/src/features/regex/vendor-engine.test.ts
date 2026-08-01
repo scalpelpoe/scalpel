@@ -73,6 +73,8 @@ function asUpstream(v: VendorSettings, customText = ''): Settings {
       resultSettings: { customText: '', autoCopy: false },
       tier: { min: 0, max: 0 },
       rarity: { corrupted: false, uncorrupted: false },
+      revives: { min: 0, max: 6 },
+      rarityFilter: { normal: false, magic: false, rare: false },
       modifier: {
         over100: false,
         round10: false,
@@ -88,8 +90,16 @@ function asUpstream(v: VendorSettings, customText = ''): Settings {
     vendor: { ...v, resultSettings: { customText, autoCopy: false } },
     tablet: {
       resultSettings: { customText: '', autoCopy: false },
-      rarity: { normal: false, magic: false },
-      type: { breach: false, delirium: false, irradiated: false, expedition: false, ritual: false, overseer: false },
+      rarity: { normal: false, magic: false, rare: false },
+      type: {
+        irradiated: false,
+        ritual: false,
+        delirium: false,
+        breach: false,
+        abyss: false,
+        temple: false,
+        overseer: false,
+      },
       modifier: { usesRemaining: false, numUsesRemaining: 1, affixes: [], affixSelectType: 'any', round10: false },
     },
   }
@@ -355,7 +365,7 @@ describe('buildVendorRegex golden (live poe2.re/vendor captures)', () => {
       mutate: (v) => {
         v.itemMods.elemental = true
       },
-      expected: '"\\d cfl.+da"',
+      expected: '"\\d [cfl].+da"',
     },
     {
       name: 'item level 65-84',
@@ -386,7 +396,7 @@ describe('buildVendorRegex golden (live poe2.re/vendor captures)', () => {
         v.characterLevel = { min: 60, max: 80 }
       },
       expected:
-        '"y: \\+|y: r|m level: (7\\d|8[0-4])\\b|s: level (6\\d|[7-7]\\d|80)\\b|(fi|co).+res|30% i.+mov|\\d cfl.+da|\\d.+life|s: boo"',
+        '"y: \\+|y: r|m level: (7\\d|8[0-4])\\b|s: level (6\\d|[7-7]\\d|80)\\b|(fi|co).+res|30% i.+mov|\\d [cfl].+da|\\d.+m life|s: boo"',
     },
   ]
 
@@ -397,6 +407,18 @@ describe('buildVendorRegex golden (live poe2.re/vendor captures)', () => {
       expect(buildVendorRegex(v)).toBe(c.expected)
     })
   }
+
+  it('elemental damage toggle emits a character class (upstream #170)', () => {
+    const v = emptyVendorSettings()
+    v.itemMods.elemental = true
+    expect(buildVendorRegex(v)).toBe('"\\d [cfl].+da"')
+  })
+
+  it('max life token requires the m prefix (upstream #164)', () => {
+    const v = emptyVendorSettings()
+    v.itemMods.maxLife = true
+    expect(buildVendorRegex(v)).toBe('"\\d.+m life"')
+  })
 })
 
 function withFields(...fields: Array<[keyof VendorSettings, string]>): VendorSettings {

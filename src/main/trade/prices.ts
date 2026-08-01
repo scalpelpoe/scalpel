@@ -6,6 +6,7 @@ import uniqueInfoPoe2 from '@shared/data/items/unique-info-poe2.json'
 import { POE_NINJA_API } from '@shared/endpoints'
 import type { NinjaItemRef } from '@shared/external-link'
 import { deriveItemVariant } from '@shared/external-link'
+import { hasGeneratedName } from '@shared/poe-item'
 import type { PriceEntry, PriceInfo } from '@shared/types'
 import { getPoeVersion } from '../game-state'
 import { getManifest } from '../manifest'
@@ -27,11 +28,30 @@ function getCachePath(): string {
   return join(app.getPath('userData'), 'uniques-by-base-cache.json')
 }
 
+// Merges dynamic/cached entries over the bundled static map (static supplies
+// the floor, extra supplements it). Shared by the dense-response builder and
+// the cache loader below.
+function mergeOverStatic(extra: Record<string, Iterable<string>>): Record<string, string[]> {
+  const merged = { ...(poe1StaticUniquesByBase as Record<string, string[]>) }
+  for (const [base, names] of Object.entries(extra)) {
+    const existing = new Set(merged[base] ?? [])
+    for (const n of names) existing.add(n)
+    merged[base] = [...existing]
+  }
+  return merged
+}
+
 function loadCachedUniquesByBase(): Record<string, string[]> {
   try {
     const cachePath = getCachePath()
     if (existsSync(cachePath)) {
-      return JSON.parse(readFileSync(cachePath, 'utf-8'))
+      // The cache file is a point-in-time merge from the last successful
+      // refreshPrices() call, not a live re-merge. Without re-merging over
+      // the bundled static map here, a shipped data fix (e.g. new flask
+      // bases added to unique-info.json) would stay invisible for an
+      // existing user until their next successful price refresh overwrote
+      // the file.
+      return mergeOverStatic(JSON.parse(readFileSync(cachePath, 'utf-8')))
     }
   } catch {
     /* fall through */
@@ -130,7 +150,10 @@ interface DenseResponse {
   itemOverviews: DenseOverview[]
 }
 
-function fetchJson(url: string): Promise<unknown> {
+/** Bare JSON GET over Electron's net stack. Exported so sibling ninja fetchers
+ *  (beast-prices) can be handed a real fetcher without importing electron
+ *  themselves, which keeps them unit-testable. */
+export function fetchJson(url: string): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const request = net.request(url)
     request.setHeader('User-Agent', 'Scalpel-Prices')
@@ -218,12 +241,7 @@ function buildUniquesByBaseFromDense(resp: DenseResponse): void {
   }
 
   // Merge dynamic data into the base map (dynamic supplements static)
-  const merged = { ...(poe1StaticUniquesByBase as Record<string, string[]>) }
-  for (const [base, names] of Object.entries(dynamicMap)) {
-    const existing = new Set(merged[base] ?? [])
-    for (const n of names) existing.add(n)
-    merged[base] = [...existing]
-  }
+  const merged = mergeOverStatic(dynamicMap)
   uniqueBaseMap = merged
   saveCachedUniquesByBase(merged)
 }
@@ -423,6 +441,11 @@ export function lookupUniquePriceForBase(name: string, baseType: string): PriceI
  *  price lookup always agree -- when we link a user to /skill-gems/hatred-21-20c,
  *  the price chip we show is the price ninja actually has for that page. */
 export function lookupPriceForItem(item: NinjaItemRef): PriceInfo | undefined {
+  // Magic/Rare items show a randomly generated title that can collide with a
+  // real currency/unique name (e.g. a Hypnotic Eye Jewel rolling "Ancient
+  // Orb", #501), so price them by base type only -- the name carries no
+  // pricing identity for these rarities.
+  if (hasGeneratedName(item.rarity)) return lookupPrice(item.baseType, item.baseType)
   const variant = deriveItemVariant(item)
   if (variant != null) {
     const exact = pricesByVariant.get(`${item.name.toLowerCase()}|${variant}`)

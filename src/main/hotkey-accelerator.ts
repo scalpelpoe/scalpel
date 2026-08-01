@@ -1,5 +1,5 @@
 import { UiohookKey } from 'uiohook-napi'
-import { PHYSICAL_PREFIX, PHYSICAL_CODES, decodePhysicalToken } from '@shared/hotkey-tokens'
+import { NUMPAD_CODE_TO_TOKEN, PHYSICAL_PREFIX, PHYSICAL_CODES, decodePhysicalToken } from '@shared/hotkey-tokens'
 
 // ─── Accelerator → uiohook keycode mapping ────────────────────────────────────
 //
@@ -43,7 +43,14 @@ const EXTRA_KEYS: Record<string, number> = {
   '9': UiohookKey['9'],
 }
 
-const KEY_MAP: Record<string, number> = { ...LETTER_KEYS, ...EXTRA_KEYS }
+// Electron's native num0-num9/numdec/numadd/numsub/nummult/numdiv tokens, mapped
+// to uiohook keycodes by inverting the shared code->token map. DOM code names
+// match UiohookKey property names, so this is a direct lookup.
+const NUMPAD_KEYS: Record<string, number> = Object.fromEntries(
+  Object.entries(NUMPAD_CODE_TO_TOKEN).map(([code, token]) => [token, UiohookKey[code as keyof typeof UiohookKey]]),
+)
+
+const KEY_MAP: Record<string, number> = { ...LETTER_KEYS, ...EXTRA_KEYS, ...NUMPAD_KEYS }
 
 // DOM code name -> uiohook keycode for the physically-routed OEM/punctuation
 // keys. The code names match UiohookKey's property names exactly, so this is a

@@ -41,6 +41,15 @@ export function isSkillGem(item: { itemClass: string }): boolean {
   return SKILL_GEM_CLASSES.has(item.itemClass)
 }
 
+/** Magic and Rare items display a randomly generated title ("Ancient Orb" on a
+ *  Hypnotic Eye Jewel) that can collide with a real currency or unique name, so
+ *  any lookup keyed on the displayed name has to fall back to the base type for
+ *  them (#501). Every other rarity -- Normal, Unique, Currency, Gem, Divination
+ *  Card -- shows a name that identifies the item. */
+export function hasGeneratedName(rarity: string | undefined): boolean {
+  return rarity === 'Magic' || rarity === 'Rare'
+}
+
 /** Default "assume endgame" area level by game version. PoE1 FilterBlade splits
  *  campaign vs endgame at AreaLevel 68 and our baseline tier-16 map is area 83.
  *  PoE2 splits at 65 and the top waystone tier caps near 80. Used for synthetic

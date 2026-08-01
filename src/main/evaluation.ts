@@ -15,11 +15,9 @@ import {
   findStrandBreakpoints,
 } from './filter/matcher'
 import { getCurrentFilter } from './filter-state'
-import { detectFocusedPoeVersion, detectOpenPoeVersions } from './game-detector'
 import { getPoeVersion } from './game-state'
-import { requestGameSwitch } from './game-switch'
 import { sendCtrlCToPoE } from './hotkeys'
-import { focusGameWindow, getOverlayAttachedVersion, getOverlayWindow, isTypingInOverlay, showOverlay } from './overlay'
+import { focusGameWindow, getOverlayWindow, showOverlay } from './overlay'
 import { readItemFromClipboard } from './trade/clipboard'
 import {
   getUniquesByBase,
@@ -131,6 +129,15 @@ export function reEvaluateLastItem(): void {
   if (lastEvaluatedItem) evaluateAndSend(lastEvaluatedItem)
 }
 
+/** Forget the last displayed item so a subsequent reEvaluateLastItem() is a
+ *  no-op. A relaunch-based game switch dropped this naturally (fresh process);
+ *  the experimental in-process switch must clear it explicitly, otherwise the
+ *  filter reload that fires on profile activation would re-evaluate the previous
+ *  game's item and pop the (closed) overlay back open on the new game. */
+export function clearLastEvaluatedItem(): void {
+  lastEvaluatedItem = null
+}
+
 export function evaluateAndSend(item: PoeItem): void {
   lastEvaluatedItem = item
   const effective = applyZoneAreaLevel(item)
@@ -213,11 +220,7 @@ export async function preloadPriceCheck(item: PoeItem, store: Store<AppSettings>
   const unidCandidates: Array<{ name: string; chaosValue: number }> = []
   if (item.rarity === 'Unique' && !item.identified) {
     const uniquesByBase = getUniquesByBase()
-    let names = uniquesByBase[item.baseType] ?? []
-    // Unique maps all share "Map" base type
-    if (item.itemClass === 'Maps' && names.length === 0) {
-      names = uniquesByBase.Map ?? []
-    }
+    const names = uniquesByBase[item.baseType] ?? []
     const isStandard = league.toLowerCase() === 'standard'
     for (const name of names) {
       // Disambiguate same-name uniques by the item's base type; falls back
@@ -269,6 +272,7 @@ export async function preloadPriceCheck(item: PoeItem, store: Store<AppSettings>
       mapMagicMonsters: item.mapMagicMonsters,
       mapRareMonsters: item.mapRareMonsters,
       enchants: item.enchants,
+      runes: item.runes,
       imbues: item.imbues,
       grantedSkills: item.grantedSkills,
       memoryStrands: item.memoryStrands,
@@ -295,6 +299,9 @@ export async function preloadPriceCheck(item: PoeItem, store: Store<AppSettings>
       ultimatumRequired: item.ultimatumRequired,
       isSynthetic: item.isSynthetic,
       unidentifiedTier: item.unidentifiedItemTier,
+      chartZone: item.chartZone,
+      chartShape: item.chartShape,
+      scryingArea: item.scryingArea,
     },
     item.advancedMods,
     store.get('priceCheckDefaultPercent') ?? 90,
@@ -330,10 +337,22 @@ let consecutiveClipboardFailures = 0
  * The user's prior clipboard contents are stashed on entry and restored on exit
  * so price-checking an item doesn't stomp whatever they had copied. Explicit
  * "Copy to clipboard" actions (trade whispers, regex copy buttons) bypass this.
+ *
+ * On a failed capture, shows the main overlay unless `opts.showOverlay` is
+ * explicitly false - the `elevation-hint` and `no-item-in-clipboard` IPC
+ * messages still fire regardless, so the renderer's state is correct the next
+ * time the overlay opens.
  */
-async function captureItemFromClipboard(isElevated: () => boolean): Promise<PoeItem | null> {
+async function captureItemFromClipboard(
+  isElevated: () => boolean,
+  opts?: { showOverlay?: boolean },
+): Promise<PoeItem | null> {
+  const showOverlayFlag = opts?.showOverlay ?? true
   const restoreClip = snapshotClipboard()
 
+  // Hotkeys are also valid while a gameplay overlay owns focus. Hand input
+  // back to PoE before copying so that path is as immediate as game focus.
+  if (!OverlayController.targetHasFocus) focusGameWindow()
   clipboard.clear()
   await sendCtrlCToPoE()
 
@@ -366,7 +385,7 @@ async function captureItemFromClipboard(isElevated: () => boolean): Promise<PoeI
       getOverlayWindow()?.webContents.send('elevation-hint')
     }
     getOverlayWindow()?.webContents.send('no-item-in-clipboard')
-    showOverlay()
+    if (showOverlayFlag) showOverlay()
     return null
   }
 
@@ -374,81 +393,49 @@ async function captureItemFromClipboard(isElevated: () => boolean): Promise<PoeI
   return item
 }
 
-/** Before the hotkey handler does any work, confirm the overlay is attached to the
- *  PoE version that actually has foreground focus. If the other PoE is focused,
- *  show the restart-prompt modal -- electron-overlay-window can only attach once
- *  per process (its native tracker keeps static globals), so switching games
- *  requires an app relaunch.
+/**
+ * Core copy-and-evaluate flow shared by the main hotkey and the plugin IPC handler.
+ * Captures an item from the clipboard and dispatches it to the filter/price-check
+ * pipeline, returning the parsed item (or null when nothing recognisable is on the
+ * clipboard). Shows the main overlay unless `opts.showOverlay` is explicitly false -
+ * a plugin with its own overlay passes that to avoid Scalpel's overlay popping open
+ * on top of it. The suppression also covers a failed clipboard capture (no filter
+ * loaded, nothing recognisable on the clipboard), not just the success path.
+ * Callers that want a specific overlay view should send the appropriate IPC message
+ * before or after calling this.
  *
- *  Detect the focused PoE version *before* the targetHasFocus fast path because
- *  attachByTitle('Path of Exile') may prefix-match 'Path of Exile 2' on Windows,
- *  making targetHasFocus true even when the overlay is attached to the wrong game.
- *  Always returns false when a switch is needed: the current press is swallowed,
- *  and the user reopens the overlay from the correct game after restart. */
-async function ensureCorrectGameForHotkey(store: Store<AppSettings>): Promise<boolean> {
-  // User typing in an overlay text field -- swallow so single-key hotkeys
-  // don't stomp the input. Otherwise if the overlay window itself is focused
-  // (user clicked into it), refocus PoE so the subsequent Ctrl+C reaches the
-  // game window.
-  if (isTypingInOverlay()) return false
-  if (getOverlayWindow()?.isFocused()) {
-    focusGameWindow()
-    return true
-  }
+ * `opts.dispatch` defaults to true. When explicitly false, this is a private read:
+ * the item is captured and returned to the caller alone. `evaluateAndSend` (which
+ * pushes `overlay-data` and hijacks the main overlay's view to 'item') and
+ * `preloadPriceCheck` (which warms the price-check pipeline) are both skipped, and
+ * since nothing is evaluated against a filter, the no-filter early return does not
+ * apply either - no filter needs to be loaded, and `no-filter-loaded` is not sent.
+ */
+export async function runMainHotkeyFlow(
+  store: Store<AppSettings>,
+  isElevated: () => boolean,
+  opts?: { showOverlay?: boolean; dispatch?: boolean },
+): Promise<PoeItem | null> {
+  const showOverlayFlag = opts?.showOverlay ?? true
+  const dispatchFlag = opts?.dispatch ?? true
 
-  const v = await detectFocusedPoeVersion()
-  if (v) {
-    // Relaunch when the focused game differs from the in-memory version OR from
-    // the version the overlay actually attached to at startup. The attach check
-    // is a backstop for onboarding exits that bypass finish-onboarding (e.g. the
-    // titlebar X): in-memory may already be PoE2 (so the version check passes)
-    // while the overlay is still bound to PoE1, so results never surface until a
-    // relaunch rebinds the native tracker.
-    if (v === getPoeVersion() && v === getOverlayAttachedVersion()) return true
-    requestGameSwitch(store, v).catch((err) => console.error('[game-switch]', err))
-    return false
-  }
-
-  // No PoE window has foreground focus. If the overlay target has focus, the
-  // game we're attached to is in the foreground, so we can proceed.
-  if (OverlayController.targetHasFocus) return true
-
-  // No PoE window has focus at all. Check if exactly one PoE variant has windows
-  // open anywhere on the desktop. If yes and it differs from the current profile,
-  // that's a strong signal the user is on the wrong game version.
-  const runningVersions = await detectOpenPoeVersions()
-  if (runningVersions.size === 1) {
-    const [runningVersion] = [...runningVersions]
-    if (runningVersion !== getPoeVersion()) {
-      requestGameSwitch(store, runningVersion).catch((err) => console.error('[game-switch]', err))
-      return false
+  if (dispatchFlag) {
+    const currentFilter = getCurrentFilter()
+    if (!currentFilter) {
+      getOverlayWindow()?.webContents.send('no-filter-loaded')
+      if (showOverlayFlag) showOverlay()
+      return null
     }
   }
 
-  return false
-}
-
-/**
- * Core copy-and-evaluate flow shared by the main hotkey and the plugin IPC handler.
- * Captures an item from the clipboard, dispatches it to the filter/price-check pipeline,
- * shows the overlay, and returns the parsed item (or null when nothing recognisable is
- * on the clipboard). Callers that want a specific overlay view should send the appropriate
- * IPC message before or after calling this.
- */
-export async function runMainHotkeyFlow(store: Store<AppSettings>, isElevated: () => boolean): Promise<PoeItem | null> {
-  const currentFilter = getCurrentFilter()
-  if (!currentFilter) {
-    getOverlayWindow()?.webContents.send('no-filter-loaded')
-    showOverlay()
-    return null
-  }
-
-  const item = await captureItemFromClipboard(isElevated)
+  const item = await captureItemFromClipboard(isElevated, { showOverlay: showOverlayFlag })
   if (!item) return null
 
-  evaluateAndSend(item)
-  preloadPriceCheck(item, store)
-  showOverlay()
+  if (dispatchFlag) {
+    evaluateAndSend(item)
+    preloadPriceCheck(item, store)
+  }
+  if (showOverlayFlag) showOverlay()
   return item
 }
 
@@ -458,7 +445,6 @@ export function createHotkeyHandler(store: Store<AppSettings>, isElevated: () =>
     hotkeyProcessing = true
 
     try {
-      if (!(await ensureCorrectGameForHotkey(store))) return
       lastCursorX = screen.getCursorScreenPoint().x
 
       // Flag the next overlay-data as "came from the filter hotkey" so the renderer
@@ -489,7 +475,6 @@ export function createPriceCheckHandler(store: Store<AppSettings>, isElevated: (
     hotkeyProcessing = true
 
     try {
-      if (!(await ensureCorrectGameForHotkey(store))) return
       lastCursorX = screen.getCursorScreenPoint().x
 
       const item = await captureItemFromClipboard(isElevated)

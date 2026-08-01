@@ -386,6 +386,58 @@ describe('PluginHost', () => {
     expect(pluginRegisterOverlay).toHaveBeenCalledWith('hello', expect.objectContaining({ title: 'Demo Overlay' }))
   })
 
+  it('carries the overlay mode through to the tab state', async () => {
+    installedList.push({ manifest, entryUrl: 'file:///fake/plugin.js' })
+    const pluginRegisterOverlay = vi.fn(async () => undefined)
+    ;(window as unknown as { api: unknown }).api = {
+      listInstalledPlugins: vi.fn(async () => installedList),
+      pluginStorageGet: vi.fn(async () => null),
+      pluginStorageSet: vi.fn(async () => undefined),
+      pluginStorageDelete: vi.fn(async () => undefined),
+      pluginStorageKeys: vi.fn(async () => []),
+      pluginRegisterHotkey: vi.fn(async () => undefined),
+      pluginUnregisterHotkey: vi.fn(async () => undefined),
+      pluginRegisterTab: vi.fn(async () => undefined),
+      pluginUnregisterTab: vi.fn(async () => undefined),
+      pluginRegisterOverlay,
+      onPluginMacro: vi.fn(() => () => {}),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      pluginTriggerMainHotkey: vi.fn(async () => null),
+    }
+    ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn(async () => ({
+      default: (ctx: ScalpelPluginContext) => {
+        ctx.registerTab({ label: 'Demo', icon: '<svg/>', render: () => {} })
+        ctx.registerOverlay({ title: 'Demo Overlay', mode: 'annotation' }, () => {})
+      },
+    }))
+    const { PluginHost } = await import('./PluginHost')
+    const onTabsChange = vi.fn()
+    render(
+      <PluginHost
+        ready
+        poeVersion={1}
+        league="Mirage"
+        currentItem={null}
+        currentZone={null}
+        onSubscribeCurrentItem={() => () => {}}
+        onSubscribeCurrentZone={() => () => {}}
+        onSubscribeLeagueChange={() => () => {}}
+        onOpenExternal={() => {}}
+        onTabsChange={onTabsChange}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
+      />,
+    )
+    await waitFor(() => expect(pluginRegisterOverlay).toHaveBeenCalled())
+    await waitFor(() => {
+      const last = onTabsChange.mock.calls[onTabsChange.mock.calls.length - 1][0]
+      expect(last).toHaveLength(1)
+      expect(last[0].overlay).toEqual(expect.objectContaining({ title: 'Demo Overlay', mode: 'annotation' }))
+    })
+  })
+
   it('unloads an uninstalled plugin without restart', async () => {
     const activate = vi.fn((ctx: ScalpelPluginContext) => {
       ctx.registerTab({ label: 'Hello', icon: '<svg/>', render: () => {} })

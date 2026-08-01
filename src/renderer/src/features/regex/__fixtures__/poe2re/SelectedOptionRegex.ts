@@ -1,12 +1,12 @@
-/* Reference implementation from poe2.re/src/lib/SelectedOptionRegex.ts. Imports
- * rewritten to use the local fixture files. Behavior unchanged. */
+/* Reference implementation from poe2.re/src/lib/SelectedOptionRegex.ts (July 2026
+ * vintage: bounded value(min-max) matching). Imports rewritten to the local fixture
+ * files. Behavior unchanged. */
 import type { SelectOption } from './SelectOption'
-import { generateNumberRegex } from './GenerateNumberRegex'
+import { generateBoundedValueRegex } from './GenerateNumberRegexCurrent'
 
-export function selectedOptionRegex(option: SelectOption, round10: boolean, over100: boolean): string {
+export function selectedOptionRegex(option: SelectOption, round10: boolean): string {
   if (option.value) {
-    return `${generateNumberRegex(option.value.toString(), round10, over100)}.*${option.regex}`
-  } else {
-    return option.regex
+    return `${generateBoundedValueRegex(option.value.toString(), option.ranges[0][1].toString(), round10)}.*${option.regex}`
   }
+  return option.regex
 }

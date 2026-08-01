@@ -3,8 +3,9 @@ import type { GameVariant } from '@shared/types'
 
 /** React context for the current PoE game version. Reading via usePoeVersion()
  *  avoids prop-drilling through deep trees (overlay -> FilterPanel -> ItemSummary
- *  -> PriceChip, etc.). Version is stable for the process lifetime since game
- *  switches trigger app.relaunch, so consumers don't need memoization. Default
+ *  -> PriceChip, etc.). The provider's `version` prop is the source of truth and
+ *  updates live on an in-process game switch (experimental multi-window), so
+ *  feed it a value that tracks the switch rather than caching at mount. Default
  *  is 1 to keep legacy renders working if a caller forgets the provider. */
 const PoeVersionContext = createContext<GameVariant>(1)
 

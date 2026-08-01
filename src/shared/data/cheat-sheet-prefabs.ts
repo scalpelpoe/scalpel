@@ -9,8 +9,8 @@ export interface PrefabPackImage {
   /** Repo-relative path under cheat-sheet-prefabs/. */
   path: string
   /** Area codes from Client.txt that this image's zone maps to. Empty when
-   *  the image has no zone metadata (PoE1 packs, or PoE2 packs lacking an
-   *  entry in their _zones.json sidecar). */
+   *  the image has no zone metadata (packs without a _zones.json sidecar,
+   *  or images lacking an entry in it). */
   areaCodes: string[]
 }
 
@@ -24,6 +24,9 @@ export interface PrefabPack {
   /** When set, the pack only appears for users on the matching PoE version.
    *  Unset = visible in both. Configured via _poe.txt in the pack directory. */
   poeVersion?: 1 | 2
+  /** Picker section the pack is listed under. Unset = the Other section.
+   *  Configured via _group.txt in the pack directory. */
+  group?: 'leveling-complete' | 'leveling-simple'
 }
 
 export const PREFAB_PACKS: PrefabPack[] = [
@@ -97,6 +100,7 @@ export const PREFAB_PACKS: PrefabPack[] = [
       },
     ],
     poeVersion: 2,
+    group: 'leveling-complete',
   },
   {
     slug: 'act-2',
@@ -172,6 +176,7 @@ export const PREFAB_PACKS: PrefabPack[] = [
       },
     ],
     poeVersion: 2,
+    group: 'leveling-complete',
   },
   {
     slug: 'act-3',
@@ -227,6 +232,7 @@ export const PREFAB_PACKS: PrefabPack[] = [
       },
     ],
     poeVersion: 2,
+    group: 'leveling-complete',
   },
   {
     slug: 'act-4',
@@ -290,6 +296,7 @@ export const PREFAB_PACKS: PrefabPack[] = [
       },
     ],
     poeVersion: 2,
+    group: 'leveling-complete',
   },
   {
     slug: 'leagues',
@@ -313,5 +320,629 @@ export const PREFAB_PACKS: PrefabPack[] = [
       },
     ],
     poeVersion: 1,
+  },
+  {
+    slug: 'poe1-act-01-simple',
+    name: 'Act 1',
+    images: [
+      {
+        path: 'poe1-act-01-simple/01-twilight-strand.webp',
+        areaCodes: ['1_1_1'],
+      },
+      {
+        path: 'poe1-act-01-simple/02-coast.webp',
+        areaCodes: ['1_1_2'],
+      },
+      {
+        path: 'poe1-act-01-simple/03-tidal-island.webp',
+        areaCodes: ['1_1_2a'],
+      },
+      {
+        path: 'poe1-act-01-simple/04-mud-flats.webp',
+        areaCodes: ['1_1_3'],
+      },
+      {
+        path: 'poe1-act-01-simple/05-submerged-passage.webp',
+        areaCodes: ['1_1_4_1'],
+      },
+      {
+        path: 'poe1-act-01-simple/06-flooded-depths.webp',
+        areaCodes: ['1_1_4_0'],
+      },
+      {
+        path: 'poe1-act-01-simple/07-ledge.webp',
+        areaCodes: ['1_1_5'],
+      },
+      {
+        path: 'poe1-act-01-simple/08-climb.webp',
+        areaCodes: ['1_1_6'],
+      },
+      {
+        path: 'poe1-act-01-simple/09-lower-prison.webp',
+        areaCodes: ['1_1_7_1'],
+      },
+      {
+        path: 'poe1-act-01-simple/10-upper-prison.webp',
+        areaCodes: ['1_1_7_2'],
+      },
+      {
+        path: 'poe1-act-01-simple/11-prisoners-gate.webp',
+        areaCodes: ['1_1_8'],
+      },
+      {
+        path: 'poe1-act-01-simple/12-ship-graveyard.webp',
+        areaCodes: ['1_1_9'],
+      },
+      {
+        path: 'poe1-act-01-simple/13-ship-graveyard-cave.webp',
+        areaCodes: ['1_1_9a'],
+      },
+      {
+        path: 'poe1-act-01-simple/14-cavern-of-wrath.webp',
+        areaCodes: ['1_1_11_1'],
+      },
+      {
+        path: 'poe1-act-01-simple/15-cavern-of-anger.webp',
+        areaCodes: ['1_1_11_2'],
+      },
+    ],
+    poeVersion: 1,
+    group: 'leveling-simple',
+  },
+  {
+    slug: 'poe1-act-02-simple',
+    name: 'Act 2',
+    images: [
+      {
+        path: 'poe1-act-02-simple/01-southern-forest.webp',
+        areaCodes: ['1_2_1'],
+      },
+      {
+        path: 'poe1-act-02-simple/02-old-fields.webp',
+        areaCodes: ['1_2_2'],
+      },
+      {
+        path: 'poe1-act-02-simple/03-crossroads.webp',
+        areaCodes: ['1_2_3'],
+      },
+      {
+        path: 'poe1-act-02-simple/04-chamber-of-sins-level-1.webp',
+        areaCodes: ['1_2_6_1'],
+      },
+      {
+        path: 'poe1-act-02-simple/05-chamber-of-sins-level-2.webp',
+        areaCodes: ['1_2_6_2'],
+      },
+      {
+        path: 'poe1-act-02-simple/06-riverways.webp',
+        areaCodes: ['1_2_7'],
+      },
+      {
+        path: 'poe1-act-02-simple/07-western-forest.webp',
+        areaCodes: ['1_2_9'],
+      },
+      {
+        path: 'poe1-act-02-simple/08-weavers-chambers.webp',
+        areaCodes: ['1_2_10'],
+      },
+      {
+        path: 'poe1-act-02-simple/09-broken-bridge.webp',
+        areaCodes: ['1_2_4'],
+      },
+      {
+        path: 'poe1-act-02-simple/10-wetlands.webp',
+        areaCodes: ['1_2_12'],
+      },
+      {
+        path: 'poe1-act-02-simple/11-fellshrine-ruins.webp',
+        areaCodes: ['1_2_15'],
+      },
+      {
+        path: 'poe1-act-02-simple/12-crypt-level-1.webp',
+        areaCodes: ['1_2_5_1'],
+      },
+      {
+        path: 'poe1-act-02-simple/13-crypt-level-2.webp',
+        areaCodes: ['1_2_5_2'],
+      },
+      {
+        path: 'poe1-act-02-simple/14-vaal-ruins.webp',
+        areaCodes: ['1_2_11'],
+      },
+      {
+        path: 'poe1-act-02-simple/15-northern-forest.webp',
+        areaCodes: ['1_2_8'],
+      },
+      {
+        path: 'poe1-act-02-simple/16-caverns.webp',
+        areaCodes: ['1_2_14_2'],
+      },
+      {
+        path: 'poe1-act-02-simple/17-ancient-pyramid.webp',
+        areaCodes: ['1_2_14_3'],
+      },
+    ],
+    poeVersion: 1,
+    group: 'leveling-simple',
+  },
+  {
+    slug: 'poe1-act-03-simple',
+    name: 'Act 3',
+    images: [
+      {
+        path: 'poe1-act-03-simple/01-city-of-sarn.webp',
+        areaCodes: ['1_3_1'],
+      },
+      {
+        path: 'poe1-act-03-simple/02-slums.webp',
+        areaCodes: ['1_3_2'],
+      },
+      {
+        path: 'poe1-act-03-simple/03-crematorium.webp',
+        areaCodes: ['1_3_3_1'],
+      },
+      {
+        path: 'poe1-act-03-simple/04-sewers.webp',
+        areaCodes: ['1_3_10_1'],
+      },
+      {
+        path: 'poe1-act-03-simple/05-marketplace.webp',
+        areaCodes: ['1_3_5'],
+      },
+      {
+        path: 'poe1-act-03-simple/06-catacombs.webp',
+        areaCodes: ['1_3_6'],
+      },
+      {
+        path: 'poe1-act-03-simple/07-battlefront.webp',
+        areaCodes: ['1_3_7'],
+      },
+      {
+        path: 'poe1-act-03-simple/08-docks.webp',
+        areaCodes: ['1_3_9'],
+      },
+      {
+        path: 'poe1-act-03-simple/09-solaris-temple-level-1.webp',
+        areaCodes: ['1_3_8_1'],
+      },
+      {
+        path: 'poe1-act-03-simple/10-solaris-temple-level-2.webp',
+        areaCodes: ['1_3_8_2'],
+      },
+      {
+        path: 'poe1-act-03-simple/11-ebony-barracks.webp',
+        areaCodes: ['1_3_13'],
+      },
+      {
+        path: 'poe1-act-03-simple/12-lunaris-temple-level-1.webp',
+        areaCodes: ['1_3_14_1'],
+      },
+      {
+        path: 'poe1-act-03-simple/13-lunaris-temple-level-2.webp',
+        areaCodes: ['1_3_14_2'],
+      },
+      {
+        path: 'poe1-act-03-simple/14-imperial-gardens.webp',
+        areaCodes: ['1_3_15'],
+      },
+      {
+        path: 'poe1-act-03-simple/15-library.webp',
+        areaCodes: ['1_3_17_1'],
+      },
+      {
+        path: 'poe1-act-03-simple/16-archives.webp',
+        areaCodes: ['1_3_17_2'],
+      },
+      {
+        path: 'poe1-act-03-simple/17-sceptre-of-god.webp',
+        areaCodes: ['1_3_18_1'],
+      },
+      {
+        path: 'poe1-act-03-simple/18-upper-sceptre-of-god.webp',
+        areaCodes: ['1_3_18_2'],
+      },
+    ],
+    poeVersion: 1,
+    group: 'leveling-simple',
+  },
+  {
+    slug: 'poe1-act-04-simple',
+    name: 'Act 4',
+    images: [
+      {
+        path: 'poe1-act-04-simple/01-aqueduct.webp',
+        areaCodes: ['1_4_1'],
+      },
+      {
+        path: 'poe1-act-04-simple/02-dried-lake.webp',
+        areaCodes: ['1_4_2'],
+      },
+      {
+        path: 'poe1-act-04-simple/03-mines-level-1.webp',
+        areaCodes: ['1_4_3_1'],
+      },
+      {
+        path: 'poe1-act-04-simple/04-mines-level-2.webp',
+        areaCodes: ['1_4_3_2'],
+      },
+      {
+        path: 'poe1-act-04-simple/05-crystal-veins.webp',
+        areaCodes: ['1_4_3_3'],
+      },
+      {
+        path: 'poe1-act-04-simple/06-daressos-dream.webp',
+        areaCodes: ['1_4_5_1'],
+      },
+      {
+        path: 'poe1-act-04-simple/07-grand-arena.webp',
+        areaCodes: ['1_4_5_2'],
+      },
+      {
+        path: 'poe1-act-04-simple/08-kaoms-dream.webp',
+        areaCodes: ['1_4_4_1'],
+      },
+      {
+        path: 'poe1-act-04-simple/09-kaoms-stronghold.webp',
+        areaCodes: ['1_4_4_3'],
+      },
+      {
+        path: 'poe1-act-04-simple/10-belly-of-the-beast-level-1.webp',
+        areaCodes: ['1_4_6_1'],
+      },
+      {
+        path: 'poe1-act-04-simple/11-belly-of-the-beast-level-2.webp',
+        areaCodes: ['1_4_6_2'],
+      },
+      {
+        path: 'poe1-act-04-simple/12-harvest.webp',
+        areaCodes: ['1_4_6_3'],
+      },
+      {
+        path: 'poe1-act-04-simple/13-ascent.webp',
+        areaCodes: ['1_4_7'],
+      },
+    ],
+    poeVersion: 1,
+    group: 'leveling-simple',
+  },
+  {
+    slug: 'poe1-act-05-simple',
+    name: 'Act 5',
+    images: [
+      {
+        path: 'poe1-act-05-simple/01-slave-pens.webp',
+        areaCodes: ['1_5_1'],
+      },
+      {
+        path: 'poe1-act-05-simple/02-control-blocks.webp',
+        areaCodes: ['1_5_2'],
+      },
+      {
+        path: 'poe1-act-05-simple/03-oriath-square.webp',
+        areaCodes: ['1_5_3'],
+      },
+      {
+        path: 'poe1-act-05-simple/04-templar-courts.webp',
+        areaCodes: ['1_5_4'],
+      },
+      {
+        path: 'poe1-act-05-simple/05-chamber-of-innocence.webp',
+        areaCodes: ['1_5_5'],
+      },
+      {
+        path: 'poe1-act-05-simple/06-torched-courts.webp',
+        areaCodes: ['1_5_4b'],
+      },
+      {
+        path: 'poe1-act-05-simple/07-ruined-square.webp',
+        areaCodes: ['1_5_3b'],
+      },
+      {
+        path: 'poe1-act-05-simple/08-ossuary.webp',
+        areaCodes: ['1_5_6'],
+      },
+      {
+        path: 'poe1-act-05-simple/09-reliquary.webp',
+        areaCodes: ['1_5_7'],
+      },
+      {
+        path: 'poe1-act-05-simple/10-cathedral-rooftop.webp',
+        areaCodes: ['1_5_8'],
+      },
+    ],
+    poeVersion: 1,
+    group: 'leveling-simple',
+  },
+  {
+    slug: 'poe1-act-06-simple',
+    name: 'Act 6',
+    images: [
+      {
+        path: 'poe1-act-06-simple/01-twilight-strand.webp',
+        areaCodes: ['2_6_1'],
+      },
+      {
+        path: 'poe1-act-06-simple/02-coast.webp',
+        areaCodes: ['2_6_2'],
+      },
+      {
+        path: 'poe1-act-06-simple/03-mud-flats.webp',
+        areaCodes: ['2_6_4'],
+      },
+      {
+        path: 'poe1-act-06-simple/04-karui-fortress.webp',
+        areaCodes: ['2_6_5'],
+      },
+      {
+        path: 'poe1-act-06-simple/05-tidal-island.webp',
+        areaCodes: ['2_6_3'],
+      },
+      {
+        path: 'poe1-act-06-simple/06-ridge.webp',
+        areaCodes: ['2_6_6'],
+      },
+      {
+        path: 'poe1-act-06-simple/07-lower-prison.webp',
+        areaCodes: ['2_6_7_1'],
+      },
+      {
+        path: 'poe1-act-06-simple/08-shavronnes-tower.webp',
+        areaCodes: ['2_6_7_2'],
+      },
+      {
+        path: 'poe1-act-06-simple/09-prisoners-gate.webp',
+        areaCodes: ['2_6_8'],
+      },
+      {
+        path: 'poe1-act-06-simple/10-western-forest.webp',
+        areaCodes: ['2_6_9'],
+      },
+      {
+        path: 'poe1-act-06-simple/11-riverways.webp',
+        areaCodes: ['2_6_10'],
+      },
+      {
+        path: 'poe1-act-06-simple/12-wetlands.webp',
+        areaCodes: ['2_6_11'],
+      },
+      {
+        path: 'poe1-act-06-simple/13-southern-forest.webp',
+        areaCodes: ['2_6_12'],
+      },
+      {
+        path: 'poe1-act-06-simple/14-cavern-of-anger.webp',
+        areaCodes: ['2_6_13'],
+      },
+      {
+        path: 'poe1-act-06-simple/15-beacon.webp',
+        areaCodes: ['2_6_14'],
+      },
+      {
+        path: 'poe1-act-06-simple/16-brine-kings-reef.webp',
+        areaCodes: ['2_6_15'],
+      },
+    ],
+    poeVersion: 1,
+    group: 'leveling-simple',
+  },
+  {
+    slug: 'poe1-act-07-simple',
+    name: 'Act 7',
+    images: [
+      {
+        path: 'poe1-act-07-simple/01-broken-bridge.webp',
+        areaCodes: ['2_7_1'],
+      },
+      {
+        path: 'poe1-act-07-simple/02-crossroads.webp',
+        areaCodes: ['2_7_2'],
+      },
+      {
+        path: 'poe1-act-07-simple/03-fellshrine-ruins.webp',
+        areaCodes: ['2_7_3'],
+      },
+      {
+        path: 'poe1-act-07-simple/04-crypt.webp',
+        areaCodes: ['2_7_4'],
+      },
+      {
+        path: 'poe1-act-07-simple/05-chamber-of-sins-level-1.webp',
+        areaCodes: ['2_7_5_1'],
+      },
+      {
+        path: 'poe1-act-07-simple/06-chamber-of-sins-level-2.webp',
+        areaCodes: ['2_7_5_2'],
+      },
+      {
+        path: 'poe1-act-07-simple/07-den.webp',
+        areaCodes: ['2_7_6'],
+      },
+      {
+        path: 'poe1-act-07-simple/08-ashen-fields.webp',
+        areaCodes: ['2_7_7'],
+      },
+      {
+        path: 'poe1-act-07-simple/09-northern-forest.webp',
+        areaCodes: ['2_7_8'],
+      },
+      {
+        path: 'poe1-act-07-simple/10-causeway.webp',
+        areaCodes: ['2_7_10'],
+      },
+      {
+        path: 'poe1-act-07-simple/11-vaal-city.webp',
+        areaCodes: ['2_7_11'],
+      },
+      {
+        path: 'poe1-act-07-simple/12-temple-of-decay-level-1.webp',
+        areaCodes: ['2_7_12_1'],
+      },
+      {
+        path: 'poe1-act-07-simple/13-temple-of-decay-level-2.webp',
+        areaCodes: ['2_7_12_2'],
+      },
+    ],
+    poeVersion: 1,
+    group: 'leveling-simple',
+  },
+  {
+    slug: 'poe1-act-08-simple',
+    name: 'Act 8',
+    images: [
+      {
+        path: 'poe1-act-08-simple/01-sarn-ramparts.webp',
+        areaCodes: ['2_8_1'],
+      },
+      {
+        path: 'poe1-act-08-simple/02-toxic-conduits.webp',
+        areaCodes: ['2_8_2_1'],
+      },
+      {
+        path: 'poe1-act-08-simple/03-doedres-cesspool.webp',
+        areaCodes: ['2_8_2_2'],
+      },
+      {
+        path: 'poe1-act-08-simple/04-quay.webp',
+        areaCodes: ['2_8_8'],
+      },
+      {
+        path: 'poe1-act-08-simple/05-grain-gate.webp',
+        areaCodes: ['2_8_9'],
+      },
+      {
+        path: 'poe1-act-08-simple/06-hidden-underbelly.webp',
+        areaCodes: ['2_8_14'],
+      },
+      {
+        path: 'poe1-act-08-simple/07-solaris-concourse.webp',
+        areaCodes: ['2_8_11'],
+      },
+      {
+        path: 'poe1-act-08-simple/08-solaris-temple-level-1.webp',
+        areaCodes: ['2_8_12_1'],
+      },
+      {
+        path: 'poe1-act-08-simple/09-solaris-temple-level-2.webp',
+        areaCodes: ['2_8_12_2'],
+      },
+      {
+        path: 'poe1-act-08-simple/10-bath-house.webp',
+        areaCodes: ['2_8_5'],
+      },
+      {
+        path: 'poe1-act-08-simple/11-high-gardens.webp',
+        areaCodes: ['2_8_4'],
+      },
+      {
+        path: 'poe1-act-08-simple/12-lunaris-concourse.webp',
+        areaCodes: ['2_8_6'],
+      },
+      {
+        path: 'poe1-act-08-simple/13-lunaris-temple-level-1.webp',
+        areaCodes: ['2_8_7_1'],
+      },
+      {
+        path: 'poe1-act-08-simple/14-lunaris-temple-level-2.webp',
+        areaCodes: ['2_8_7_2'],
+      },
+      {
+        path: 'poe1-act-08-simple/15-harbour-bridge.webp',
+        areaCodes: ['2_8_13'],
+      },
+    ],
+    poeVersion: 1,
+    group: 'leveling-simple',
+  },
+  {
+    slug: 'poe1-act-09-simple',
+    name: 'Act 9',
+    images: [
+      {
+        path: 'poe1-act-09-simple/01-blood-aqueduct.webp',
+        areaCodes: ['2_9_1'],
+      },
+      {
+        path: 'poe1-act-09-simple/02-descent.webp',
+        areaCodes: ['2_9_2'],
+      },
+      {
+        path: 'poe1-act-09-simple/03-vastiri-desert.webp',
+        areaCodes: ['2_9_3'],
+      },
+      {
+        path: 'poe1-act-09-simple/04-oasis.webp',
+        areaCodes: ['2_9_4'],
+      },
+      {
+        path: 'poe1-act-09-simple/05-foothills.webp',
+        areaCodes: ['2_9_5'],
+      },
+      {
+        path: 'poe1-act-09-simple/06-boiling-lake.webp',
+        areaCodes: ['2_9_6'],
+      },
+      {
+        path: 'poe1-act-09-simple/07-tunnel.webp',
+        areaCodes: ['2_9_7'],
+      },
+      {
+        path: 'poe1-act-09-simple/08-quarry.webp',
+        areaCodes: ['2_9_8'],
+      },
+      {
+        path: 'poe1-act-09-simple/09-refinery.webp',
+        areaCodes: ['2_9_9'],
+      },
+      {
+        path: 'poe1-act-09-simple/10-belly-of-the-beast.webp',
+        areaCodes: ['2_9_10_1'],
+      },
+      {
+        path: 'poe1-act-09-simple/11-rotting-core.webp',
+        areaCodes: ['2_9_10_2'],
+      },
+    ],
+    poeVersion: 1,
+    group: 'leveling-simple',
+  },
+  {
+    slug: 'poe1-act-10-simple',
+    name: 'Act 10',
+    images: [
+      {
+        path: 'poe1-act-10-simple/01-cathedral-rooftop.webp',
+        areaCodes: ['2_10_1'],
+      },
+      {
+        path: 'poe1-act-10-simple/02-ravaged-square.webp',
+        areaCodes: ['2_10_2'],
+      },
+      {
+        path: 'poe1-act-10-simple/03-torched-courts.webp',
+        areaCodes: ['2_10_3'],
+      },
+      {
+        path: 'poe1-act-10-simple/04-desecrated-chambers.webp',
+        areaCodes: ['2_10_4'],
+      },
+      {
+        path: 'poe1-act-10-simple/05-control-blocks.webp',
+        areaCodes: ['2_10_7'],
+      },
+      {
+        path: 'poe1-act-10-simple/06-ossuary.webp',
+        areaCodes: ['2_10_9'],
+      },
+      {
+        path: 'poe1-act-10-simple/07-canals.webp',
+        areaCodes: ['2_10_5'],
+      },
+      {
+        path: 'poe1-act-10-simple/08-feeding-trough.webp',
+        areaCodes: ['2_10_6'],
+      },
+    ],
+    poeVersion: 1,
+    group: 'leveling-simple',
   },
 ]

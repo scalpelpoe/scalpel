@@ -14,7 +14,7 @@ import { useReportInputFocus } from '../shared/use-report-input-focus'
 import { useCurrentZone } from '../shared/use-current-zone'
 import { FilterPanel } from '../features/filter/FilterPanel'
 import { SettingsPanel } from '../features/settings/SettingsPanel'
-import { SocketRecolor } from '../components/SocketRecolor'
+import { SocketRecolor } from '../features/socket-recolor'
 import { DustExplorer } from '../features/dust-explorer'
 import { DivCardExplorer } from '../features/div-card-explorer'
 import { RegexTool } from '../features/regex'
@@ -47,6 +47,7 @@ import { initManifest, getManifest } from '../shared/manifest'
 import { prettyHotkey } from '../components/primitives/hotkey-utils'
 import { createTryHotkey } from '../components/primitives/hotkey-collisions'
 import { PluginErrorBanner } from '../plugins/PluginErrorBanner'
+import { usePluginAutoUpdate } from '../plugins/use-plugin-auto-update'
 import type { BrokenPlugin } from '../plugins/PluginErrorBanner'
 import type { View } from './view'
 
@@ -198,6 +199,17 @@ export default function App(): JSX.Element {
     const ms = tone === 'warn' ? 5000 : 3000
     settingsErrorTimer.current = setTimeout(() => setSettingsError(null), ms)
   }
+
+  usePluginAutoUpdate({
+    enabled: settings?.pluginAutoUpdate ?? false,
+    registryUrl: settings?.pluginRegistryUrl,
+    onApplied: (applied) => {
+      showSettingsError(
+        applied.map((a) => m.settings_plg_auto_updated({ name: a.name, version: a.version })).join(' · '),
+        'warn',
+      )
+    },
+  })
 
   const updateSetting = <K extends keyof AppSettings>(key: K, value: AppSettings[K]): void => {
     window.api.setSetting(key, value)
@@ -526,6 +538,15 @@ export default function App(): JSX.Element {
           width: tierSister.width,
           height: tierSister.height,
         })
+      }
+      // Context menus portal to document.body to escape the wrapper's transform,
+      // which also removes them from the rects above - collect them so an open
+      // menu stays clickable even where it juts past the panel edge.
+      for (const el of document.querySelectorAll('[data-context-menu]')) {
+        const r = el.getBoundingClientRect()
+        if (r.width > 0 && r.height > 0) {
+          rects.push({ left: r.left, top: r.top, width: r.width, height: r.height })
+        }
       }
       window.api.reportPanelRect(rects)
     }
@@ -987,6 +1008,7 @@ export default function App(): JSX.Element {
                 )}
                 {view === 'tools' && overlayData && features.socketRecolor && (
                   <SocketRecolor
+                    key={`${overlayData.item.name}|${overlayData.item.baseType}|${overlayData.item.sockets}|${overlayData.item.itemLevel}|${overlayData.item.quality}`}
                     item={overlayData.item}
                     priceInfo={overlayData.priceInfo}
                     chaosPerDivine={overlayData.chaosPerDivine}
@@ -1101,7 +1123,7 @@ export default function App(): JSX.Element {
             setView(`plugin:${pluginId}` as View)
             void window.api.pluginShowOverlay()
           }}
-          onCopyAndEvaluateItem={() => window.api.pluginTriggerMainHotkey()}
+          onCopyAndEvaluateItem={(opts) => window.api.pluginTriggerMainHotkey(opts)}
           onPluginError={handlePluginError}
           onPluginUnloaded={(pluginId) => {
             if (view === `plugin:${pluginId}`) setView('idle')

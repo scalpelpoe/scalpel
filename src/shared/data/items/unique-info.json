@@ -28,6 +28,10 @@
     "Taproot",
     "The Hidden Blade"
   ],
+  "Amethyst Flask": [
+    "Atziri's Promise",
+    "Progenesis"
+  ],
   "Amethyst Ring": [
     "Blackflame",
     "Circle of Nostalgia",
@@ -79,6 +83,9 @@
     "Second Piece of Focus",
     "Third Piece of Focus"
   ],
+  "Ashbark Tincture": [
+    "Wildfire Phloem"
+  ],
   "Assassin Bow": [
     "Arborix",
     "Chin Sol",
@@ -98,12 +105,18 @@
     "Snakebite",
     "Storm's Gift"
   ],
+  "Assembled Eye Jewel": [
+    "Reclaimed Malevolence"
+  ],
   "Astral Plate": [
     "Blunderbore",
     "Death's Oath"
   ],
   "Astrolabe Amulet": [
     "Venarius' Astrolabe"
+  ],
+  "Atoll Map": [
+    "Maelström of Chaos"
   ],
   "Auric Mace": [
     "Callinellus Malleus"
@@ -125,6 +138,10 @@
   ],
   "Bastard Sword": [
     "Shiversting"
+  ],
+  "Bismuth Flask": [
+    "Oriath's End",
+    "The Wise Oak"
   ],
   "Black Maw Talisman": [
     "Night's Hold"
@@ -160,6 +177,9 @@
   "Bone Circlet": [
     "Plume of Pursuit",
     "Wraithlord"
+  ],
+  "Bone Crypt Map": [
+    "Olmec's Sanctum"
   ],
   "Bone Helmet": [
     "Ancient Skull",
@@ -256,6 +276,9 @@
   "Cedar Tower Shield": [
     "Trolltimber Spire"
   ],
+  "Cemetery Map": [
+    "Hallowed Ground"
+  ],
   "Chain Belt": [
     "Ascent From Flesh",
     "Bated Breath",
@@ -276,6 +299,9 @@
   ],
   "Charan's Sword": [
     "Oni-Goroshi"
+  ],
+  "Chateau Map": [
+    "The Perandus Manor"
   ],
   "Chiming Spirit Shield": [
     "The Eternal Apple",
@@ -335,6 +361,9 @@
   "Coiled Staff": [
     "Xirgil's Crank"
   ],
+  "Colossal Mana Flask": [
+    "Wellwater Phylactery"
+  ],
   "Colossal Tower Shield": [
     "Ahn's Heritage",
     "Dawnbreaker"
@@ -383,6 +412,9 @@
   "Corsair Sword": [
     "Ichimonji"
   ],
+  "Courtyard Map": [
+    "The Vinktar Square"
+  ],
   "Crimson Round Shield": [
     "Shattershard"
   ],
@@ -421,6 +453,9 @@
   ],
   "Crystal Wand": [
     "Corona Solaris"
+  ],
+  "Cursed Crypt Map": [
+    "The Coward's Trial"
   ],
   "Cutlass": [
     "Severed in Sleep",
@@ -471,6 +506,9 @@
   "Devout Chainmail": [
     "The Fourth Vow"
   ],
+  "Diamond Flask": [
+    "Coralito's Signature"
+  ],
   "Diamond Ring": [
     "Gifts from Above",
     "Grattus Signet",
@@ -494,6 +532,10 @@
   ],
   "Driftwood Wand": [
     "Lifesprig"
+  ],
+  "Dunes Map": [
+    "Pillars of Arun",
+    "Replica Pillars of Arun"
   ],
   "Dusk Blade": [
     "Ephemeral Edge"
@@ -673,6 +715,10 @@
   "General's Brigandine": [
     "Rigwald's Hunt"
   ],
+  "Ghastly Eye Jewel": [
+    "Amanamu's Gaze",
+    "Destructive Aspiration"
+  ],
   "Gilded Sallet": [
     "Deidbell",
     "Deidbellow"
@@ -721,6 +767,9 @@
     "The Ignomon",
     "The Untouched Soul",
     "Winterheart"
+  ],
+  "Gold Flask": [
+    "Wine of the Prophet"
   ],
   "Gold Ring": [
     "Andvarius",
@@ -779,6 +828,14 @@
   "Graceful Sword": [
     "Nametaker"
   ],
+  "Grand Mana Flask": [
+    "Zerphi's Last Breath"
+  ],
+  "Granite Flask": [
+    "Lion's Roar",
+    "Replica Rumi's Concoction",
+    "Rumi's Concoction"
+  ],
   "Great Crown": [
     "Forbidden Shako",
     "Geofri's Crest",
@@ -796,6 +853,9 @@
     "Replica Trypanon",
     "Trypanon"
   ],
+  "Greater Mana Flask": [
+    "Doedre's Elixir"
+  ],
   "Greatwolf Talisman": [
     "Eyes of the Greatwolf"
   ],
@@ -808,9 +868,16 @@
     "Ornament of the East",
     "Replica Advancing Fortress"
   ],
+  "Hallowed Hybrid Flask": [
+    "The Writhing Jar"
+  ],
   "Harbinger Bow": [
     "Nuro's Harp",
     "Slivertongue"
+  ],
+  "Harbinger Map": [
+    "Infused Beachhead",
+    "The Beachhead"
   ],
   "Harlequin Mask": [
     "Farrul's Bite",
@@ -869,6 +936,10 @@
     "Farrul's Pounce",
     "Gravebind"
   ],
+  "Hypnotic Eye Jewel": [
+    "Baleful Dominion",
+    "Kurgal's Gaze"
+  ],
   "Imbued Wand": [
     "Moonsorrow",
     "Obliteration",
@@ -922,6 +993,12 @@
     "Asenath's Mark",
     "Wreath of Phrecia"
   ],
+  "Iron Flask": [
+    "Elixir of the Unbroken Circle",
+    "Olroth's Resolve",
+    "Starlight Chalice",
+    "Vorana's Preparation"
+  ],
   "Iron Gauntlets": [
     "Lochtonial Caress"
   ],
@@ -961,6 +1038,9 @@
   ],
   "Ironwood Buckler": [
     "Kiloava's Bluster"
+  ],
+  "Ironwood Tincture": [
+    "Mightblood Ire"
   ],
   "Jade Amulet": [
     "Hyrri's Truth",
@@ -1045,6 +1125,9 @@
     "The Ephemeral Bond",
     "Voice of the Storm"
   ],
+  "Large Hybrid Flask": [
+    "Divination Distillate"
+  ],
   "Lathi": [
     "The Searing Touch"
   ],
@@ -1113,6 +1196,9 @@
   "Lunaris Circlet": [
     "Doedre's Scorn"
   ],
+  "Machinarium Map": [
+    "Doryani's Machinarium"
+  ],
   "Maelström Staff": [
     "Disintegrator",
     "Duskdawn",
@@ -1170,6 +1256,9 @@
     "Font of Thunder",
     "Leper's Alms"
   ],
+  "Moon Temple Map": [
+    "The Twilight Temple"
+  ],
   "Moonstone Ring": [
     "Anathema",
     "Heartbound Loop",
@@ -1191,6 +1280,13 @@
     "Machina Mitts",
     "Malachai's Mark",
     "Thunderfist"
+  ],
+  "Murderous Eye Jewel": [
+    "Festering Vengeance",
+    "Tecrod's Gaze"
+  ],
+  "Museum Map": [
+    "The Putrid Cloister"
   ],
   "Nailed Fist": [
     "Last Resort",
@@ -1214,6 +1310,9 @@
     "Fleshcrafter",
     "Vis Mortis"
   ],
+  "Necropolis Map": [
+    "Death and Taxes"
+  ],
   "Nightmare Bascinet": [
     "Devoto's Devotion",
     "The Bringer of Rain"
@@ -1226,6 +1325,9 @@
   ],
   "Nubuck Gloves": [
     "Oskarm"
+  ],
+  "Oakbranch Tincture": [
+    "The Battle Within"
   ],
   "Occultist's Vestment": [
     "Shavronne's Wrappings"
@@ -1282,6 +1384,9 @@
   "Ornate Sword": [
     "Queen's Decree",
     "Queen's Escape"
+  ],
+  "Overgrown Shrine Map": [
+    "Acton's Nightmare"
   ],
   "Pagan Wand": [
     "Mystic Refractor"
@@ -1382,6 +1487,12 @@
     "The Taming",
     "Thief's Torment"
   ],
+  "Prismatic Tincture": [
+    "Sap of the Seasons"
+  ],
+  "Promenade Map": [
+    "Hall of Grandmasters"
+  ],
   "Prophecy Wand": [
     "Grace of the Goddess",
     "Void Battery"
@@ -1394,6 +1505,14 @@
   ],
   "Quarterstaff": [
     "The Annihilating Light"
+  ],
+  "Quartz Flask": [
+    "Forbidden Taste",
+    "Soul Catcher",
+    "Soul Ripper"
+  ],
+  "Quicksilver Flask": [
+    "Rotgut"
   ],
   "Ranger Bow": [
     "Hopeshredder",
@@ -1430,6 +1549,10 @@
   ],
   "Reinforced Tower Shield": [
     "Titucius' Span"
+  ],
+  "Relic Chambers Map": [
+    "Cortex",
+    "Replica Cortex"
   ],
   "Ring": [
     "Kalandra's Touch"
@@ -1477,6 +1600,10 @@
   ],
   "Ruby Amulet": [
     "Star of Wraeclast"
+  ],
+  "Ruby Flask": [
+    "Coruscating Elixir",
+    "Dying Sun"
   ],
   "Ruby Ring": [
     "Ahkeli's Meadow",
@@ -1558,6 +1685,17 @@
   "Samnite Helmet": [
     "Hrimnor's Resolve"
   ],
+  "Sanctified Life Flask": [
+    "Blood of the Karui"
+  ],
+  "Sanctified Mana Flask": [
+    "Lavianga's Spirit",
+    "Replica Lavianga's Spirit"
+  ],
+  "Sapphire Flask": [
+    "Stormblood",
+    "Taste of Hate"
+  ],
   "Sapphire Ring": [
     "Call of the Void",
     "Circle of Fear",
@@ -1594,6 +1732,10 @@
   ],
   "Seaglass Amulet": [
     "Whispers of Infinity"
+  ],
+  "Searching Eye Jewel": [
+    "Extinguishing Grasp",
+    "Ulaman's Gaze"
   ],
   "Secutor Helm": [
     "Skullhead"
@@ -1647,6 +1789,9 @@
     "Hyrri's Bite",
     "Hyrri's Demise"
   ],
+  "Shipyard Map": [
+    "Mao Kun"
+  ],
   "Short Bow": [
     "Quill Rain",
     "Replica Quill Rain"
@@ -1672,6 +1817,10 @@
   ],
   "Silken Vest": [
     "Ghostwrithe"
+  ],
+  "Silver Flask": [
+    "Cinderswallow Urn",
+    "Kiara's Determination"
   ],
   "Simple Robe": [
     "Skin of the Lords",
@@ -1758,6 +1907,9 @@
     "Reverberation Rod",
     "Storm Prison"
   ],
+  "Sporebloom Tincture": [
+    "Grasping Nightshade"
+  ],
   "Stealth Boots": [
     "Garukhan's Flight",
     "Sin Trek"
@@ -1788,9 +1940,17 @@
   "Steelwood Bow": [
     "The Crimson Storm"
   ],
+  "Stibnite Flask": [
+    "Replica Witchfire Brew",
+    "Sin's Rebirth",
+    "Witchfire Brew"
+  ],
   "Stiletto": [
     "Bloodplay",
     "Replica Bloodplay"
+  ],
+  "Strand Map": [
+    "Whakawairua Tuahu"
   ],
   "Strapped Boots": [
     "Nomic's Storm"
@@ -1814,6 +1974,12 @@
   "Stygian Vise": [
     "Darkness Enthroned"
   ],
+  "Sulphur Flask": [
+    "Bottled Faith",
+    "Replica Sorrow of the Divine",
+    "The Overflowing Chalice",
+    "The Sorrow of the Divine"
+  ],
   "Sun Leather": [
     "Briskwrap"
   ],
@@ -1830,6 +1996,10 @@
   ],
   "Teak Round Shield": [
     "The Ghastly Theatre"
+  ],
+  "Temple Map": [
+    "Poorjoy's Asylum",
+    "Replica Poorjoy's Asylum"
   ],
   "Terror Claw": [
     "Rive",
@@ -1876,6 +2046,10 @@
   "Tomahawk": [
     "Moonbender's Wing"
   ],
+  "Topaz Flask": [
+    "Stormblood",
+    "Vessel of Vinktar"
+  ],
   "Topaz Ring": [
     "Astral Projector",
     "Circle of Regret",
@@ -1907,6 +2081,9 @@
     "Farrul's Fur",
     "Replica Farrul's Fur"
   ],
+  "Tropical Island Map": [
+    "Untainted Paradise"
+  ],
   "Turquoise Amulet": [
     "Badge of the Brotherhood",
     "Fury Valve",
@@ -1937,6 +2114,12 @@
   "Tyrant's Sekhem": [
     "Sign of the Sin Eater",
     "The Sands of Time"
+  ],
+  "Underground River Map": [
+    "Caer Blaidd, Wolfpack's Den"
+  ],
+  "Underground Sea Map": [
+    "Oba's Cursed Trove"
   ],
   "Unset Amulet": [
     "Uul-Netol's Vow"
@@ -1996,6 +2179,9 @@
     "Fractal Thoughts",
     "Glimpse of Chaos",
     "The Vertex"
+  ],
+  "Vaal Pyramid Map": [
+    "Vaults of Atziri"
   ],
   "Vaal Rapier": [
     "Paradoxica",

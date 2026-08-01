@@ -12,6 +12,7 @@ import {
 } from '@shared/data/filter/filter-actions'
 import { Toggle } from '@renderer/components/Toggle'
 import { CollapsibleSection } from '@renderer/shared/CollapsibleSection'
+import { alertSoundUrl } from './alert-sound-url'
 
 export function ActionBox({ title, children }: { title: string; children: React.ReactNode }): JSX.Element {
   return (
@@ -79,9 +80,7 @@ function AlertSoundEditor({
   const currentValue = isNone ? '__none__' : isCustom ? `custom:${action.values[0] ?? ''}` : (action.values[0] ?? '1')
 
   const playBuiltinSound = (id: string): void => {
-    const paddedId = id.padStart(2, '0')
-    const soundUrl = new URL(`../../assets/sounds/AlertSound_${paddedId}.ogg`, import.meta.url).href
-    const audio = new Audio(soundUrl)
+    const audio = new Audio(alertSoundUrl(id))
     audio.volume = previewVolumeRef.current
     audio.play().catch(() => {})
   }

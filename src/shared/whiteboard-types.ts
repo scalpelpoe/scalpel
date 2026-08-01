@@ -72,6 +72,17 @@ export interface RadiusRingElement extends BaseElement {
   fill: string | null
 }
 
+/** A live picture-in-picture mirror of a region of the PoE window. `source` is
+ *  the captured region as normalized fractions of the game window; `bbox` is
+ *  where the mirror is drawn on the board (normalized, like shape/image). The
+ *  pixels come from a shared capture stream at render time and are never
+ *  persisted. */
+export interface LiveMirrorElement extends BaseElement {
+  type: 'liveMirror'
+  source: { x: number; y: number; w: number; h: number }
+  bbox: { x: number; y: number; w: number; h: number }
+}
+
 export type WhiteboardElement =
   | StrokeElement
   | ShapeElement
@@ -79,6 +90,7 @@ export type WhiteboardElement =
   | ImageElement
   | RulerElement
   | RadiusRingElement
+  | LiveMirrorElement
 
 export const ELEMENT_TYPES: ReadonlyArray<WhiteboardElement['type']> = [
   'stroke',
@@ -87,6 +99,7 @@ export const ELEMENT_TYPES: ReadonlyArray<WhiteboardElement['type']> = [
   'image',
   'ruler',
   'radiusRing',
+  'liveMirror',
 ]
 
 export interface BoardState {
@@ -198,6 +211,12 @@ function validateRadiusRing(v: RawObj): boolean {
   return true
 }
 
+function validateLiveMirror(v: RawObj): boolean {
+  if (!validateBbox(v.source)) return false
+  if (!validateBbox(v.bbox)) return false
+  return true
+}
+
 /** Per-kind validators for the type-specific fields. Base fields (id, z,
  *  rotation, locked) are checked by `validateElement` before dispatching here.
  *  Adding a new element kind: extend `WhiteboardElement`, list it in
@@ -209,6 +228,7 @@ export const ELEMENT_VALIDATORS: Record<WhiteboardElement['type'], (v: RawObj) =
   image: validateImage,
   ruler: validateRuler,
   radiusRing: validateRadiusRing,
+  liveMirror: validateLiveMirror,
 }
 
 function validateElement(value: unknown): value is WhiteboardElement {

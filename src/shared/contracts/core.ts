@@ -1,5 +1,3 @@
-export type GameVariant = 1 | 2
-
 export type AppLocale = 'en' | 'es' | 'de'
 
 export type ItemRarity = 'Normal' | 'Magic' | 'Rare' | 'Unique' | 'Gem' | 'Currency'

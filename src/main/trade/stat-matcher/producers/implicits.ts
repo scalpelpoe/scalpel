@@ -1,6 +1,7 @@
 import type { StatFilter } from '../../trade'
 import { findAdvMod } from '../adv-mods'
 import type { MatchContext } from '../context'
+import { QUALIFIER_BY_ITEM_CLASS } from '../item-classes'
 import { matchModToStat } from '../mod-matcher'
 import { accumulatePseudo, PSEUDO_CONTRIBUTIONS } from '../pseudo'
 import { dropFragmentDuplicates, GEM_LEVEL_MOD } from './explicits'
@@ -9,17 +10,41 @@ export function processImplicits(ctx: MatchContext): StatFilter[] {
   const { implicits, itemInfo, advancedMods, isWeapon, isTablet, pseudoAccumulator } = ctx
   const out: StatFilter[] = []
 
+  // Trade stats that share display text across item categories carry a trailing
+  // qualifier; pass the item's category so the matcher can pick that variant
+  // (see the explicit producer, which does the same).
+  const preferQualifier = QUALIFIER_BY_ITEM_CLASS[itemInfo?.itemClass ?? ''] ?? null
+
   for (const mod of implicits) {
-    const cleaned = mod.replace(/\s*\(implicit\)\s*$/i, '').trim()
+    let cleaned = mod.replace(/\s*\(implicit\)\s*$/i, '').trim()
+    // Stygian Vise / abyss belts: clipboard prints "Has 1 Abyssal Socket" but the trade
+    // API indexes "Has # Abyssal Sockets". buildSocketFilters already emits the correct
+    // chip from the socket string (A). Matching this line here used to fall through to
+    // relaxed "Has 1 Socket" (implicit.stat_4077843608), which is incompatible with
+    // Stygian Vise and zeroes the search.
+    if (/^Has \d+ Abyssal Sockets?$/i.test(cleaned)) continue
     // Try implicit stats first, then fall back to explicit (non-local, then local) and remap the ID
     const matched =
-      matchModToStat(cleaned, false, 'implicit') ??
+      matchModToStat(cleaned, false, 'implicit', false, preferQualifier) ??
       (() => {
-        const fallback = matchModToStat(cleaned, false, 'explicit') ?? matchModToStat(cleaned, true, 'explicit')
+        const fallback =
+          matchModToStat(cleaned, false, 'explicit', false, preferQualifier) ??
+          matchModToStat(cleaned, true, 'explicit', false, preferQualifier)
         if (!fallback) return null
         return { ...fallback, statId: `implicit.${fallback.statId.split('.')[1]}` }
       })()
     if (matched) {
+      const advMod = advancedMods ? findAdvMod(advancedMods, cleaned, 'implicit') : undefined
+      // Catalyst quality (and other magnitude sources) scale an implicit's roll the
+      // same way they scale affixes; GGG annotates the advanced header with
+      // "-- N% Increased", parsed onto the AdvancedMod as magnitudeMultiplier. Mirror
+      // the explicit path so the chip shows the real scaled value and the trade
+      // search min matches (#477).
+      if (advMod?.magnitudeMultiplier && matched.value != null) {
+        const oldVal = matched.value
+        matched.value = Math.trunc(oldVal * advMod.magnitudeMultiplier)
+        cleaned = cleaned.replace(String(Math.abs(oldVal)), String(Math.abs(matched.value)))
+      }
       // Skip "X per Y" mods -- they're conditional and shouldn't inflate pseudo totals
       const isPerMod = /\bper\b/i.test(cleaned)
       const pseudoList = PSEUDO_CONTRIBUTIONS[matched.statId]
@@ -28,10 +53,7 @@ export function processImplicits(ctx: MatchContext): StatFilter[] {
       }
       // Check if this implicit is from eldritch (Searing Exarch / Eater of Worlds)
       let _isEldritch = false
-      if (advancedMods) {
-        const advMod = findAdvMod(advancedMods, cleaned, 'implicit')
-        if (advMod?.eldritch) _isEldritch = true
-      }
+      if (advMod?.eldritch) _isEldritch = true
       // Gem-level implicits (e.g. corrupted "+1 to Level of all Skill Gems" on
       // amulets) are discrete brackets -- pin max to the exact rolled value so
       // the search doesn't merge with pricier +2 listings.

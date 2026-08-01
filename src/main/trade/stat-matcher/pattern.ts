@@ -24,8 +24,10 @@ function statTextToRelaxedPattern(text: string): RegExp {
   // Same whitespace normalization as statTextToPattern -- see that function for details.
   const normalized = text.replace(/\s+/g, ' ')
   let escaped = normalized.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/#/g, '(.+?)')
-  // Replace hardcoded numbers (e.g. "50%", "20") with capture groups
-  escaped = escaped.replace(/\d+(?:\\\.\d+)?/g, '(.+?)')
+  // Replace hardcoded numbers (e.g. "50%", "20") with numeric capture groups only.
+  // Using (.+?) here let "Has 1 Socket" match "Has 1 Abyssal Socket" by swallowing
+  // "1 Abyssal" -- wrong trade id for Stygian Vise and zero results.
+  escaped = escaped.replace(/\d+(?:\\\.\d+)?/g, '(\\d+(?:\\.\\d+)?)')
   return new RegExp(`^${escaped}$`, 'i')
 }
 

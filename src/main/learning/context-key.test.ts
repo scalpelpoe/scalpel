@@ -1,7 +1,7 @@
 // src/main/learning/context-key.test.ts
 import { describe, it, expect } from 'vitest'
 import { defaultPoeItem } from '@shared/poe-item'
-import { deriveLearningContext, relevanceAxisFor, GLOBAL_KEY } from './context-key'
+import { deriveLearningContext, relevanceAxisFor, GLOBAL_KEY, pinScopeKey } from './context-key'
 
 describe('relevanceAxisFor', () => {
   it('classifies armour by defence archetype', () => {
@@ -58,5 +58,17 @@ describe('deriveLearningContext', () => {
     )
     expect(ctx.uniqueName).toBe("Kaom's Heart")
     expect(ctx.rungKeys).toEqual([GLOBAL_KEY, "u|Kaom's Heart"])
+  })
+})
+
+describe('pinScopeKey', () => {
+  it('scopes non-uniques to rarity|itemClass', () => {
+    const item = defaultPoeItem({ rarity: 'Rare', itemClass: 'Helmets', armour: 200 })
+    expect(pinScopeKey(item)).toBe('Rare|Helmets')
+  })
+
+  it('scopes uniques to the unique name', () => {
+    const item = defaultPoeItem({ rarity: 'Unique', itemClass: 'Belts', name: 'Mageblood' })
+    expect(pinScopeKey(item)).toBe('u|Mageblood')
   })
 })

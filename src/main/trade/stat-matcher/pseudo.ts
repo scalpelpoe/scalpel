@@ -35,7 +35,7 @@ export const PSEUDO_CONTRIBUTIONS: Record<string, PseudoContribution[]> = {}
 // pseudoId -> the full universe of contributing real stat ids (deduped). The
 // trade2 weight group sums these at the implicit default weight of 1, so only the
 // ids matter here; the per-stat multiplier stays in PSEUDO_CONTRIBUTIONS for the
-// accumulator total. Built in buildPseudoMap(), cleared by _resetPseudoMap().
+// accumulator total. Built in buildPseudoMap(), cleared by resetPseudoMap().
 export const PSEUDO_WEIGHT_GROUPS: Record<string, Array<{ id: string }>> = {}
 
 function buildPseudoMap(): void {
@@ -160,13 +160,26 @@ function buildPseudoMap(): void {
 
   const statEntries = getStatEntries()
   for (const entry of statEntries) {
-    if (entry.type !== 'explicit' && entry.type !== 'implicit' && entry.type !== 'crafted') continue
+    // Runes feed pseudos too (a +res rune counts toward Total Elemental Resistance).
+    // GGG's stats payload gives the rune category id "rune" (so stat ids are
+    // rune.stat_*) but tags each entry's `type` as "augment", not "rune" -- so detect
+    // runes by id prefix, not entry.type.
+    const isRune = entry.id.startsWith('rune.')
+    if (entry.type !== 'explicit' && entry.type !== 'implicit' && entry.type !== 'crafted' && !isRune) continue
     // "Inflict <Ele> Exposure on Hit, applying -#% to <Ele> Resistance" is an
     // enemy debuff, not player resistance. Its text contains "to <Ele>
     // Resistance" so the loose resistance patterns below would otherwise sum
     // the negative value into the player's Total Elemental Resistance pseudo.
     // Exposure mods never feed any player pseudo, so skip them outright.
     if (/\bExposure\b/i.test(entry.text)) continue
+    // "Minions have +#% to all Elemental Resistances" (and totems/allies/etc.)
+    // is likewise not player resistance. Bone Rings and other minion gear were
+    // folding those rolls into Total Elemental Resistance (e.g. 37 all-res × 3).
+    if (
+      /\b(?:Minions?|Totems?|Spectres?|Allies|Companions?)\b/i.test(entry.text) &&
+      /\bResistances?\b/i.test(entry.text)
+    )
+      continue
     for (const [pattern, pseudoId, pseudoLabel, multiplier, opts] of pseudoMappings) {
       if (pattern.test(entry.text)) {
         if (!PSEUDO_CONTRIBUTIONS[entry.id]) PSEUDO_CONTRIBUTIONS[entry.id] = []
@@ -234,14 +247,17 @@ export function accumulatePseudo(
  *  trade API fetch) well after createOverlayWindow sets the version at startup, so
  *  the first build always sees the correct game. If startup ordering ever changes
  *  so stats can be present before setPoeVersion runs, gate this on the version
- *  being known, or _resetPseudoMap once it is. */
+ *  being known, or resetPseudoMap once it is. */
 export function ensurePseudoMapBuilt(): void {
   if (Object.keys(PSEUDO_CONTRIBUTIONS).length === 0 && getStatEntries().length > 0) buildPseudoMap()
 }
 
 /** Clear the pseudo contributions map. Called by the test hook in index.ts so
  *  each test rebuilds from its own seeded entries. */
-export function _resetPseudoMap(): void {
+export function resetPseudoMap(): void {
   for (const k of Object.keys(PSEUDO_CONTRIBUTIONS)) delete PSEUDO_CONTRIBUTIONS[k]
   for (const k of Object.keys(PSEUDO_WEIGHT_GROUPS)) delete PSEUDO_WEIGHT_GROUPS[k]
 }
+
+/** @deprecated Use resetPseudoMap instead. Kept for test compatibility. */
+export const _resetPseudoMap = resetPseudoMap

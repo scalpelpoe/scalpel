@@ -87,22 +87,103 @@ for (const line of lines) {
   }
 }
 
-// GGG splits Abyss into TWO trade stats: the numeric "# additional Abysses"
-// (stat_3490187949) and a dedicated singular "an additional Abyss"
-// (stat_1070816711). Most map-content mods (Strongbox, Essence, Shrine) alias both
-// phrasings under one id, so EE2 folds them into a single ref and the `explicit[0]`
-// pick above is correct -- but for Abyss [0] is the numeric id, which then wrongly
-// covers the valueless singular phrasings too. Re-point those at the singular id so
-// the price check searches the stat the item is actually indexed under (the numeric
-// stat misses every singular-Abyss tablet).
-const SINGULAR_STAT_OVERRIDES = {
+// EE2 folds some logically-single mods that GGG actually splits into TWO trade stats
+// under one ref, listing both ids in trade.ids.explicit. The `explicit[0]` pick above
+// then lands on the wrong id for the tablet/map context. EE2's ndjson does not say
+// which id carries which text variant, so re-point the affected keys explicitly (the
+// correct id is sourced from the live trade2 /data/stats catalog).
+const STAT_ID_OVERRIDES = {
+  // Abyss: [0] is the numeric "# additional Abysses" (stat_3490187949); the dedicated
+  // singular "an additional Abyss" is stat_1070816711. The numeric stat misses every
+  // singular-Abyss tablet, so route the valueless singular phrasings to the singular id.
   'area contains an additional abyss': 'explicit.stat_1070816711',
   'map contains an additional abyss': 'explicit.stat_1070816711',
   'your maps contain an additional abyss': 'explicit.stat_1070816711',
+  // Azmeri Spirit: same singular/numeric split as Abyss. [0] is the numeric "# additional
+  // Azmeri Spirit" (stat_358129101); the singular "an additional Azmeri Spirit" is
+  // stat_775597083 (live-probed: 210 tablet listings). Only the map/boss singular phrasings
+  // move; the numeric "# additional" keys stay on [0]. (No "Area contains an additional
+  // Azmeri Spirit" text exists, so there is no area-singular key to route.)
+  'map contains an additional azmeri spirit': 'explicit.stat_775597083',
+  'areas with powerful map bosses contain an additional azmeri spirit': 'explicit.stat_775597083',
+  // Strongbox: [0]=stat_3240183538 carries the numeric "# additional Strongboxes" AND
+  // the singular "an additional Strongbox" text on ALL tablet bases -- the singular is
+  // this same numeric stat's value-1 display, live-probed on Breach (218) and Overseer
+  // (168) listings. A June fix mistakenly re-routed the Map/Your-Maps singular to
+  // stat_3040603554, which only indexes Overseer Tablets (0 listings on Breach etc.),
+  // so it zeroed every non-Overseer search. stat_3040603554 is the SEPARATE Overseer
+  // boss-pool mod (legacy "Areas with Powerful Map Bosses..." text); its shared-text
+  // ambiguity with the regular mod is resolved at runtime in tablets.ts via the
+  // advanced-mod suffix name ("of Compartments"), not by this flat text table.
+  'areas with powerful map bosses contain an additional strongbox': 'explicit.stat_3040603554',
+  // Experience gain: [0] is the generic stat_3666934677 (shared with the rune stat);
+  // the map-scoped variant -- the id that carries the "...in Map" text and is the one
+  // tablets/maps are indexed under -- is stat_57434274. Route every tablet experience
+  // phrasing there so the price check searches the stat the item is actually indexed
+  // under instead of the generic (non-map) one.
+  '#% increased experience gain': 'explicit.stat_57434274',
+  '#% increased experience gain in map': 'explicit.stat_57434274',
+  '#% increased experience gain in your maps': 'explicit.stat_57434274',
+  '#% reduced experience gain': 'explicit.stat_57434274',
+  '#% reduced experience gain in map': 'explicit.stat_57434274',
+  '#% reduced experience gain in your maps': 'explicit.stat_57434274',
+  // Gold found: [0] is the generic stat_1133965702 ("...in this Area"); the map-scoped
+  // "(Gold Piles)" variant -- the id that carries the "...in Map (Gold Piles)" text and
+  // is the one tablets/maps are indexed under -- is stat_1276056105. Route every tablet
+  // gold phrasing there so the price check searches the stat the item is indexed under.
+  '#% increased gold found in map': 'explicit.stat_1276056105',
+  '#% increased gold found in this area': 'explicit.stat_1276056105',
+  '#% increased gold found in your maps': 'explicit.stat_1276056105',
+  '#% reduced gold found in map': 'explicit.stat_1276056105',
+  '#% reduced gold found in this area': 'explicit.stat_1276056105',
+  '#% reduced gold found in your maps': 'explicit.stat_1276056105',
+  // Delirium Fog duration (issue #471): GGG has two identical-text stats "Delirium Fog
+  // in Map/Area lasts # additional seconds before dissipating"; EE2 folds both ids under
+  // one ref and [0] = stat_1174954559 is a dead index (live-probed 0 listings); the
+  // indexed twin is stat_3226351972 (1692 listings; also confirmed by the reporter's
+  // working search).
+  'delirium fog in area lasts # additional seconds before dissipating': 'explicit.stat_3226351972',
+  'delirium fog in map lasts # additional seconds before dissipating': 'explicit.stat_3226351972',
+  'delirium fog in your maps lasts # additional seconds before dissipating': 'explicit.stat_3226351972',
+  // Summoning Circle chance (issue #471): EE2's stat_866117935 was delisted from the
+  // live trade2 stats catalog (an unresolvable id makes the trade site open a BLANK
+  // query); the live id is stat_267210597 (probed: 5123 tablet listings).
+  'area has #% increased chance to contain a summoning circle': 'explicit.stat_267210597',
+  'area has #% reduced chance to contain a summoning circle': 'explicit.stat_267210597',
+  'map has #% increased chance to contain a summoning circle': 'explicit.stat_267210597',
+  'map has #% reduced chance to contain a summoning circle': 'explicit.stat_267210597',
+  // Legacy Overseer boss-pool phrasings for shrine/essence (the "Areas with [Map]
+  // Powerful Map Bosses contain an additional X" texts live under the boss ids in the
+  // catalog; note the first shrine key mirrors GGG's own typo "Areas with Map Powerful
+  // Map Bosses").
+  'areas with powerful map bosses contain an additional shrine': 'explicit.stat_3042527515',
+  'areas with map powerful map bosses contain an additional shrine': 'explicit.stat_3042527515',
+  'areas with powerful map bosses contain an additional essence': 'explicit.stat_2162684861',
 }
-for (const [key, id] of Object.entries(SINGULAR_STAT_OVERRIDES)) {
+for (const [key, id] of Object.entries(STAT_ID_OVERRIDES)) {
   if (map[key]) map[key] = id
   else console.log(`  override key absent from source (EE2 phrasing changed?): "${key}"`)
+}
+
+// These mods' trade stat ids were removed from the live trade2 /data/stats catalog in
+// 0.3.x with no retext successor (verified 2026-07-03); an id the trade site cannot
+// resolve kills the whole query (blank page), so drop the keys -- buildTabletFilters
+// then falls back to the live-text matcher, misses, and skips the mod, leaving the rest
+// of the search intact. Remove when EE2 drops them too (the "removed" log line goes quiet).
+const DELISTED_KEYS = [
+  // stat_1443457598 / stat_2885317882 (union of souls), stat_166883716 (monster defences), stat_2068415277 (player defences)
+  'natural rare monsters in area are in a union of souls with the map boss',
+  'natural monster packs in area are in a union of souls',
+  'monsters have #% increased defences',
+  'monsters have #% reduced defences',
+  'players have #% less defences',
+  'players have #% more defences',
+]
+for (const key of DELISTED_KEYS) {
+  if (map[key]) {
+    delete map[key]
+    console.log(`  removed delisted key: "${key}"`)
+  } else console.log(`  delisted key already absent from source: "${key}"`)
 }
 
 const sorted = {}

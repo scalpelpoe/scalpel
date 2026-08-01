@@ -1,8 +1,9 @@
 import type { MacroScope } from './macro-scope'
 import type { ThemePalette } from './theme/palette'
 
+export type { GameVariant } from './contracts/game-variant'
+
 export type {
-  GameVariant,
   AppLocale,
   ItemRarity,
   Visibility,

@@ -15,6 +15,10 @@ export interface MapMod {
 const DANGER_OVERRIDES: Record<number, Danger> = {
   [955801458]: 'beneficial', // Area contains two Unique Bosses
   [-1647756153]: 'beneficial', // Rare Monsters each have 1 additional Modifier|increased number of Rare Monsters
+  // 3.29 rates both Thorns rolls scary: 0, which would file reflect damage under
+  // "Beneficial" alongside extra-magic-monsters. Harmless is the honest floor.
+  [-235013251]: 'harmless', // Rare Monsters have Physical Thorns reflecting (400-800) Physical Damage
+  [1078205993]: 'harmless', // Rare Monsters have Elemental Thorns reflecting (900-1500) Elemental Damage
 }
 
 /** Mods that are nightmare but should be grouped with regular mods (not in the nightmare section) */
@@ -31,8 +35,16 @@ function scaryToDanger(scary: number): Danger {
   return 'beneficial'
 }
 
+/** Strip GGG's tag markup: `[Internal|Display]` renders in-game as `Display`, `[Word]`
+ *  as `Word`. 3.29's Thorns map mods ship the raw tag form upstream, and the `|` inside
+ *  the brackets would otherwise read as this data's multi-mod separator -- breaking both
+ *  the label and the trade lookup, which splits mod text on `|` before matching stats. */
+function stripTags(rawText: string): string {
+  return rawText.replace(/\[[^\]|]*\|([^\]]*)\]/g, '$1').replace(/\[([^\]]*)\]/g, '$1')
+}
+
 function formatText(rawText: string): string {
-  return rawText
+  return stripTags(rawText)
     .replace(/\([\d-]+\)/g, '#')
     .replace(/\b\d+%/g, '#%')
     .replace(/\b\d+\b/g, '#')

@@ -114,13 +114,27 @@ describe('installUnpacked', () => {
     expect(installed).toEqual(['hello-world'])
   })
 
-  it('marks id in unpacked.json on install', async () => {
+  it('marks id in unpacked.json on install, with the directory it came from', async () => {
     mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
     mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')
     mockFs.dirs.add(SRC_PLUGIN)
     const { installUnpacked } = await import('./install-unpacked')
     installUnpacked(SRC_PLUGIN)
     const unpacked = JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'unpacked.json'))!)
-    expect(unpacked).toEqual(['hello-world'])
+    expect(unpacked).toEqual([{ id: 'hello-world', sourceDir: SRC_PLUGIN }])
+  })
+
+  it('re-points an existing entry at the directory it was last loaded from', async () => {
+    mockFs.files.set(
+      join(TEST_USER_DATA, 'plugins', 'unpacked.json'),
+      JSON.stringify([{ id: 'hello-world', sourceDir: '/old/location' }]),
+    )
+    mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')
+    mockFs.dirs.add(SRC_PLUGIN)
+    const { installUnpacked } = await import('./install-unpacked')
+    installUnpacked(SRC_PLUGIN)
+    const unpacked = JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'unpacked.json'))!)
+    expect(unpacked).toEqual([{ id: 'hello-world', sourceDir: SRC_PLUGIN }])
   })
 })

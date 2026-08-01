@@ -348,6 +348,14 @@ export function initUpdater(
   currentChannel = channel
   updaterInitialized = true
 
+  // Older versions wrote a VBS wrapper here and never cleaned it up; AV scanners
+  // flag it at rest (#448). Best-effort delete.
+  try {
+    unlinkSync(join(app.getPath('userData'), 'apply-update.vbs'))
+  } catch {
+    /* absent or locked, fine */
+  }
+
   // Check if we just updated and notify renderer
   const justUpdatedPath = join(app.getPath('userData'), 'just-updated.json')
   const overlayStatePath = join(app.getPath('userData'), 'overlay-state.json')
@@ -495,7 +503,9 @@ ipcMain.handle('install-update', () => {
   }
 
   const batPath = join(userDataDir, 'apply-update.bat')
-  const batLines = ['@echo off', 'timeout /t 2 /nobreak > nul']
+  // The batch runs with no console (DETACHED_PROCESS); `timeout` can exit immediately
+  // without a console, `ping` waits ~2s regardless.
+  const batLines = ['@echo off', 'ping -n 3 127.0.0.1 > nul']
 
   if (isFullUpgrade) {
     // Full Electron upgrade: extract the zip over the install directory, then copy asar.
@@ -528,13 +538,13 @@ ipcMain.handle('install-update', () => {
 
   writeFileSync(batPath, batLines.join('\r\n'))
 
-  // Use a VBScript wrapper to run the batch file invisibly
-  const vbsPath = join(userDataDir, 'apply-update.vbs')
-  writeFileSync(vbsPath, `CreateObject("WScript.Shell").Run """${batPath}""", 0, False\r\n`)
-
-  spawn('wscript.exe', [vbsPath], {
+  // Run the batch detached with no console. DETACHED_PROCESS gives the child no
+  // console window at all, so nothing flashes. A VBS wrapper used to do the hiding,
+  // but AV heuristics flag app-written VBS as dropper behavior (#448).
+  spawn('cmd.exe', ['/c', batPath], {
     detached: true,
     stdio: 'ignore',
+    windowsHide: true,
   }).unref()
 
   recordMainBreadcrumb('updater: exit to apply update')

@@ -52,6 +52,13 @@ export const POE_NINJA_POE2_EXCHANGE = 'https://poe.ninja/poe2/api/economy/excha
  *  best-effort path with the direct-ninja path retained as fallback. */
 export const POE2_NINJA_PROXY = 'https://api.exiledexchange2.dev/proxy'
 
+/** poe.ninja PoE1 stash overview. The only current endpoint that returns
+ *  `listingCount`, which the Beasts regex tab needs to drop price-fixed
+ *  listings: the dense feed's top beast entries are routinely 100k+ chaos on
+ *  fewer than 5 listings, and one of those would eat the entire 100-character
+ *  menagerie budget. Append `?league=<league>&type=Beast`. */
+export const POE_NINJA_STASH_OVERVIEW = 'https://poe.ninja/poe1/api/economy/stash/current/item/overview'
+
 /** Scalpel's GitHub repo home. Base for the release/issue URLs below and the
  *  Support Development link in Settings. */
 export const GITHUB_REPO_URL = 'https://github.com/scalpelpoe/scalpel'
@@ -80,6 +87,11 @@ export const KOFI_URL = 'https://ko-fi.com/scalpelpoe'
  *  Settings -> Sheets. */
 export const CHEAT_SHEET_PREFAB_BASE_URL =
   'https://raw.githubusercontent.com/scalpelpoe/scalpel/main/cheat-sheet-prefabs/'
+
+/** Cyclon's Definitiv Guide - source of the PoE1 act starter-pack layout
+ *  images (used with permission). Linked from the attribution line under
+ *  the starter packs in Settings -> Sheets. */
+export const DEFINITIV_GUIDE_URL = 'https://www.definitivguide.com/'
 
 /** Runtime-fetched manifest of values that may change between releases (e.g.
  *  ninja league slugs). Fetched on app start; bundled copy in the repo root

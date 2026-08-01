@@ -4,6 +4,7 @@ import type { PluginManifest } from '../../../../../plugin-sdk/src/types'
 import type { AppSettings, RuntimeSettings } from '@shared/types'
 import type { HotkeySlot } from '@renderer/components/primitives/hotkey-collisions'
 import { Button } from '@renderer/components/primitives/Button'
+import { SettingToggleBox } from '@renderer/components/primitives/SettingToggleBox'
 import { HotkeyRecorder } from '@renderer/components/primitives/HotkeyRecorder'
 import { pluginHotkeyBinding } from './plugin-hotkey-binding'
 import { m } from '@shared/paraglide/messages.js'
@@ -424,6 +425,12 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
     <div className="flex flex-col gap-4">
       <section className="flex flex-col gap-2">
         <div className="settings-section-title mt-3">{m.settings_plg_installed_heading()}</div>
+        <SettingToggleBox
+          inlineLabel
+          label={m.settings_plg_auto_update()}
+          checked={settings.pluginAutoUpdate}
+          onChange={(val) => update('pluginAutoUpdate', val)}
+        />
         {installed.length === 0 ? (
           <div className="text-xs text-zinc-500">{m.settings_plg_none_installed()}</div>
         ) : (

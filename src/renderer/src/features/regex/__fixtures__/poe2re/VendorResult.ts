@@ -62,7 +62,7 @@ function movement(settings: Settings['vendor']['movementSpeed']): string | null 
 
 function itemMods(settings: Settings['vendor']['itemMods']): (string | null)[] {
   const eleDamage = settings.elemental
-    ? 'cfl'
+    ? '[cfl]'
     : [
         settings.coldDamage ? 'co' : null,
         settings.chaosDamage ? 'ch' : null,
@@ -97,7 +97,7 @@ function itemMods(settings: Settings['vendor']['itemMods']): (string | null)[] {
     settings.rarity ? 'd rari' : null,
     settings.attackSpeed ? 'ck spe' : null,
     settings.castSpeed ? 'st spe' : null,
-    settings.maxLife ? '\\d.+life' : null,
+    settings.maxLife ? '\\d.+m life' : null,
     settings.maxMana ? '\\d.+mana' : null,
     attributes ? `o (all a|${attributes})` : null,
   ].filter((e) => e !== null)

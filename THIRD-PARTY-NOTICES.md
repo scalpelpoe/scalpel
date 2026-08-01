@@ -48,6 +48,16 @@ Scalpel includes the following third-party software and data:
 
 ---
 
+## Features Stolen With Permission
+
+### Hinekora (navali-creations/hinekora)
+
+- Source: https://github.com/navali-creations/hinekora/
+- License: AGPL-3.0
+- Feature Stolen: Mirroring on screen elements as video for overlaying cooldown skills
+  
+---
+
 ## npm Dependencies
 
 ---

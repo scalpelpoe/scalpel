@@ -2,7 +2,16 @@ import { create, type StoreApi, type UseBoundStore } from 'zustand'
 import type { WhiteboardElement } from '@shared/whiteboard-types'
 import { createHistory, type History } from './history'
 
-export type Tool = 'select' | 'pen' | 'highlighter' | 'eraser' | 'shape' | 'text' | 'ruler' | 'radiusRing'
+export type Tool =
+  | 'select'
+  | 'pen'
+  | 'highlighter'
+  | 'eraser'
+  | 'shape'
+  | 'text'
+  | 'ruler'
+  | 'radiusRing'
+  | 'liveMirror'
 
 export type Mode = 'edit' | 'play'
 

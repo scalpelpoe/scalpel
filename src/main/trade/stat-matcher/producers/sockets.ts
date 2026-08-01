@@ -6,6 +6,7 @@ type SocketItemInfo = {
   sockets: string
   linkedSockets: number
   itemClass: string
+  runes?: string[]
 }
 
 // Socket chips: rune sockets (PoE2), white sockets, abyssal sockets, links
@@ -31,16 +32,32 @@ export function buildSocketFilters(
   // PoE2 rune sockets: one chip per item with min = current count. Rune-socket count
   // is load-bearing for PoE2 (2-socket body armours trade at a premium); enabled by
   // default so searches narrow to "at least this many" unless the user turns it off.
+  //
+  // Special-rune mechanic: some "(rune)"-tagged mods occupy a visible socket without
+  // counting toward the GGG trade site's rune_sockets equipment filter, so the visible
+  // socket count over-states what trade will match. Two known kinds:
+  //   - Warping runes: "Can roll <Theme> modifiers" (Chronomancy, Berserking, etc.)
+  //   - Modifier-grant runes: "+N Prefix/Suffix Modifier(s) allowed"
+  // Subtract one per special rune. Normal stat runes (resistances, life, ...) DO count
+  // and are not matched here. Verified by live trade2 probing: a 2-socket boot with two
+  // special runes indexes as rune_sockets 0; with one, as 1. The patterns are
+  // case-sensitive so the capital-M implicit "Can roll Ring Modifiers" (never in
+  // runes[]) is never discounted.
   if (s > 0) {
-    out.push({
-      id: 'socket.rune_sockets',
-      text: `${s} Rune Socket${s === 1 ? '' : 's'}`,
-      value: s,
-      min: s,
-      max: null,
-      enabled: true,
-      type: 'socket',
-    })
+    const specialRune = /^(?:Can roll .+ modifiers|\+\d+ (?:Prefix|Suffix) Modifiers? allowed)$/
+    const specialRuneCount = (itemInfo.runes ?? []).filter((r) => specialRune.test(r.trim())).length
+    const effectiveRuneSockets = s - specialRuneCount
+    if (effectiveRuneSockets > 0) {
+      out.push({
+        id: 'socket.rune_sockets',
+        text: `${effectiveRuneSockets} Rune Socket${effectiveRuneSockets === 1 ? '' : 's'}`,
+        value: effectiveRuneSockets,
+        min: effectiveRuneSockets,
+        max: null,
+        enabled: true,
+        type: 'socket',
+      })
+    }
   }
 
   // White sockets chip goes into filters (type: 'explicit') -- preserved quirk from

@@ -1,21 +1,22 @@
-# makepkg work directories from manual package tests
-*/src/
-*/pkg/
+# makepkg work directories and VCS source caches
+src/
+pkg/
+scalpel/
 
 # makepkg package/source outputs
-*/*.pkg.tar*
-*/*.src.tar*
+*.pkg.tar*
+*.src.tar*
 
 # downloaded release/source assets during manual tests
-*/*.AppImage
-*/*.asar
-*/*.zip
-*/*.tar.gz
-*/*.tar.xz
-*/*.tar.zst
-*/*.png
-*/LICENSE
+*.AppImage
+*.asar
+*.zip
+*.tar.gz
+*.tar.xz
+*.tar.zst
+*.png
+LICENSE
 
 # logs / partial downloads
-*/*.log
-*/*.part
+*.log
+*.part

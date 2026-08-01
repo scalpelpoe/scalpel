@@ -32,3 +32,19 @@ export function clampRectToScreen(rect: ScreenRect, area: ScreenRect): ScreenRec
   const y = Math.min(Math.max(rect.y, area.y), area.y + area.height - height)
   return { x, y, width, height }
 }
+
+/** Target rect for un-minimizing the cheat-sheets window: keep `size`, grow
+ *  up-and-left from the current strip's bottom-right corner (the inverse of
+ *  the minimize collapse, so an unmoved strip restores to its exact old
+ *  bounds), then clamp fully on-screen so a strip parked near the top or
+ *  left screen edge can't expand the header out of reach. Pure. */
+export function restoreTargetRect(
+  cur: ScreenRect,
+  size: { width: number; height: number },
+  area: ScreenRect,
+): ScreenRect {
+  return clampRectToScreen(
+    { x: cur.x + cur.width - size.width, y: cur.y + cur.height - size.height, width: size.width, height: size.height },
+    area,
+  )
+}

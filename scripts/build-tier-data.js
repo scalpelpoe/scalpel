@@ -102,6 +102,48 @@ function buildCompact(modsByBase, mods, baseItems) {
   return { schemaVersion: SCHEMA_VERSION, mods: outMods, pools, bases }
 }
 
+/** Strip RePoE markup: [a|b] -> b, [x] -> x. */
+function stripMarkup(text) {
+  return (text || '')
+    .replace(/\[([^\]|]+)\|([^\]]+)\]/g, '$2')
+    .replace(/\[([^\]]+)\]/g, '$1')
+}
+
+/** Normalized match key: markup-stripped, uppercased, numbers -> '#', ws collapsed. */
+function normKey(text) {
+  return stripMarkup(text)
+    .toUpperCase()
+    .replace(/[+-]?\([0-9.]+-[0-9.]+\)/g, '#')
+    .replace(/[+-]?[0-9][0-9.,]*/g, '#')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
+
+/** Build the desecrated dataset: single-stat domain==desecrated mods, laddered by normalized key. */
+function buildDesecrated(mods) {
+  const byKey = new Map() // key -> Map<"min:max", {min,max,lvl}>
+  for (const m of Object.values(mods)) {
+    if (!m || m.domain !== 'desecrated') continue
+    const stats = m.stats || []
+    if (stats.length !== 1) continue // v1: single-stat only
+    const s = stats[0]
+    const d = s.id.endsWith('_permyriad') ? 100 : 1
+    const key = normKey(m.text)
+    if (!key || key === '#') continue
+    if (!byKey.has(key)) byKey.set(key, new Map())
+    // "reduced"/"faster" mods store negative stat ranges but render (and OCR) as
+    // positive numbers; compare in absolute display-space so value->tier matches.
+    const a = Math.abs(s.min / d)
+    const b = Math.abs(s.max / d)
+    const tier = { min: Math.min(a, b), max: Math.max(a, b), lvl: m.required_level || 0 }
+    byKey.get(key).set(`${tier.min}:${tier.max}`, tier)
+  }
+  const out = []
+  for (const [key, tierMap] of byKey) out.push({ key, tiers: [...tierMap.values()].sort((a, b) => a.min - b.min) })
+  out.sort((a, b) => (a.key < b.key ? -1 : 1))
+  return { schemaVersion: 1, mods: out }
+}
+
 function sha256(str) {
   return crypto.createHash('sha256').update(str).digest('hex')
 }
@@ -166,7 +208,8 @@ async function main() {
       meta.etags[key] = r.etag
     }
     const outPath = path.join(OUT_DIR, `tiers-${game}.json`)
-    if (!gameChanged && fs.existsSync(outPath)) {
+    const desecPath = path.join(OUT_DIR, 'desecrated-poe2.json')
+    if (!gameChanged && fs.existsSync(outPath) && (game !== 'poe2' || fs.existsSync(desecPath))) {
       perGameHash[game] = sha256(fs.readFileSync(outPath, 'utf8'))
       continue
     }
@@ -179,6 +222,14 @@ async function main() {
       }
     }
     const compact = buildCompact(fetched['mods_by_base.json'], fetched['mods.json'], fetched['base_items.json'])
+    if (game === 'poe2') {
+      const desecJson = `${JSON.stringify(buildDesecrated(fetched['mods.json']))}\n`
+      const desecExisting = fs.existsSync(desecPath) ? fs.readFileSync(desecPath, 'utf8') : null
+      if (desecJson !== desecExisting) {
+        fs.writeFileSync(desecPath, desecJson, 'utf8')
+        console.log(`poe2: wrote desecrated-poe2.json (${JSON.parse(desecJson).mods.length} mods)`)
+      }
+    }
     const json = `${JSON.stringify(compact)}\n`
     perGameHash[game] = sha256(json)
     // Only write (and flag a change) when the bytes actually differ. A 200 that
@@ -219,4 +270,4 @@ if (require.main === module) {
   })
 }
 
-module.exports = { buildCompact, sha256, main, SCHEMA_VERSION, OUT_DIR, SOURCES }
+module.exports = { buildCompact, buildDesecrated, normKey, stripMarkup, sha256, main, SCHEMA_VERSION, OUT_DIR, SOURCES }

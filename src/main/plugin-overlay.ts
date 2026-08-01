@@ -79,7 +79,7 @@ function fullGameAnchor(): OverlayAnchor {
  *  elements (e.g. value labels next to a menu). Reuses the same overlays-map key
  *  as registerPluginOverlay, so open/close/dispose work unchanged. */
 export function registerPluginAnnotationOverlay(pluginId: string): SecondaryOverlay {
-  return registerPluginOverlayInternal(pluginId, {
+  const overlay = registerPluginOverlayInternal(pluginId, {
     id: `plugin-overlay:${pluginId}`,
     htmlEntry: 'plugin-annotation-overlay.html',
     defaultAnchor: fullGameAnchor,
@@ -99,6 +99,11 @@ export function registerPluginAnnotationOverlay(pluginId: string): SecondaryOver
       })
     },
   })
+  // Click-through surface with no chrome and no close button - if the Esc
+  // sweep hid it, the user would have no visible way to bring it back. Same
+  // reasoning as the whiteboard's passthrough mode. Idempotent on re-register.
+  overlay.setPersistOverOthers(true)
+  return overlay
 }
 
 export function getPluginOverlay(pluginId: string): SecondaryOverlay | null {
@@ -115,6 +120,19 @@ export function showPluginOverlay(pluginId: string): void {
 
 export function hidePluginOverlay(pluginId: string): void {
   overlays.get(pluginId)?.hide()
+}
+
+/** True when the plugin's popped-out overlay window exists and is currently
+ *  visible. Used by auto-update to skip a pop-out the user is looking at. */
+export function isPluginOverlayVisible(pluginId: string): boolean {
+  return overlays.get(pluginId)?.isVisible() ?? false
+}
+
+/** Reload a plugin's popped-out overlay window if one exists, so it re-imports
+ *  the new plugin.js after an update (the pop-out never receives plugin-updated
+ *  and would otherwise run stale code). No-op when there is no pop-out. */
+export function reloadPluginOverlay(pluginId: string): void {
+  overlays.get(pluginId)?.getWindow()?.webContents.reload()
 }
 
 /** Tear down on uninstall: hide the window so it does not linger. The handle

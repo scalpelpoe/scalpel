@@ -57,10 +57,12 @@ export const api = {
     | { ok: false; requiresRestart: true; targetGame: GameVariant }
     | { ok: false; error: string }
   > => ipcRenderer.invoke('set-active-profile', id, restartIfNeeded),
-  refreshLeagues: (): Promise<{
+  refreshLeagues: (
+    force = false,
+  ): Promise<{
     leaguesPoe1: string[]
     leaguesPoe2: string[]
-  }> => ipcRenderer.invoke('refresh-leagues'),
+  }> => ipcRenderer.invoke('refresh-leagues', force),
   pickFilterFile: (): Promise<string | null> => ipcRenderer.invoke('pick-filter-file'),
   pickFilterDir: (): Promise<string | null> => ipcRenderer.invoke('pick-filter-dir'),
   scanFilterDir: (dir: string): Promise<FilterListEntry[]> => ipcRenderer.invoke('scan-filter-dir', dir),
@@ -121,6 +123,20 @@ export const api = {
     league: string,
   ): Promise<Record<string, { chaosValue: number; divineValue?: number } | null>> =>
     ipcRenderer.invoke('batch-lookup-ref-prices', refs, league),
+  getBeastPrices: (
+    force?: boolean,
+  ): Promise<{
+    lines: Array<{
+      name: string
+      chaosValue: number
+      divineValue?: number
+      listingCount: number
+      graph?: (number | null)[]
+    }>
+    league: string
+    updatedAt: number | null
+    error?: string
+  }> => ipcRenderer.invoke('get-beast-prices', force),
   sisterOpenPriceCheck: (ref: {
     name: string
     baseType?: string
@@ -219,6 +235,10 @@ export const api = {
     ipcRenderer.send('record-pref-observation', sessionId, chips),
   resetLearning: (scope: 'all' | { rarity: string; itemClass: string }): Promise<void> =>
     ipcRenderer.invoke('reset-learning', scope),
+  setLearnedPreference: (sessionId: number, chipId: string, enabled: boolean): void =>
+    ipcRenderer.send('set-learned-preference', sessionId, chipId, enabled),
+  unsetLearnedPreference: (sessionId: number, chipId: string): void =>
+    ipcRenderer.send('unset-learned-preference', sessionId, chipId),
 
   // Regex presets
   getRegexPresets: (): Promise<import('@shared/types').RegexPreset[]> => ipcRenderer.invoke('get-regex-presets'),
@@ -247,8 +267,15 @@ export const api = {
     ipcRenderer.invoke('cheat-sheet:remove', categoryId, sheetId, ext),
   removeCheatSheetCategory: (categoryId: string): Promise<void> =>
     ipcRenderer.invoke('cheat-sheet:remove-category', categoryId),
-  listCheatSheetPrefabs: (): Promise<Array<{ slug: string; name: string; imageCount: number; poeVersion?: 1 | 2 }>> =>
-    ipcRenderer.invoke('cheat-sheet:list-prefabs'),
+  listCheatSheetPrefabs: (): Promise<
+    Array<{
+      slug: string
+      name: string
+      imageCount: number
+      poeVersion?: 1 | 2
+      group?: 'leveling-complete' | 'leveling-simple'
+    }>
+  > => ipcRenderer.invoke('cheat-sheet:list-prefabs'),
   importCheatSheetPrefab: (
     slug: string,
   ): Promise<{ categoryId: string; sheets: Array<{ id: string; ext: string; areaCodes?: string[] }> }> =>
@@ -276,6 +303,9 @@ export const api = {
     ipcRenderer.on('secondary-overlay-canvas:snap-ghost', handler)
     return () => ipcRenderer.removeListener('secondary-overlay-canvas:snap-ghost', handler)
   },
+  // Secondary-overlay pin (Esc exemption). Sender-resolved in main.
+  getOverlayPinned: (): Promise<boolean> => ipcRenderer.invoke('secondary-overlay:get-pinned'),
+  setOverlayPinned: (pinned: boolean): void => ipcRenderer.send('secondary-overlay:set-pinned', pinned),
   onCheatSheetPreview: (cb: (state: { src: string | null }) => void): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, state: { src: string | null }): void => cb(state)
     ipcRenderer.on('cheat-sheet-preview:render', handler)
@@ -322,6 +352,11 @@ export const api = {
     const handler = (): void => cb()
     ipcRenderer.on('overlay-hide', handler)
     return () => ipcRenderer.removeListener('overlay-hide', handler)
+  },
+  onOverlayShow: (cb: () => void): (() => void) => {
+    const handler = (): void => cb()
+    ipcRenderer.on('overlay-show', handler)
+    return () => ipcRenderer.removeListener('overlay-show', handler)
   },
   onSettingUpdated: (cb: (key: string, value: unknown) => void): (() => void) => {
     const handler = (_: Electron.IpcRendererEvent, key: string, value: unknown): void => cb(key, value)
@@ -588,7 +623,7 @@ export const api = {
     wantTexts: string[]
     wantMode: 'any' | 'all'
     wantValues: Record<number, number>
-    rarity: { normal: boolean; magic: boolean }
+    rarity: { normal: boolean; magic: boolean; rare: boolean }
     typeFlags: Record<string, boolean>
     uses: { enabled: boolean; value: number }
   }): Promise<{
@@ -820,6 +855,20 @@ export const api = {
      *  missed the original push. */
     requestShownState: (): void => ipcRenderer.send('whiteboard:request-shown-state'),
   },
+  // Screen capture source resolution for the whiteboard live-mirror feature
+  screen: {
+    getGameWindowSource: (): Promise<{ sourceId: string; gameSize: { w: number; h: number } } | null> =>
+      ipcRenderer.invoke(IPC_CHANNELS.SCREEN.GET_GAME_WINDOW_SOURCE),
+    onSourceInvalidated: (cb: () => void): (() => void) => {
+      const handler = (): void => cb()
+      ipcRenderer.on(IPC_CHANNELS.SCREEN.SOURCE_INVALIDATED_EVENT, handler)
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.SCREEN.SOURCE_INVALIDATED_EVENT, handler)
+    },
+    onSourceMaybeStale: (handler: () => void): (() => void) => {
+      ipcRenderer.on(IPC_CHANNELS.SCREEN.SOURCE_MAYBE_STALE_EVENT, handler)
+      return () => ipcRenderer.removeListener(IPC_CHANNELS.SCREEN.SOURCE_MAYBE_STALE_EVENT, handler)
+    },
+  },
   // Plugins
   listInstalledPlugins: (): Promise<
     Array<{
@@ -831,6 +880,9 @@ export const api = {
     Array<{
       manifest: import('../plugin-sdk/src/types').PluginManifest
       entryUrl: string
+      /** Absent when the plugin was side-loaded before source dirs were
+       *  tracked - Reload needs it, so the button stays disabled without one. */
+      sourceDir?: string
     }>
   > => ipcRenderer.invoke('plugins:list-unpacked'),
   getInstalledPlugin: (
@@ -855,6 +907,10 @@ export const api = {
     ipcRenderer.invoke('plugins:list-registered-tabs'),
   pluginInstallUnpacked: (): Promise<{ ok: true; id: string } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:install-unpacked'),
+  /** Re-copy an unpacked plugin from the directory it was loaded from and
+   *  hot-swap the running instance. The plugin dev loop, without a restart. */
+  pluginReloadUnpacked: (pluginId: string): Promise<{ ok: true; id: string } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('plugins:reload-unpacked', pluginId),
   pluginFetchRegistry: (): Promise<
     { ok: true; snapshot: import('@shared/plugin-registry-types').RegistrySnapshot } | { ok: false; error: string }
   > => ipcRenderer.invoke('plugins:fetch-registry'),
@@ -920,8 +976,10 @@ export const api = {
     ipcRenderer.on('plugin-overlay:init', handler)
     return () => ipcRenderer.removeListener('plugin-overlay:init', handler)
   },
-  pluginTriggerMainHotkey: (): Promise<import('@shared/types').PoeItem | null> =>
-    ipcRenderer.invoke('plugins:trigger-main-hotkey'),
+  pluginTriggerMainHotkey: (opts?: {
+    showOverlay?: boolean
+    dispatch?: boolean
+  }): Promise<import('@shared/types').PoeItem | null> => ipcRenderer.invoke('plugins:trigger-main-hotkey', opts),
   pluginShowOverlay: (): Promise<void> => ipcRenderer.invoke('plugins:show-overlay'),
   pluginRegisterOverlay: (
     pluginId: string,
@@ -934,10 +992,13 @@ export const api = {
   ): Promise<void> => ipcRenderer.invoke('plugins:register-overlay', pluginId, opts),
   pluginOpenOverlay: (pluginId: string): Promise<void> => ipcRenderer.invoke('plugins:open-overlay', pluginId),
   pluginCloseOverlay: (pluginId: string): Promise<void> => ipcRenderer.invoke('plugins:close-overlay', pluginId),
+  pluginOverlayVisible: (pluginId: string): Promise<boolean> => ipcRenderer.invoke('plugins:overlay-visible', pluginId),
   pluginCaptureGameWindow: (
     region?: import('../plugin-sdk/src/types').GameRect,
   ): Promise<import('../plugin-sdk/src/types').GameCapture | null> =>
     ipcRenderer.invoke('plugins:capture-game-window', region),
+  pluginGetCursorPosition: (): Promise<{ x: number; y: number } | null> =>
+    ipcRenderer.invoke('plugins:get-cursor-position'),
 }
 
 contextBridge.exposeInMainWorld('api', api)

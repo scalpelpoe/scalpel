@@ -21,14 +21,14 @@ describe('buildRuneBaseFilter', () => {
     expect(filters[0].type).toBe('misc')
   })
 
-  it('emits misc.rune_base with text "Runemastered" for a runemastered unique', () => {
+  it('emits misc.rune_base enabled for a runemastered unique (targets the runemastered variant by default, issue #458)', () => {
     const filters = buildRuneBaseFilter(
       makeInfo({ baseType: 'Runemastered Veridical Chain', rarity: 'Unique', itemClass: 'Amulets' }),
     )
     expect(filters).toHaveLength(1)
     expect(filters[0].id).toBe('misc.rune_base')
     expect(filters[0].text).toBe('Runemastered')
-    expect(filters[0].enabled).toBe(false)
+    expect(filters[0].enabled).toBe(true)
   })
 
   it('emits nothing for a plain (non-rune) base', () => {

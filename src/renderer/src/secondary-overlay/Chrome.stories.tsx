@@ -2,6 +2,14 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { GridFour, GridNine, GridSixteen } from '@icon-park/react'
 import { Chrome } from './Chrome'
 
+// Storybook has no preload bridge; stub just enough for the pin toggle.
+if (!(window as unknown as { api?: unknown }).api) {
+  ;(window as unknown as { api: Record<string, unknown> }).api = {
+    getOverlayPinned: async () => false,
+    setOverlayPinned: () => {},
+  }
+}
+
 /** The frame around every secondary overlay window (cheat sheets today, more
  *  tomorrow): drag-region header with the Scalpel icon, an optional left
  *  content slot for tabs, an optional right slot for view controls, and a

@@ -1,6 +1,7 @@
-import type { GameVariant, TradePriceOption } from './core'
+import type { TradePriceOption } from './core'
 import type { CheatSheetsSettings } from './overlay'
 import type { RegexPreset } from './regex'
+import type { GameVariant } from './game-variant'
 
 export interface PoeProfile {
   schemaVersion: 1

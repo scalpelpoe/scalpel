@@ -9,22 +9,30 @@ interface Props {
   onError: (msg: string, tone?: 'error' | 'warn') => void
 }
 
+interface UnpackedRow {
+  manifest: PluginManifest
+  sourceDir?: string
+}
+
 export function DeveloperSection({ settings, update, onError }: Props): JSX.Element {
   const enabled = !!settings.developerMode
 
-  const [unpacked, setUnpacked] = useState<PluginManifest[]>([])
+  const [unpacked, setUnpacked] = useState<UnpackedRow[]>([])
 
   const refresh = useCallback(async () => {
     const list = await window.api.listUnpackedPlugins()
-    setUnpacked(list.map((p) => p.manifest))
+    setUnpacked(list.map((p) => ({ manifest: p.manifest, sourceDir: p.sourceDir })))
   }, [])
 
   useEffect(() => {
     void refresh()
     const unsubInstalled = window.api.onPluginInstalled(() => void refresh())
+    // A reload re-installs over the running plugin, which reports as an update.
+    const unsubUpdated = window.api.onPluginUpdated(() => void refresh())
     const unsubUninstalled = window.api.onPluginUninstalled(() => void refresh())
     return () => {
       unsubInstalled()
+      unsubUpdated()
       unsubUninstalled()
     }
   }, [refresh])
@@ -36,6 +44,15 @@ export function DeveloperSection({ settings, update, onError }: Props): JSX.Elem
       return
     }
     onError(m.settings_dev_plugin_installed({ id: r.id }), 'warn')
+  }
+
+  const reload = async (id: string, name: string): Promise<void> => {
+    const r = await window.api.pluginReloadUnpacked(id)
+    if (!r.ok) {
+      onError(r.error)
+      return
+    }
+    onError(`Reloaded "${name}".`, 'warn')
   }
 
   const remove = async (id: string, name: string): Promise<void> => {
@@ -77,26 +94,48 @@ export function DeveloperSection({ settings, update, onError }: Props): JSX.Elem
           <div className="flex flex-col gap-1 mt-1">
             <span className="text-xs text-zinc-400">Loaded unpacked plugins</span>
             <span className="text-[10px] text-zinc-500">
-              Removing only deletes Scalpel's copy. Your source directory is untouched.
+              Reload re-copies the plugin from the directory you loaded it from and swaps the running code - rebuild,
+              reload, no restart. Removing only deletes Scalpel's copy; your source directory is untouched.
             </span>
             {unpacked.length === 0 ? (
               <span className="text-xs text-zinc-500">None loaded.</span>
             ) : (
               <div className="flex flex-col gap-1">
-                {unpacked.map((manifest) => (
+                {unpacked.map(({ manifest, sourceDir }) => (
                   <div
                     key={manifest.id}
                     className="flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-white/[0.04]"
                   >
-                    <span className="text-xs text-zinc-200">
-                      {manifest.name} <span className="font-mono text-[10px] text-zinc-500">v{manifest.version}</span>
+                    <span className="flex flex-col min-w-0">
+                      <span className="text-xs text-zinc-200">
+                        {manifest.name} <span className="font-mono text-[10px] text-zinc-500">v{manifest.version}</span>
+                      </span>
+                      {sourceDir && (
+                        <span className="font-mono text-[10px] text-zinc-500 truncate" title={sourceDir}>
+                          {sourceDir}
+                        </span>
+                      )}
                     </span>
-                    <button
-                      className="btn-bounce px-2 py-1 text-[11px] bg-zinc-700 hover:bg-zinc-600 rounded"
-                      onClick={() => void remove(manifest.id, manifest.name)}
-                    >
-                      Remove
-                    </button>
+                    <span className="flex items-center gap-1 shrink-0">
+                      <button
+                        className="btn-bounce px-2 py-1 text-[11px] bg-zinc-700 hover:bg-zinc-600 rounded disabled:opacity-40 disabled:cursor-not-allowed"
+                        disabled={!sourceDir}
+                        title={
+                          sourceDir
+                            ? `Re-copy from ${sourceDir} and hot-swap the running plugin`
+                            : 'Load this plugin unpacked again to enable reloading'
+                        }
+                        onClick={() => void reload(manifest.id, manifest.name)}
+                      >
+                        Reload
+                      </button>
+                      <button
+                        className="btn-bounce px-2 py-1 text-[11px] bg-zinc-700 hover:bg-zinc-600 rounded"
+                        onClick={() => void remove(manifest.id, manifest.name)}
+                      >
+                        Remove
+                      </button>
+                    </span>
                   </div>
                 ))}
               </div>
@@ -105,8 +144,8 @@ export function DeveloperSection({ settings, update, onError }: Props): JSX.Elem
           <div className="flex flex-col gap-1 mt-3 pt-3 border-t border-border">
             <span className="text-xs text-zinc-400">Restart Scalpel</span>
             <span className="text-[10px] text-zinc-500">
-              Plugin code is loaded at startup. Restart to pick up a freshly-built or just-installed plugin
-              without closing and reopening by hand.
+              Relaunches the app. Rebuilt plugin code no longer needs this - use Reload above - but a full restart still
+              clears anything that only initialises at startup. Packaged builds only.
             </span>
             <button
               onClick={() => window.api.restartApp()}

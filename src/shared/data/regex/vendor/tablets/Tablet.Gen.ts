@@ -93,7 +93,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -1948610158,
     "name": "##% increased chance for Abyssal monsters in Map to have Abyssal Modifiers",
-    "regex": "r ab",
+    "regex": "ap t",
     "values": [],
     "ranges": [
       [
@@ -109,7 +109,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -155578423,
     "name": "##% increased chance for Desecrated Currency from Abysses in Map",
-    "regex": "cy",
+    "regex": "ese",
     "values": [],
     "ranges": [
       [
@@ -125,7 +125,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": 349687363,
     "name": "##% increased chance Vaal Beacon Chests are Rare in Map",
-    "regex": "n c",
+    "regex": "ts a",
     "values": [],
     "ranges": [
       [
@@ -189,7 +189,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -2071746539,
     "name": "##% increased Expedition Explosive Placement Range in Map",
-    "regex": "pla",
+    "regex": "ace",
     "values": [],
     "ranges": [
       [
@@ -237,7 +237,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -1651586367,
     "name": "##% increased Gold found in Map",
-    "regex": "go",
+    "regex": "gol",
     "values": [],
     "ranges": [
       [
@@ -331,9 +331,25 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
+    "id": -1180290839,
+    "name": "##% increased Quantity of Hiveblood found in Map",
+    "regex": "eb",
+    "values": [],
+    "ranges": [
+      [
+        30,
+        60
+      ]
+    ],
+    "prefix": false,
+    "tags": [
+      "breach"
+    ]
+  },
+  {
     "id": 1236536467,
     "name": "##% increased Quantity of Items dropped by Map Bosses",
-    "regex": "y of i",
+    "regex": "tity of i",
     "values": [],
     "ranges": [
       [
@@ -397,7 +413,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": 732129923,
     "name": "##% increased Rarity of Items dropped by Map Bosses",
-    "regex": "(35-60)% increased [Rarity] of Items dropped by Map Bosses",
+    "regex": "rity of items d",
     "values": [],
     "ranges": [
       [
@@ -474,7 +490,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -347580005,
     "name": "Abysses in Map have ##% increased chance to lead to an Abyssal Depths",
-    "regex": "lea",
+    "regex": "ead",
     "values": [],
     "ranges": [
       [
@@ -504,9 +520,9 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
-    "id": 69941386,
-    "name": "Breaches in Map have ##% increased Monster density",
-    "regex": "den",
+    "id": -1810195056,
+    "name": "Breaches in Map have ##% increased Pack Size",
+    "regex": "^breache",
     "values": [],
     "ranges": [
       [
@@ -552,6 +568,22 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
+    "id": -1098842492,
+    "name": "Delirium Fog in Map applies ##% increased Deliriousness to Players",
+    "regex": "sn",
+    "values": [],
+    "ranges": [
+      [
+        15,
+        30
+      ]
+    ],
+    "prefix": false,
+    "tags": [
+      "delirium"
+    ]
+  },
+  {
     "id": -75847069,
     "name": "Delirium Fog in Map dissipates ##% slower",
     "regex": "slo",
@@ -570,7 +602,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -1301692462,
     "name": "Delirium Fog in Map lasts ## additional seconds before dissipating",
-    "regex": "bef",
+    "regex": "ast",
     "values": [],
     "ranges": [
       [
@@ -616,25 +648,9 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
-    "id": -1500776985,
-    "name": "Delirium in Map increases ##% faster with distance from the mirror",
-    "regex": "fas",
-    "values": [],
-    "ranges": [
-      [
-        15,
-        30
-      ]
-    ],
-    "prefix": false,
-    "tags": [
-      "delirium"
-    ]
-  },
-  {
     "id": -144636559,
     "name": "Delirium Monsters in Map have ##% increased Pack Size",
-    "regex": "ze$",
+    "regex": "um mo",
     "values": [],
     "ranges": [
       [
@@ -714,7 +730,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -1408619460,
     "name": "Map contains # additional Azmeri Spirit",
-    "regex": "it$",
+    "regex": "irit$",
     "values": [
       1
     ],
@@ -743,7 +759,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -28949286,
     "name": "Map contains ## additional Essences",
-    "regex": "l e",
+    "regex": "l essences",
     "values": [],
     "ranges": [
       [
@@ -775,7 +791,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -83772487,
     "name": "Map contains ## additional Shrines",
-    "regex": "l sh",
+    "regex": "l shrines",
     "values": [],
     "ranges": [
       [
@@ -791,7 +807,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -851314709,
     "name": "Map contains ## additional Strongboxes",
-    "regex": "l st",
+    "regex": "l strongboxe",
     "values": [],
     "ranges": [
       [
@@ -823,7 +839,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -1831730187,
     "name": "Map contains an additional Abyss",
-    "regex": "l abyss$",
+    "regex": "tional abyss$",
     "values": [],
     "ranges": [],
     "prefix": false,
@@ -834,7 +850,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -1851342203,
     "name": "Map contains an additional Essence",
-    "regex": "Map contains an additional [Essence]",
+    "regex": "l essence$",
     "values": [],
     "ranges": [],
     "prefix": true,
@@ -845,7 +861,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -1666580030,
     "name": "Map contains an additional Shrine",
-    "regex": "Map contains an additional [Shrine]",
+    "regex": "ne$",
     "values": [],
     "ranges": [],
     "prefix": false,
@@ -856,7 +872,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": 1553812225,
     "name": "Map contains an additional Strongbox",
-    "regex": "Map contains an additional [Strongbox]",
+    "regex": "ox$",
     "values": [],
     "ranges": [],
     "prefix": false,
@@ -867,7 +883,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": 2085013298,
     "name": "Map contains an additional Summoning Circle",
-    "regex": "l su",
+    "regex": "tional su",
     "values": [],
     "ranges": [],
     "prefix": true,
@@ -1006,7 +1022,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -2108138016,
     "name": "Map has ##% increased Magic Monsters",
-    "regex": "c m",
+    "regex": "d ma",
     "values": [],
     "ranges": [
       [
@@ -1147,7 +1163,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -1860827957,
     "name": "Ritual Altars in Map allow rerolling Favours ## additional times",
-    "regex": "mes",
+    "regex": "allo",
     "values": [],
     "ranges": [
       [

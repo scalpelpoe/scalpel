@@ -85,7 +85,7 @@ export function ExpandedCardList({
               )}
             </span>
             <span className="text-[11px] text-text-dim relative z-[2] font-mono w-[55px] text-right">
-              {Math.round(c.card.weight)}
+              {Math.round(c.card.weight ?? 0)}
               {c.card.weightEstimated ? '*' : ''}
             </span>
             <span

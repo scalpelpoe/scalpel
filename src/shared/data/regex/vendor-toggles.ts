@@ -404,3 +404,41 @@ export function ensureVendorGroupsMigrated(legacyKey: string, groupsKey: string)
     // ignore malformed legacy data
   }
 }
+
+/** PoE2 mirror of sanitizeVendorPoe1Groups: coerce an untrusted persisted value
+ *  into a valid groups state (heals a poe2: key poisoned with PoE1-shaped state
+ *  by the pre-fix in-process game switch). */
+export function sanitizeVendorGroups(value: unknown): VendorGroupsState {
+  if (typeof value !== 'object' || value === null) return structuredClone(DEFAULT_VENDOR_GROUPS_STATE)
+  const raw = value as { groups?: unknown; selectedGroupId?: unknown }
+  if (!Array.isArray(raw.groups) || raw.groups.length === 0) {
+    return structuredClone(DEFAULT_VENDOR_GROUPS_STATE)
+  }
+  const groups = raw.groups.map((g) => sanitizeVendorSettings(g))
+  const sel = typeof raw.selectedGroupId === 'number' && Number.isFinite(raw.selectedGroupId) ? raw.selectedGroupId : 0
+  return { groups, selectedGroupId: Math.min(Math.max(0, sel), groups.length - 1) }
+}
+
+function sanitizeVendorSettings(value: unknown): VendorSettings {
+  const s = structuredClone(DEFAULT_VENDOR_SETTINGS)
+  if (typeof value !== 'object' || value === null) return s
+  const raw = value as Record<string, unknown>
+  for (const group of BOOLEAN_GROUPS) {
+    const src = raw[group]
+    if (typeof src !== 'object' || src === null) continue
+    const dst = s[group] as Record<string, boolean>
+    for (const field of Object.keys(dst)) {
+      const v = (src as Record<string, unknown>)[field]
+      if (typeof v === 'boolean') dst[field] = v
+    }
+  }
+  s.itemLevel = sanitizeLevelRange(raw.itemLevel)
+  s.characterLevel = sanitizeLevelRange(raw.characterLevel)
+  return s
+}
+
+function sanitizeLevelRange(value: unknown): { min: number; max: number } {
+  const raw = (typeof value === 'object' && value !== null ? value : {}) as Record<string, unknown>
+  const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? Math.max(0, Math.min(100, v)) : 0)
+  return { min: num(raw.min), max: num(raw.max) }
+}

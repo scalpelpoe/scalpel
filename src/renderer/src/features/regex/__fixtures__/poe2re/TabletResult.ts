@@ -1,8 +1,11 @@
 /* Verbatim copy of poe2.re's src/pages/tablet/TabletResult.ts (veiset/poe2.re),
- * used as a parity reference only. Only the import paths differ from upstream.
+ * used as a parity reference only. Only the import paths differ from upstream,
+ * plus the dropped over100 arg to selectedOptionRegex (current upstream no longer
+ * threads it through - see SelectedOptionRegex.ts).
  * Do not refactor - drift from upstream is what the parity test catches. */
 import { Settings } from './Settings'
 import { selectedOptionRegex } from './SelectedOptionRegex'
+import { generateRarityRegex } from './GenerateRarityRegex'
 
 export function generateTabletRegex(settings: Settings): string {
   const result = [
@@ -18,9 +21,7 @@ export function generateTabletRegex(settings: Settings): string {
 }
 
 function generateModifierRegex(settings: Settings['tablet']['modifier']): string[] {
-  const affixes = settings.affixes
-    .filter((e) => e.isSelected)
-    .map((e) => selectedOptionRegex(e, settings.round10, false))
+  const affixes = settings.affixes.filter((e) => e.isSelected).map((e) => selectedOptionRegex(e, settings.round10))
   if (affixes.length === 0) return []
   if (settings.affixSelectType === 'all') {
     return affixes.map((e) => `"${e}"`)
@@ -28,43 +29,33 @@ function generateModifierRegex(settings: Settings['tablet']['modifier']): string
   return [`"${affixes.join('|')}"`]
 }
 
-function generateRarityRegex(settings: Settings['tablet']['rarity']): string | null {
-  if ((settings.normal && settings.magic) || (!settings.normal && !settings.magic)) {
-    return null
-  }
-  const normalRegex = settings.normal ? 'n' : ''
-  const magicRegex = settings.magic ? 'm' : ''
-  const result = [normalRegex, magicRegex].filter((e) => e.length > 0).join('|')
-  if (result.length === 0) return null
-  if (result.length === 1) return `"y: ${result}"`
-  if (result.length > 1) return `"y: (${result})"`
-  return null
-}
-
 function generateTypeRegex(settings: Settings['tablet']['type']): string | null {
   if (
-    (settings.breach &&
-      settings.delirium &&
-      settings.irradiated &&
-      settings.expedition &&
+    (settings.irradiated &&
       settings.ritual &&
+      settings.delirium &&
+      settings.breach &&
+      settings.abyss &&
+      settings.temple &&
       settings.overseer) ||
-    (!settings.breach &&
-      !settings.delirium &&
-      !settings.irradiated &&
-      !settings.expedition &&
+    (!settings.irradiated &&
       !settings.ritual &&
+      !settings.delirium &&
+      !settings.breach &&
+      !settings.abyss &&
+      !settings.temple &&
       !settings.overseer)
   ) {
     return null
   }
-  const breachRegex = settings.breach ? 'eac' : ''
-  const deliriumRegex = settings.delirium ? 'liri' : ''
   const irradiatedRegex = settings.irradiated ? 'rra' : ''
-  const expeditionRegex = settings.expedition ? 'xped' : ''
   const ritualRegex = settings.ritual ? 'tual' : ''
+  const deliriumRegex = settings.delirium ? 'liri' : ''
+  const breachRegex = settings.breach ? 'eac' : ''
+  const abyssRegex = settings.abyss ? 'byss' : ''
+  const templeRegex = settings.temple ? 'empl' : ''
   const overseerRegex = settings.overseer ? 'eer' : ''
-  const result = [breachRegex, deliriumRegex, irradiatedRegex, expeditionRegex, ritualRegex, overseerRegex]
+  const result = [irradiatedRegex, ritualRegex, deliriumRegex, breachRegex, abyssRegex, templeRegex, overseerRegex]
     .filter((e) => e.length > 0)
     .join('|')
   if (result.length === 0) return null

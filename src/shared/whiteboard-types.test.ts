@@ -169,6 +169,30 @@ describe('validateBoardLibrary', () => {
   })
 })
 
+describe('liveMirror validation', () => {
+  it('is listed in ELEMENT_TYPES', () => {
+    expect(ELEMENT_TYPES).toContain('liveMirror')
+  })
+
+  it('accepts a well-formed liveMirror', () => {
+    const ok = {
+      source: { x: 0.1, y: 0.1, w: 0.2, h: 0.1 },
+      bbox: { x: 0.5, y: 0.5, w: 0.2, h: 0.1 },
+    }
+    expect(ELEMENT_VALIDATORS.liveMirror(ok)).toBe(true)
+  })
+
+  it('rejects a liveMirror missing its source rect', () => {
+    const bad = { bbox: { x: 0, y: 0, w: 0.1, h: 0.1 } }
+    expect(ELEMENT_VALIDATORS.liveMirror(bad)).toBe(false)
+  })
+
+  it('rejects a liveMirror with a malformed source rect', () => {
+    const bad = { source: { x: 0, y: 0 }, bbox: { x: 0, y: 0, w: 0.1, h: 0.1 } }
+    expect(ELEMENT_VALIDATORS.liveMirror(bad)).toBe(false)
+  })
+})
+
 describe('ruler / radiusRing validators', () => {
   it('lists the new kinds in ELEMENT_TYPES', () => {
     expect(ELEMENT_TYPES).toContain('ruler')

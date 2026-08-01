@@ -766,6 +766,39 @@ describe('parseItemText', () => {
       expect(item.explicits).toContain('19% reduced Charges per use')
     })
 
+    it('offers a "\\n"-joined candidate for a basic-copy mod that wraps across two lines', () => {
+      // A basic (Ctrl+C) copy has no advanced-mod headers to group a mod's wrapped
+      // lines, so the joined candidate must be synthesized here instead -- otherwise
+      // only the two junk half-lines reach the matcher and the real stat never matches.
+      const text = [
+        'Item Class: Jewels',
+        'Rarity: Unique',
+        "Watcher's Eye",
+        'Prismatic Jewel',
+        '--------',
+        'Limited to: 1',
+        '--------',
+        'Item Level: 85',
+        '--------',
+        '4% increased maximum Life',
+        '6% increased maximum Energy Shield',
+        '4% increased maximum Mana',
+        '19% of Damage taken while affected by Clarity Recouped as Mana',
+        '15% of Fire and Cold Damage taken as Lightning Damage while',
+        'affected by Purity of Lightning',
+      ].join('\n')
+
+      const item = parseItemText(text)!
+      expect(item.explicits).toContain(
+        '15% of Fire and Cold Damage taken as Lightning Damage while\naffected by Purity of Lightning',
+      )
+      expect(item.explicits).toContain('4% increased maximum Life')
+      expect(item.explicits).toContain('6% increased maximum Energy Shield')
+      expect(item.explicits).toContain('4% increased maximum Mana')
+      expect(item.explicits).toContain('19% of Damage taken while affected by Clarity Recouped as Mana')
+      expect(item.explicits).not.toContain('4% increased maximum Life\n6% increased maximum Energy Shield')
+    })
+
     it('parses a PoE2 Waystone property block and monster affixes', () => {
       const text = [
         'Item Class: Waystones',
@@ -960,6 +993,149 @@ describe('parseItemText', () => {
   })
 
   // ---------------------------------------------------------------------------
+  // Charts (PoE1 Allflame league)
+  // ---------------------------------------------------------------------------
+
+  describe('charts', () => {
+    const chartText = (withAdvancedMods: boolean) =>
+      [
+        'Item Class: Chart',
+        'Rarity: Magic',
+        'Fecund Coral Forest Chart',
+        '--------',
+        'Sea Pillars',
+        'Area Level: 57',
+        'Item Quantity: +20% (augmented)',
+        '--------',
+        'Item Level: 57',
+        '--------',
+        ...(withAdvancedMods ? ['{ Implicit Modifier }'] : []),
+        'Voyage Modifier will be revealed once Charted',
+        '--------',
+        'Chart Shape: Straight',
+        '--------',
+        ...(withAdvancedMods
+          ? ['{ Prefix Modifier "Fecund" (Tier: 4) - Life }', '15(10-19)% more Monster Life']
+          : ['15% more Monster Life']),
+        '--------',
+        'Take this item to Valerie aboard the Sovereign to Chart this area.',
+      ].join('\n')
+
+    it('parses the zone name, shape and quantity from an advanced copy', () => {
+      const item = parseItemText(chartText(true))!
+
+      expect(item.itemClass).toBe('Chart')
+      expect(item.chartZone).toBe('Sea Pillars')
+      expect(item.chartShape).toBe('Straight')
+      expect(item.monsterLevel).toBe(57)
+      expect(item.mapQuantity).toBe(20)
+      expect(item.baseType).toBe('Coral Forest Chart')
+    })
+
+    it('parses the zone name and shape from a basic copy', () => {
+      const item = parseItemText(chartText(false))!
+
+      expect(item.chartZone).toBe('Sea Pillars')
+      expect(item.chartShape).toBe('Straight')
+    })
+
+    it('leaves chartZone undefined when the zone line is missing', () => {
+      const text = [
+        'Item Class: Chart',
+        'Rarity: Normal',
+        'Coral Forest Chart',
+        '--------',
+        'Area Level: 57',
+        '--------',
+        'Item Level: 57',
+      ].join('\n')
+
+      const item = parseItemText(text)!
+
+      expect(item.chartZone).toBeUndefined()
+      expect(item.monsterLevel).toBe(57)
+    })
+
+    it('does not read a zone off a non-chart item with an area level', () => {
+      const text = [
+        'Item Class: Expedition Logbooks',
+        'Rarity: Normal',
+        'Expedition Logbook',
+        '--------',
+        'Area Level: 81',
+        '--------',
+        'Item Level: 81',
+        '--------',
+        'Knights of the Sun',
+      ].join('\n')
+
+      const item = parseItemText(text)!
+
+      expect(item.chartZone).toBeUndefined()
+      expect(item.chartShape).toBeUndefined()
+    })
+
+    it('strips the magic prefix on a basic copy using the static base list', () => {
+      const item = parseItemText(chartText(false))!
+
+      expect(item.baseType).toBe('Coral Forest Chart')
+      expect(item.width).toBe(1)
+      expect(item.height).toBe(1)
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // Scrying Orbs (PoE1)
+  // ---------------------------------------------------------------------------
+
+  describe('scrying orbs', () => {
+    const scryingOrbText = (area: string) =>
+      [
+        'Item Class: Stackable Currency',
+        'Rarity: Currency',
+        'Scrying Orb',
+        '--------',
+        `Map Area: ${area}`,
+        '--------',
+        'Scries a Map on your Atlas',
+        '--------',
+        'Right click on this item then left click a Map on your Atlas.',
+      ].join('\n')
+
+    it('parses the bound map area', () => {
+      const item = parseItemText(scryingOrbText('Dunes'))!
+
+      expect(item.itemClass).toBe('Stackable Currency')
+      expect(item.baseType).toBe('Scrying Orb')
+      expect(item.scryingArea).toBe('Dunes')
+    })
+
+    it('keeps a multi-word area intact', () => {
+      expect(parseItemText(scryingOrbText('Sunken City'))!.scryingArea).toBe('Sunken City')
+    })
+
+    it('leaves the area line out of the mod list', () => {
+      const item = parseItemText(scryingOrbText('Dunes'))!
+
+      expect(item.explicits ?? []).not.toContain('Map Area: Dunes')
+    })
+
+    it('leaves scryingArea undefined on another currency', () => {
+      const text = [
+        'Item Class: Stackable Currency',
+        'Rarity: Currency',
+        'Chaos Orb',
+        '--------',
+        'Stack Size: 12/20',
+        '--------',
+        'Reforges a rare item with new random modifiers',
+      ].join('\n')
+
+      expect(parseItemText(text)!.scryingArea).toBeUndefined()
+    })
+  })
+
+  // ---------------------------------------------------------------------------
   // Flags
   // ---------------------------------------------------------------------------
 
@@ -1038,6 +1214,16 @@ describe('parseItemText', () => {
     it('detects Mirrored flag', () => {
       const item = parseItemText(makeRing(['--------', 'Mirrored']))!
       expect(item.mirrored).toBe(true)
+    })
+
+    it('detects Vestigial flag', () => {
+      const item = parseItemText(makeRing(['--------', 'Vestigial']))!
+      expect(item.vestigial).toBe(true)
+    })
+
+    it('a normal item is not vestigial', () => {
+      const item = parseItemText(makeRing([]))!
+      expect(item.vestigial).toBe(false)
     })
 
     it('detects Fractured flag via (fractured) suffix', () => {
@@ -1260,6 +1446,37 @@ describe('parseItemText', () => {
       const item = parseItemText(text)!
       expect(item.explicits).toContain('Damage Penetrates 85% Cold Resistance')
       expect(item.advancedMods?.[0].ranges).toEqual([{ value: 85, min: 75, max: 75 }])
+    })
+
+    it("strips signed (+/-) roll-range bounds on hybrid resistance mods (Ventor's Gamble)", () => {
+      // Ventor's res lines roll across negative and positive, so the advanced
+      // clipboard shows a signed upper bound, e.g. "+17(-40-+40)%". The "+40"
+      // bound must be parsed (and stripped) the same as a bare or negative bound.
+      const text = [
+        'Item Class: Rings',
+        'Rarity: Unique',
+        "Ventor's Gamble",
+        'Gold Ring',
+        '--------',
+        'Item Level: 82',
+        '--------',
+        '{ Unique Modifier — Elemental, Fire, Resistance }',
+        '+17(-40-+40)% to Fire Resistance',
+        '{ Unique Modifier — Elemental, Lightning, Resistance }',
+        '-8(-40-+40)% to Lightning Resistance',
+        '{ Unique Modifier }',
+        '20(25--25)% reduced Rarity of Items found',
+      ].join('\n')
+
+      const item = parseItemText(text)!
+      // The range notation is stripped from the displayed explicit text
+      expect(item.explicits).toContain('+17% to Fire Resistance')
+      expect(item.explicits).toContain('-8% to Lightning Resistance')
+      expect(item.explicits).toContain('20% reduced Rarity of Items found')
+      // And the signed bounds are captured as numeric ranges
+      expect(item.advancedMods?.[0].ranges).toEqual([{ value: 17, min: -40, max: 40 }])
+      expect(item.advancedMods?.[1].ranges).toEqual([{ value: -8, min: -40, max: 40 }])
+      expect(item.advancedMods?.[2].ranges).toEqual([{ value: 20, min: 25, max: -25 }])
     })
 
     it('strips variant alternatives like Ghost Reaver()', () => {
@@ -1772,6 +1989,46 @@ describe('parseItemText', () => {
 
       const item = parseItemText(text)!
       expect(item.grantedSkills).toBeUndefined()
+    })
+  })
+
+  describe('PoE2 socketed rune mods', () => {
+    it('extracts a (rune) line into runes[] when it sits in its own section', () => {
+      const text = [
+        'Item Class: Helmets',
+        'Rarity: Unique',
+        'Goldrim',
+        'Felt Cap',
+        '--------',
+        'Item Level: 80',
+        '--------',
+        '+9 to Dexterity (rune)',
+        '--------',
+        '+48 to Evasion Rating',
+        '10% increased Rarity of Items found',
+        '+34% to all Elemental Resistances',
+      ].join('\n')
+      const item = parseItemText(text)!
+      expect(item.runes).toEqual(['+9 to Dexterity'])
+      expect(item.explicits).not.toContain('+9 to Dexterity (rune)')
+    })
+
+    it('drops a (rune) line that shares the explicit block, keeping it out of explicits', () => {
+      const text = [
+        'Item Class: Body Armours',
+        'Rarity: Rare',
+        'Sample Armour',
+        'Plate',
+        '--------',
+        'Item Level: 80',
+        '--------',
+        '+9 to Dexterity (rune)',
+        '+48 to Evasion Rating',
+        '+34% to all Elemental Resistances',
+      ].join('\n')
+      const item = parseItemText(text)!
+      expect(item.runes).toEqual(['+9 to Dexterity'])
+      expect(item.explicits).toEqual(['+48 to Evasion Rating', '+34% to all Elemental Resistances'])
     })
   })
 })
