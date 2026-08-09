@@ -14,7 +14,7 @@ vi.mock('@shared/data/items/item-icons-poe2.json', () => ({
   default: { 'Exalted Orb': 'https://poe2-bundle/exalted.png' },
 }))
 
-import { harvestIcons, loadIconCache } from './icon-cache'
+import { harvestIcons, loadIconCache, enrichPriceEntryIcons } from './icon-cache'
 
 describe('harvestIcons', () => {
   beforeEach(() => {
@@ -61,5 +61,33 @@ describe('harvestIcons', () => {
     expect(loadIconCache(1)["Falconer's Jacket"]).toBeUndefined()
     expect(loadIconCache(2)["Falconer's Jacket"]).toBe('https://p2/falcon.png')
     expect(loadIconCache(2)['Rusted Cuirass']).toBeUndefined()
+  })
+})
+
+describe('enrichPriceEntryIcons', () => {
+  beforeEach(() => {
+    for (const v of [1, 2] as const) {
+      const c = loadIconCache(v)
+      for (const k of Object.keys(c)) delete c[k]
+    }
+  })
+
+  it('fills missing icons from the bundled sheet', () => {
+    const entries = [{ name: 'Exalted Orb', category: 'currency', chaosValue: 1 }]
+    enrichPriceEntryIcons(2, entries)
+    expect(entries[0].icon).toBe('https://poe2-bundle/exalted.png')
+  })
+
+  it('does not overwrite an existing icon', () => {
+    const entries = [{ name: 'Exalted Orb', category: 'currency', chaosValue: 1, icon: 'https://keep.me/x.png' }]
+    enrichPriceEntryIcons(2, entries)
+    expect(entries[0].icon).toBe('https://keep.me/x.png')
+  })
+
+  it('fills from the runtime cache when not bundled', () => {
+    harvestIcons(2, [{ name: '', baseType: 'Origin Core', rarity: 'Normal', icon: 'https://cache/origin.png' }])
+    const entries = [{ name: 'Origin Core', category: 'fragments', chaosValue: 9 }]
+    enrichPriceEntryIcons(2, entries)
+    expect(entries[0].icon).toBe('https://cache/origin.png')
   })
 })

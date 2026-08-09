@@ -7,6 +7,7 @@ import { getCurrentZone, ingestZoneEvent, onZoneChanged } from './zone-state'
 
 let started = false
 const logLineWinGetters: Array<() => BrowserWindow | null> = []
+const rawLineListeners: Array<(line: string) => void> = []
 
 /** Boot the Client.txt watcher and pipe zone changes to the overlay
  *  webContents. Idempotent (re-attach events shouldn't restart the
@@ -19,12 +20,28 @@ export function startClientLogWatcher(overlayWindow: BrowserWindow): void {
   started = true
   startWatcher(path, (line) => {
     emitLogLine(line)
+    for (const cb of rawLineListeners) {
+      try {
+        cb(line)
+      } catch (err) {
+        console.error('[FilterScalpel] client-log listener failed:', err)
+      }
+    }
     const parsed = parseClientLogLine(line)
     if (parsed) ingestZoneEvent(parsed)
   })
   forwardZoneChangesTo(() => overlayWindow)
   forwardLogLinesTo(() => overlayWindow)
   sendCurrentZoneTo(overlayWindow)
+}
+
+/** Subscribe to every raw Client.txt line (main-process listeners). */
+export function onClientLogLine(cb: (line: string) => void): () => void {
+  rawLineListeners.push(cb)
+  return () => {
+    const i = rawLineListeners.indexOf(cb)
+    if (i >= 0) rawLineListeners.splice(i, 1)
+  }
 }
 
 export { getCurrentZone, onZoneChanged } from './zone-state'
@@ -70,4 +87,5 @@ function emitLogLine(line: string): void {
 export function _resetForTests(): void {
   started = false
   logLineWinGetters.length = 0
+  rawLineListeners.length = 0
 }

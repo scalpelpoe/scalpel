@@ -11,6 +11,7 @@ import type { PriceEntry, PriceInfo } from '@shared/types'
 import { getPoeVersion } from '../game-state'
 import { getManifest } from '../manifest'
 import { fetchAndBuildPoe2PriceMap, fetchPoe2PricesFromProxy, type Poe2PriceResult } from './prices.poe2'
+import { enrichPriceEntryIcons } from './icon-cache'
 
 const staticUniquesByVersion: Record<1 | 2, Record<string, string[]>> = {
   1: uniqueInfoPoe1 as Record<string, string[]>,
@@ -372,6 +373,7 @@ export async function refreshPrices(league: string): Promise<void> {
       uniqueBaseMapPoe2 = result.uniquesByBase
       saveCachedUniquesByBasePoe2(result.uniquesByBase)
       priceEntries = result.entries
+      enrichPriceEntryIcons(2, priceEntries)
       priceEntriesUpdatedAt = now
       notifyPriceUpdate()
       return
@@ -382,6 +384,7 @@ export async function refreshPrices(league: string): Promise<void> {
     processDenseResponse(resp, freshEntries)
     buildUniquesByBaseFromDense(resp)
     priceEntries = freshEntries
+    enrichPriceEntryIcons(1, priceEntries)
     priceEntriesUpdatedAt = now
     notifyPriceUpdate()
   } catch (e) {

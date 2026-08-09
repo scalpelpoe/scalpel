@@ -3,6 +3,7 @@ import { join } from 'node:path'
 import { app } from 'electron'
 import bundledPoe1 from '@shared/data/items/item-icons-poe1.json'
 import bundledPoe2 from '@shared/data/items/item-icons-poe2.json'
+import type { PriceEntry } from '@shared/types'
 
 /**
  * Runtime icon cache. Observes trade-fetch responses and persists any icons
@@ -88,4 +89,19 @@ function scheduleWrite(version: 1 | 2): void {
       }
     }, WRITE_DEBOUNCE_MS),
   )
+}
+
+/** Resolve a bundled or runtime-cached icon URL for an item name. Used to fill
+ *  PriceEntry.icon when poe.ninja/proxy payloads omit artwork (EE2 proxy). */
+export function lookupBundledIcon(version: 1 | 2, name: string): string | undefined {
+  return BUNDLED[version][name] ?? loadIconCache(version)[name]
+}
+
+/** Fill missing PriceEntry.icon fields from the shipped icon sheet + runtime cache. */
+export function enrichPriceEntryIcons(version: 1 | 2, entries: PriceEntry[]): void {
+  for (const entry of entries) {
+    if (entry.icon) continue
+    const icon = lookupBundledIcon(version, entry.name)
+    if (icon) entry.icon = icon
+  }
 }

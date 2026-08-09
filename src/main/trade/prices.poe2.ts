@@ -1,6 +1,13 @@
-import { POE_NINJA_POE2_EXCHANGE, POE2_NINJA_PROXY } from '@shared/endpoints'
+import { POE_CDN, POE_NINJA_POE2_EXCHANGE, POE2_NINJA_PROXY } from '@shared/endpoints'
 import { getGameFeatures } from '@shared/game-features'
 import type { PriceEntry, PriceInfo } from '@shared/types'
+
+/** poe.ninja returns relative `/gen/image/...` paths; Scalpel ships absolute CDN URLs. */
+export function absolutePoeCdnIcon(image?: string): string | undefined {
+  if (!image) return undefined
+  if (image.startsWith('http://') || image.startsWith('https://')) return image
+  return `${POE_CDN}${image.startsWith('/') ? image : `/${image}`}`
+}
 
 /**
  * PoE2 ninja price fetching + processing. The PoE2 API has no dense/overviews
@@ -28,6 +35,7 @@ interface Poe2ExchangeLine {
 interface Poe2ExchangeItem {
   id: string
   name: string
+  image?: string
 }
 
 interface Poe2ExchangeResponse {
@@ -86,8 +94,11 @@ export function applyResponse(
 ): void {
   const exaltedPerPrimary = resp.core.rates?.exalted ?? 0
   const nameById = new Map<string, string>()
+  const iconById = new Map<string, string>()
   for (const item of [...(resp.core.items ?? []), ...(resp.items ?? [])]) {
     if (item.id && item.name) nameById.set(item.id, item.name)
+    const icon = absolutePoeCdnIcon(item.image)
+    if (item.id && icon) iconById.set(item.id, icon)
   }
 
   // Seed the core currencies (divine is always worth 1 primary by definition).
@@ -96,7 +107,13 @@ export function applyResponse(
     const chaosValue = divineValue * exaltedPerPrimary
     if (!Number.isFinite(chaosValue) || chaosValue <= 0) continue
     priceMap.set(item.name.toLowerCase(), { chaosValue, divineValue, ninjaCategory: 'currency' })
-    entriesOut?.push({ name: item.name, category: 'currency', chaosValue, divineValue })
+    entriesOut?.push({
+      name: item.name,
+      category: 'currency',
+      chaosValue,
+      divineValue,
+      icon: absolutePoeCdnIcon(item.image),
+    })
   }
 
   for (const line of resp.lines ?? []) {
@@ -116,6 +133,7 @@ export function applyResponse(
       chaosValue,
       divineValue: primary,
       graph: line.sparkline?.data,
+      icon: iconById.get(line.id),
     })
   }
 }

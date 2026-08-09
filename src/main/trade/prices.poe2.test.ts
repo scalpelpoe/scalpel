@@ -1,6 +1,20 @@
 import { describe, expect, it } from 'vitest'
 import type { PriceEntry, PriceInfo } from '@shared/types'
-import { applyProxyResponse, applyResponse, fetchPoe2PricesFromProxy } from './prices.poe2'
+import { absolutePoeCdnIcon, applyProxyResponse, applyResponse, fetchPoe2PricesFromProxy } from './prices.poe2'
+
+describe('absolutePoeCdnIcon', () => {
+  it('prefixes relative gen/image paths with the PoE CDN', () => {
+    expect(absolutePoeCdnIcon('/gen/image/foo.png')).toBe('https://web.poecdn.com/gen/image/foo.png')
+  })
+
+  it('leaves absolute URLs alone', () => {
+    expect(absolutePoeCdnIcon('https://web.poecdn.com/x.png')).toBe('https://web.poecdn.com/x.png')
+  })
+
+  it('returns undefined for empty input', () => {
+    expect(absolutePoeCdnIcon()).toBeUndefined()
+  })
+})
 
 // Helper: minimal valid Poe2ExchangeResponse shape for the parts applyResponse
 // reads. The real ninja payload has more fields but they're ignored.
@@ -260,20 +274,28 @@ describe('PoE2 price entries', () => {
         secondary: 'exalted',
         rates: { exalted: 50 },
         items: [
-          { id: 'divine', name: 'Divine Orb' },
-          { id: 'exalted', name: 'Exalted Orb' },
+          { id: 'divine', name: 'Divine Orb', image: '/gen/image/divine.png' },
+          { id: 'exalted', name: 'Exalted Orb', image: '/gen/image/exalted.png' },
         ],
       },
       lines: [{ id: 'chaos', primaryValue: 0.01, sparkline: { data: [1, 2] } }],
-      items: [{ id: 'chaos', name: 'Chaos Orb' }],
+      items: [{ id: 'chaos', name: 'Chaos Orb', image: '/gen/image/chaos.png' }],
     }
     const priceMap = new Map()
     const entries: PriceEntry[] = []
     applyResponse(resp as never, priceMap, 'currency', entries)
 
-    expect(entries.find((e) => e.name === 'Divine Orb')).toMatchObject({ category: 'currency', divineValue: 1 })
+    expect(entries.find((e) => e.name === 'Divine Orb')).toMatchObject({
+      category: 'currency',
+      divineValue: 1,
+      icon: 'https://web.poecdn.com/gen/image/divine.png',
+    })
     const chaos = entries.find((e) => e.name === 'Chaos Orb')
-    expect(chaos).toMatchObject({ category: 'currency', divineValue: 0.01 })
+    expect(chaos).toMatchObject({
+      category: 'currency',
+      divineValue: 0.01,
+      icon: 'https://web.poecdn.com/gen/image/chaos.png',
+    })
     expect(chaos?.graph).toEqual([1, 2])
   })
 

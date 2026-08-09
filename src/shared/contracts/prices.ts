@@ -12,4 +12,6 @@ export interface PriceEntry {
   chaosValue: number
   divineValue?: number
   graph?: (number | null)[]
+  /** Absolute CDN icon URL when known (poe.ninja image or bundled icon map). */
+  icon?: string
 }

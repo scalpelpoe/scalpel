@@ -11,6 +11,8 @@ function installApi(): void {
     })),
     getOverlayState: vi.fn(async () => ({ poeVersion: 1 })),
     getSettings: vi.fn(async () => ({ activeProfile: { league: 'Std' } })),
+    getIconCache: vi.fn(async () => ({})),
+    onIconCacheUpdated: vi.fn(() => () => {}),
     onOverlayData: vi.fn(() => () => {}),
     onZoneChanged: vi.fn(() => () => {}),
     onLeagueUpdated: vi.fn(() => () => {}),

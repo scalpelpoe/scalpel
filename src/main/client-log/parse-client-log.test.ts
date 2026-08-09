@@ -33,3 +33,22 @@ describe('parseClientLogLine', () => {
     expect(parseClientLogLine(line)).toEqual({ areaLevel: 1, areaCode: '1_1_1' })
   })
 })
+
+describe('parseOnlineFilterReloadLine', () => {
+  it('extracts the online filter id from a successful reload', async () => {
+    const { parseOnlineFilterReloadLine } = await import('./parse-client-log')
+    const line =
+      '2026/07/26 21:36:46 730101750 ddd288d2 [INFO Client 24100] [Item Filter] Finished reloading online filter 38gBvaIX. Result: true. Hash: d96e5d594368c7d76ff6e4942ab3886c. Type: Normal. Message: '
+    expect(parseOnlineFilterReloadLine(line)).toBe('38gBvaIX')
+  })
+
+  it('ignores failed reloads and unrelated lines', async () => {
+    const { parseOnlineFilterReloadLine } = await import('./parse-client-log')
+    expect(
+      parseOnlineFilterReloadLine(
+        '[Item Filter] Finished reloading online filter 38gBvaIX. Result: false. Hash: x',
+      ),
+    ).toBeNull()
+    expect(parseOnlineFilterReloadLine('[Item Filter] Downloading online list')).toBeNull()
+  })
+})

@@ -1,9 +1,10 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
-import { BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings, FilterListEntry } from '@shared/types'
+import type { AppSettings, FilterListEntry, GameVariant } from '@shared/types'
 import { getAppWindow } from '../app-window'
+import { detectActiveFilter, type DetectActiveFilterResult } from '../detect-active-filter'
 import { setCloseOnClickOutside, showOverlay } from '../overlay'
 
 export function register(store: Store<AppSettings>): void {
@@ -11,6 +12,14 @@ export function register(store: Store<AppSettings>): void {
     const suffix = store.get('poeVersion') === 2 ? ' 2' : ''
     return `${process.env.USERPROFILE}\\Documents\\My Games\\Path of Exile${suffix}`
   }
+
+  ipcMain.handle(
+    'detect-active-game-filter',
+    (_event, filterDirOverride?: string): DetectActiveFilterResult => {
+      const version = (store.get('poeVersion') === 2 ? 2 : 1) as GameVariant
+      return detectActiveFilter(version, app.getPath('documents'), filterDirOverride)
+    },
+  )
 
   ipcMain.handle('pick-filter-file', async (event) => {
     const sender = BrowserWindow.fromWebContents(event.sender)
@@ -99,7 +108,9 @@ export function register(store: Store<AppSettings>): void {
       try {
         for (const f of readdirSync(onlinePath)) {
           const fullPath = join(onlinePath, f)
-          // Skip directories and .filter files (those are local filters)
+          // Skip directories and .filter files (legacy dumps — real GGG online
+          // downloads are extensionless random ids with a #name: header).
+          if (f.toLowerCase().endsWith('.filter')) continue
           try {
             const stat = statSync(fullPath)
             if (stat.isDirectory()) continue

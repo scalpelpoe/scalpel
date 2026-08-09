@@ -23,6 +23,12 @@ export function scanFilterDir(dir: string): Promise<FilterListEntry[]> {
   return window.api.scanFilterDir(dir)
 }
 
+export function detectActiveGameFilter(filterDirOverride?: string): ReturnType<
+  typeof window.api.detectActiveGameFilter
+> {
+  return window.api.detectActiveGameFilter(filterDirOverride)
+}
+
 export function scanSoundFiles(dir: string): Promise<string[]> {
   return window.api.scanSoundFiles(dir)
 }

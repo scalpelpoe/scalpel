@@ -1,0 +1,24 @@
+{
+  "name": "scalpel-economy",
+  "version": "1.0.3",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build && node -e \"require('node:fs').copyFileSync('manifest.json','dist/manifest.json')\"",
+    "install:scalpel": "npm run build && node scripts/install.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@scalpelpoe/plugin-sdk": "file:../../src/plugin-sdk",
+    "@types/node": "^25.9.1",
+    "@types/react": "^18.3.30",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^6.0.2",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8"
+  }
+}

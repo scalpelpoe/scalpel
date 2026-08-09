@@ -74,6 +74,11 @@ vi.mock('./online-sync', () => ({
   updateOnlineSyncDir: vi.fn(),
 }))
 
+vi.mock('./active-filter-sync', () => ({
+  isApplyingGameFilterSync: vi.fn(() => false),
+  syncScalpelSelectionToGame: vi.fn(async () => {}),
+}))
+
 vi.mock('./pinned-zone', () => ({
   applyPinnedZoneEnabled: vi.fn(),
   getPinnedZoneOverlay: vi.fn(() => null),

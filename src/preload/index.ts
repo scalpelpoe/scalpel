@@ -66,6 +66,22 @@ export const api = {
   pickFilterFile: (): Promise<string | null> => ipcRenderer.invoke('pick-filter-file'),
   pickFilterDir: (): Promise<string | null> => ipcRenderer.invoke('pick-filter-dir'),
   scanFilterDir: (dir: string): Promise<FilterListEntry[]> => ipcRenderer.invoke('scan-filter-dir', dir),
+  detectActiveGameFilter: (
+    filterDirOverride?: string,
+  ): Promise<
+    | {
+        ok: true
+        detected: {
+          filterDir: string
+          filterPath: string
+          name: string
+          online: boolean
+          filterId: string
+          localCopyPath: string | null
+        }
+      }
+    | { ok: false; error: string }
+  > => ipcRenderer.invoke('detect-active-game-filter', filterDirOverride),
   scanSoundFiles: (dir: string): Promise<string[]> => ipcRenderer.invoke('scan-sound-files', dir),
   getSoundDataUrl: (dir: string, filename: string): Promise<string | null> =>
     ipcRenderer.invoke('get-sound-data-url', dir, filename),
@@ -768,6 +784,28 @@ export const api = {
     const handler = (_: Electron.IpcRendererEvent, changed: { path: string; name: string }[]): void => cb(changed)
     ipcRenderer.on('online-filter-changed', handler)
     return () => ipcRenderer.removeListener('online-filter-changed', handler)
+  },
+  onActiveFilterSynced: (
+    cb: (info: {
+      filterId: string
+      name: string
+      filterPath: string
+      filterDir: string
+      source: 'game' | 'app'
+    }) => void,
+  ): (() => void) => {
+    const handler = (
+      _: Electron.IpcRendererEvent,
+      info: {
+        filterId: string
+        name: string
+        filterPath: string
+        filterDir: string
+        source: 'game' | 'app'
+      },
+    ): void => cb(info)
+    ipcRenderer.on('active-filter-synced', handler)
+    return () => ipcRenderer.removeListener('active-filter-synced', handler)
   },
   onFilterChanged: (cb: () => void): (() => void) => {
     const handler = (): void => cb()

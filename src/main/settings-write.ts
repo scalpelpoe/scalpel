@@ -189,6 +189,12 @@ export function applyProfileEditSideEffect<K extends ProfileSettingKey>(key: K, 
     const path = value as string
     if (path) loadFilter(path, 'Switched Filters')
     else clearFilterState()
+    // Mirror selection into PoE config (Options / next launch). Skip when this
+    // edit itself came from watching the game config.
+    void import('./active-filter-sync').then(({ isApplyingGameFilterSync, syncScalpelSelectionToGame }) => {
+      if (!path || isApplyingGameFilterSync()) return
+      void syncScalpelSelectionToGame(path)
+    })
   } else if (key === 'filterDir') {
     updateOnlineSyncDir(value as string)
   } else if (key === 'cheatSheets') {

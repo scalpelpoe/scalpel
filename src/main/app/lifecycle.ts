@@ -13,6 +13,7 @@ import type { AppSettings } from '@shared/types'
 import { refreshPrices, invalidatePriceCache } from '../trade/prices'
 import { onRateLimitUpdate } from '../trade/trade'
 import { startOnlineSync } from '../online-sync'
+import { startActiveFilterSync } from '../active-filter-sync'
 import { initUpdater } from '../update/updater'
 import { getOverlayWindow, showOverlay, setGameFocusHandlers } from '../overlay'
 import { getAppWindow } from '../app-window'
@@ -66,14 +67,16 @@ export function startLiveServices(deps: LiveServicesDeps): void {
   }
 
   const filterDir = getProfileBackedSetting(store, 'filterDir') as string
-  startOnlineSync(filterDir, () => {
+  const windowProvider = (): BrowserWindow[] => {
     const wins: BrowserWindow[] = []
     const ow = getOverlayWindow()
     const aw = getAppWindow()
     if (ow) wins.push(ow)
     if (aw) wins.push(aw)
     return wins
-  })
+  }
+  startOnlineSync(filterDir, windowProvider)
+  startActiveFilterSync(store, windowProvider)
 
   // Broadcast rate limit state to overlay
   onRateLimitUpdate((state) => {

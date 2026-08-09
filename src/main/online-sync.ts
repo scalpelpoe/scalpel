@@ -30,6 +30,7 @@ function scanOnlineFilters(filterDir: string): OnlineFilterInfo[] {
     if (!existsSync(onlinePath)) return results
 
     for (const f of readdirSync(onlinePath)) {
+      if (f.toLowerCase().endsWith('.filter')) continue
       const fullPath = join(onlinePath, f)
       try {
         if (statSync(fullPath).isDirectory()) continue

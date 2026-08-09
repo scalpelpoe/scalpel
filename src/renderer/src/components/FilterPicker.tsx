@@ -28,6 +28,8 @@ export function FilterPicker({
 }: Props): JSX.Element {
   const [filters, setFilters] = useState<FilterListEntry[]>([])
   const [scanning, setScanning] = useState(false)
+  const [detecting, setDetecting] = useState(false)
+  const [detectError, setDetectError] = useState<string | null>(null)
   const [switching, setSwitching] = useState(false)
   const [conflictEntry, setConflictEntry] = useState<FilterListEntry | null>(null)
   const [updatedFilters, setUpdatedFilters] = useState<Set<string>>(new Set())
@@ -74,6 +76,16 @@ export function FilterPicker({
     setFilters(list)
     setScanning(false)
   }
+
+  // Live game↔app active-filter sync: refresh list + pull updated settings
+  useEffect(() => {
+    if (!window.api.onActiveFilterSynced) return
+    const unsub = window.api.onActiveFilterSynced((info) => {
+      void window.api.getSettings().then(onSettingsChange)
+      void scanDir(info.filterDir)
+    })
+    return unsub
+  }, [onSettingsChange])
 
   // Scan on mount if we already have a directory
   useEffect(() => {
@@ -150,6 +162,68 @@ export function FilterPicker({
     }
   }
 
+  const detectFromGame = async (): Promise<void> => {
+    setDetecting(true)
+    setDetectError(null)
+    try {
+      const result = await window.api.detectActiveGameFilter(fDir || undefined)
+      if (!result.ok) {
+        setDetectError(result.error)
+        return
+      }
+      const { detected } = result
+      if (detected.filterDir !== fDir) {
+        const updated = await window.api.setProfileSettingForGame(gameVariant, 'filterDir', detected.filterDir)
+        onSettingsChange(updated)
+      }
+      await scanDir(detected.filterDir)
+
+      // Prefer existing Scalpel editable local copy when present.
+      if (detected.localCopyPath) {
+        const updated = await window.api.setProfileSettingForGame(
+          gameVariant,
+          'filterPath',
+          detected.localCopyPath,
+        )
+        onSettingsChange(updated)
+        return
+      }
+
+      if (detected.online) {
+        const safeName = detected.name.replace(/[<>:"/\\|?*]/g, '_')
+        const localName = `${safeName}-local`
+        const sep = detected.filterDir.includes('/') ? '/' : '\\'
+        const localPath = `${detected.filterDir}${sep}${localName}.filter`
+        const imported = await window.api.importOnlineFilter(
+          detected.filterPath,
+          detected.name,
+          detected.filterDir,
+          false,
+        )
+        if (imported.conflict) {
+          const updated = await window.api.setProfileSettingForGame(gameVariant, 'filterPath', localPath)
+          onSettingsChange(updated)
+          window.api.checkForOnlineUpdate().catch(() => {})
+          return
+        }
+        if (!imported.ok || !imported.path) {
+          setDetectError(imported.error ?? 'Failed to import online filter')
+          return
+        }
+        const updated = await window.api.setProfileSettingForGame(gameVariant, 'filterPath', imported.path)
+        onSettingsChange(updated)
+        await scanDir(detected.filterDir)
+        if (!autoSwitchInGame) onOnlineImport?.(localName)
+        return
+      }
+
+      const updated = await window.api.setProfileSettingForGame(gameVariant, 'filterPath', detected.filterPath)
+      onSettingsChange(updated)
+    } finally {
+      setDetecting(false)
+    }
+  }
+
   const mergeOnlineFilter = async (entry: FilterListEntry): Promise<void> => {
     const safeName = entry.name.replace(/[<>:"/\\|?*]/g, '_')
     const localName = `${safeName}-local`
@@ -219,26 +293,46 @@ export function FilterPicker({
   const currentPath = settings.activeProfile?.filterPath
 
   const localFilters = filters.filter((f) => !f.online)
-  const onlineFilters = filters.filter((f) => f.online)
+  const onlineFilters = filters
+    .filter((f) => f.online)
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name))
 
   const showFolder = mode !== 'list'
   const showList = mode !== 'folder'
+  const localNames = new Set(localFilters.map((f) => f.name))
+
+  const onlineHasLocal = (name: string): boolean => {
+    const safe = name.replace(/[<>:"/\\|?*]/g, '_')
+    return localNames.has(`${safe}-local`)
+  }
 
   return (
     <div className="flex flex-col gap-2">
       {/* Directory selector */}
       {showFolder && (
-        <div className="setting-box" onClick={pickDir}>
-          <span className={`value ${dirName ? '' : 'dim'}`}>{dirName ?? '(no folder selected)'}</span>
+        <div className="flex flex-col gap-1.5">
+          <div className="setting-box" onClick={pickDir}>
+            <span className={`value ${dirName ? '' : 'dim'}`}>{dirName ?? '(no folder selected)'}</span>
+            <button
+              className="primary"
+              onClick={(e) => {
+                e.stopPropagation()
+                pickDir()
+              }}
+            >
+              {dirName ? 'Change' : 'Browse...'}
+            </button>
+          </div>
           <button
-            className="primary"
-            onClick={(e) => {
-              e.stopPropagation()
-              pickDir()
-            }}
+            type="button"
+            className="self-start px-2.5 py-1 text-[11px]"
+            disabled={detecting || switching}
+            onClick={() => void detectFromGame()}
           >
-            {dirName ? 'Change' : 'Browse...'}
+            {detecting ? 'Detecting...' : 'Detect from game'}
           </button>
+          {detectError && <p className="text-[11px] text-red-400 m-0">{detectError}</p>}
         </div>
       )}
 
@@ -247,24 +341,27 @@ export function FilterPicker({
         <div
           className="flex flex-col gap-0.5 overflow-y-auto rounded p-1 bg-black/20"
           style={{
-            maxHeight: maxListHeight,
+            maxHeight: Math.max(maxListHeight, 320),
           }}
         >
           {localFilters.length > 0 &&
-            localFilters.map((f) => (
-              <FilterRow
-                key={f.path}
-                entry={f}
-                active={currentPath === f.path}
-                switching={switching}
-                hasUpdate={false}
-                onSelect={() => selectFilter(f)}
-              />
-            ))}
+            localFilters.map((f) => {
+              const base = f.name.endsWith('-local') ? f.name.slice(0, -'-local'.length) : null
+              return (
+                <FilterRow
+                  key={f.path}
+                  entry={f}
+                  active={currentPath === f.path}
+                  switching={switching}
+                  hasUpdate={base ? updatedFilters.has(base) : false}
+                  onSelect={() => selectFilter(f)}
+                />
+              )
+            })}
           {onlineFilters.length > 0 && (
             <>
               <div className="text-[10px] text-text-dim uppercase tracking-[0.5px] px-2 pt-1.5 pb-0.5">
-                Online Filters
+                Online Filters ({onlineFilters.length})
               </div>
               {onlineFilters.map((f) => (
                 <FilterRow
@@ -272,7 +369,7 @@ export function FilterPicker({
                   entry={f}
                   active={currentPath === f.path}
                   switching={switching}
-                  hasUpdate={updatedFilters.has(f.name)}
+                  hasUpdate={updatedFilters.has(f.name) && !onlineHasLocal(f.name)}
                   onSelect={() => selectFilter(f)}
                 />
               ))}
@@ -284,7 +381,8 @@ export function FilterPicker({
       {showList && fDir && !scanning && filters.length > 0 && (
         <p className="text-[10px] text-text-dim flex items-center gap-1 m-0 ml-1 mt-0.5">
           <Info size={12} theme="two-tone" fill={['currentColor', 'rgba(255,255,255,0.2)']} className="flex shrink-0" />
-          To add a new online filter, load it in-game first and it will appear here next time you open settings.
+          Only filters downloaded to disk appear here. Account filters show up after you select them once in-game.
+          Live swaps follow PoE's Client.txt reload events (config.ini often lags until you Save Options).
         </p>
       )}
 
