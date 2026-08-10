@@ -53,5 +53,16 @@ export type { InstallManifest, Manifest, AuthResult } from './contracts/updates'
 
 export type { HistoryEntry, FilterChange, FilterVersion } from './contracts/history'
 
+export type { FilterSection, FilterSectionTier } from './contracts/filter-sections'
+
+export type {
+  LootSimAlert,
+  LootSimDrop,
+  LootSimDropStyle,
+  LootSimPoolItem,
+  LootSimRequest,
+  LootSimResult,
+} from './contracts/loot-sim'
+
 export type { MacroScope }
 export type { ThemePalette }

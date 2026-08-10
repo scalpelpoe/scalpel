@@ -1,10 +1,14 @@
 import { ipcMain } from 'electron'
 import type Store from 'electron-store'
-import type { AppSettings, FilterAction, FilterBlock, FilterChange, PoeItem } from '@shared/types'
+import type { AppSettings, FilterAction, FilterBlock, FilterChange, LootSimRequest, PoeItem } from '@shared/types'
 import { evaluateAndSend } from '../evaluation'
 import { describeIntent } from '../filter/intent-describe'
 import { getIntents, record } from '../filter/intent-recorder'
+import { simulateLootDrops } from '../filter/loot-sim'
+import { buildFilterSections } from '../filter/sections'
 import {
+  addBaseTypeToTier,
+  insertSectionRule,
   moveBaseTypeBetweenTiers,
   updateQualityThresholds,
   updateStackThresholds,
@@ -12,6 +16,7 @@ import {
   writeBlockEdit,
 } from '../filter/writer'
 import { getCurrentFilter, loadFilter } from '../filter-state'
+import { getPoeVersion } from '../game-state'
 import { captureSnapshot } from '../history'
 import { reloadFilterInGame } from '../overlay'
 import { getProfileBackedSetting } from '../profiles/profile-settings'
@@ -79,6 +84,149 @@ function describeBlockEdit(oldBlock: FilterBlock, newBlock: FilterBlock): string
 // ---- IPC handlers ----------------------------------------------------------
 
 export function register(store: Store<AppSettings>): void {
+  ipcMain.handle('get-filter-sections', () => {
+    const path = getProfileBackedSetting(store, 'filterPath') as string | undefined
+    if (path) {
+      const current = getCurrentFilter()
+      if (!current || current.path !== path) {
+        try {
+          loadFilter(path)
+        } catch (err) {
+          return { ok: false as const, error: String(err), sections: [] }
+        }
+      }
+    }
+    const currentFilter = getCurrentFilter()
+    if (!currentFilter) return { ok: false as const, error: 'No filter loaded', sections: [] }
+    return { ok: true as const, path: currentFilter.path, sections: buildFilterSections(currentFilter) }
+  })
+
+  ipcMain.handle('set-section-tier-visibility', (_event, blockIndex: number, visibility: FilterBlock['visibility']) => {
+    const currentFilter = getCurrentFilter()
+    if (!currentFilter) return { ok: false, error: 'No filter loaded' }
+    const oldBlock = currentFilter.blocks[blockIndex]
+    if (!oldBlock) return { ok: false, error: 'Block not found' }
+    if (oldBlock.visibility === visibility) return { ok: true }
+    try {
+      const updatedBlock: FilterBlock = { ...oldBlock, visibility }
+      const tier = oldBlock.tierTag?.tier ?? `block #${blockIndex + 1}`
+      captureSnapshot(currentFilter.path, 'block-edit', `${oldBlock.visibility} → ${visibility} (${tier})`, undefined)
+      if (oldBlock.tierTag) {
+        record({
+          type: 'set-visibility',
+          target: { typePath: oldBlock.tierTag.typePath, tier: oldBlock.tierTag.tier },
+          payload: { visibility },
+          timestamp: Date.now(),
+        })
+      }
+      writeBlockEdit(currentFilter, blockIndex, updatedBlock)
+      const path = getProfileBackedSetting(store, 'filterPath')
+      if (path) loadFilter(path)
+      reloadFilterInGame()
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, error: String(err) }
+    }
+  })
+
+  ipcMain.handle('get-filter-block', (_event, blockIndex: number) => {
+    const path = getProfileBackedSetting(store, 'filterPath') as string | undefined
+    if (path) {
+      const current = getCurrentFilter()
+      if (!current || current.path !== path) {
+        try {
+          loadFilter(path)
+        } catch (err) {
+          return { ok: false as const, error: String(err) }
+        }
+      }
+    }
+    const currentFilter = getCurrentFilter()
+    if (!currentFilter) return { ok: false as const, error: 'No filter loaded' }
+    const block = currentFilter.blocks[blockIndex]
+    if (!block) return { ok: false as const, error: 'Block not found' }
+    return { ok: true as const, block, blockIndex }
+  })
+
+  ipcMain.handle('simulate-loot-drops', (_event, req: LootSimRequest) => {
+    const path = getProfileBackedSetting(store, 'filterPath') as string | undefined
+    if (path) {
+      const current = getCurrentFilter()
+      if (!current || current.path !== path) {
+        try {
+          loadFilter(path)
+        } catch (err) {
+          return { ok: false as const, error: String(err), drops: [], shown: 0, hidden: 0 }
+        }
+      }
+    }
+    const currentFilter = getCurrentFilter()
+    if (!currentFilter) return { ok: false as const, error: 'No filter loaded', drops: [], shown: 0, hidden: 0 }
+    try {
+      const result = simulateLootDrops(currentFilter, req, getPoeVersion() === 2 ? 2 : 1)
+      return { ok: true as const, ...result }
+    } catch (err) {
+      return { ok: false as const, error: String(err), drops: [], shown: 0, hidden: 0 }
+    }
+  })
+
+  ipcMain.handle('add-basetype-to-tier', (_event, blockIndex: number, baseType: string) => {
+    const currentFilter = getCurrentFilter()
+    if (!currentFilter) return { ok: false, error: 'No filter loaded' }
+    try {
+      const block = currentFilter.blocks[blockIndex]
+      captureSnapshot(currentFilter.path, 'block-edit', `Added "${baseType}" to tier`, baseType)
+      if (block?.tierTag) {
+        record({
+          type: 'move-basetype',
+          target: { typePath: block.tierTag.typePath, tier: block.tierTag.tier },
+          payload: { value: baseType, fromTier: '__new__' },
+          timestamp: Date.now(),
+        })
+      }
+      addBaseTypeToTier(currentFilter, blockIndex, baseType)
+      const path = getProfileBackedSetting(store, 'filterPath')
+      if (path) loadFilter(path)
+      if (store.get('reloadOnSave') !== false) reloadFilterInGame()
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, error: String(err) }
+    }
+  })
+
+  ipcMain.handle(
+    'insert-section-rule',
+    (
+      _event,
+      opts: {
+        typePath: string
+        tier: string
+        baseType: string
+        beforeBlockIndex: number
+        visibility?: FilterBlock['visibility']
+        copyStyleFromIndex?: number
+      },
+    ) => {
+      const currentFilter = getCurrentFilter()
+      if (!currentFilter) return { ok: false, error: 'No filter loaded' }
+      try {
+        captureSnapshot(
+          currentFilter.path,
+          'block-edit',
+          `Added rule "${opts.baseType}" (${opts.typePath}/${opts.tier})`,
+          opts.baseType,
+        )
+        insertSectionRule(currentFilter, opts)
+        const path = getProfileBackedSetting(store, 'filterPath')
+        if (path) loadFilter(path)
+        if (store.get('reloadOnSave') !== false) reloadFilterInGame()
+        return { ok: true }
+      } catch (err) {
+        return { ok: false, error: String(err) }
+      }
+    },
+  )
+
   ipcMain.handle('save-block-edit', (_event, blockIndex: number, updatedBlock: FilterBlock, itemJson?: string) => {
     const currentFilter = getCurrentFilter()
     if (!currentFilter) return { ok: false, error: 'No filter loaded' }

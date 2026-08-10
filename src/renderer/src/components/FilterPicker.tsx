@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { CloseSmall, Info } from '@icon-park/react'
 import type { FilterListEntry, GameVariant, RuntimeSettings } from '@shared/types'
+import { FilterBladeBridge } from './FilterBladeBridge'
 
 interface Props {
   settings: RuntimeSettings
@@ -240,6 +241,19 @@ export function FilterPicker({
             {dirName ? 'Change' : 'Browse...'}
           </button>
         </div>
+      )}
+
+      {(showFolder || showList) && (
+        <FilterBladeBridge
+          settings={settings}
+          onSettingsChange={onSettingsChange}
+          autoSwitchInGame={autoSwitchInGame}
+          onOnlineImport={onOnlineImport}
+          onLinked={() => {
+            const dir = settingsRef.current.activeProfile?.filterDir
+            if (dir) void scanDir(dir)
+          }}
+        />
       )}
 
       {/* Filter list */}

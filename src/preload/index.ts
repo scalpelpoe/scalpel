@@ -76,6 +76,30 @@ export const api = {
     force = false,
   ): Promise<{ ok: boolean; path?: string; error?: string; conflict?: boolean }> =>
     ipcRenderer.invoke('import-online-filter', sourcePath, filterName, targetDir, force),
+  filterBladeUrl: (): Promise<string> => ipcRenderer.invoke('filterblade-url'),
+  filterBladeScan: (
+    filterDir?: string,
+  ): Promise<{
+    filterDir: string
+    candidates: Array<{ name: string; path: string; score: number }>
+    needsSync: boolean
+  }> => ipcRenderer.invoke('filterblade-scan', filterDir),
+  filterBladeLink: (opts?: {
+    filterDir?: string
+    preferName?: string
+    force?: boolean
+  }): Promise<{
+    ok: boolean
+    error?: string
+    needsSync?: boolean
+    conflict?: boolean
+    filterDir?: string
+    path?: string
+    onlineName?: string
+    localName?: string
+    alreadyLinked?: boolean
+    candidates?: Array<{ name: string; path: string; score: number }>
+  }> => ipcRenderer.invoke('filterblade-link', opts),
   switchIngameFilter: (filterName: string, currentFilter?: string): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke('switch-ingame-filter', filterName, currentFilter),
 
@@ -90,6 +114,35 @@ export const api = {
     block: FilterBlock,
     itemJson?: string,
   ): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('save-block-edit', blockIndex, block, itemJson),
+  getFilterSections: (): Promise<{
+    ok: boolean
+    error?: string
+    path?: string
+    sections: import('@shared/types').FilterSection[]
+  }> => ipcRenderer.invoke('get-filter-sections'),
+  setSectionTierVisibility: (
+    blockIndex: number,
+    visibility: 'Show' | 'Hide' | 'Minimal',
+  ): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('set-section-tier-visibility', blockIndex, visibility),
+  getFilterBlock: (
+    blockIndex: number,
+  ): Promise<{ ok: boolean; error?: string; block?: import('@shared/types').FilterBlock; blockIndex?: number }> =>
+    ipcRenderer.invoke('get-filter-block', blockIndex),
+  addBaseTypeToTier: (blockIndex: number, baseType: string): Promise<{ ok: boolean; error?: string }> =>
+    ipcRenderer.invoke('add-basetype-to-tier', blockIndex, baseType),
+  insertSectionRule: (opts: {
+    typePath: string
+    tier: string
+    baseType: string
+    beforeBlockIndex: number
+    visibility?: 'Show' | 'Hide' | 'Minimal'
+    copyStyleFromIndex?: number
+  }): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('insert-section-rule', opts),
+  simulateLootDrops: (
+    req: import('@shared/types').LootSimRequest,
+  ): Promise<{ ok: boolean; error?: string } & import('@shared/types').LootSimResult> =>
+    ipcRenderer.invoke('simulate-loot-drops', req),
   reloadFilter: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('reload-filter'),
   getUniqueVisibility: (): Promise<Record<string, 'Show' | 'Hide'>> => ipcRenderer.invoke('get-unique-visibility'),
   lookupBaseType: (

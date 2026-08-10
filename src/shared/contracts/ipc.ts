@@ -35,6 +35,12 @@ export const IPC_CHANNELS = {
     SWITCH_INGAME: 'switch-ingame-filter',
     GET_COLOR_FREQUENCIES: 'get-color-frequencies',
     SAVE_BLOCK_EDIT: 'save-block-edit',
+    GET_FILTER_SECTIONS: 'get-filter-sections',
+    SET_SECTION_TIER_VISIBILITY: 'set-section-tier-visibility',
+    GET_FILTER_BLOCK: 'get-filter-block',
+    ADD_BASETYPE_TO_TIER: 'add-basetype-to-tier',
+    INSERT_SECTION_RULE: 'insert-section-rule',
+    SIMULATE_LOOT_DROPS: 'simulate-loot-drops',
     RELOAD: 'reload-filter',
     GET_UNIQUE_VISIBILITY: 'get-unique-visibility',
     MOVE_ITEM_TIER: 'move-item-tier',
@@ -60,6 +66,9 @@ export const IPC_CHANNELS = {
     QUICK_UPDATE: 'quick-update-filter',
     MERGE: 'merge-online-filter',
     ONLINE_FILTER_CHANGED_EVENT: 'online-filter-changed',
+    FILTERBLADE_URL: 'filterblade-url',
+    FILTERBLADE_SCAN: 'filterblade-scan',
+    FILTERBLADE_LINK: 'filterblade-link',
   },
 
   PRICES: {

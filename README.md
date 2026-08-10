@@ -6,6 +6,8 @@ Path of Exile's first ever fourth-party tool. An overlay to edit your filter, pr
 
 - **Cross Game Support** - One tool, both games. Switch from PoE1 to PoE2 and back by using your hotkey. If you're in the wrong game it will prompt you to restart.
 - **Filter Editor** - Edit your loot filter in-game quickly and precisely (like a Scalpel, get it)
+- **Filter Section Browser** - Browse NeverSink `$type` / `$tier` sections, toggle Show/Hide, drag BaseTypes between tiers, and add rules
+- **Loot Simulator** - Preview how selected BaseTypes look and sound against your active filter
 - **Price Checker** - A price checker that works like you'd expect, when it works. But better. Sometimes.
 - **Regex** - Generate, save and hotkey regex strings. Maps/Waystones, Flask & Custom for now. More coming. Powered by [poe.re](https://poe.re)
 - **Economy Audit** - Bulk retier items based on current market prices from poe.ninja

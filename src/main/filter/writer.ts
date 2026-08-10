@@ -121,6 +121,102 @@ export function moveBaseTypeBetweenTiers(
   filterFile.rawLines = lines
 }
 
+/** Append a BaseType to an existing tier block and write to disk. */
+export function addBaseTypeToTier(filterFile: FilterFile, blockIndex: number, baseType: string): void {
+  const block = filterFile.blocks[blockIndex]
+  if (!block) throw new Error('Block not found')
+  const name = baseType.trim()
+  if (!name) throw new Error('BaseType name required')
+  const lines = [...filterFile.rawLines]
+  addBaseTypeToRawLines(lines, block, name)
+  writeFileSync(filterFile.path, lines.join(filterFile.eol ?? '\n'), 'utf-8')
+  filterFile.rawLines = lines
+}
+
+/**
+ * Insert a new Show rule into a NeverSink section (FilterBlade-style "Add rule").
+ * Places it just before `beforeBlockIndex` (usually the first tier of the section)
+ * so it wins over later Hide rules for the same BaseType.
+ */
+export function insertSectionRule(
+  filterFile: FilterFile,
+  opts: {
+    typePath: string
+    tier: string
+    baseType: string
+    beforeBlockIndex: number
+    visibility?: FilterBlock['visibility']
+    copyStyleFromIndex?: number
+  },
+): number {
+  const { typePath, tier, baseType } = opts
+  const name = baseType.trim()
+  if (!name) throw new Error('BaseType name required')
+  const tierId = tier.trim().replace(/\s+/g, '').toLowerCase() || 'custom'
+  if (!typePath.trim()) throw new Error('Section typePath required')
+
+  const before = filterFile.blocks[opts.beforeBlockIndex]
+  if (!before) throw new Error('Insert position not found')
+
+  const indent = detectIndent(filterFile.rawLines)
+  const eol = filterFile.eol ?? '\n'
+  const styleSrc =
+    opts.copyStyleFromIndex != null
+      ? filterFile.blocks[opts.copyStyleFromIndex]
+      : filterFile.blocks[opts.beforeBlockIndex]
+
+  const classCond = styleSrc?.conditions.find((c) => c.type === 'Class')
+  const actions = (styleSrc?.actions ?? [])
+    .filter((a) =>
+      [
+        'SetTextColor',
+        'SetBorderColor',
+        'SetBackgroundColor',
+        'SetFontSize',
+        'PlayAlertSound',
+        'PlayEffect',
+        'MinimapIcon',
+      ].includes(a.type),
+    )
+    .map((a) => ({ ...a, values: [...a.values] }))
+
+  const newBlock: FilterBlock = {
+    id: `new-${Date.now()}`,
+    visibility: opts.visibility ?? 'Show',
+    conditions: [
+      ...(classCond ? [{ ...classCond, values: [...classCond.values] }] : []),
+      { type: 'BaseType', operator: '==', values: [name], explicitOperator: true },
+    ],
+    actions:
+      actions.length > 0
+        ? actions
+        : [
+            { type: 'SetFontSize', values: ['40'] },
+            { type: 'SetTextColor', values: ['255', '255', '255', '255'] },
+            { type: 'SetBorderColor', values: ['255', '255', '255', '255'] },
+            { type: 'SetBackgroundColor', values: ['0', '0', '0', '200'] },
+          ],
+    continue: false,
+    lineStart: 0,
+    lineEnd: 0,
+    inlineComment: `$type->${typePath} $tier->${tierId}`,
+    tierTag: { typePath, tier: tierId },
+  }
+
+  const blockLines = serializeBlock(newBlock, indent)
+  const insertAt = (() => {
+    const leading = before.leadingComment ? before.leadingComment.split('\n').length : 0
+    return before.lineStart - 1 - leading
+  })()
+
+  const lines = [...filterFile.rawLines]
+  lines.splice(insertAt, 0, ...blockLines, '')
+  writeFileSync(filterFile.path, lines.join(eol), 'utf-8')
+  filterFile.rawLines = lines
+  // Caller must reload/parse — return approximate index hint
+  return opts.beforeBlockIndex
+}
+
 function removeBaseTypeFromRawLines(lines: string[], block: FilterBlock, baseType: string): void {
   const escaped = escapeRegex(baseType)
   for (let i = block.lineStart - 1; i < block.lineEnd; i++) {

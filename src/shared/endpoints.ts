@@ -135,6 +135,25 @@ export const PREMIUM_MODS_URL =
 export const ENDGAME_FILTER_SUPPORT_URL =
   'https://raw.githubusercontent.com/scalpelpoe/scalpel/main/src/shared/data/trade/endgame-filter-support.json'
 
+/** URL of FilterBlade for PoE1 / PoE2 NeverSink customization. Sync exports
+ *  land in PoE's OnlineFilters folder — Scalpel links those as `-local` copies. */
+export function filterBladeUrl(poeVersion: 1 | 2): string {
+  return poeVersion === 2 ? 'https://www.filterblade.xyz/?game=Poe2' : 'https://www.filterblade.xyz/?game=Poe'
+}
+
+/** PoE website page for a specific account / shared item filter.
+ *  OnlineFilters entries are named by this id (e.g. `rkY4jLfX`). */
+export function poeItemFilterUrl(filterId: string): string {
+  const id = filterId.trim().replace(/\.filter$/i, '')
+  return `${POE_WEBSITE}/item-filter/${encodeURIComponent(id)}`
+}
+
+/** PoE2 (or PoE1) public filter ladder — Follow shared filters from other players. */
+export function poeItemFilterLadderUrl(poeVersion: 1 | 2): string {
+  const type = poeVersion === 2 ? 'PoE2' : 'PoE1'
+  return `${POE_WEBSITE}/item-filter/ladder/follower/type/${type}`
+}
+
 /** "Powered by..." attribution links shown under the regex output bar. The
  *  underlying mod / regex data ships from these projects; we point users at the
  *  source so they can compare against the upstream tools and contribute upstream. */

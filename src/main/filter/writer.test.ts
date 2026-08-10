@@ -1,11 +1,13 @@
-import { mkdtempSync, readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import type { FilterBlock } from '@shared/types'
 import { parseFilterFile } from './parser'
 import {
+  addBaseTypeToTier,
   detectIndent,
+  insertSectionRule,
   moveBaseTypeBetweenTiers,
   renderFilterSelective,
   serializeBlock,
@@ -180,5 +182,47 @@ describe('renderFilterSelective removedBlocks', () => {
     })
     const line = serializeBlock(b, '\t').find((l) => l.includes('BaseType'))
     expect(line).toContain('"Weird#Name"')
+  })
+})
+
+describe('addBaseTypeToTier / insertSectionRule', () => {
+  it('adds a BaseType onto an existing tier', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'wadd-'))
+    const p = join(dir, 'o.filter')
+    const content = ['Show # $type->currency $tier->s', '\tBaseType == "Divine Orb"', '\tSetFontSize 45', ''].join('\n')
+    writeFileSync(p, content, 'utf-8')
+    const file = parseFilterFile(p, readFileSync(p, 'utf-8'))
+    addBaseTypeToTier(file, 0, 'Mirror of Kalandra')
+    const out = readFileSync(p, 'utf-8')
+    expect(out).toContain('"Divine Orb"')
+    expect(out).toContain('"Mirror of Kalandra"')
+  })
+
+  it('inserts a new section rule before the first tier', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'wins-'))
+    const p = join(dir, 'o.filter')
+    const content = [
+      'Show # $type->currency $tier->s',
+      '\tClass Currency',
+      '\tBaseType == "Divine Orb"',
+      '\tSetFontSize 45',
+      '\tSetTextColor 255 0 0 255',
+      '',
+    ].join('\n')
+    writeFileSync(p, content, 'utf-8')
+    const file = parseFilterFile(p, readFileSync(p, 'utf-8'))
+    insertSectionRule(file, {
+      typePath: 'currency',
+      tier: 'custom',
+      baseType: 'Chaos Orb',
+      beforeBlockIndex: 0,
+      copyStyleFromIndex: 0,
+    })
+    const reloaded = parseFilterFile(p, readFileSync(p, 'utf-8'))
+    expect(reloaded.blocks.length).toBeGreaterThanOrEqual(2)
+    expect(reloaded.blocks[0].tierTag).toEqual({ typePath: 'currency', tier: 'custom' })
+    expect(reloaded.blocks[0].conditions.some((c) => c.type === 'BaseType' && c.values.includes('Chaos Orb'))).toBe(
+      true,
+    )
   })
 })

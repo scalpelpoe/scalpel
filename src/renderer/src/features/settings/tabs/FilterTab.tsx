@@ -1,7 +1,9 @@
 import type { AppSettings, ProfileSettingValue, PoeItem, RuntimeSettings } from '@shared/types'
 import { getGameFeatures } from '@shared/game-features'
 import { FilterPicker } from '@renderer/components/FilterPicker'
+import { FilterSectionEditor } from '@renderer/components/FilterSectionEditor'
 import { HistoryPanel } from '@renderer/components/HistoryPanel'
+import { LootSimulator } from '@renderer/components/LootSimulator'
 import { HotkeyField } from '@renderer/components/primitives/HotkeyField'
 import { SettingToggleBox } from '@renderer/components/primitives/SettingToggleBox'
 import { m } from '@shared/paraglide/messages.js'
@@ -63,6 +65,20 @@ export function FilterTab({
     <>
       <div className="settings-section-title mt-3">{m.settings_filter_heading()}</div>
 
+      <section>
+        <label>Edit filter sections</label>
+        <div className="mt-[6px]">
+          <FilterSectionEditor filterPath={filterPath} />
+        </div>
+      </section>
+
+      <section>
+        <label>Loot simulator</label>
+        <div className="mt-[6px]">
+          <LootSimulator filterPath={filterPath} />
+        </div>
+      </section>
+
       {/* Filter folder & picker */}
       <section>
         <label>{m.settings_filter_folder()}</label>
@@ -73,6 +89,7 @@ export function FilterTab({
             autoSwitchInGame={isOverlay || undefined}
             onOnlineFilterUpdated={onOnlineFilterUpdated}
             onOnlineImport={onOnlineImport}
+            maxListHeight={140}
           />
         </div>
         {isOverlay && !filterPath && (
