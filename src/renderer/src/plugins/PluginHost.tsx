@@ -4,6 +4,8 @@ import type { PluginActivate, PluginManifest } from '../../../plugin-sdk/src/typ
 import { createPluginContext } from './context'
 import { resolveLeagueOptions } from '@renderer/shared/league-options'
 import { importPluginModule } from './import-plugin-module'
+import { PluginCommunicationRuntime } from './plugin-communication'
+import { planPluginLoad } from './plugin-dependencies'
 
 export interface RegisteredTab {
   pluginId: string
@@ -46,6 +48,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
   // drained by unloadPlugin so a reload (or uninstall) leaves nothing running.
   const pluginDisposersRef = useRef<Map<string, Array<() => void>>>(new Map())
   const pluginTeardownRef = useRef<Map<string, () => void>>(new Map())
+  const communicationRef = useRef(new PluginCommunicationRuntime())
   // Latest-value refs let our captured-once subscribe callbacks return current values.
   const poeVersionRef = useRef(props.poeVersion)
   const leagueRef = useRef(props.league)
@@ -95,6 +98,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       const ctx = createPluginContext({
         pluginId: m.id,
         pluginVersion: m.version,
+        plugins: communicationRef.current.createApi(m),
         getPoeVersion: () => poeVersionRef.current,
         getLeague: () => leagueRef.current,
         // `version` arrives already defaulted to the current game by context.ts,
@@ -214,6 +218,10 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       }
       pluginDisposersRef.current.delete(m.id)
       pluginTeardownRef.current.delete(m.id)
+      communicationRef.current.remove(m.id)
+      setTabs((prev) => prev.filter((tab) => tab.pluginId !== m.id))
+      pluginHotkeyHandlersRef.current.delete(m.id)
+      pendingOverlayRef.current.delete(m.id)
       onPluginErrorRef.current?.(m.id, err instanceof Error ? err : new Error(String(err)))
     }
   }, [])
@@ -245,6 +253,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     setTabs((prev) => prev.filter((t) => t.pluginId !== pluginId))
     pluginHotkeyHandlersRef.current.delete(pluginId)
     pendingOverlayRef.current.delete(pluginId)
+    communicationRef.current.remove(pluginId)
     void window.api.pluginUnregisterHotkey(pluginId)
     void window.api.pluginUnregisterTab(pluginId)
   }, [])
@@ -255,9 +264,15 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     let cancelled = false
 
     void (async () => {
-      const installed = await window.api.listInstalledPlugins()
+      const installed = (await window.api.listInstalledPlugins()).filter(
+        (entry) => !entry.manifest.poeVersions || entry.manifest.poeVersions.includes(poeVersionRef.current),
+      )
       if (cancelled) return
-      for (const entry of installed) {
+      const plan = planPluginLoad(installed)
+      for (const [pluginId, error] of plan.errors) {
+        onPluginErrorRef.current?.(pluginId, error)
+      }
+      for (const entry of plan.entries) {
         if (cancelled) return
         await loadPlugin(entry)
       }

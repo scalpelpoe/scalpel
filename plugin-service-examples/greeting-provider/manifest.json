@@ -1,0 +1,12 @@
+{
+  "manifestVersion": 1,
+  "id": "greeting-provider",
+  "version": "1.0.0",
+  "name": "Greeting Provider",
+  "description": "Provides a small greeting API and a normal plugin tab.",
+  "author": "Scalpel",
+  "scalpelMinVersion": ">=1.1.0",
+  "api": {
+    "version": "1.0.0"
+  }
+}
