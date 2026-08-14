@@ -111,6 +111,7 @@ const EXPECTED_CONTEXT_KEYS = [
   'pluginId',
   'pluginVersion',
   'prices',
+  'plugins',
   'registerHotkey',
   'registerOverlay',
   'registerTab',
@@ -123,6 +124,10 @@ function stubDeps(): PluginContextFactoryDeps {
   return {
     pluginId: 'surface-test',
     pluginVersion: '0.0.0',
+    plugins: {
+      expose: () => {},
+      get: () => null,
+    },
     getPoeVersion: () => 1,
     getLeague: () => '',
     getLeagues: async () => [],

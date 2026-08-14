@@ -1,0 +1,15 @@
+{
+  "manifestVersion": 1,
+  "id": "greeting-consumer",
+  "version": "1.0.0",
+  "name": "Greeting Consumer",
+  "description": "Calls an explicitly declared plugin dependency from normal UI.",
+  "author": "Scalpel",
+  "scalpelMinVersion": ">=1.1.0",
+  "dependencies": [
+    {
+      "pluginId": "greeting-provider",
+      "apiVersion": "1.0.0"
+    }
+  ]
+}

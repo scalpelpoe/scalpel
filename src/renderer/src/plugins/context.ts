@@ -11,6 +11,7 @@ export function createPluginContext(deps: PluginContextFactoryDeps): ScalpelPlug
   return {
     pluginId: deps.pluginId,
     pluginVersion: deps.pluginVersion,
+    plugins: deps.plugins,
     getPoeVersion: deps.getPoeVersion,
     getLeague: deps.getLeague,
     getLeagues: (version) => deps.getLeagues(version ?? deps.getPoeVersion()),
