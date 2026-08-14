@@ -7,6 +7,10 @@ import type { PoeItem } from '@shared/types'
 const baseDeps = () => ({
   pluginId: 'test',
   pluginVersion: '1.0.0',
+  plugins: {
+    expose: vi.fn(),
+    get: vi.fn(() => null),
+  },
   getPoeVersion: () => 1 as const,
   getLeague: () => 'Mirage',
   getLeagues: vi.fn(async () => ['Standard']),

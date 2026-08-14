@@ -15,6 +15,33 @@ export interface PluginManifest {
   /** Absolute URL of a small icon shown in the Plugins settings store rows.
    *  PNG or SVG. The same URL the registry entry advertises pre-install. */
   iconUrl?: string
+  /** Public API exposed by this plugin's renderer entry point. */
+  api?: {
+    version: string
+  }
+  /** Explicit plugin API dependencies. No provider discovery is performed. */
+  dependencies?: PluginDependency[]
+}
+
+export interface PluginDependency {
+  pluginId: string
+  apiVersion: string
+  optional?: boolean
+}
+
+export type PluginApiHandler = (method: string, params: unknown) => unknown | Promise<unknown>
+
+export interface PluginApiClient {
+  readonly pluginId: string
+  readonly apiVersion: string
+  call<TResult = unknown, TParams = unknown>(method: string, params?: TParams): Promise<TResult>
+}
+
+export interface PluginCommunicationApi {
+  /** Expose the API declared by this plugin's manifest. Must be called during activation. */
+  expose(handler: PluginApiHandler): void
+  /** Get a client for an explicitly declared dependency. */
+  get(pluginId: string): PluginApiClient | null
 }
 
 /** Optional cleanup returned from activate(); the host calls it when the plugin
@@ -209,6 +236,7 @@ export interface MediaApi {
 export interface ScalpelPluginContext {
   readonly pluginId: string
   readonly pluginVersion: string
+  readonly plugins: PluginCommunicationApi
 
   getPoeVersion(): 1 | 2
   getLeague(): string

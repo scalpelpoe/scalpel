@@ -39,6 +39,12 @@ export function useActivatePlugin(pluginId: string): ActivatedPlugin {
       const ctx: ScalpelPluginContext = {
         pluginId,
         pluginVersion: entry.manifest.version,
+        plugins: {
+          expose: () => {
+            throw new Error('plugin APIs are not available in secondary overlay windows yet')
+          },
+          get: () => null,
+        },
         getPoeVersion: () => poeVersion,
         getLeague: () => league,
         getLeagues: async (version) =>
