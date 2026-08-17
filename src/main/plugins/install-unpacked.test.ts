@@ -93,6 +93,42 @@ describe('installUnpacked', () => {
     expect(mockFs.files.has(join(destDir, 'plugin.js'))).toBe(true)
   })
 
+  it('copies a declared API contract', async () => {
+    const apiManifest = JSON.stringify({
+      ...JSON.parse(validManifest),
+      api: { version: '1.0.0', contract: 'api.openrpc.json' },
+    })
+    mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), apiManifest)
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')
+    mockFs.files.set(join(SRC_PLUGIN, 'api.openrpc.json'), '{"openrpc":"1.4.0"}')
+    mockFs.dirs.add(SRC_PLUGIN)
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN)
+
+    expect(r.ok).toBe(true)
+    const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
+    expect(mockFs.files.get(join(destDir, 'api.openrpc.json'))).toBe('{"openrpc":"1.4.0"}')
+  })
+
+  it('rejects an API provider whose declared contract is missing', async () => {
+    mockFs.files.set(
+      join(SRC_PLUGIN, 'manifest.json'),
+      JSON.stringify({
+        ...JSON.parse(validManifest),
+        api: { version: '1.0.0', contract: 'api.openrpc.json' },
+      }),
+    )
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')
+    mockFs.dirs.add(SRC_PLUGIN)
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN)
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('api.openrpc.json')
+  })
+
   it('appends id to installed.json when new', async () => {
     mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
     mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')

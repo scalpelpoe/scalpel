@@ -4,6 +4,8 @@ export type ValidationResult = { ok: true; manifest: PluginManifest } | { ok: fa
 
 export const PLUGIN_ID_PATTERN = /^[a-z][a-z0-9-]{2,49}$/
 const API_VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
+const CONTRACT_FILENAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}\.json$/
+const WINDOWS_DEVICE_FILENAME_PATTERN = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i
 
 function isString(v: unknown): v is string {
   return typeof v === 'string'
@@ -51,6 +53,14 @@ export function validateManifest(raw: unknown): ValidationResult {
     const api = m.api as Record<string, unknown>
     if (!isString(api.version) || !API_VERSION_PATTERN.test(api.version)) {
       return { ok: false, error: 'api.version must be a canonical major.minor.patch version' }
+    }
+    if (
+      !isString(api.contract) ||
+      !CONTRACT_FILENAME_PATTERN.test(api.contract) ||
+      api.contract.toLowerCase() === 'manifest.json' ||
+      WINDOWS_DEVICE_FILENAME_PATTERN.test(api.contract)
+    ) {
+      return { ok: false, error: 'api.contract must be a safe root-level JSON filename' }
     }
   }
   if (m.dependencies !== undefined) {

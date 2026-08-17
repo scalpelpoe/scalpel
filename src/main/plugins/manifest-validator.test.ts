@@ -67,14 +67,27 @@ describe('validateManifest', () => {
   it('accepts a declared API and explicit dependencies', () => {
     const r = validateManifest({
       ...valid,
-      api: { version: '1.0.0' },
+      api: { version: '1.0.0', contract: 'api.openrpc.json' },
       dependencies: [{ pluginId: 'greeting-provider', apiVersion: '1.0.0' }],
     })
     expect(r.ok).toBe(true)
   })
 
   it('rejects malformed API declarations and dependencies', () => {
-    expect(validateManifest({ ...valid, api: { version: '^1.0.0' } }).ok).toBe(false)
+    expect(validateManifest({ ...valid, api: { version: '^1.0.0', contract: 'api.openrpc.json' } }).ok).toBe(false)
+    expect(validateManifest({ ...valid, api: { version: '1.0.0' } }).ok).toBe(false)
+    for (const contract of [
+      '../api.json',
+      'contracts/api.json',
+      'C:\\api.json',
+      'https://x/api.json',
+      'manifest.json',
+      'MANIFEST.json',
+      'CON.json',
+      'lpt1.json',
+    ]) {
+      expect(validateManifest({ ...valid, api: { version: '1.0.0', contract } }).ok).toBe(false)
+    }
     expect(validateManifest({ ...valid, dependencies: 'greeting-provider' }).ok).toBe(false)
     expect(validateManifest({ ...valid, dependencies: [{ pluginId: 'BAD', apiVersion: '1.0.0' }] }).ok).toBe(false)
     expect(

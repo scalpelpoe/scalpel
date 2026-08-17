@@ -72,6 +72,19 @@ export async function installFromRegistry(entry: RegistryEntry): Promise<Install
     return { ok: false, error: `plugin.js checksum mismatch (expected ${entry.sha256}, got ${actual})` }
   }
 
+  let contractText: string | null = null
+  if (v.manifest.api) {
+    try {
+      const resp = await net.fetch(pluginReleaseAssetUrl(entry.repo, entry.latestVersion, v.manifest.api.contract))
+      if (resp.status !== 200) {
+        return { ok: false, error: `${v.manifest.api.contract} download returned ${resp.status}` }
+      }
+      contractText = await resp.text()
+    } catch (e) {
+      return { ok: false, error: `${v.manifest.api.contract} download failed: ${(e as Error).message}` }
+    }
+  }
+
   // 5. Write atomically: stage into a temp dir, then swap the whole directory
   // into place - move any existing install aside first and restore it if the
   // swap throws. A failed write can no longer delete, half-overwrite, or tear a
@@ -84,6 +97,9 @@ export async function installFromRegistry(entry: RegistryEntry): Promise<Install
     mkdirSync(tmpDir, { recursive: true })
     writeFileSync(join(tmpDir, 'plugin.js'), pluginBytes)
     writeFileSync(join(tmpDir, 'manifest.json'), manifestText)
+    if (v.manifest.api && contractText !== null) {
+      writeFileSync(join(tmpDir, v.manifest.api.contract), contractText)
+    }
 
     rmSync(bakDir, { recursive: true, force: true })
     const hadPrevious = existsSync(destDir)

@@ -23,7 +23,7 @@ describe('planPluginLoad', () => {
     const consumer = entry('consumer', {
       dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0' }],
     })
-    const provider = entry('provider', { api: { version: '1.0.0' } })
+    const provider = entry('provider', { api: { version: '1.0.0', contract: 'api.openrpc.json' } })
 
     const plan = planPluginLoad([consumer, provider])
 
@@ -38,7 +38,7 @@ describe('planPluginLoad', () => {
     const incompatible = entry('version-consumer', {
       dependencies: [{ pluginId: 'provider', apiVersion: '2.0.0' }],
     })
-    const provider = entry('provider', { api: { version: '1.0.0' } })
+    const provider = entry('provider', { api: { version: '1.0.0', contract: 'api.openrpc.json' } })
 
     const plan = planPluginLoad([missing, incompatible, provider])
 
@@ -60,11 +60,11 @@ describe('planPluginLoad', () => {
 
   it('rejects dependency cycles before activation', () => {
     const first = entry('first', {
-      api: { version: '1.0.0' },
+      api: { version: '1.0.0', contract: 'api.openrpc.json' },
       dependencies: [{ pluginId: 'second', apiVersion: '1.0.0' }],
     })
     const second = entry('second', {
-      api: { version: '1.0.0' },
+      api: { version: '1.0.0', contract: 'api.openrpc.json' },
       dependencies: [{ pluginId: 'first', apiVersion: '1.0.0' }],
     })
 
