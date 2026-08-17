@@ -4,6 +4,7 @@ import { act, fireEvent, render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { PluginActivate, PluginManifest } from '../../../plugin-sdk/src/types'
 import type { RegisteredTab } from './PluginHost'
+import { requireGreetingProviderClient } from '../../../../plugin-service-examples/greeting-consumer/src/generated/greeting-provider-client'
 
 const providerManifest: PluginManifest = {
   manifestVersion: 1,
@@ -13,7 +14,7 @@ const providerManifest: PluginManifest = {
   description: 'test provider',
   author: 'test',
   scalpelMinVersion: '>=0.0.0',
-  api: { version: '1.0.0' },
+  api: { version: '1.0.0', contract: 'api.openrpc.json' },
 }
 
 const consumerManifest: PluginManifest = {
@@ -64,7 +65,7 @@ describe('plugin communication UI slice', () => {
     }
     const consumer: PluginActivate = (ctx) => {
       activationOrder.push(ctx.pluginId)
-      const client = ctx.plugins.get('greeting-provider')!
+      const client = requireGreetingProviderClient(ctx)
       ctx.registerTab({
         label: 'Consumer',
         icon: '<svg/>',
@@ -73,7 +74,7 @@ describe('plugin communication UI slice', () => {
           const result = document.createElement('p')
           button.textContent = 'Ask provider'
           button.addEventListener('click', () => {
-            void client.call<{ message: string }>('greet', { name: 'Exile' }).then((response) => {
+            void client.greet({ name: 'Exile' }).then((response) => {
               result.textContent = response.message
             })
           })

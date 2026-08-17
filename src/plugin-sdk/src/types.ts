@@ -18,6 +18,8 @@ export interface PluginManifest {
   /** Public API exposed by this plugin's renderer entry point. */
   api?: {
     version: string
+    /** Root-level OpenRPC document bundled with the plugin release. */
+    contract: string
   }
   /** Explicit plugin API dependencies. No provider discovery is performed. */
   dependencies?: PluginDependency[]

@@ -19,7 +19,7 @@ describe('PluginCommunicationRuntime', () => {
   it('routes asynchronous calls to a declared provider', async () => {
     const runtime = new PluginCommunicationRuntime()
     const handler = vi.fn((_method: string, params: unknown) => ({ echoed: params }))
-    runtime.createApi(manifest('provider', { api: { version: '1.0.0' } })).expose(handler)
+    runtime.createApi(manifest('provider', { api: { version: '1.0.0', contract: 'api.openrpc.json' } })).expose(handler)
     const consumer = runtime.createApi(
       manifest('consumer', {
         dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0' }],
@@ -53,7 +53,9 @@ describe('PluginCommunicationRuntime', () => {
 
   it('invalidates clients when a provider unloads', async () => {
     const runtime = new PluginCommunicationRuntime()
-    runtime.createApi(manifest('provider', { api: { version: '1.0.0' } })).expose(() => 'ok')
+    runtime
+      .createApi(manifest('provider', { api: { version: '1.0.0', contract: 'api.openrpc.json' } }))
+      .expose(() => 'ok')
     const client = runtime
       .createApi(
         manifest('consumer', {
@@ -69,7 +71,9 @@ describe('PluginCommunicationRuntime', () => {
 
   it('rejects values that cannot cross a future transport boundary', async () => {
     const runtime = new PluginCommunicationRuntime()
-    runtime.createApi(manifest('provider', { api: { version: '1.0.0' } })).expose(() => null)
+    runtime
+      .createApi(manifest('provider', { api: { version: '1.0.0', contract: 'api.openrpc.json' } }))
+      .expose(() => null)
     const client = runtime
       .createApi(
         manifest('consumer', {

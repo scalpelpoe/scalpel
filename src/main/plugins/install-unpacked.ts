@@ -25,6 +25,10 @@ export function installUnpacked(sourceDir: string): InstallResult {
   }
   const v = validateManifest(raw)
   if (!v.ok) return { ok: false, error: v.error }
+  const contractPath = v.manifest.api ? join(sourceDir, v.manifest.api.contract) : null
+  if (contractPath && !existsSync(contractPath)) {
+    return { ok: false, error: `source directory does not contain ${v.manifest.api?.contract}` }
+  }
 
   const id = v.manifest.id
   const destDir = pluginDir(id)
@@ -32,6 +36,9 @@ export function installUnpacked(sourceDir: string): InstallResult {
     mkdirSync(destDir, { recursive: true })
     copyFileSync(manifestPath, join(destDir, 'manifest.json'))
     copyFileSync(entryPath, join(destDir, 'plugin.js'))
+    if (contractPath && v.manifest.api) {
+      copyFileSync(contractPath, join(destDir, v.manifest.api.contract))
+    }
 
     // Append to installed.json and unpacked.json if new. The source dir rides
     // along so the Developer settings can re-copy from it (Reload) without

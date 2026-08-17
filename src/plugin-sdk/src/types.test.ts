@@ -25,6 +25,7 @@ describe('PluginManifest', () => {
     expectTypeOf(m.homepage).toEqualTypeOf<string | undefined>()
     expectTypeOf(m.tabIcon).toEqualTypeOf<string | undefined>()
     expectTypeOf(m.api?.version).toEqualTypeOf<string | undefined>()
+    expectTypeOf(m.api?.contract).toEqualTypeOf<string | undefined>()
     expectTypeOf(m.dependencies?.[0]?.pluginId).toEqualTypeOf<string | undefined>()
   })
 })
