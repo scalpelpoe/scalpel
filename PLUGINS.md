@@ -732,7 +732,17 @@ Every plugin ships a `manifest.json` alongside its `plugin.js`. The schema:
   "homepage": "https://github.com/you/your-plugin",
   "scalpelMinVersion": ">=0.9.8",
   "poeVersions": [1, 2],
-  "tabIcon": "icon.svg"
+  "tabIcon": "icon.svg",
+  "api": {
+    "version": "1.0.0",
+    "contract": "api.openrpc.json"
+  },
+  "dependencies": [
+    {
+      "pluginId": "shared-provider",
+      "apiVersion": "1.0.0"
+    }
+  ]
 }
 ```
 
@@ -743,6 +753,9 @@ Field notes:
 - `scalpelMinVersion` is a comparator expression (`">=0.9.8"`, `">=0.9.8 <1.0"`). If the running Scalpel doesn't satisfy it, the plugin won't load.
 - `poeVersions` gates which games the plugin appears under. Omit for both.
 - `tabIcon` is optional; you can also pass an inline SVG string via `registerTab({ icon })`.
+- `api` declares one public plugin API. `contract` is a root-level OpenRPC JSON file shipped beside `plugin.js`.
+- `dependencies` explicitly names plugin APIs this plugin consumes. API versions use exact `major.minor.patch` matching in the initial implementation.
+- See `PLUGIN_SERVICES.md` and `plugin-service-examples/` for the current communication API and generated-client workflow.
 
 ## Local testing
 
@@ -752,7 +765,7 @@ While developing, skip the registry and install your plugin directly.
 
 1. In Scalpel, open Settings → Developer.
 2. Toggle "Developer mode" on.
-3. Click "Load unpacked plugin..." and pick the directory containing your built `plugin.js` and `manifest.json`.
+3. Click "Load unpacked plugin..." and pick the directory containing your built `plugin.js`, `manifest.json`, and declared API contract when applicable.
 4. Your tab appears in the title bar immediately.
 
 **Option 2: Manual file copy**
@@ -769,13 +782,13 @@ While developing, skip the registry and install your plugin directly.
 
 Releases are GitHub-driven. Tag your repo with `v<version>` matching your manifest's `version`, and attach the built artifacts:
 
-1. `npm run build` produces `dist/plugin.js` and copies `dist/manifest.json`.
+1. `npm run build` produces `dist/plugin.js`, copies `dist/manifest.json`, and includes the declared API contract when applicable.
 2. Tag and release on GitHub:
    ```bash
    git tag v1.0.0
    git push origin v1.0.0
    ```
-3. On the GitHub release page, attach `dist/plugin.js` and `dist/manifest.json` as release assets.
+3. On the GitHub release page, attach `dist/plugin.js`, `dist/manifest.json`, and the root-level API contract named by `api.contract` as release assets.
 
 Scalpel downloads files from `https://github.com/<your-repo>/releases/download/v<version>/<file>`, so the version tag and asset filenames must match exactly.
 

@@ -90,6 +90,11 @@ const matchingManifest = {
   scalpelMinVersion: '>=0.0.0',
 }
 
+const matchingApiManifest = {
+  ...matchingManifest,
+  api: { version: '1.0.0', contract: 'api.openrpc.json' },
+}
+
 function readMockJson(path: string): unknown {
   const value = mockFs.files.get(path)
   if (value == null) throw new Error(`Expected mock file to exist: ${path}`)
@@ -118,6 +123,42 @@ describe('installFromRegistry', () => {
     expect(r.ok).toBe(true)
     expect(mockFs.bufs.has(join(TEST_USER_DATA, 'plugins', 'hello-world', 'plugin.js'))).toBe(true)
     expect(mockFs.files.has(join(TEST_USER_DATA, 'plugins', 'hello-world', 'manifest.json'))).toBe(true)
+  })
+
+  it('downloads and stages a declared API contract', async () => {
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingApiManifest)),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/api.openrpc.json':
+        new Response('{"openrpc":"1.4.0"}'),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry(validEntry)
+
+    expect(r.ok).toBe(true)
+    expect(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'hello-world', 'api.openrpc.json'))).toBe(
+      '{"openrpc":"1.4.0"}',
+    )
+  })
+
+  it('rejects an API provider when its declared contract cannot be downloaded', async () => {
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingApiManifest)),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry(validEntry)
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('api.openrpc.json')
   })
 
   it('appends to installed.json on success', async () => {
