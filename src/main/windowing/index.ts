@@ -61,6 +61,9 @@ export interface OverlaySpec {
    *  creation (renderer wasn't mounted yet, so webContents.send would
    *  silently drop them). */
   onFirstShow?: (win: BrowserWindow) => void
+  /** Fired after every renderer load, including webContents.reload(). Use for
+   *  initialization messages the replacement renderer must receive again. */
+  onDidFinishLoad?: (win: BrowserWindow) => void
   /** When true, re-apply the (resolved) anchor bounds on every show, not just at
    *  window creation. For specs whose `defaultAnchor` is context-dependent and
    *  must re-evaluate each time the window is shown. Default (false) keeps the
@@ -145,6 +148,8 @@ export interface SecondaryOverlay {
    *  created lazily so we don't spawn renderers for overlays the user never
    *  touches in a session). */
   getWindow(): BrowserWindow | null
+  /** Permanently destroy this overlay and remove its registration. */
+  destroy(): void
   /** When true, hide paths that respect this flag leave the overlay visible
    *  instead of hiding it when another surface opens. Currently honored by the
    *  Esc "hide any visible secondary" sweep; other hide sites must check it
@@ -184,6 +189,8 @@ export interface SecondaryOverlay {
    *  false then, so hideAllOnPoeBlur doesn't re-record the flag). */
   hideKeepingRestore(): void
 }
+
+const destroyingWindows = new WeakSet<BrowserWindow>()
 
 const SNAP_RANGE = 80
 /** Window between a programmatic setBounds and clearing the "ignore the move
@@ -417,6 +424,24 @@ function makeOverlayApi(state: OverlayState): SecondaryOverlay {
       state.win.hide()
     },
     getWindow: () => (state.win && !state.win.isDestroyed() ? state.win : null),
+    destroy: () => {
+      if (state.programmaticSettleTimer) {
+        clearTimeout(state.programmaticSettleTimer)
+        state.programmaticSettleTimer = null
+      }
+      if (state.win && !state.win.isDestroyed()) {
+        const win = state.win
+        destroyingWindows.add(win)
+        win.close()
+        if (!win.isDestroyed()) {
+          setTimeout(() => {
+            if (!win.isDestroyed()) win.destroy()
+          }, 250)
+        }
+      }
+      state.win = null
+      overlays.delete(state.spec.id)
+    },
     setPersistOverOthers: (value) => {
       state.persistOverOthers = value
     },
@@ -438,8 +463,12 @@ function ensureWin(state: OverlayState): BrowserWindow {
   applyAnchorBounds(state)
   prewarmSnapCanvas()
   wireWindowEvents(state, win)
-  win.webContents.once('did-finish-load', () => {
+  let firstLoad = true
+  win.webContents.on('did-finish-load', () => {
     if (!state.win || state.win.isDestroyed()) return
+    state.spec.onDidFinishLoad?.(state.win)
+    if (!firstLoad) return
+    firstLoad = false
     // Reapply anchor bounds: on Windows the first setBounds after window
     // creation doesn't always stick until the renderer is loaded. Mirrors
     // the double-apply pattern in electron-overlay-window.
@@ -512,7 +541,7 @@ app.on('before-quit', () => {
 
 function wireWindowEvents(state: OverlayState, win: BrowserWindow): void {
   win.on('close', (e) => {
-    if (appQuitting) return
+    if (appQuitting || destroyingWindows.has(win)) return
     e.preventDefault()
     win.hide()
     state.wasVisibleBeforeFocusLoss = false

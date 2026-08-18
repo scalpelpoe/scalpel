@@ -109,4 +109,48 @@ describe('validateManifest', () => {
       }).ok,
     ).toBe(false)
   })
+
+  it('accepts a pinned Windows native backend', () => {
+    expect(
+      validateManifest({
+        ...valid,
+        nativeBackend: {
+          protocolVersion: 1,
+          contract: 'backend.openrpc.json',
+          targets: { 'win32-x64': { file: 'item-analyzer.exe', sha256: 'a'.repeat(64) } },
+        },
+      }).ok,
+    ).toBe(true)
+  })
+
+  it('rejects unsafe or unpinned native backend declarations', () => {
+    const backend = {
+      protocolVersion: 1,
+      contract: 'backend.openrpc.json',
+      targets: { 'win32-x64': { file: 'item-analyzer.exe', sha256: 'a'.repeat(64) } },
+    }
+    expect(validateManifest({ ...valid, nativeBackend: { ...backend, protocolVersion: 2 } }).ok).toBe(false)
+    expect(validateManifest({ ...valid, nativeBackend: { ...backend, contract: '../backend.json' } }).ok).toBe(false)
+    expect(
+      validateManifest({
+        ...valid,
+        nativeBackend: { ...backend, targets: { 'win32-x64': { file: '../worker.exe', sha256: 'a'.repeat(64) } } },
+      }).ok,
+    ).toBe(false)
+    expect(
+      validateManifest({
+        ...valid,
+        nativeBackend: { ...backend, targets: { 'win32-x64': { file: 'worker.exe', sha256: 'bad' } } },
+      }).ok,
+    ).toBe(false)
+    expect(
+      validateManifest({
+        ...valid,
+        nativeBackend: {
+          ...backend,
+          targets: { 'win32-x64': { file: 'plugin.js.', sha256: 'a'.repeat(64) } },
+        },
+      }).ok,
+    ).toBe(false)
+  })
 })

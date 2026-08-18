@@ -11,6 +11,7 @@ const baseDeps = () => ({
     expose: vi.fn(),
     get: vi.fn(() => null),
   },
+  nativeCall: vi.fn(async () => null),
   getPoeVersion: () => 1 as const,
   getLeague: () => 'Mirage',
   getLeagues: vi.fn(async () => ['Standard']),
@@ -61,6 +62,15 @@ describe('createPluginContext', () => {
     const ctx = createPluginContext(baseDeps())
     expect(ctx.pluginId).toBe('test')
     expect(ctx.pluginVersion).toBe('1.0.0')
+  })
+
+  it('binds native backend calls to the owning plugin context', async () => {
+    const deps = baseDeps()
+    const nativeCall = vi.fn(async () => ({ value: 42 }))
+    const ctx = createPluginContext({ ...deps, nativeCall })
+
+    await expect(ctx.native.call('analyzeItem', { name: 'Exile' })).resolves.toEqual({ value: 42 })
+    expect(nativeCall).toHaveBeenCalledWith('analyzeItem', { name: 'Exile' })
   })
 
   it('forwards getPoeVersion/getLeague/getCurrentItem/getCurrentZone', () => {

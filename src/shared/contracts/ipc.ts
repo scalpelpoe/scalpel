@@ -243,6 +243,7 @@ export const IPC_CHANNELS = {
     STORAGE_SET: 'plugins:storage-set',
     STORAGE_DELETE: 'plugins:storage-delete',
     STORAGE_KEYS: 'plugins:storage-keys',
+    NATIVE_CALL: 'plugins:native-call',
     REGISTER_HOTKEY: 'plugins:register-hotkey',
     LIST_REGISTERED_HOTKEYS: 'plugins:list-registered-hotkeys',
     REGISTER_TAB: 'plugins:register-tab',

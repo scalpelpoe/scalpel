@@ -69,6 +69,7 @@ import {
 import { initLearning } from './learning'
 import { initMainLocale } from './locale'
 import { flushAll as flushPluginStorage } from './plugins/storage'
+import { pluginNativeBackends } from './plugins/native-backend'
 import { registerCheatSheetProtocol } from './cheat-sheet-protocol'
 import { registerScalpelInternalProtocol, registerScalpelInternalSchemePrivileges } from './plugins/protocol'
 import { registerScalpelPluginProtocol, registerScalpelPluginSchemePrivileges } from './plugins/plugin-protocol'
@@ -606,6 +607,7 @@ app.on('before-quit', () => {
 
 app.on('will-quit', () => {
   recordMainBreadcrumb('will-quit')
+  pluginNativeBackends.stopAllNow()
   stopHotkeyListener()
   stopOnlineSync()
   recordMainBreadcrumb('will-quit complete')

@@ -13,6 +13,7 @@ import {
 import { dirname, join } from 'node:path'
 import { app, type BrowserWindow, ipcMain } from 'electron'
 import { ELECTRON_RELEASES, GITHUB_RELEASES_API } from '@shared/endpoints'
+import { pluginNativeBackends } from '../plugins/native-backend'
 import type { InstallManifest } from '@shared/types'
 import { findBrickedMatch } from '@shared/version-match'
 import { selectListRelease } from './select-release'
@@ -511,6 +512,7 @@ ipcMain.handle('install-update', () => {
     recordMainBreadcrumb('updater: relaunch (no pending update)')
     stopHotkeyListener()
     app.relaunch()
+    pluginNativeBackends.stopAllNow()
     app.exit(0)
     return
   }
@@ -609,6 +611,7 @@ ipcMain.handle('install-update', () => {
 
   recordMainBreadcrumb('updater: exit to apply update')
   stopHotkeyListener()
+  pluginNativeBackends.stopAllNow()
   app.exit(0)
 })
 

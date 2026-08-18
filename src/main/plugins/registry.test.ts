@@ -79,13 +79,21 @@ describe('fetchRegistry', () => {
     const cachePath = join(TEST_USER_DATA, 'plugins', 'registry-cache.json')
     expect(mockFs.files.has(cachePath)).toBe(true)
     const cached = JSON.parse(mockFs.files.get(cachePath)!)
+    expect(cached.url).toBe('https://raw.githubusercontent.com/scalpelpoe/scalpel-plugins-registry/main/registry.json')
     expect(cached.etag).toBe('"abc123"')
     expect(cached.snapshot.plugins[0].id).toBe('hello-world')
   })
 
   it('uses cached registry on a 304 response', async () => {
     const cachePath = join(TEST_USER_DATA, 'plugins', 'registry-cache.json')
-    mockFs.files.set(cachePath, JSON.stringify({ etag: '"abc123"', snapshot: validRegistry }))
+    mockFs.files.set(
+      cachePath,
+      JSON.stringify({
+        url: 'https://raw.githubusercontent.com/scalpelpoe/scalpel-plugins-registry/main/registry.json',
+        etag: '"abc123"',
+        snapshot: validRegistry,
+      }),
+    )
     mockNetFetch(async () => new Response(null, { status: 304 }))
     const { fetchRegistry } = await import('./registry')
     const result = await fetchRegistry()
@@ -95,7 +103,14 @@ describe('fetchRegistry', () => {
 
   it('returns the cached registry when the network fetch throws', async () => {
     const cachePath = join(TEST_USER_DATA, 'plugins', 'registry-cache.json')
-    mockFs.files.set(cachePath, JSON.stringify({ etag: '"abc123"', snapshot: validRegistry }))
+    mockFs.files.set(
+      cachePath,
+      JSON.stringify({
+        url: 'https://raw.githubusercontent.com/scalpelpoe/scalpel-plugins-registry/main/registry.json',
+        etag: '"abc123"',
+        snapshot: validRegistry,
+      }),
+    )
     mockNetFetch(async () => {
       throw new Error('network down')
     })
@@ -111,6 +126,22 @@ describe('fetchRegistry', () => {
     })
     const { fetchRegistry } = await import('./registry')
     const result = await fetchRegistry()
+    expect(result.ok).toBe(false)
+  })
+
+  it('never reuses a cache written for a different registry URL', async () => {
+    const cachePath = join(TEST_USER_DATA, 'plugins', 'registry-cache.json')
+    mockFs.files.set(
+      cachePath,
+      JSON.stringify({ url: 'https://attacker.example/registry.json', etag: '"evil"', snapshot: validRegistry }),
+    )
+    mockNetFetch(async () => {
+      throw new Error('network down')
+    })
+    const { fetchRegistry } = await import('./registry')
+
+    const result = await fetchRegistry()
+
     expect(result.ok).toBe(false)
   })
 
@@ -156,6 +187,36 @@ describe('fetchRegistry', () => {
     const result = await fetchRegistry()
     expect(result.ok).toBe(true)
     if (result.ok) expect(result.snapshot.plugins).toHaveLength(0)
+  })
+
+  it('keeps valid supplemental asset hashes and drops malformed asset maps', async () => {
+    const withAssets = {
+      ...validRegistry,
+      plugins: [{ ...validRegistry.plugins[0], assets: { 'worker.exe': 'b'.repeat(64) } }],
+    }
+    mockNetFetch(async () => new Response(JSON.stringify(withAssets), { status: 200 }))
+    const { fetchRegistry } = await import('./registry')
+    const validResult = await fetchRegistry()
+    expect(validResult.ok).toBe(true)
+    if (validResult.ok) expect(validResult.snapshot.plugins[0].assets).toEqual({ 'worker.exe': 'b'.repeat(64) })
+
+    const malformed = {
+      ...validRegistry,
+      plugins: [{ ...validRegistry.plugins[0], assets: { '../worker.exe': 'b'.repeat(64) } }],
+    }
+    mockNetFetch(async () => new Response(JSON.stringify(malformed), { status: 200 }))
+    const malformedResult = await fetchRegistry()
+    expect(malformedResult.ok).toBe(true)
+    if (malformedResult.ok) expect(malformedResult.snapshot.plugins[0].assets).toBeUndefined()
+
+    const trailingDot = {
+      ...validRegistry,
+      plugins: [{ ...validRegistry.plugins[0], assets: { 'plugin.js.': 'b'.repeat(64) } }],
+    }
+    mockNetFetch(async () => new Response(JSON.stringify(trailingDot), { status: 200 }))
+    const trailingDotResult = await fetchRegistry()
+    expect(trailingDotResult.ok).toBe(true)
+    if (trailingDotResult.ok) expect(trailingDotResult.snapshot.plugins[0].assets).toBeUndefined()
   })
 
   it('drops an entry with a malformed repo', async () => {

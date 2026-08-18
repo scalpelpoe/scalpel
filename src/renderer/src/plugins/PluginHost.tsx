@@ -99,6 +99,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
         pluginId: m.id,
         pluginVersion: m.version,
         plugins: communicationRef.current.createApi(m),
+        nativeCall: (method, params) => window.api.pluginNativeCall(m.id, method, params),
         getPoeVersion: () => poeVersionRef.current,
         getLeague: () => leagueRef.current,
         // `version` arrives already defaulted to the current game by context.ts,

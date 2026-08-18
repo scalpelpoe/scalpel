@@ -4,6 +4,8 @@ node_modules/
 # Build output
 out/
 dist/
+plugin-service-examples/native-item-analyzer/native/target/
+plugin-service-examples/native-item-analyzer/dist/
 playwright-report/
 test-results/
 
