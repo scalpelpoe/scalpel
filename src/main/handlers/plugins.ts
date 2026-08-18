@@ -29,9 +29,11 @@ import { installFromRegistry } from '../plugins/install-from-registry'
 import { installUnpacked } from '../plugins/install-unpacked'
 import { getInstalledPlugins, getUnpackedPlugins } from '../plugins/manager'
 import { PLUGIN_ID_PATTERN } from '../plugins/manifest-validator'
+import { pluginNativeBackends } from '../plugins/native-backend'
 import { clearPluginOverlayAnchor, getPluginOverlayAnchor, setPluginOverlayAnchor } from '../plugins/overlay-anchors'
 import { pluginEntryUrl } from '../plugins/plugin-protocol'
 import { fetchRegistry } from '../plugins/registry'
+import { resolveRegistrySelection } from '../plugins/registry-selection'
 import { deleteValue, getValue, listKeys, setValue } from '../plugins/storage'
 import { uninstallPlugin } from '../plugins/uninstall'
 import { getUnpackedSourceDir } from '../plugins/unpacked-list'
@@ -49,6 +51,15 @@ export interface UnpackedPluginIpc extends InstalledPluginIpc {
 }
 
 export function register(store: Store<AppSettings>, isElevated: () => boolean = () => false): void {
+  const registryConfig = (): { url: string | undefined; allowNativeBackend: boolean } => {
+    const processOverride = process.env.SCALPEL_PLUGIN_REGISTRY_URL
+    const userRegistry = store.get('pluginRegistryUrl') as AppSettings['pluginRegistryUrl']
+    return {
+      url: processOverride ?? userRegistry ?? undefined,
+      allowNativeBackend: Boolean(processOverride) || !userRegistry,
+    }
+  }
+
   const notifyHotkeysChanged = (): void => {
     getOverlayWindow()?.webContents.send('plugin-hotkeys-changed')
   }
@@ -126,6 +137,10 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
     return listKeys(pluginId)
   })
+  ipcMain.handle('plugins:native-call', (_evt, pluginId: string, method: string, params?: unknown) => {
+    if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
+    return pluginNativeBackends.call(pluginId, method, params)
+  })
 
   ipcMain.handle('plugins:register-hotkey', (_evt, pluginId: string, label: string) => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
@@ -178,24 +193,20 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     if (result.canceled || result.filePaths.length === 0) {
       return { ok: false as const, error: 'cancelled' }
     }
-    return installUnpackedAndNotify(result.filePaths[0], unpackedFlowDeps)
+    return pluginNativeBackends.withAllStopped(() => installUnpackedAndNotify(result.filePaths[0], unpackedFlowDeps))
   })
 
   // Re-copy a side-loaded plugin from the directory it came from and hot-swap
   // it. Rebuild the plugin, hit Reload, run the new code - no app restart.
-  ipcMain.handle('plugins:reload-unpacked', (_evt, pluginId: string) => {
+  ipcMain.handle('plugins:reload-unpacked', async (_evt, pluginId: string) => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
-    return reloadUnpackedPlugin(pluginId, unpackedFlowDeps)
+    return pluginNativeBackends.withPluginStopped(pluginId, () => reloadUnpackedPlugin(pluginId, unpackedFlowDeps))
   })
 
   ipcMain.handle('plugins:fetch-registry', async () => {
     // Dev-only override (local test harness) takes precedence over the
     // self-host setting; never set SCALPEL_PLUGIN_REGISTRY_URL in production.
-    const overrideUrl =
-      process.env.SCALPEL_PLUGIN_REGISTRY_URL ??
-      (store.get('pluginRegistryUrl') as AppSettings['pluginRegistryUrl']) ??
-      undefined
-    return fetchRegistry(overrideUrl)
+    return fetchRegistry(registryConfig().url)
   })
 
   // Install and update share the same download/validate/write path; they differ
@@ -204,10 +215,14 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     entry: unknown,
     channel: 'plugin-installed' | 'plugin-updated',
   ): Promise<import('../plugins/install-types').InstallResult> => {
-    if (!entry || typeof entry !== 'object') {
-      return { ok: false as const, error: 'invalid registry entry' }
-    }
-    const result = await installFromRegistry(entry as import('@shared/plugin-registry-types').RegistryEntry)
+    // Only the id crosses the trust boundary. Main resolves repository
+    // coordinates and hashes from its configured registry.
+    const config = registryConfig()
+    const selection = await resolveRegistrySelection(entry, config.url)
+    if (!selection.ok) return selection
+    const result = await pluginNativeBackends.withPluginStopped(selection.entry.id, () =>
+      installFromRegistry(selection.entry, { allowNativeBackend: config.allowNativeBackend }),
+    )
     if (result.ok) {
       const installed = getInstalledPlugins().find((p) => p.manifest.id === result.id)
       if (installed) {
@@ -224,9 +239,8 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
   }
 
   ipcMain.handle('plugins:install-from-registry', async (_evt, entry: unknown) => {
-    // Defensive shape check; the renderer should only pass entries it got
-    // back from `plugins:fetch-registry`, but trusting the IPC boundary is
-    // the same posture we take everywhere else.
+    // installOrUpdate treats this only as an id selector and re-resolves the
+    // trusted entry in main.
     return installOrUpdate(entry, 'plugin-installed')
   })
 
@@ -286,19 +300,22 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
   })
 
   ipcMain.handle('plugins:uninstall', async (_evt, pluginId: string) => {
-    const uninstallResult = uninstallPlugin(pluginId)
-    if (uninstallResult.ok) {
-      getOverlayWindow()?.webContents.send('plugin-uninstalled', pluginId)
-      disposePluginOverlay(pluginId)
-      clearPluginOverlayAnchor(store, pluginId)
-      removePluginHotkey(pluginId)
-      removePluginOverlayHotkey(pluginId)
-      removePluginTab(pluginId)
-      notifyTabsChanged()
-      refreshAppMacros()
-      notifyHotkeysChanged()
-    }
-    return uninstallResult
+    if (!PLUGIN_ID_PATTERN.test(pluginId)) return { ok: false as const, error: 'invalid plugin id' }
+    return pluginNativeBackends.withPluginStopped(pluginId, () => {
+      const uninstallResult = uninstallPlugin(pluginId)
+      if (uninstallResult.ok) {
+        getOverlayWindow()?.webContents.send('plugin-uninstalled', pluginId)
+        disposePluginOverlay(pluginId)
+        clearPluginOverlayAnchor(store, pluginId)
+        removePluginHotkey(pluginId)
+        removePluginOverlayHotkey(pluginId)
+        removePluginTab(pluginId)
+        notifyTabsChanged()
+        refreshAppMacros()
+        notifyHotkeysChanged()
+      }
+      return uninstallResult
+    })
   })
 
   ipcMain.handle('plugins:unregister-hotkey', (_evt, pluginId: string) => {

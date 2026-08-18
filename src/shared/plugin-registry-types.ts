@@ -26,6 +26,9 @@ export interface RegistryEntry {
    *  the trust root; this pins the exact bytes so a later compromise or swap
    *  of the GitHub release asset is rejected at install time. */
   sha256: string
+  /** Additional release assets pinned by the curated registry, keyed by their
+   *  safe root-level filename. Native executables must appear here. */
+  assets?: Record<string, string>
   /** Comparator expression a la versionMatches; install is blocked if the
    *  running Scalpel doesn't satisfy this. */
   scalpelMinVersion: string

@@ -143,6 +143,13 @@ interface ScalpelPluginContext {
     keys(): Promise<string[]>
   }
 
+  // Owner-only request/response calls to the native backend declared by this
+  // plugin. Scalpel owns the executable path, process, integrity check, and
+  // lifetime. Calls reject when no compatible backend is declared.
+  native: {
+    call<TResult = unknown, TParams = unknown>(method: string, params?: TParams): Promise<TResult>
+  }
+
   // Read / write / watch the running game's _Config.ini. The host resolves the
   // path from the detected PoE version; plugins cannot name a path. This is the
   // only file a plugin can touch on disk. See "Editing the game config" below.
@@ -742,7 +749,17 @@ Every plugin ships a `manifest.json` alongside its `plugin.js`. The schema:
       "pluginId": "shared-provider",
       "apiVersion": "1.0.0"
     }
-  ]
+  ],
+  "nativeBackend": {
+    "protocolVersion": 1,
+    "contract": "backend.openrpc.json",
+    "targets": {
+      "win32-x64": {
+        "file": "my-plugin-backend.exe",
+        "sha256": "<lowercase SHA-256>"
+      }
+    }
+  }
 }
 ```
 
@@ -755,6 +772,10 @@ Field notes:
 - `tabIcon` is optional; you can also pass an inline SVG string via `registerTab({ icon })`.
 - `api` declares one public plugin API. `contract` is a root-level OpenRPC JSON file shipped beside `plugin.js`.
 - `dependencies` explicitly names plugin APIs this plugin consumes. API versions use exact `major.minor.patch` matching in the initial implementation.
+- `nativeBackend` declares one private, supervised sidecar. The initial target is `win32-x64`; all files are root-level release assets. The normal context routes `ctx.native.call()` to its owning plugin and cannot choose paths, arguments, or environment variables.
+- Native requests and responses are newline-delimited JSON with a one-MiB limit, at most 32 concurrent calls, and a ten-second call timeout. Standard output is reserved for protocol messages; diagnostics belong on standard error.
+- Plugins remain trusted and share renderer/preload access. Owner routing prevents accidental cross-plugin calls; it is not a security boundary against a hostile plugin.
+- Native backends install only from Scalpel's curated registry (or a process-level developer registry override). User-configured self-hosted registries remain JavaScript-only because renderer code can change that setting.
 - See `PLUGIN_SERVICES.md` and `plugin-service-examples/` for the current communication API and generated-client workflow.
 
 ## Local testing
@@ -765,7 +786,7 @@ While developing, skip the registry and install your plugin directly.
 
 1. In Scalpel, open Settings → Developer.
 2. Toggle "Developer mode" on.
-3. Click "Load unpacked plugin..." and pick the directory containing your built `plugin.js`, `manifest.json`, and declared API contract when applicable.
+3. Click "Load unpacked plugin..." and pick the directory containing your built `plugin.js`, `manifest.json`, declared contracts, and native executable when applicable.
 4. Your tab appears in the title bar immediately.
 
 **Option 2: Manual file copy**
@@ -782,13 +803,13 @@ While developing, skip the registry and install your plugin directly.
 
 Releases are GitHub-driven. Tag your repo with `v<version>` matching your manifest's `version`, and attach the built artifacts:
 
-1. `npm run build` produces `dist/plugin.js`, copies `dist/manifest.json`, and includes the declared API contract when applicable.
+1. `npm run build` produces `dist/plugin.js`, copies `dist/manifest.json`, and includes all declared contracts and native assets when applicable.
 2. Tag and release on GitHub:
    ```bash
    git tag v1.0.0
    git push origin v1.0.0
    ```
-3. On the GitHub release page, attach `dist/plugin.js`, `dist/manifest.json`, and the root-level API contract named by `api.contract` as release assets.
+3. On the GitHub release page, attach `dist/plugin.js`, `dist/manifest.json`, and every root-level contract/native asset declared by the manifest.
 
 Scalpel downloads files from `https://github.com/<your-repo>/releases/download/v<version>/<file>`, so the version tag and asset filenames must match exactly.
 
@@ -805,6 +826,9 @@ Once your plugin has a working release, open a pull request against [`scalpelpoe
   "repo": "your-github-username/scalpel-plugin-jewel-economy",
   "latestVersion": "1.0.0",
   "sha256": "3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532",
+  "assets": {
+    "my-plugin-backend.exe": "<lowercase SHA-256 matching nativeBackend.targets>"
+  },
   "scalpelMinVersion": ">=0.9.8",
   "poeVersions": [1, 2],
   "iconUrl": "https://raw.githubusercontent.com/your-user/your-plugin/main/icon.png",

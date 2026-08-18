@@ -1,0 +1,100 @@
+{
+  "$schema": "https://spec.open-rpc.org/meta-schema.json",
+  "info": {
+    "description": "Private request/response contract between the plugin renderer and its Rust sidecar.",
+    "title": "Native Item Analyzer Backend",
+    "version": "1.0.0"
+  },
+  "methods": [
+    {
+      "name": "analyzeItem",
+      "paramStructure": "by-name",
+      "params": [
+        {
+          "name": "baseType",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "explicits",
+          "required": true,
+          "schema": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        {
+          "name": "implicits",
+          "required": true,
+          "schema": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        {
+          "name": "itemLevel",
+          "required": true,
+          "schema": {
+            "format": "uint32",
+            "minimum": 0,
+            "type": "integer"
+          }
+        },
+        {
+          "name": "name",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "rarity",
+          "required": true,
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "result": {
+        "name": "analysis",
+        "schema": {
+          "$schema": "https://json-schema.org/draft/2020-12/schema",
+          "properties": {
+            "displayName": {
+              "type": "string"
+            },
+            "fingerprint": {
+              "type": "string"
+            },
+            "numericTokens": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            },
+            "totalMods": {
+              "format": "uint",
+              "minimum": 0,
+              "type": "integer"
+            }
+          },
+          "required": [
+            "displayName",
+            "fingerprint",
+            "totalMods",
+            "numericTokens"
+          ],
+          "title": "AnalyzeItemResult",
+          "type": "object"
+        }
+      },
+      "summary": "Fingerprint and summarize a parsed Path of Exile item."
+    }
+  ],
+  "openrpc": "1.4.0"
+}

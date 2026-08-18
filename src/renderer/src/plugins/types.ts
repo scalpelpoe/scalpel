@@ -5,6 +5,7 @@ export type PluginContextFactoryDeps = {
   pluginId: string
   pluginVersion: string
   plugins: PluginCommunicationApi
+  nativeCall: (method: string, params?: unknown) => Promise<unknown>
   getPoeVersion: () => 1 | 2
   getLeague: () => string
   getLeagues: (version: 1 | 2) => Promise<readonly string[]>

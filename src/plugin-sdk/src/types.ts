@@ -23,6 +23,21 @@ export interface PluginManifest {
   }
   /** Explicit plugin API dependencies. No provider discovery is performed. */
   dependencies?: PluginDependency[]
+  /** Optional private native process owned and supervised by Scalpel. */
+  nativeBackend?: {
+    protocolVersion: 1
+    /** Root-level OpenRPC document describing the private worker protocol. */
+    contract: string
+    targets: {
+      /** The initial native backend slice supports Scalpel's Windows x64 build. */
+      'win32-x64'?: {
+        /** Root-level executable shipped with the plugin release. */
+        file: string
+        /** Lowercase SHA-256 of the executable. */
+        sha256: string
+      }
+    }
+  }
 }
 
 export interface PluginDependency {
@@ -44,6 +59,11 @@ export interface PluginCommunicationApi {
   expose(handler: PluginApiHandler): void
   /** Get a client for an explicitly declared dependency. */
   get(pluginId: string): PluginApiClient | null
+}
+
+export interface PluginNativeBackendApi {
+  /** Call this plugin's declared private native backend. */
+  call<TResult = unknown, TParams = unknown>(method: string, params?: TParams): Promise<TResult>
 }
 
 /** Optional cleanup returned from activate(); the host calls it when the plugin
@@ -239,6 +259,7 @@ export interface ScalpelPluginContext {
   readonly pluginId: string
   readonly pluginVersion: string
   readonly plugins: PluginCommunicationApi
+  readonly native: PluginNativeBackendApi
 
   getPoeVersion(): 1 | 2
   getLeague(): string

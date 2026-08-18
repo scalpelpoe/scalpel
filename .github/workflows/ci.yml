@@ -18,6 +18,8 @@ jobs:
         with:
           node-version: 22
 
+      - uses: dtolnay/rust-toolchain@stable
+
       - name: Install Python setuptools (needed by node-gyp)
         run: pip install setuptools
 
@@ -38,6 +40,12 @@ jobs:
 
       - name: Test
         run: npm run test
+
+      - name: Test native plugin example
+        run: npm run test:native-plugin-example
+
+      - name: Check generated native plugin example
+        run: npm run check:native-plugin-example
 
       - name: Build
         run: npm run build

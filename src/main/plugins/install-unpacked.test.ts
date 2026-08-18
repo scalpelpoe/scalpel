@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -127,6 +128,60 @@ describe('installUnpacked', () => {
 
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error).toContain('api.openrpc.json')
+  })
+
+  it('verifies and copies a declared native backend', async () => {
+    const nativeBytes = 'native worker bytes'
+    const nativeManifest = JSON.stringify({
+      ...JSON.parse(validManifest),
+      nativeBackend: {
+        protocolVersion: 1,
+        contract: 'backend.openrpc.json',
+        targets: {
+          'win32-x64': {
+            file: 'worker.exe',
+            sha256: createHash('sha256').update(nativeBytes).digest('hex'),
+          },
+        },
+      },
+    })
+    mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), nativeManifest)
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')
+    mockFs.files.set(join(SRC_PLUGIN, 'backend.openrpc.json'), '{}')
+    mockFs.files.set(join(SRC_PLUGIN, 'worker.exe'), nativeBytes)
+    mockFs.dirs.add(SRC_PLUGIN)
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN)
+
+    expect(r.ok).toBe(true)
+    const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
+    expect(mockFs.files.get(join(destDir, 'backend.openrpc.json'))).toBe('{}')
+    expect(mockFs.files.get(join(destDir, 'worker.exe'))).toBe(nativeBytes)
+  })
+
+  it('rejects a native backend whose checksum does not match', async () => {
+    mockFs.files.set(
+      join(SRC_PLUGIN, 'manifest.json'),
+      JSON.stringify({
+        ...JSON.parse(validManifest),
+        nativeBackend: {
+          protocolVersion: 1,
+          contract: 'backend.openrpc.json',
+          targets: { 'win32-x64': { file: 'worker.exe', sha256: '0'.repeat(64) } },
+        },
+      }),
+    )
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')
+    mockFs.files.set(join(SRC_PLUGIN, 'backend.openrpc.json'), '{}')
+    mockFs.files.set(join(SRC_PLUGIN, 'worker.exe'), 'tampered')
+    mockFs.dirs.add(SRC_PLUGIN)
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN)
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('checksum mismatch')
   })
 
   it('appends id to installed.json when new', async () => {

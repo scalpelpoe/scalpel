@@ -5,7 +5,9 @@ export type ValidationResult = { ok: true; manifest: PluginManifest } | { ok: fa
 export const PLUGIN_ID_PATTERN = /^[a-z][a-z0-9-]{2,49}$/
 const API_VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
 const CONTRACT_FILENAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}\.json$/
+const ASSET_FILENAME_PATTERN = /^[a-zA-Z0-9](?:[a-zA-Z0-9._-]{0,98}[a-zA-Z0-9])?$/
 const WINDOWS_DEVICE_FILENAME_PATTERN = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i
+const SHA256_PATTERN = /^[a-f0-9]{64}$/
 
 function isString(v: unknown): v is string {
   return typeof v === 'string'
@@ -91,6 +93,52 @@ export function validateManifest(raw: unknown): ValidationResult {
       }
       if (dependency.optional !== undefined && typeof dependency.optional !== 'boolean') {
         return { ok: false, error: 'dependency.optional must be a boolean when present' }
+      }
+    }
+  }
+  if (m.nativeBackend !== undefined) {
+    if (m.nativeBackend == null || typeof m.nativeBackend !== 'object' || Array.isArray(m.nativeBackend)) {
+      return { ok: false, error: 'nativeBackend must be an object when present' }
+    }
+    const backend = m.nativeBackend as Record<string, unknown>
+    if (backend.protocolVersion !== 1) {
+      return { ok: false, error: 'nativeBackend.protocolVersion must be 1' }
+    }
+    if (
+      !isString(backend.contract) ||
+      !CONTRACT_FILENAME_PATTERN.test(backend.contract) ||
+      backend.contract.toLowerCase() === 'manifest.json' ||
+      WINDOWS_DEVICE_FILENAME_PATTERN.test(backend.contract) ||
+      (m.api as { contract?: string } | undefined)?.contract?.toLowerCase() === backend.contract.toLowerCase()
+    ) {
+      return { ok: false, error: 'nativeBackend.contract must be a unique safe root-level JSON filename' }
+    }
+    if (backend.targets == null || typeof backend.targets !== 'object' || Array.isArray(backend.targets)) {
+      return { ok: false, error: 'nativeBackend.targets must be an object' }
+    }
+    const targets = backend.targets as Record<string, unknown>
+    const targetNames = Object.keys(targets)
+    if (targetNames.length === 0 || targetNames.some((name) => name !== 'win32-x64')) {
+      return { ok: false, error: 'nativeBackend.targets must declare at least one supported target' }
+    }
+    for (const targetName of targetNames) {
+      const value = targets[targetName]
+      if (value == null || typeof value !== 'object' || Array.isArray(value)) {
+        return { ok: false, error: `nativeBackend target "${targetName}" must be an object` }
+      }
+      const target = value as Record<string, unknown>
+      const targetFile = isString(target.file) ? target.file.toLowerCase() : ''
+      if (
+        !isString(target.file) ||
+        !ASSET_FILENAME_PATTERN.test(target.file) ||
+        WINDOWS_DEVICE_FILENAME_PATTERN.test(target.file) ||
+        ['manifest.json', 'plugin.js', backend.contract.toLowerCase()].includes(targetFile) ||
+        (m.api as { contract?: string } | undefined)?.contract?.toLowerCase() === targetFile
+      ) {
+        return { ok: false, error: `nativeBackend target "${targetName}" must use a unique safe root-level file` }
+      }
+      if (!isString(target.sha256) || !SHA256_PATTERN.test(target.sha256)) {
+        return { ok: false, error: `nativeBackend target "${targetName}" must declare a lowercase SHA-256` }
       }
     }
   }

@@ -14,7 +14,10 @@ function currentScalpelVersion(): string {
   return app.getVersion()
 }
 
-export async function installFromRegistry(entry: RegistryEntry): Promise<InstallResult> {
+export async function installFromRegistry(
+  entry: RegistryEntry,
+  options: { allowNativeBackend?: boolean } = {},
+): Promise<InstallResult> {
   // 1. Version check
   if (!versionMatches(entry.scalpelMinVersion, currentScalpelVersion())) {
     return {
@@ -65,6 +68,9 @@ export async function installFromRegistry(entry: RegistryEntry): Promise<Install
       error: `manifest version "${v.manifest.version}" does not match registry latestVersion "${entry.latestVersion}"`,
     }
   }
+  if (v.manifest.nativeBackend && options.allowNativeBackend !== true) {
+    return { ok: false, error: 'native backends are not allowed from a self-hosted registry' }
+  }
 
   // 4.5. Verify plugin.js checksum
   const actual = createHash('sha256').update(pluginBytes).digest('hex')
@@ -85,6 +91,43 @@ export async function installFromRegistry(entry: RegistryEntry): Promise<Install
     }
   }
 
+  let backendContractText: string | null = null
+  let nativeBytes: Uint8Array | null = null
+  const nativeTarget =
+    process.platform === 'win32' && process.arch === 'x64' ? v.manifest.nativeBackend?.targets['win32-x64'] : undefined
+  if (v.manifest.nativeBackend) {
+    try {
+      const resp = await net.fetch(
+        pluginReleaseAssetUrl(entry.repo, entry.latestVersion, v.manifest.nativeBackend.contract),
+      )
+      if (resp.status !== 200) {
+        return { ok: false, error: `${v.manifest.nativeBackend.contract} download returned ${resp.status}` }
+      }
+      backendContractText = await resp.text()
+    } catch (e) {
+      return { ok: false, error: `${v.manifest.nativeBackend.contract} download failed: ${(e as Error).message}` }
+    }
+  }
+  if (nativeTarget) {
+    if (entry.assets?.[nativeTarget.file] !== nativeTarget.sha256) {
+      return { ok: false, error: `registry does not pin ${nativeTarget.file} with the manifest checksum` }
+    }
+    try {
+      const resp = await net.fetch(pluginReleaseAssetUrl(entry.repo, entry.latestVersion, nativeTarget.file))
+      if (resp.status !== 200) return { ok: false, error: `${nativeTarget.file} download returned ${resp.status}` }
+      nativeBytes = new Uint8Array(await resp.arrayBuffer())
+    } catch (e) {
+      return { ok: false, error: `${nativeTarget.file} download failed: ${(e as Error).message}` }
+    }
+    const nativeActual = createHash('sha256').update(nativeBytes).digest('hex')
+    if (nativeActual !== nativeTarget.sha256) {
+      return {
+        ok: false,
+        error: `${nativeTarget.file} checksum mismatch (expected ${nativeTarget.sha256}, got ${nativeActual})`,
+      }
+    }
+  }
+
   // 5. Write atomically: stage into a temp dir, then swap the whole directory
   // into place - move any existing install aside first and restore it if the
   // swap throws. A failed write can no longer delete, half-overwrite, or tear a
@@ -100,6 +143,10 @@ export async function installFromRegistry(entry: RegistryEntry): Promise<Install
     if (v.manifest.api && contractText !== null) {
       writeFileSync(join(tmpDir, v.manifest.api.contract), contractText)
     }
+    if (v.manifest.nativeBackend && backendContractText !== null) {
+      writeFileSync(join(tmpDir, v.manifest.nativeBackend.contract), backendContractText)
+    }
+    if (nativeTarget && nativeBytes) writeFileSync(join(tmpDir, nativeTarget.file), nativeBytes)
 
     rmSync(bakDir, { recursive: true, force: true })
     const hadPrevious = existsSync(destDir)

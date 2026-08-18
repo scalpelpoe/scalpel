@@ -27,6 +27,7 @@ describe('PluginManifest', () => {
     expectTypeOf(m.api?.version).toEqualTypeOf<string | undefined>()
     expectTypeOf(m.api?.contract).toEqualTypeOf<string | undefined>()
     expectTypeOf(m.dependencies?.[0]?.pluginId).toEqualTypeOf<string | undefined>()
+    expectTypeOf(m.nativeBackend?.targets['win32-x64']?.file).toEqualTypeOf<string | undefined>()
   })
 })
 
@@ -48,7 +49,7 @@ describe('PluginActivate', () => {
 
 describe('ScalpelPluginContext', () => {
   it('exposes identity, game state, events, registration, and utilities', () => {
-    const ctx = { plugins: {} } as ScalpelPluginContext
+    const ctx = { plugins: {}, native: {} } as ScalpelPluginContext
     expectTypeOf(ctx.pluginId).toEqualTypeOf<string>()
     expectTypeOf(ctx.pluginVersion).toEqualTypeOf<string>()
     expectTypeOf(ctx.getPoeVersion).returns.toEqualTypeOf<1 | 2>()
@@ -61,6 +62,7 @@ describe('ScalpelPluginContext', () => {
     expectTypeOf(ctx.openExternal).toBeFunction()
     expectTypeOf(ctx.plugins.expose).toBeFunction()
     expectTypeOf(ctx.plugins.get).toBeFunction()
+    expectTypeOf(ctx.native.call).toBeFunction()
   })
 
   it('exposes registerHotkey', () => {
