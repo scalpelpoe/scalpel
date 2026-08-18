@@ -7,6 +7,8 @@ const PLUGIN_SHA = createHash('sha256').update(PLUGIN_BYTES).digest('hex')
 
 const NEW_BYTES = new Uint8Array([9, 9, 9])
 const NEW_SHA = createHash('sha256').update(NEW_BYTES).digest('hex')
+const NATIVE_BYTES = new Uint8Array([7, 8, 9])
+const NATIVE_SHA = createHash('sha256').update(NATIVE_BYTES).digest('hex')
 
 const TEST_USER_DATA = '/test/userData'
 
@@ -95,6 +97,15 @@ const matchingApiManifest = {
   api: { version: '1.0.0', contract: 'api.openrpc.json' },
 }
 
+const matchingNativeManifest = {
+  ...matchingManifest,
+  nativeBackend: {
+    protocolVersion: 1,
+    contract: 'backend.openrpc.json',
+    targets: { 'win32-x64': { file: 'worker.exe', sha256: NATIVE_SHA } },
+  },
+}
+
 function readMockJson(path: string): unknown {
   const value = mockFs.files.get(path)
   if (value == null) throw new Error(`Expected mock file to exist: ${path}`)
@@ -159,6 +170,65 @@ describe('installFromRegistry', () => {
 
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error).toContain('api.openrpc.json')
+  })
+
+  it('downloads and verifies registry-pinned native backend assets', async () => {
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingNativeManifest)),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/backend.openrpc.json':
+        new Response('{}'),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/worker.exe': new Response(
+        NATIVE_BYTES,
+      ),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry(
+      { ...validEntry, assets: { 'worker.exe': NATIVE_SHA } },
+      { allowNativeBackend: true },
+    )
+
+    expect(r.ok).toBe(true)
+    expect(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'hello-world', 'backend.openrpc.json'))).toBe('{}')
+    expect(mockFs.bufs.get(join(TEST_USER_DATA, 'plugins', 'hello-world', 'worker.exe'))).toEqual(NATIVE_BYTES)
+  })
+
+  it('rejects a native executable not independently pinned by the registry', async () => {
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingNativeManifest)),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/backend.openrpc.json':
+        new Response('{}'),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry(validEntry, { allowNativeBackend: true })
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('registry does not pin worker.exe')
+  })
+
+  it('rejects native backends unless the caller marks the registry as trusted for native code', async () => {
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingNativeManifest)),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry({ ...validEntry, assets: { 'worker.exe': NATIVE_SHA } })
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('self-hosted registry')
   })
 
   it('appends to installed.json on success', async () => {

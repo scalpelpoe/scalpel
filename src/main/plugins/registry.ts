@@ -10,6 +10,7 @@ import { pluginsDir } from './paths'
 export type FetchResult = { ok: true; snapshot: RegistrySnapshot } | { ok: false; error: string }
 
 interface CachedRegistry {
+  url: string
   etag: string | null
   snapshot: RegistrySnapshot
 }
@@ -18,12 +19,12 @@ function cachePath(): string {
   return join(pluginsDir(), 'registry-cache.json')
 }
 
-function readCache(): CachedRegistry | null {
+function readCache(url: string): CachedRegistry | null {
   const p = cachePath()
   if (!existsSync(p)) return null
   try {
     const parsed = JSON.parse(readFileSync(p, 'utf-8'))
-    if (parsed && typeof parsed === 'object' && parsed.snapshot) {
+    if (parsed && typeof parsed === 'object' && parsed.url === url && parsed.snapshot) {
       return parsed as CachedRegistry
     }
   } catch {
@@ -53,6 +54,18 @@ function validateSnapshot(raw: unknown): RegistrySnapshot | null {
     if (typeof e.repo !== 'string' || !/^\w[\w.-]*\/\w[\w.-]*$/.test(e.repo)) continue
     if (typeof e.latestVersion !== 'string' || typeof e.scalpelMinVersion !== 'string') continue
     if (typeof e.sha256 !== 'string' || !/^[a-f0-9]{64}$/.test(e.sha256)) continue
+    const assets =
+      e.assets &&
+      typeof e.assets === 'object' &&
+      !Array.isArray(e.assets) &&
+      Object.entries(e.assets).every(
+        ([name, hash]) =>
+          /^[a-zA-Z0-9](?:[a-zA-Z0-9._-]{0,98}[a-zA-Z0-9])?$/.test(name) &&
+          typeof hash === 'string' &&
+          /^[a-f0-9]{64}$/.test(hash),
+      )
+        ? (e.assets as Record<string, string>)
+        : undefined
     plugins.push({
       id: e.id,
       name: e.name,
@@ -62,6 +75,7 @@ function validateSnapshot(raw: unknown): RegistrySnapshot | null {
       latestVersion: e.latestVersion,
       scalpelMinVersion: e.scalpelMinVersion,
       sha256: e.sha256,
+      assets,
       poeVersions:
         Array.isArray(e.poeVersions) && e.poeVersions.every((x) => x === 1 || x === 2)
           ? (e.poeVersions as (1 | 2)[])
@@ -100,7 +114,7 @@ export async function fetchRegistry(overrideUrl?: string): Promise<FetchResult> 
 
 async function fetchRegistryRaw(overrideUrl?: string): Promise<FetchResult> {
   const url = overrideUrl ?? PLUGIN_REGISTRY_URL
-  const cached = readCache()
+  const cached = readCache(url)
   const headers: Record<string, string> = { accept: 'application/json' }
   if (cached?.etag) headers['if-none-match'] = cached.etag
 
@@ -134,6 +148,6 @@ async function fetchRegistryRaw(overrideUrl?: string): Promise<FetchResult> {
     return { ok: false, error: 'registry failed schema validation' }
   }
 
-  writeCache({ etag: response.headers.get('etag'), snapshot })
+  writeCache({ url, etag: response.headers.get('etag'), snapshot })
   return { ok: true, snapshot }
 }

@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import type { InstallResult } from './install-types'
@@ -29,6 +30,25 @@ export function installUnpacked(sourceDir: string): InstallResult {
   if (contractPath && !existsSync(contractPath)) {
     return { ok: false, error: `source directory does not contain ${v.manifest.api?.contract}` }
   }
+  const backendContractPath = v.manifest.nativeBackend ? join(sourceDir, v.manifest.nativeBackend.contract) : null
+  if (backendContractPath && !existsSync(backendContractPath)) {
+    return { ok: false, error: `source directory does not contain ${v.manifest.nativeBackend?.contract}` }
+  }
+  const nativeTarget =
+    process.platform === 'win32' && process.arch === 'x64' ? v.manifest.nativeBackend?.targets['win32-x64'] : undefined
+  const nativePath = nativeTarget ? join(sourceDir, nativeTarget.file) : null
+  if (nativePath && !existsSync(nativePath)) {
+    return { ok: false, error: `source directory does not contain ${nativeTarget?.file}` }
+  }
+  if (nativePath && nativeTarget) {
+    const actual = createHash('sha256').update(readFileSync(nativePath)).digest('hex')
+    if (actual !== nativeTarget.sha256) {
+      return {
+        ok: false,
+        error: `${nativeTarget.file} checksum mismatch (expected ${nativeTarget.sha256}, got ${actual})`,
+      }
+    }
+  }
 
   const id = v.manifest.id
   const destDir = pluginDir(id)
@@ -39,6 +59,10 @@ export function installUnpacked(sourceDir: string): InstallResult {
     if (contractPath && v.manifest.api) {
       copyFileSync(contractPath, join(destDir, v.manifest.api.contract))
     }
+    if (backendContractPath && v.manifest.nativeBackend) {
+      copyFileSync(backendContractPath, join(destDir, v.manifest.nativeBackend.contract))
+    }
+    if (nativePath && nativeTarget) copyFileSync(nativePath, join(destDir, nativeTarget.file))
 
     // Append to installed.json and unpacked.json if new. The source dir rides
     // along so the Developer settings can re-copy from it (Reload) without
