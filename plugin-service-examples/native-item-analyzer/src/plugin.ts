@@ -1,22 +1,7 @@
-import type { PluginActivate, PoeItem } from '@scalpelpoe/plugin-sdk'
+import { createNativeServiceClient, type PluginActivate, type PoeItem } from '@scalpelpoe/plugin-sdk'
+import { NativeItemAnalyzer } from './generated/native_item_analyzer_pb'
 
-interface AnalyzeItemParams {
-  name: string
-  baseType: string
-  rarity: string
-  itemLevel: number
-  implicits: string[]
-  explicits: string[]
-}
-
-interface AnalyzeItemResult {
-  displayName: string
-  fingerprint: string
-  totalMods: number
-  numericTokens: number
-}
-
-function itemParams(item: PoeItem): AnalyzeItemParams {
+function itemParams(item: PoeItem) {
   return {
     name: item.name,
     baseType: item.baseType,
@@ -28,6 +13,7 @@ function itemParams(item: PoeItem): AnalyzeItemParams {
 }
 
 const activate: PluginActivate = (ctx) => {
+  const native = createNativeServiceClient(ctx.native, NativeItemAnalyzer)
   ctx.registerTab({
     label: 'Native Item Analyzer',
     icon: '<svg viewBox="0 0 16 16"><path d="M3 2h7l3 3v9H3z" fill="none" stroke="currentColor"/><path d="M6 8h4M6 11h4" stroke="currentColor"/></svg>',
@@ -82,7 +68,7 @@ const activate: PluginActivate = (ctx) => {
           const item = await ctx.copyAndEvaluateItem({ showOverlay: false, dispatch: false })
           if (!item) throw new Error('No recognizable item is currently hovered.')
           status.textContent = 'Waiting for Rust backend...'
-          const analysis = await ctx.native.call<AnalyzeItemResult, AnalyzeItemParams>('analyzeItem', itemParams(item))
+          const analysis = await native.analyzeItem(itemParams(item))
           container.querySelector<HTMLElement>('[data-result-name]')!.textContent = analysis.displayName
           container.querySelector<HTMLElement>('[data-result-mods]')!.textContent = String(analysis.totalMods)
           container.querySelector<HTMLElement>('[data-result-numbers]')!.textContent = String(analysis.numericTokens)

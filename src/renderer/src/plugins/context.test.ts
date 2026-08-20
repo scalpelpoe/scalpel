@@ -11,7 +11,7 @@ const baseDeps = () => ({
     expose: vi.fn(),
     get: vi.fn(() => null),
   },
-  nativeCall: vi.fn(async () => null),
+  nativeCall: vi.fn(async () => new Uint8Array()),
   getPoeVersion: () => 1 as const,
   getLeague: () => 'Mirage',
   getLeagues: vi.fn(async () => ['Standard']),
@@ -66,11 +66,13 @@ describe('createPluginContext', () => {
 
   it('binds native backend calls to the owning plugin context', async () => {
     const deps = baseDeps()
-    const nativeCall = vi.fn(async () => ({ value: 42 }))
+    const response = Uint8Array.of(42)
+    const nativeCall = vi.fn(async () => response)
     const ctx = createPluginContext({ ...deps, nativeCall })
 
-    await expect(ctx.native.call('analyzeItem', { name: 'Exile' })).resolves.toEqual({ value: 42 })
-    expect(nativeCall).toHaveBeenCalledWith('analyzeItem', { name: 'Exile' })
+    const request = Uint8Array.of(7)
+    await expect(ctx.native.call('/example.v1.Service/Analyze', request)).resolves.toEqual(response)
+    expect(nativeCall).toHaveBeenCalledWith('/example.v1.Service/Analyze', request)
   })
 
   it('forwards getPoeVersion/getLeague/getCurrentItem/getCurrentZone', () => {

@@ -742,7 +742,8 @@ Every plugin ships a `manifest.json` alongside its `plugin.js`. The schema:
   "tabIcon": "icon.svg",
   "api": {
     "version": "1.0.0",
-    "contract": "api.openrpc.json"
+    "contract": "api.binpb",
+    "service": "example.jewels.v1.JewelEconomy"
   },
   "dependencies": [
     {
@@ -752,7 +753,8 @@ Every plugin ships a `manifest.json` alongside its `plugin.js`. The schema:
   ],
   "nativeBackend": {
     "protocolVersion": 1,
-    "contract": "backend.openrpc.json",
+    "contract": "backend.binpb",
+    "service": "example.jewels.v1.JewelAnalyzer",
     "targets": {
       "win32-x64": {
         "file": "my-plugin-backend.exe",
@@ -770,13 +772,15 @@ Field notes:
 - `scalpelMinVersion` is a comparator expression (`">=0.9.8"`, `">=0.9.8 <1.0"`). If the running Scalpel doesn't satisfy it, the plugin won't load.
 - `poeVersions` gates which games the plugin appears under. Omit for both.
 - `tabIcon` is optional; you can also pass an inline SVG string via `registerTab({ icon })`.
-- `api` declares one public plugin API. `contract` is a root-level OpenRPC JSON file shipped beside `plugin.js`.
+- `api` declares one public unary Protobuf service. `contract` is a root-level binary `FileDescriptorSet`; `service` is its fully qualified service name.
 - `dependencies` explicitly names plugin APIs this plugin consumes. API versions use exact `major.minor.patch` matching in the initial implementation.
-- `nativeBackend` declares one private, supervised sidecar. The initial target is `win32-x64`; all files are root-level release assets. The normal context routes `ctx.native.call()` to its owning plugin and cannot choose paths, arguments, or environment variables.
-- Native requests and responses are newline-delimited JSON with a one-MiB limit, at most 32 concurrent calls, and a ten-second call timeout. Standard output is reserved for protocol messages; diagnostics belong on standard error.
+- `nativeBackend` declares one private, supervised unary Protobuf service. The initial target is `win32-x64`; all files are root-level release assets. The normal context routes `ctx.native` to its owning plugin and cannot choose paths, arguments, or environment variables.
+- Use Protobuf-ES service descriptors with `exposePluginService`, `createPluginServiceClient`, and `createNativeServiceClient`. These helpers infer every method signature directly from standard generated code.
+- Native requests and responses use length-prefixed Protobuf frames with a one-MiB limit, at most 32 concurrent calls, and a ten-second call timeout. Standard output is reserved for protocol frames; diagnostics belong on standard error.
 - Plugins remain trusted and share renderer/preload access. Owner routing prevents accidental cross-plugin calls; it is not a security boundary against a hostile plugin.
 - Native backends install only from Scalpel's curated registry (or a process-level developer registry override). User-configured self-hosted registries remain JavaScript-only because renderer code can change that setting.
-- See `PLUGIN_SERVICES.md` and `plugin-service-examples/` for the current communication API and generated-client workflow.
+- Add `@bufbuild/protobuf`, `@bufbuild/buf`, and `@bufbuild/protoc-gen-es` alongside the SDK, then configure `scalpelPlugin` in `package.json`. Run `scalpel-plugin generate`, `check`, `build`, or `pack` instead of maintaining custom contract scripts.
+- See `PLUGIN_SERVICES.md` and `plugin-service-examples/` for the complete workflow.
 
 ## Local testing
 
@@ -803,7 +807,7 @@ While developing, skip the registry and install your plugin directly.
 
 Releases are GitHub-driven. Tag your repo with `v<version>` matching your manifest's `version`, and attach the built artifacts:
 
-1. `npm run build` produces `dist/plugin.js`, copies `dist/manifest.json`, and includes all declared contracts and native assets when applicable.
+1. `npx scalpel-plugin pack` produces `dist/plugin.js`, `dist/manifest.json`, and every declared contract and native asset.
 2. Tag and release on GitHub:
    ```bash
    git tag v1.0.0
@@ -827,6 +831,8 @@ Once your plugin has a working release, open a pull request against [`scalpelpoe
   "latestVersion": "1.0.0",
   "sha256": "3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532",
   "assets": {
+    "api.binpb": "<lowercase SHA-256 of the API descriptor>",
+    "backend.binpb": "<lowercase SHA-256 of the backend descriptor>",
     "my-plugin-backend.exe": "<lowercase SHA-256 matching nativeBackend.targets>"
   },
   "scalpelMinVersion": ">=0.9.8",
@@ -836,7 +842,7 @@ Once your plugin has a working release, open a pull request against [`scalpelpoe
 }
 ```
 
-The `sha256` field is the lowercase hex SHA-256 of the exact `plugin.js` you attached to the release. Scalpel recomputes it on download and rejects the install if the bytes don't match, so a compromised or swapped release asset can't be silently loaded. Compute it from your built artifact:
+The `sha256` field pins `plugin.js`. Every declared descriptor and native executable must also be pinned under `assets`. Scalpel recomputes each hash on download and rejects replaced release assets. Compute a hash from a built artifact with:
 
 ```bash
 node -e "console.log(require('crypto').createHash('sha256').update(require('fs').readFileSync('plugin.js')).digest('hex'))"

@@ -5,7 +5,10 @@ edition = "2024"
 license = "AGPL-3.0-only"
 
 [dependencies]
-schemars = "1"
-serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+prost = "0.14"
+scalpel-plugin-native = { path = "../../../crates/scalpel-plugin-native" }
 sha2 = "0.10"
+
+[build-dependencies]
+prost-build = "0.14"
+protoc-bin-vendored = "3"

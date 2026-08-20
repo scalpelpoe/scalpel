@@ -9,7 +9,8 @@
   "poeVersions": [1, 2],
   "nativeBackend": {
     "protocolVersion": 1,
-    "contract": "backend.openrpc.json",
+    "contract": "backend.binpb",
+    "service": "scalpel.examples.item_analyzer.v1.NativeItemAnalyzer",
     "targets": {
       "win32-x64": {
         "file": "native-item-analyzer.exe",

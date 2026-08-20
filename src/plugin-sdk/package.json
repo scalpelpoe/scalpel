@@ -1,11 +1,17 @@
 {
   "name": "@scalpelpoe/plugin-sdk",
   "version": "0.11.0",
-  "description": "TypeScript SDK for building Scalpel plugins. Types only; the runtime is served by Scalpel at scalpel-internal://sdk.js via importmap.",
+  "description": "TypeScript SDK and build tooling for Scalpel plugins.",
   "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "scalpel-plugin": "./dist/cli/scalpel-plugin.mjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -55,5 +61,11 @@
     "plugin-sdk",
     "electron"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@bufbuild/buf": "1.72.0",
+    "@bufbuild/protobuf": "2.14.0",
+    "@bufbuild/protoc-gen-es": "2.14.0",
+    "esbuild": "0.28.0"
+  }
 }

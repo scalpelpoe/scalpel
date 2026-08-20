@@ -9,6 +9,10 @@ const NEW_BYTES = new Uint8Array([9, 9, 9])
 const NEW_SHA = createHash('sha256').update(NEW_BYTES).digest('hex')
 const NATIVE_BYTES = new Uint8Array([7, 8, 9])
 const NATIVE_SHA = createHash('sha256').update(NATIVE_BYTES).digest('hex')
+const API_CONTRACT_BYTES = new Uint8Array([10, 11, 12])
+const API_CONTRACT_SHA = createHash('sha256').update(API_CONTRACT_BYTES).digest('hex')
+const BACKEND_CONTRACT_BYTES = new Uint8Array([13, 14, 15])
+const BACKEND_CONTRACT_SHA = createHash('sha256').update(BACKEND_CONTRACT_BYTES).digest('hex')
 
 const TEST_USER_DATA = '/test/userData'
 
@@ -94,14 +98,15 @@ const matchingManifest = {
 
 const matchingApiManifest = {
   ...matchingManifest,
-  api: { version: '1.0.0', contract: 'api.openrpc.json' },
+  api: { version: '1.0.0', contract: 'api.binpb', service: 'example.greeting.v1.GreetingProvider' },
 }
 
 const matchingNativeManifest = {
   ...matchingManifest,
   nativeBackend: {
     protocolVersion: 1,
-    contract: 'backend.openrpc.json',
+    contract: 'backend.binpb',
+    service: 'example.items.v1.ItemAnalyzer',
     targets: { 'win32-x64': { file: 'worker.exe', sha256: NATIVE_SHA } },
   },
 }
@@ -143,17 +148,16 @@ describe('installFromRegistry', () => {
       ),
       'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
         new Response(JSON.stringify(matchingApiManifest)),
-      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/api.openrpc.json':
-        new Response('{"openrpc":"1.4.0"}'),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/api.binpb': new Response(
+        API_CONTRACT_BYTES,
+      ),
     })
 
     const { installFromRegistry } = await import('./install-from-registry')
-    const r = await installFromRegistry(validEntry)
+    const r = await installFromRegistry({ ...validEntry, assets: { 'api.binpb': API_CONTRACT_SHA } })
 
     expect(r.ok).toBe(true)
-    expect(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'hello-world', 'api.openrpc.json'))).toBe(
-      '{"openrpc":"1.4.0"}',
-    )
+    expect(mockFs.bufs.get(join(TEST_USER_DATA, 'plugins', 'hello-world', 'api.binpb'))).toEqual(API_CONTRACT_BYTES)
   })
 
   it('rejects an API provider when its declared contract cannot be downloaded', async () => {
@@ -166,10 +170,10 @@ describe('installFromRegistry', () => {
     })
 
     const { installFromRegistry } = await import('./install-from-registry')
-    const r = await installFromRegistry(validEntry)
+    const r = await installFromRegistry({ ...validEntry, assets: { 'api.binpb': API_CONTRACT_SHA } })
 
     expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.error).toContain('api.openrpc.json')
+    if (!r.ok) expect(r.error).toContain('api.binpb')
   })
 
   it('downloads and verifies registry-pinned native backend assets', async () => {
@@ -179,8 +183,8 @@ describe('installFromRegistry', () => {
       ),
       'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
         new Response(JSON.stringify(matchingNativeManifest)),
-      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/backend.openrpc.json':
-        new Response('{}'),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/backend.binpb':
+        new Response(BACKEND_CONTRACT_BYTES),
       'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/worker.exe': new Response(
         NATIVE_BYTES,
       ),
@@ -188,12 +192,17 @@ describe('installFromRegistry', () => {
 
     const { installFromRegistry } = await import('./install-from-registry')
     const r = await installFromRegistry(
-      { ...validEntry, assets: { 'worker.exe': NATIVE_SHA } },
+      {
+        ...validEntry,
+        assets: { 'backend.binpb': BACKEND_CONTRACT_SHA, 'worker.exe': NATIVE_SHA },
+      },
       { allowNativeBackend: true },
     )
 
     expect(r.ok).toBe(true)
-    expect(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'hello-world', 'backend.openrpc.json'))).toBe('{}')
+    expect(mockFs.bufs.get(join(TEST_USER_DATA, 'plugins', 'hello-world', 'backend.binpb'))).toEqual(
+      BACKEND_CONTRACT_BYTES,
+    )
     expect(mockFs.bufs.get(join(TEST_USER_DATA, 'plugins', 'hello-world', 'worker.exe'))).toEqual(NATIVE_BYTES)
   })
 
@@ -204,12 +213,15 @@ describe('installFromRegistry', () => {
       ),
       'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
         new Response(JSON.stringify(matchingNativeManifest)),
-      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/backend.openrpc.json':
-        new Response('{}'),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/backend.binpb':
+        new Response(BACKEND_CONTRACT_BYTES),
     })
 
     const { installFromRegistry } = await import('./install-from-registry')
-    const r = await installFromRegistry(validEntry, { allowNativeBackend: true })
+    const r = await installFromRegistry(
+      { ...validEntry, assets: { 'backend.binpb': BACKEND_CONTRACT_SHA } },
+      { allowNativeBackend: true },
+    )
 
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error).toContain('registry does not pin worker.exe')

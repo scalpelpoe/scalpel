@@ -1,8 +1,8 @@
-import type { PluginActivate } from '@scalpelpoe/plugin-sdk'
-import { requireGreetingProviderClient } from './generated/greeting-provider-client'
+import { createPluginServiceClient, type PluginActivate } from '@scalpelpoe/plugin-sdk'
+import { GreetingProvider } from './generated/greeting_pb'
 
 const activate: PluginActivate = (ctx) => {
-  const greetings = requireGreetingProviderClient(ctx)
+  const greetings = createPluginServiceClient(ctx.plugins, 'greeting-provider', GreetingProvider)
 
   ctx.registerTab({
     label: 'Greeting Consumer',

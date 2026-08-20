@@ -944,8 +944,8 @@ export const api = {
   pluginStorageDelete: (pluginId: string, key: string): Promise<void> =>
     ipcRenderer.invoke('plugins:storage-delete', pluginId, key),
   pluginStorageKeys: (pluginId: string): Promise<string[]> => ipcRenderer.invoke('plugins:storage-keys', pluginId),
-  pluginNativeCall: <TResult = unknown>(pluginId: string, method: string, params?: unknown): Promise<TResult> =>
-    ipcRenderer.invoke('plugins:native-call', pluginId, method, params),
+  pluginNativeCall: (pluginId: string, method: string, payload: Uint8Array): Promise<Uint8Array> =>
+    ipcRenderer.invoke('plugins:native-call', pluginId, method, payload),
   pluginRegisterHotkey: (pluginId: string, label: string): Promise<void> =>
     ipcRenderer.invoke('plugins:register-hotkey', pluginId, label),
   pluginListRegisteredHotkeys: (): Promise<Array<{ action: string; pluginId: string; label: string }>> =>
