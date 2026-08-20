@@ -18,16 +18,20 @@ export interface PluginManifest {
   /** Public API exposed by this plugin's renderer entry point. */
   api?: {
     version: string
-    /** Root-level OpenRPC document bundled with the plugin release. */
+    /** Root-level Protobuf FileDescriptorSet bundled with the plugin release. */
     contract: string
+    /** Fully qualified unary Protobuf service exposed by this plugin. */
+    service: string
   }
   /** Explicit plugin API dependencies. No provider discovery is performed. */
   dependencies?: PluginDependency[]
   /** Optional private native process owned and supervised by Scalpel. */
   nativeBackend?: {
     protocolVersion: 1
-    /** Root-level OpenRPC document describing the private worker protocol. */
+    /** Root-level Protobuf FileDescriptorSet describing the private worker API. */
     contract: string
+    /** Fully qualified unary Protobuf service implemented by the worker. */
+    service: string
     targets: {
       /** The initial native backend slice supports Scalpel's Windows x64 build. */
       'win32-x64'?: {
@@ -62,8 +66,8 @@ export interface PluginCommunicationApi {
 }
 
 export interface PluginNativeBackendApi {
-  /** Call this plugin's declared private native backend. */
-  call<TResult = unknown, TParams = unknown>(method: string, params?: TParams): Promise<TResult>
+  /** Call this plugin's declared private native backend with a Protobuf payload. */
+  call(method: string, payload: Uint8Array): Promise<Uint8Array>
 }
 
 /** Optional cleanup returned from activate(); the host calls it when the plugin

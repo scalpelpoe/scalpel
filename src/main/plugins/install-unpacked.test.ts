@@ -97,11 +97,11 @@ describe('installUnpacked', () => {
   it('copies a declared API contract', async () => {
     const apiManifest = JSON.stringify({
       ...JSON.parse(validManifest),
-      api: { version: '1.0.0', contract: 'api.openrpc.json' },
+      api: { version: '1.0.0', contract: 'api.binpb', service: 'example.greeting.v1.GreetingProvider' },
     })
     mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), apiManifest)
     mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')
-    mockFs.files.set(join(SRC_PLUGIN, 'api.openrpc.json'), '{"openrpc":"1.4.0"}')
+    mockFs.files.set(join(SRC_PLUGIN, 'api.binpb'), 'descriptor bytes')
     mockFs.dirs.add(SRC_PLUGIN)
 
     const { installUnpacked } = await import('./install-unpacked')
@@ -109,7 +109,7 @@ describe('installUnpacked', () => {
 
     expect(r.ok).toBe(true)
     const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
-    expect(mockFs.files.get(join(destDir, 'api.openrpc.json'))).toBe('{"openrpc":"1.4.0"}')
+    expect(mockFs.files.get(join(destDir, 'api.binpb'))).toBe('descriptor bytes')
   })
 
   it('rejects an API provider whose declared contract is missing', async () => {
@@ -117,7 +117,7 @@ describe('installUnpacked', () => {
       join(SRC_PLUGIN, 'manifest.json'),
       JSON.stringify({
         ...JSON.parse(validManifest),
-        api: { version: '1.0.0', contract: 'api.openrpc.json' },
+        api: { version: '1.0.0', contract: 'api.binpb', service: 'example.greeting.v1.GreetingProvider' },
       }),
     )
     mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')
@@ -127,7 +127,7 @@ describe('installUnpacked', () => {
     const r = installUnpacked(SRC_PLUGIN)
 
     expect(r.ok).toBe(false)
-    if (!r.ok) expect(r.error).toContain('api.openrpc.json')
+    if (!r.ok) expect(r.error).toContain('api.binpb')
   })
 
   it('verifies and copies a declared native backend', async () => {
@@ -136,7 +136,8 @@ describe('installUnpacked', () => {
       ...JSON.parse(validManifest),
       nativeBackend: {
         protocolVersion: 1,
-        contract: 'backend.openrpc.json',
+        contract: 'backend.binpb',
+        service: 'example.items.v1.ItemAnalyzer',
         targets: {
           'win32-x64': {
             file: 'worker.exe',
@@ -147,7 +148,7 @@ describe('installUnpacked', () => {
     })
     mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), nativeManifest)
     mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')
-    mockFs.files.set(join(SRC_PLUGIN, 'backend.openrpc.json'), '{}')
+    mockFs.files.set(join(SRC_PLUGIN, 'backend.binpb'), 'descriptor bytes')
     mockFs.files.set(join(SRC_PLUGIN, 'worker.exe'), nativeBytes)
     mockFs.dirs.add(SRC_PLUGIN)
 
@@ -156,7 +157,7 @@ describe('installUnpacked', () => {
 
     expect(r.ok).toBe(true)
     const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
-    expect(mockFs.files.get(join(destDir, 'backend.openrpc.json'))).toBe('{}')
+    expect(mockFs.files.get(join(destDir, 'backend.binpb'))).toBe('descriptor bytes')
     expect(mockFs.files.get(join(destDir, 'worker.exe'))).toBe(nativeBytes)
   })
 
@@ -167,13 +168,14 @@ describe('installUnpacked', () => {
         ...JSON.parse(validManifest),
         nativeBackend: {
           protocolVersion: 1,
-          contract: 'backend.openrpc.json',
+          contract: 'backend.binpb',
+          service: 'example.items.v1.ItemAnalyzer',
           targets: { 'win32-x64': { file: 'worker.exe', sha256: '0'.repeat(64) } },
         },
       }),
     )
     mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')
-    mockFs.files.set(join(SRC_PLUGIN, 'backend.openrpc.json'), '{}')
+    mockFs.files.set(join(SRC_PLUGIN, 'backend.binpb'), 'descriptor bytes')
     mockFs.files.set(join(SRC_PLUGIN, 'worker.exe'), 'tampered')
     mockFs.dirs.add(SRC_PLUGIN)
 

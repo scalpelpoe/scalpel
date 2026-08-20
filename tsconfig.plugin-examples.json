@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "allowJs": false,
+    "paths": {
+      "@scalpelpoe/plugin-sdk": ["src/plugin-sdk/src/index.ts"],
+      "@shared/*": ["src/shared/*"],
+      "@main/*": ["src/main/*"],
+      "@renderer/*": ["src/renderer/src/*"]
+    },
+    "types": []
+  },
+  "include": ["plugin-service-examples/**/*.ts"]
+}

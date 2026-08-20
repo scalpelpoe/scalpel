@@ -78,24 +78,35 @@ export async function installFromRegistry(
     return { ok: false, error: `plugin.js checksum mismatch (expected ${entry.sha256}, got ${actual})` }
   }
 
-  let contractText: string | null = null
+  let contractBytes: Uint8Array | null = null
   if (v.manifest.api) {
+    const expected = entry.assets?.[v.manifest.api.contract]
+    if (!expected) return { ok: false, error: `registry does not pin ${v.manifest.api.contract}` }
     try {
       const resp = await net.fetch(pluginReleaseAssetUrl(entry.repo, entry.latestVersion, v.manifest.api.contract))
       if (resp.status !== 200) {
         return { ok: false, error: `${v.manifest.api.contract} download returned ${resp.status}` }
       }
-      contractText = await resp.text()
+      contractBytes = new Uint8Array(await resp.arrayBuffer())
     } catch (e) {
       return { ok: false, error: `${v.manifest.api.contract} download failed: ${(e as Error).message}` }
     }
+    const contractActual = createHash('sha256').update(contractBytes).digest('hex')
+    if (contractActual !== expected) {
+      return {
+        ok: false,
+        error: `${v.manifest.api.contract} checksum mismatch (expected ${expected}, got ${contractActual})`,
+      }
+    }
   }
 
-  let backendContractText: string | null = null
+  let backendContractBytes: Uint8Array | null = null
   let nativeBytes: Uint8Array | null = null
   const nativeTarget =
     process.platform === 'win32' && process.arch === 'x64' ? v.manifest.nativeBackend?.targets['win32-x64'] : undefined
   if (v.manifest.nativeBackend) {
+    const expected = entry.assets?.[v.manifest.nativeBackend.contract]
+    if (!expected) return { ok: false, error: `registry does not pin ${v.manifest.nativeBackend.contract}` }
     try {
       const resp = await net.fetch(
         pluginReleaseAssetUrl(entry.repo, entry.latestVersion, v.manifest.nativeBackend.contract),
@@ -103,9 +114,16 @@ export async function installFromRegistry(
       if (resp.status !== 200) {
         return { ok: false, error: `${v.manifest.nativeBackend.contract} download returned ${resp.status}` }
       }
-      backendContractText = await resp.text()
+      backendContractBytes = new Uint8Array(await resp.arrayBuffer())
     } catch (e) {
       return { ok: false, error: `${v.manifest.nativeBackend.contract} download failed: ${(e as Error).message}` }
+    }
+    const contractActual = createHash('sha256').update(backendContractBytes).digest('hex')
+    if (contractActual !== expected) {
+      return {
+        ok: false,
+        error: `${v.manifest.nativeBackend.contract} checksum mismatch (expected ${expected}, got ${contractActual})`,
+      }
     }
   }
   if (nativeTarget) {
@@ -140,11 +158,11 @@ export async function installFromRegistry(
     mkdirSync(tmpDir, { recursive: true })
     writeFileSync(join(tmpDir, 'plugin.js'), pluginBytes)
     writeFileSync(join(tmpDir, 'manifest.json'), manifestText)
-    if (v.manifest.api && contractText !== null) {
-      writeFileSync(join(tmpDir, v.manifest.api.contract), contractText)
+    if (v.manifest.api && contractBytes !== null) {
+      writeFileSync(join(tmpDir, v.manifest.api.contract), contractBytes)
     }
-    if (v.manifest.nativeBackend && backendContractText !== null) {
-      writeFileSync(join(tmpDir, v.manifest.nativeBackend.contract), backendContractText)
+    if (v.manifest.nativeBackend && backendContractBytes !== null) {
+      writeFileSync(join(tmpDir, v.manifest.nativeBackend.contract), backendContractBytes)
     }
     if (nativeTarget && nativeBytes) writeFileSync(join(tmpDir, nativeTarget.file), nativeBytes)
 
