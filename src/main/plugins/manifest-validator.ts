@@ -4,7 +4,8 @@ export type ValidationResult = { ok: true; manifest: PluginManifest } | { ok: fa
 
 export const PLUGIN_ID_PATTERN = /^[a-z][a-z0-9-]{2,49}$/
 const API_VERSION_PATTERN = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/
-const CONTRACT_FILENAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}\.json$/
+const CONTRACT_FILENAME_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,99}\.binpb$/
+const PROTOBUF_SERVICE_PATTERN = /^(?:[A-Za-z_][A-Za-z0-9_]*\.)+[A-Za-z_][A-Za-z0-9_]*$/
 const ASSET_FILENAME_PATTERN = /^[a-zA-Z0-9](?:[a-zA-Z0-9._-]{0,98}[a-zA-Z0-9])?$/
 const WINDOWS_DEVICE_FILENAME_PATTERN = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i
 const SHA256_PATTERN = /^[a-f0-9]{64}$/
@@ -62,7 +63,10 @@ export function validateManifest(raw: unknown): ValidationResult {
       api.contract.toLowerCase() === 'manifest.json' ||
       WINDOWS_DEVICE_FILENAME_PATTERN.test(api.contract)
     ) {
-      return { ok: false, error: 'api.contract must be a safe root-level JSON filename' }
+      return { ok: false, error: 'api.contract must be a safe root-level .binpb filename' }
+    }
+    if (!isString(api.service) || !PROTOBUF_SERVICE_PATTERN.test(api.service)) {
+      return { ok: false, error: 'api.service must be a fully qualified Protobuf service name' }
     }
   }
   if (m.dependencies !== undefined) {
@@ -111,7 +115,10 @@ export function validateManifest(raw: unknown): ValidationResult {
       WINDOWS_DEVICE_FILENAME_PATTERN.test(backend.contract) ||
       (m.api as { contract?: string } | undefined)?.contract?.toLowerCase() === backend.contract.toLowerCase()
     ) {
-      return { ok: false, error: 'nativeBackend.contract must be a unique safe root-level JSON filename' }
+      return { ok: false, error: 'nativeBackend.contract must be a unique safe root-level .binpb filename' }
+    }
+    if (!isString(backend.service) || !PROTOBUF_SERVICE_PATTERN.test(backend.service)) {
+      return { ok: false, error: 'nativeBackend.service must be a fully qualified Protobuf service name' }
     }
     if (backend.targets == null || typeof backend.targets !== 'object' || Array.isArray(backend.targets)) {
       return { ok: false, error: 'nativeBackend.targets must be an object' }

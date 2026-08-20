@@ -8,6 +8,7 @@
   "scalpelMinVersion": ">=1.1.0",
   "api": {
     "version": "1.0.0",
-    "contract": "api.openrpc.json"
+    "contract": "api.binpb",
+    "service": "scalpel.examples.greeting.v1.GreetingProvider"
   }
 }

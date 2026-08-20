@@ -55,7 +55,7 @@ export function useActivatePlugin(
           get: () => null,
         },
         native: {
-          call: (method, params) => window.api.pluginNativeCall(pluginId, method, params),
+          call: (method, payload) => window.api.pluginNativeCall(pluginId, method, payload),
         },
         getPoeVersion: () => poeVersion,
         getLeague: () => league,

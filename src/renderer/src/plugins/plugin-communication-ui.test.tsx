@@ -2,9 +2,10 @@
 
 import { act, fireEvent, render, waitFor } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { createPluginServiceClient, exposePluginService } from '../../../plugin-sdk/src/protobuf'
 import type { PluginActivate, PluginManifest } from '../../../plugin-sdk/src/types'
 import type { RegisteredTab } from './PluginHost'
-import { requireGreetingProviderClient } from '../../../../plugin-service-examples/greeting-consumer/src/generated/greeting-provider-client'
+import { GreetingProvider } from '../../../../plugin-service-examples/greeting-consumer/src/generated/greeting_pb'
 
 const providerManifest: PluginManifest = {
   manifestVersion: 1,
@@ -14,7 +15,11 @@ const providerManifest: PluginManifest = {
   description: 'test provider',
   author: 'test',
   scalpelMinVersion: '>=0.0.0',
-  api: { version: '1.0.0', contract: 'api.openrpc.json' },
+  api: {
+    version: '1.0.0',
+    contract: 'api.binpb',
+    service: 'scalpel.examples.greeting.v1.GreetingProvider',
+  },
 }
 
 const consumerManifest: PluginManifest = {
@@ -57,15 +62,16 @@ describe('plugin communication UI slice', () => {
     const activationOrder: string[] = []
     const provider: PluginActivate = (ctx) => {
       activationOrder.push(ctx.pluginId)
-      ctx.plugins.expose((method, params) => {
-        if (method !== 'greet') throw new Error('unknown method')
-        return { message: `Hello, ${(params as { name: string }).name}!` }
+      exposePluginService(ctx.plugins, GreetingProvider, {
+        greet(request) {
+          return { message: `Hello, ${request.name}!` }
+        },
       })
       ctx.registerTab({ label: 'Provider', icon: '<svg/>', render: () => {} })
     }
     const consumer: PluginActivate = (ctx) => {
       activationOrder.push(ctx.pluginId)
-      const client = requireGreetingProviderClient(ctx)
+      const client = createPluginServiceClient(ctx.plugins, 'greeting-provider', GreetingProvider)
       ctx.registerTab({
         label: 'Consumer',
         icon: '<svg/>',

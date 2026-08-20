@@ -26,3 +26,10 @@ export type {
   RegisterTabOptions,
   ScalpelPluginContext,
 } from './types'
+export {
+  createNativeServiceClient,
+  createPluginServiceClient,
+  exposePluginService,
+  getPluginServiceClient,
+} from './protobuf'
+export type { PluginServiceClient, PluginServiceImplementation } from './protobuf'

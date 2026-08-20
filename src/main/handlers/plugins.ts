@@ -137,9 +137,9 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
     return listKeys(pluginId)
   })
-  ipcMain.handle('plugins:native-call', (_evt, pluginId: string, method: string, params?: unknown) => {
+  ipcMain.handle('plugins:native-call', (_evt, pluginId: string, method: string, payload: Uint8Array) => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
-    return pluginNativeBackends.call(pluginId, method, params)
+    return pluginNativeBackends.call(pluginId, method, payload)
   })
 
   ipcMain.handle('plugins:register-hotkey', (_evt, pluginId: string, label: string) => {

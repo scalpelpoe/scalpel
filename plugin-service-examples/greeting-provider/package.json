@@ -1,0 +1,19 @@
+{
+  "name": "@scalpel-examples/greeting-provider",
+  "private": true,
+  "type": "module",
+  "scalpelPlugin": {
+    "manifest": "manifest.json",
+    "entry": "src/plugin.ts",
+    "bundle": "plugin.js",
+    "outDir": "dist",
+    "contracts": [
+      {
+        "source": "proto",
+        "descriptor": "api.binpb",
+        "generated": "src/generated",
+        "service": "scalpel.examples.greeting.v1.GreetingProvider"
+      }
+    ]
+  }
+}

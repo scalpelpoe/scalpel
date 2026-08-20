@@ -67,27 +67,38 @@ describe('validateManifest', () => {
   it('accepts a declared API and explicit dependencies', () => {
     const r = validateManifest({
       ...valid,
-      api: { version: '1.0.0', contract: 'api.openrpc.json' },
+      api: { version: '1.0.0', contract: 'api.binpb', service: 'example.greeting.v1.GreetingProvider' },
       dependencies: [{ pluginId: 'greeting-provider', apiVersion: '1.0.0' }],
     })
     expect(r.ok).toBe(true)
   })
 
   it('rejects malformed API declarations and dependencies', () => {
-    expect(validateManifest({ ...valid, api: { version: '^1.0.0', contract: 'api.openrpc.json' } }).ok).toBe(false)
+    expect(
+      validateManifest({
+        ...valid,
+        api: { version: '^1.0.0', contract: 'api.binpb', service: 'example.greeting.v1.GreetingProvider' },
+      }).ok,
+    ).toBe(false)
     expect(validateManifest({ ...valid, api: { version: '1.0.0' } }).ok).toBe(false)
     for (const contract of [
-      '../api.json',
-      'contracts/api.json',
-      'C:\\api.json',
-      'https://x/api.json',
-      'manifest.json',
-      'MANIFEST.json',
-      'CON.json',
-      'lpt1.json',
+      '../api.binpb',
+      'contracts/api.binpb',
+      'C:\\api.binpb',
+      'https://x/api.binpb',
+      'CON.binpb',
+      'lpt1.binpb',
     ]) {
-      expect(validateManifest({ ...valid, api: { version: '1.0.0', contract } }).ok).toBe(false)
+      expect(
+        validateManifest({
+          ...valid,
+          api: { version: '1.0.0', contract, service: 'example.greeting.v1.GreetingProvider' },
+        }).ok,
+      ).toBe(false)
     }
+    expect(
+      validateManifest({ ...valid, api: { version: '1.0.0', contract: 'api.binpb', service: 'not-qualified' } }).ok,
+    ).toBe(false)
     expect(validateManifest({ ...valid, dependencies: 'greeting-provider' }).ok).toBe(false)
     expect(validateManifest({ ...valid, dependencies: [{ pluginId: 'BAD', apiVersion: '1.0.0' }] }).ok).toBe(false)
     expect(
@@ -116,7 +127,8 @@ describe('validateManifest', () => {
         ...valid,
         nativeBackend: {
           protocolVersion: 1,
-          contract: 'backend.openrpc.json',
+          contract: 'backend.binpb',
+          service: 'example.items.v1.ItemAnalyzer',
           targets: { 'win32-x64': { file: 'item-analyzer.exe', sha256: 'a'.repeat(64) } },
         },
       }).ok,
@@ -126,11 +138,12 @@ describe('validateManifest', () => {
   it('rejects unsafe or unpinned native backend declarations', () => {
     const backend = {
       protocolVersion: 1,
-      contract: 'backend.openrpc.json',
+      contract: 'backend.binpb',
+      service: 'example.items.v1.ItemAnalyzer',
       targets: { 'win32-x64': { file: 'item-analyzer.exe', sha256: 'a'.repeat(64) } },
     }
     expect(validateManifest({ ...valid, nativeBackend: { ...backend, protocolVersion: 2 } }).ok).toBe(false)
-    expect(validateManifest({ ...valid, nativeBackend: { ...backend, contract: '../backend.json' } }).ok).toBe(false)
+    expect(validateManifest({ ...valid, nativeBackend: { ...backend, contract: '../backend.binpb' } }).ok).toBe(false)
     expect(
       validateManifest({
         ...valid,

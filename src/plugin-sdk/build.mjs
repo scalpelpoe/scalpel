@@ -1,9 +1,8 @@
 // Build the publishable artifact for @scalpelpoe/plugin-sdk.
 //
-// The SDK is a types-only package. At runtime inside Scalpel, the renderer's
-// importmap re-routes `@scalpelpoe/plugin-sdk` to scalpel-internal://sdk.js
-// (served by Scalpel's main process from out/scalpel-internal/sdk.js). The
-// package on npm therefore needs only:
+// The SDK's renderer entry is host-provided. Inside Scalpel, the renderer's
+// importmap re-routes `@scalpelpoe/plugin-sdk` to scalpel-internal://sdk.js.
+// The npm package additionally ships a real Node-only authoring CLI.
 //
 //   - dist/index.d.ts  - bundled type declarations (every type a plugin
 //                        author can use, inlined from the SDK's transitive
@@ -16,7 +15,7 @@
 //
 // Run via `npm run build` from src/plugin-sdk/.
 
-import { mkdirSync, readFileSync, writeFileSync, rmSync, existsSync, copyFileSync } from 'fs'
+import { chmodSync, mkdirSync, readFileSync, writeFileSync, rmSync, existsSync, copyFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { execSync } from 'child_process'
@@ -62,7 +61,7 @@ const stub = `// Auto-generated runtime stub for @scalpelpoe/plugin-sdk.
 // is a Proxy that throws with a helpful message on access / call / new.
 
 const MESSAGE =
-  "@scalpelpoe/plugin-sdk: this package is types-only. The runtime is " +
+  "@scalpelpoe/plugin-sdk: the root renderer runtime is host-provided. It is " +
   "served by Scalpel via importmap (scalpel-internal://sdk.js). " +
   "Externalize '@scalpelpoe/plugin-sdk' in your plugin bundler config."
 
@@ -97,6 +96,13 @@ for (const name of ['tokens.css', 'tailwind-preset.cjs']) {
   if (existsSync(join(here, name))) copyFileSync(join(here, name), join(dist, name))
 }
 
+// 5. Ship the Node-only authoring CLI. It is intentionally outside src/ so
+//    Node APIs never enter the renderer SDK declaration graph.
+mkdirSync(join(dist, 'cli'), { recursive: true })
+copyFileSync(join(here, 'cli/scalpel-plugin.mjs'), join(dist, 'cli/scalpel-plugin.mjs'))
+chmodSync(join(dist, 'cli/scalpel-plugin.mjs'), 0o755)
+
 console.log(`Built @scalpelpoe/plugin-sdk to ${dist}`)
 console.log(`  - dist/index.d.ts (${bundledDts.length + globalsDts.length} bytes, ${valueExports.size} value exports)`)
 console.log(`  - dist/index.js (runtime stub)`)
+console.log(`  - dist/cli/scalpel-plugin.mjs (authoring CLI)`)

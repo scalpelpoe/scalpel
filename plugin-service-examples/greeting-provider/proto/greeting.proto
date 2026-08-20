@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package scalpel.examples.greeting.v1;
+
+service GreetingProvider {
+  rpc Greet(GreetRequest) returns (GreetResponse);
+}
+
+message GreetRequest {
+  string name = 1;
+}
+
+message GreetResponse {
+  string message = 1;
+  uint32 calls = 2;
+}

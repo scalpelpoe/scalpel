@@ -2,23 +2,26 @@ import { createHash } from 'node:crypto'
 import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { create, fromBinary, toBinary, type MessageInitShape } from '@bufbuild/protobuf'
+import { NativeFrameSchema, type NativeFrame } from './generated/scalpel/plugin/native/v1/transport_pb'
 import { getInstalledPlugins } from './manager'
 import { pluginDir } from './paths'
 
-const MAX_LINE_BYTES = 1024 * 1024
+const MAX_FRAME_BYTES = 1024 * 1024
 const MAX_IN_FLIGHT = 32
 const CALL_TIMEOUT_MS = 10_000
 const STOP_TIMEOUT_MS = 750
 const MAX_STDERR_BYTES = 8 * 1024
-const METHOD_PATTERN = /^[A-Za-z_$][A-Za-z0-9_$]*$/
+const METHOD_PATTERN = /^\/[A-Za-z_][A-Za-z0-9_.]*\/[A-Za-z_][A-Za-z0-9_]*$/
 
 interface NativeBackendDescriptor {
   executablePath: string
   sha256: string
+  service: string
 }
 
 interface PendingCall {
-  resolve(value: unknown): void
+  resolve(value: NativeFrame['body']): void
   reject(error: Error): void
   timer: NodeJS.Timeout
 }
@@ -37,22 +40,28 @@ export class PluginNativeBackendManager {
     private readonly spawnBackend: SpawnBackend = spawnInstalledBackend,
   ) {}
 
-  async call<TResult = unknown>(pluginId: string, method: string, params?: unknown): Promise<TResult> {
+  async call(pluginId: string, method: string, payload: Uint8Array): Promise<Uint8Array> {
     if (this.blockAllCount > 0 || (this.blockedPlugins.get(pluginId) ?? 0) > 0) {
       throw new Error(`native backend for plugin "${pluginId}" is temporarily unavailable`)
     }
-    if (!METHOD_PATTERN.test(method)) throw new Error('native backend method must be a TypeScript identifier')
+    if (!METHOD_PATTERN.test(method)) throw new Error('native backend method must be a fully qualified Protobuf method')
+    if (!(payload instanceof Uint8Array)) throw new Error('native backend payload must be a Uint8Array')
     let backend = this.processes.get(pluginId)
     if (!backend) {
       const descriptor = this.resolveBackend(pluginId)
       verifyExecutable(descriptor)
-      backend = new NativeBackendProcess(pluginId, this.spawnBackend(descriptor.executablePath), () => {
-        if (this.processes.get(pluginId) === backend) this.processes.delete(pluginId)
-      })
+      backend = new NativeBackendProcess(
+        pluginId,
+        descriptor.service,
+        this.spawnBackend(descriptor.executablePath),
+        () => {
+          if (this.processes.get(pluginId) === backend) this.processes.delete(pluginId)
+        },
+      )
       this.processes.set(pluginId, backend)
     }
     await backend.ready
-    return backend.call(method, params) as Promise<TResult>
+    return backend.call(method, Uint8Array.from(payload))
   }
 
   async stop(pluginId: string): Promise<void> {
@@ -118,19 +127,19 @@ class NativeBackendProcess {
   readonly ready: Promise<void>
   private readonly pending = new Map<number, PendingCall>()
   private nextId = 1
-  private stdoutBuffer = ''
+  private stdoutBuffer: Buffer<ArrayBufferLike> = Buffer.alloc(0)
   private stderr = ''
   private stopped = false
   private terminalError: Error | null = null
 
   constructor(
     private readonly pluginId: string,
+    private readonly service: string,
     private readonly child: ChildProcessWithoutNullStreams,
     private readonly onExit: () => void,
   ) {
-    child.stdout.setEncoding('utf8')
     child.stderr.setEncoding('utf8')
-    child.stdout.on('data', (chunk: string) => this.acceptStdout(chunk))
+    child.stdout.on('data', (chunk: Buffer) => this.acceptStdout(chunk))
     child.stderr.on('data', (chunk: string) => {
       this.stderr = `${this.stderr}${chunk}`.slice(-MAX_STDERR_BYTES)
     })
@@ -144,16 +153,33 @@ class NativeBackendProcess {
         ),
       )
     })
-    this.ready = this.request('scalpel.initialize', { protocolVersion: 1, pluginId }).then((result) => {
-      if (!result || typeof result !== 'object' || (result as { protocolVersion?: unknown }).protocolVersion !== 1) {
+    this.ready = this.request(
+      {
+        case: 'initializeRequest',
+        value: { protocolVersion: 1, pluginId, service },
+      },
+      'initialize',
+      0,
+    ).then((body) => {
+      if (
+        body.case !== 'initializeResponse' ||
+        body.value.protocolVersion !== 1 ||
+        body.value.pluginId !== pluginId ||
+        body.value.service !== service
+      ) {
         throw new Error('native backend returned an invalid protocol handshake')
       }
     })
     this.ready.catch((error) => this.fail(error instanceof Error ? error : new Error(String(error))))
   }
 
-  call(method: string, params?: unknown): Promise<unknown> {
-    return this.request(method, params ?? null)
+  async call(method: string, payload: Uint8Array): Promise<Uint8Array> {
+    if (!method.startsWith(`/${this.service}/`)) {
+      throw new Error(`native backend method must belong to service "${this.service}"`)
+    }
+    const body = await this.request({ case: 'callRequest', value: { method, payload } }, method)
+    if (body.case !== 'callResponse') throw new Error('native backend returned an invalid call response')
+    return Uint8Array.from(body.value.payload)
   }
 
   async stop(): Promise<void> {
@@ -184,26 +210,31 @@ class NativeBackendProcess {
     this.finish()
   }
 
-  private request(method: string, params: unknown): Promise<unknown> {
+  private request(
+    body: MessageInitShape<typeof NativeFrameSchema>['body'],
+    label: string,
+    requestId?: number,
+  ): Promise<NativeFrame['body']> {
     if (this.stopped) return Promise.reject(this.terminalError ?? new Error('native backend is unavailable'))
     if (this.pending.size >= MAX_IN_FLIGHT)
       return Promise.reject(new Error('native backend has too many in-flight calls'))
-    const id = this.nextId++
-    let line: string
-    try {
-      line = `${JSON.stringify({ id, method, params })}\n`
-    } catch {
-      return Promise.reject(new Error('native backend params must be JSON-serializable'))
-    }
-    if (Buffer.byteLength(line) > MAX_LINE_BYTES)
+    const id = requestId ?? this.nextId++
+    const payload = toBinary(NativeFrameSchema, create(NativeFrameSchema, { requestId: id, body }))
+    if (payload.byteLength === 0 || payload.byteLength > MAX_FRAME_BYTES) {
       return Promise.reject(new Error('native backend request is too large'))
+    }
+    const frame = Buffer.allocUnsafe(4 + payload.byteLength)
+    frame.writeUInt32LE(payload.byteLength, 0)
+    frame.set(payload, 4)
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id)
-        reject(new Error(`native backend call "${method}" timed out`))
+        const error = new Error(`native backend call "${label}" timed out`)
+        reject(error)
+        this.fail(error)
       }, CALL_TIMEOUT_MS)
       this.pending.set(id, { resolve, reject, timer })
-      this.child.stdin.write(line, 'utf8', (error) => {
+      this.child.stdin.write(frame, (error) => {
         if (!error) return
         const pending = this.pending.get(id)
         if (!pending) return
@@ -214,64 +245,50 @@ class NativeBackendProcess {
     })
   }
 
-  private acceptStdout(chunk: string): void {
+  private acceptStdout(chunk: Buffer): void {
     if (this.stopped) return
-    this.stdoutBuffer += chunk
+    this.stdoutBuffer = this.stdoutBuffer.length === 0 ? chunk : Buffer.concat([this.stdoutBuffer, chunk])
     for (;;) {
-      const newline = this.stdoutBuffer.indexOf('\n')
-      if (newline === -1) {
-        if (Buffer.byteLength(this.stdoutBuffer) > MAX_LINE_BYTES) {
-          this.fail(new Error('native backend response is too large'))
-        }
-        return
-      }
-      const line = this.stdoutBuffer.slice(0, newline).trimEnd()
-      this.stdoutBuffer = this.stdoutBuffer.slice(newline + 1)
-      if (!line) continue
-      if (Buffer.byteLength(line) > MAX_LINE_BYTES) {
+      if (this.stdoutBuffer.length < 4) return
+      const length = this.stdoutBuffer.readUInt32LE(0)
+      if (length === 0 || length > MAX_FRAME_BYTES) {
         this.fail(new Error('native backend response is too large'))
         return
       }
-      this.acceptLine(line)
+      if (this.stdoutBuffer.length < 4 + length) return
+      const payload = this.stdoutBuffer.subarray(4, 4 + length)
+      this.stdoutBuffer = this.stdoutBuffer.subarray(4 + length)
+      this.acceptFrame(payload)
       if (this.stopped) return
     }
   }
 
-  private acceptLine(line: string): void {
-    let response: unknown
+  private acceptFrame(payload: Uint8Array): void {
+    let response: NativeFrame
     try {
-      response = JSON.parse(line)
+      response = fromBinary(NativeFrameSchema, payload)
     } catch {
-      this.fail(new Error('native backend emitted malformed JSON'))
+      this.fail(new Error('native backend emitted a malformed Protobuf frame'))
       return
     }
-    if (!response || typeof response !== 'object' || !Number.isSafeInteger((response as { id?: unknown }).id)) {
-      this.fail(new Error('native backend emitted an invalid response'))
-      return
-    }
-    const value = response as { id: number; result?: unknown; error?: unknown }
-    const pending = this.pending.get(value.id)
+    const pending = this.pending.get(response.requestId)
     if (!pending) {
-      this.fail(new Error(`native backend responded with unknown request id ${value.id}`))
+      this.fail(new Error(`native backend responded with unknown request id ${response.requestId}`))
       return
     }
     clearTimeout(pending.timer)
-    this.pending.delete(value.id)
-    if (value.error !== undefined) {
-      const message =
-        value.error &&
-        typeof value.error === 'object' &&
-        typeof (value.error as { message?: unknown }).message === 'string'
-          ? (value.error as { message: string }).message
-          : 'native backend returned an error'
-      pending.reject(new Error(message))
+    this.pending.delete(response.requestId)
+    if (response.body.case === 'callError') {
+      pending.reject(new Error(response.body.value.message || 'native backend returned an error'))
       return
     }
-    if (!Object.prototype.hasOwnProperty.call(value, 'result')) {
-      pending.reject(new Error('native backend response has neither result nor error'))
+    if (response.body.case !== 'callResponse' && response.body.case !== 'initializeResponse') {
+      const error = new Error('native backend emitted an invalid response body')
+      pending.reject(error)
+      this.fail(error)
       return
     }
-    pending.resolve(value.result)
+    pending.resolve(response.body)
   }
 
   private fail(error: Error): void {
@@ -306,7 +323,7 @@ function resolveInstalledBackend(pluginId: string): NativeBackendDescriptor {
   }
   const target = backend.targets['win32-x64']
   if (!target) throw new Error(`plugin "${pluginId}" has no native backend for win32-x64`)
-  return { executablePath: join(pluginDir(pluginId), target.file), sha256: target.sha256 }
+  return { executablePath: join(pluginDir(pluginId), target.file), sha256: target.sha256, service: backend.service }
 }
 
 function verifyExecutable(descriptor: NativeBackendDescriptor): void {
