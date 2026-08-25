@@ -10,6 +10,19 @@ const STEAM_GAME_DIR: Record<GameVariant, string> = {
   2: 'Path of Exile 2',
 }
 
+/** Both games share exe names (PathOfExileSteam.exe), so the install
+ *  directory is the only version signal in a process path. Callers reorder
+ *  candidates by this - never filter - so a custom install dir matching
+ *  neither name still resolves when it is the only candidate. */
+const GAME_DIR_RE: Record<GameVariant, RegExp> = {
+  1: /Path of Exile(?! 2)/i,
+  2: /Path of Exile 2/i,
+}
+
+function installMatchesVersion(p: string, version: GameVariant): boolean {
+  return GAME_DIR_RE[version].test(p)
+}
+
 type PathApi = { join: (...parts: string[]) => string; dirname: (p: string) => string }
 
 /** Path ops for the *target* platform (deps.platform), not the host OS.
@@ -65,7 +78,7 @@ export function resolveClientLogPath(deps: PathResolverDeps = {}): string | null
   if (fromEnv) return fromEnv
 
   try {
-    if (platform === 'win32') return resolveWindows(execUtf8, fs, path)
+    if (platform === 'win32') return resolveWindows(execUtf8, fs, path, version)
     if (platform === 'linux') return resolveLinux(fs, home, version, path)
     if (platform === 'darwin') return resolveDarwin(execUtf8, fs, home, version, path)
   } catch (err) {
@@ -90,25 +103,34 @@ function resolveWindows(
   execUtf8: NonNullable<PathResolverDeps['execUtf8']>,
   fs: PathResolverFs,
   path: PathApi,
+  version: GameVariant,
 ): string | null {
   const out = execUtf8('powershell.exe', [
     '-NoProfile',
     '-NonInteractive',
     '-Command',
-    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Process -Name 'PathOfExile*' | Select-Object -First 1 -ExpandProperty Path",
+    "[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-Process -Name 'PathOfExile*' | Select-Object -ExpandProperty Path",
   ])
-  const exePath = out.trim()
-  if (!exePath) return null
-  const candidate = path.join(path.dirname(exePath), 'logs', 'Client.txt')
-  if (!fs.existsSync(candidate)) {
-    if (process.env.SCALPEL_DEBUG_LOG) console.warn('[client-log] path resolver: not found at', candidate)
-    return null
+  const exePaths = out
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean)
+  const ordered = [
+    ...exePaths.filter((p) => installMatchesVersion(p, version)),
+    ...exePaths.filter((p) => !installMatchesVersion(p, version)),
+  ]
+  for (const exePath of ordered) {
+    const candidate = path.join(path.dirname(exePath), 'logs', 'Client.txt')
+    if (fs.existsSync(candidate)) return candidate
   }
-  return candidate
+  if (ordered.length > 0 && process.env.SCALPEL_DEBUG_LOG) {
+    console.warn('[client-log] path resolver: no Client.txt beside', ordered.join(', '))
+  }
+  return null
 }
 
 function resolveLinux(fs: PathResolverFs, home: string, version: GameVariant, path: PathApi): string | null {
-  const fromProc = resolveFromLinuxProc(fs, path)
+  const fromProc = resolveFromLinuxProc(fs, path, version)
   if (fromProc) return fromProc
   return resolveFromSteamLibraries(fs, linuxSteamRoots(home, path), version, path)
 }
@@ -147,44 +169,56 @@ function darwinSteamRoots(home: string, path: PathApi): string[] {
   return [path.join(home, 'Library', 'Application Support', 'Steam')]
 }
 
-function resolveFromLinuxProc(fs: PathResolverFs, path: PathApi): string | null {
+function resolveFromLinuxProc(fs: PathResolverFs, path: PathApi, version: GameVariant): string | null {
   let pids: string[]
   try {
     pids = fs.readdirSync('/proc').filter((n) => /^\d+$/.test(n))
   } catch {
     return null
   }
+  const fallbacks: string[] = []
   for (const pid of pids) {
-    let cmdline = ''
-    try {
-      cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8')
-    } catch {
-      continue
-    }
-    if (!EXE_NAME_RE.test(cmdline) && !cmdlineIncludesPoeDir(cmdline)) continue
+    const candidate = procPidCandidate(fs, path, pid)
+    if (!candidate) continue
+    if (installMatchesVersion(candidate, version)) return candidate
+    fallbacks.push(candidate)
+  }
+  return fallbacks[0] ?? null
+}
 
-    try {
-      const exe = fs.readlinkSync(`/proc/${pid}/exe`)
-      const candidate = clientTxtBesideExe(exe.replace(/\s+\(deleted\)$/, ''), fs, path)
-      if (candidate) return candidate
-    } catch {
-      /* wine-preloader: exe is not the game binary */
-    }
+/** First Client.txt candidate for one pid: beside the exe link, beside a
+ *  Wine cmdline exe, or in the process cwd - the same priority the scan
+ *  used before candidates were collected across pids. */
+function procPidCandidate(fs: PathResolverFs, path: PathApi, pid: string): string | null {
+  let cmdline = ''
+  try {
+    cmdline = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8')
+  } catch {
+    return null
+  }
+  if (!EXE_NAME_RE.test(cmdline) && !cmdlineIncludesPoeDir(cmdline)) return null
 
-    for (const part of cmdline.split('\0')) {
-      const unix = unixPathFromWineExe(part)
-      if (!unix || !EXE_NAME_RE.test(unix)) continue
-      const candidate = clientTxtBesideExe(unix, fs, path)
-      if (candidate) return candidate
-    }
+  try {
+    const exe = fs.readlinkSync(`/proc/${pid}/exe`)
+    const candidate = clientTxtBesideExe(exe.replace(/\s+\(deleted\)$/, ''), fs, path)
+    if (candidate) return candidate
+  } catch {
+    /* wine-preloader: exe is not the game binary */
+  }
 
-    try {
-      const cwd = fs.readlinkSync(`/proc/${pid}/cwd`)
-      const candidate = path.join(cwd, 'logs', 'Client.txt')
-      if (fs.existsSync(candidate)) return candidate
-    } catch {
-      /* no cwd */
-    }
+  for (const part of cmdline.split('\0')) {
+    const unix = unixPathFromWineExe(part)
+    if (!unix || !EXE_NAME_RE.test(unix)) continue
+    const candidate = clientTxtBesideExe(unix, fs, path)
+    if (candidate) return candidate
+  }
+
+  try {
+    const cwd = fs.readlinkSync(`/proc/${pid}/cwd`)
+    const candidate = path.join(cwd, 'logs', 'Client.txt')
+    if (fs.existsSync(candidate)) return candidate
+  } catch {
+    /* no cwd */
   }
   return null
 }

@@ -133,6 +133,64 @@ describe('resolveClientLogPath', () => {
     ).toBeNull()
   })
 
+  it('picks the attached game when both games are running on Windows', () => {
+    const poe1 = 'C:\\Steam\\steamapps\\common\\Path of Exile\\logs\\Client.txt'
+    const poe2 = 'C:\\Steam\\steamapps\\common\\Path of Exile 2\\logs\\Client.txt'
+    const fs = fakeFs({ [poe1]: '', [poe2]: '' })
+    expect(
+      resolveClientLogPath({
+        platform: 'win32',
+        env: {},
+        homedir: 'C:\\Users\\t',
+        fs,
+        execUtf8: () =>
+          'C:\\Steam\\steamapps\\common\\Path of Exile\\PathOfExileSteam.exe\r\n' +
+          'C:\\Steam\\steamapps\\common\\Path of Exile 2\\PathOfExileSteam.exe\r\n',
+        poeVersion: 2,
+      }),
+    ).toBe(poe2)
+  })
+
+  it('still resolves a lone install whose directory names neither game', () => {
+    const log = 'D:\\Games\\poe\\logs\\Client.txt'
+    const fs = fakeFs({ [log]: '' })
+    expect(
+      resolveClientLogPath({
+        platform: 'win32',
+        env: {},
+        homedir: 'C:\\Users\\t',
+        fs,
+        execUtf8: () => 'D:\\Games\\poe\\PathOfExileSteam.exe\n',
+        poeVersion: 2,
+      }),
+    ).toBe(log)
+  })
+
+  it('prefers the attached game across /proc processes', () => {
+    const poe1 = '/home/t/.steam/steamapps/common/Path of Exile/logs/Client.txt'
+    const poe2 = '/home/t/.steam/steamapps/common/Path of Exile 2/logs/Client.txt'
+    const fs = fakeFs({
+      '/proc': 'dir',
+      '/proc/41': 'dir',
+      '/proc/41/cmdline': `/home/t/.steam/steamapps/common/Path of Exile/PathOfExile_x64\0`,
+      '/proc/41/exe': 'link:/home/t/.steam/steamapps/common/Path of Exile/PathOfExile_x64',
+      '/proc/42': 'dir',
+      '/proc/42/cmdline': `/home/t/.steam/steamapps/common/Path of Exile 2/PathOfExileSteam\0`,
+      '/proc/42/exe': 'link:/home/t/.steam/steamapps/common/Path of Exile 2/PathOfExileSteam',
+      [poe1]: '',
+      [poe2]: '',
+    })
+    expect(
+      resolveClientLogPath({
+        platform: 'linux',
+        env: {},
+        homedir: '/home/t',
+        fs,
+        poeVersion: 2,
+      }),
+    ).toBe(poe2)
+  })
+
   it('uses PowerShell on Windows', () => {
     const log = 'C:\\PoE\\logs\\Client.txt'
     const fs = fakeFs({ [log]: '' })
