@@ -94,6 +94,45 @@ describe('resolveClientLogPath', () => {
     ).toBe(log)
   })
 
+  it('prefers the attached game over a nearer wrong-game install', () => {
+    const poe1 = '/home/t/.local/share/Steam/steamapps/common/Path of Exile/logs/Client.txt'
+    const poe2 = '/mnt/games/SteamLibrary/steamapps/common/Path of Exile 2/logs/Client.txt'
+    const fs = fakeFs({
+      '/proc': 'dir',
+      '/home/t/.local/share/Steam/steamapps': 'dir',
+      '/home/t/.local/share/Steam/steamapps/libraryfolders.vdf': `"libraryfolders"\n{\n\t"1"\n\t{\n\t\t"path"\t\t"/mnt/games/SteamLibrary"\n\t}\n}`,
+      [poe1]: '',
+      [poe2]: '',
+    })
+    expect(
+      resolveClientLogPath({
+        platform: 'linux',
+        env: {},
+        homedir: '/home/t',
+        fs,
+        poeVersion: 2,
+      }),
+    ).toBe(poe2)
+  })
+
+  it('returns null when only the other game is installed', () => {
+    const poe1 = '/home/t/.local/share/Steam/steamapps/common/Path of Exile/logs/Client.txt'
+    const fs = fakeFs({
+      '/proc': 'dir',
+      '/home/t/.local/share/Steam/steamapps': 'dir',
+      [poe1]: '',
+    })
+    expect(
+      resolveClientLogPath({
+        platform: 'linux',
+        env: {},
+        homedir: '/home/t',
+        fs,
+        poeVersion: 2,
+      }),
+    ).toBeNull()
+  })
+
   it('uses PowerShell on Windows', () => {
     const log = 'C:\\PoE\\logs\\Client.txt'
     const fs = fakeFs({ [log]: '' })

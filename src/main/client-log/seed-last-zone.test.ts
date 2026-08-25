@@ -24,6 +24,24 @@ describe('parseLastZoneFromChunk', () => {
   it('returns null when no zone line is present', () => {
     expect(parseLastZoneFromChunk('hello\nworld')).toBeNull()
   })
+
+  it('does not seed across a session boundary', () => {
+    const text = [
+      '[DEBUG Client 1] Generating level 70 area "OldMap" with seed 1',
+      '***** LOG FILE OPENING *****',
+      'login noise',
+    ].join('\n')
+    expect(parseLastZoneFromChunk(text)).toBeNull()
+  })
+
+  it('seeds from a zone line after the last session boundary', () => {
+    const text = [
+      '[DEBUG Client 1] Generating level 70 area "OldMap" with seed 1',
+      '***** LOG FILE OPENING *****',
+      '[DEBUG Client 1] Generating level 12 area "G2_town" with seed 2',
+    ].join('\n')
+    expect(parseLastZoneFromChunk(text)).toEqual({ areaLevel: 12, areaCode: 'G2_town' })
+  })
 })
 
 describe('readLastZoneFromLog', () => {

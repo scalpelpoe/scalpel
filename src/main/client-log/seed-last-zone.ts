@@ -4,6 +4,10 @@ import type { Zone } from '@shared/types'
 
 const MAX_SCAN_BYTES = 2_000_000
 
+/** PoE appends this marker on every client boot. A zone line before the
+ *  last marker belongs to a previous session and must never seed "current". */
+const SESSION_BOUNDARY = 'LOG FILE OPENING'
+
 export interface SeedLastZoneFs {
   statSync(path: string): { size: number }
   openSync(path: string, flags: string): number
@@ -19,6 +23,7 @@ const defaultFs: SeedLastZoneFs = { statSync, openSync, readSync, closeSync }
 export function parseLastZoneFromChunk(text: string): Zone | null {
   const lines = text.split(/\r?\n/)
   for (let i = lines.length - 1; i >= 0; i--) {
+    if (lines[i].includes(SESSION_BOUNDARY)) return null
     const parsed = parseClientLogLine(lines[i])
     if (parsed) return parsed
   }

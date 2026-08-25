@@ -233,12 +233,13 @@ function resolveFromSteamLibraries(
     }
   }
 
-  const names = version === 1 ? [STEAM_GAME_DIR[1], STEAM_GAME_DIR[2]] : [STEAM_GAME_DIR[2], STEAM_GAME_DIR[1]]
+  // Only the attached game's install qualifies: a wrong-game Client.txt
+  // would latch for the whole session (startClientLogWatcher never
+  // re-resolves), which is worse than null - null retries on next attach.
+  const name = STEAM_GAME_DIR[version]
   for (const lib of libraries) {
-    for (const name of names) {
-      const candidate = path.join(lib, 'steamapps', 'common', name, 'logs', 'Client.txt')
-      if (fs.existsSync(candidate)) return candidate
-    }
+    const candidate = path.join(lib, 'steamapps', 'common', name, 'logs', 'Client.txt')
+    if (fs.existsSync(candidate)) return candidate
   }
   return null
 }
