@@ -89,6 +89,12 @@ export function ViewTab({ settings, update, updateMany }: Props): JSX.Element {
       show: features.divCards,
     },
     {
+      key: 'timeless',
+      icon: <span className="text-[10px] font-bold">TJ</span>,
+      title: m.feature_timeless_jewels(),
+      show: features.timelessJewels,
+    },
+    {
       key: 'regex',
       icon: <img src={poereIcon} alt="" className="w-[18px] h-[18px] object-contain" />,
       title: m.feature_regex_tool(),

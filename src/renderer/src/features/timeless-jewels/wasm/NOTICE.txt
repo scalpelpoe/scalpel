@@ -1,0 +1,3 @@
+Timeless Jewel calculation engine and game data are from Vilsol/timeless-jewels
+(https://github.com/Vilsol/timeless-jewels), licensed under GPL-3.0.
+See LICENSE-Vilsol-GPL3.txt. Scalpel UI wrapping is AGPL-3.0.

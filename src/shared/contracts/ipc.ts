@@ -177,6 +177,14 @@ export const IPC_CHANNELS = {
     SNAP_GHOST_EVENT: 'secondary-overlay-canvas:snap-ghost',
   },
 
+  TIMELESS_TREE: {
+    SHOW: 'timeless-tree:show',
+    REQUEST_CLOSE: 'timeless-tree:request-close',
+    SET_STATE: 'timeless-tree:set-state',
+    REQUEST_STATE: 'timeless-tree:request-state',
+    STATE_EVENT: 'timeless-tree:state',
+  },
+
   APP_WINDOW: {
     SET_MODE: 'app-window-mode',
     OPEN_SETTINGS_TAB: 'open-settings-tab',

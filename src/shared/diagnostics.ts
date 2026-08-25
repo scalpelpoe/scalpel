@@ -12,6 +12,7 @@ export type DiagnosticSource =
   | 'plugin-overlay'
   | 'plugin-annotation-overlay'
   | 'regex-remote'
+  | 'timeless-tree'
 
 export interface SerializedDiagnosticError {
   name?: string

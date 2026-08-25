@@ -159,6 +159,19 @@ export function TitleBar({
             <img src={DIV_CARD_ICON_URL} alt="" className="w-[18px] h-[18px] object-contain" />
           </button>
         )}
+        {features.timelessJewels && !hiddenTabs.has('timeless') && (
+          <button
+            onClick={() => onSetView('timeless')}
+            title={m.feature_timeless_jewels()}
+            className="btn-bounce w-[30px] h-[30px] flex items-center justify-center p-0.5 text-[11px] font-bold"
+            style={{
+              background: view === 'timeless' ? 'var(--accent)' : undefined,
+              color: view === 'timeless' ? '#171821' : undefined,
+            }}
+          >
+            TJ
+          </button>
+        )}
         {features.regexTool && !hiddenTabs.has('regex') && (
           <button
             onClick={() => onSetView('regex')}

@@ -8,6 +8,7 @@ export type BuiltinView =
   | 'tools'
   | 'dust'
   | 'divcards'
+  | 'timeless'
   | 'pricecheck'
   | 'regex'
   | 'extras'

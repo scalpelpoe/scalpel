@@ -2,7 +2,7 @@ export type MacroScope = 'poe1' | 'poe2' | 'both'
 
 const POE1_ONLY_CHAT_COMMANDS: ReadonlySet<string> = new Set(['/menagerie', '/delve', '/kingsmarch', '/monastery'])
 
-const POE1_ONLY_APP_MACROS: ReadonlySet<string> = new Set(['openDust', 'openDivCards'])
+const POE1_ONLY_APP_MACROS: ReadonlySet<string> = new Set(['openDust', 'openDivCards', 'openTimeless'])
 
 export function chatCommandScope(command: string): MacroScope {
   const normalized = command.trim().toLowerCase()

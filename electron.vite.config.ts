@@ -34,6 +34,7 @@ export default defineConfig({
     define: {
       __APP_VERSION__: JSON.stringify(pkg.version),
     },
+    assetsInclude: ['**/*.wasm'],
     build: {
       rollupOptions: {
         input: {
@@ -47,6 +48,7 @@ export default defineConfig({
           pinnedZone: resolve(__dirname, 'src/renderer/pinned-zone.html'),
           pluginOverlay: resolve(__dirname, 'src/renderer/plugin-overlay.html'),
           pluginAnnotationOverlay: resolve(__dirname, 'src/renderer/plugin-annotation-overlay.html'),
+          timelessTree: resolve(__dirname, 'src/renderer/timeless-tree.html'),
         },
       },
     },

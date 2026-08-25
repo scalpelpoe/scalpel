@@ -318,7 +318,7 @@ export interface SearchableItem {
   flags?: { zanaMemory?: boolean }
 }
 
-export const HIDEABLE_TAB_KEYS = ['item', 'pricecheck', 'dust', 'divcards', 'regex', 'extras'] as const
+export const HIDEABLE_TAB_KEYS = ['item', 'pricecheck', 'dust', 'divcards', 'timeless', 'regex', 'extras'] as const
 
 export type HideableTabKey = (typeof HIDEABLE_TAB_KEYS)[number]
 
