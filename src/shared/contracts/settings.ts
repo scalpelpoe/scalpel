@@ -7,6 +7,7 @@ import type { PoeProfile } from './profiles'
 import type { HideableTabKey } from './items'
 import type { GameVariant } from './game-variant'
 import type { RadialMenuSettings } from './radial'
+import type { LauncherSliceMode, LauncherStyle } from '../launcher'
 
 export interface LegacyAppSettings {
   filterPathPoe1?: string
@@ -31,6 +32,11 @@ export interface AppSettings {
   leaguesFetchedAt?: number
   hotkey: string
   priceCheckHotkey: string
+  launcherHotkey: string
+  /** Radial tool launcher slice contents: names, icons, or both. Default `names`. */
+  launcherSliceMode: LauncherSliceMode
+  /** Launcher layout variant. Default `classic`. */
+  launcherStyle: LauncherStyle
   overlayOpacity: number
   overlayScale: number
   openSide: 'both' | 'right' | 'left'

@@ -12,6 +12,7 @@ import {
   setChatCommands,
   setHotkey,
   setPriceCheckHotkey,
+  setLauncherHotkey,
   refreshScopedHotkeys,
   setStashScrollEnabled,
   setStashScrollModifier,
@@ -89,6 +90,8 @@ function sideEffect(setting: ProfileChangedSetting, prevAppSettings?: AppSetting
     setHotkey(value as string)
   } else if (key === 'priceCheckHotkey') {
     setPriceCheckHotkey(value as string)
+  } else if (key === 'launcherHotkey') {
+    setLauncherHotkey(value as string)
   } else if (key === 'closeOnClickOutside') {
     setCloseOnClickOutside(value as boolean)
   } else if (key === 'chatCommands') {

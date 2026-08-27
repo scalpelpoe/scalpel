@@ -20,8 +20,10 @@ import { hideFocusedOrAnyVisibleSecondaryOverlay, isAnyScalpelBrowserWindowFocus
 
 let currentAccelerator: string | null = null
 let priceCheckAccelerator: string | null = null
+let launcherAccelerator: string | null = null
 let triggerCombo: KeyCombo | null = null
 let priceCheckCombo: KeyCombo | null = null
+let launcherCombo: KeyCombo | null = null
 type ChatCommandConfig = { hotkey: string; command: string; autoSubmit?: boolean; scope?: MacroScope }
 type AppMacroConfig = { action: string; hotkey: string; tag?: string; presetId?: string; scope?: MacroScope }
 type ScopedHotkeyCategory = 'chat-command' | 'app-macro'
@@ -46,6 +48,7 @@ let secondaryOverlayHotkeys: OverlayHotkey[] = []
 let registeredOverlayAccelerators: string[] = []
 let onTrigger: (() => void) | null = null
 let onPriceCheck: (() => void) | null = null
+let onLauncher: (() => void) | null = null
 let onEscape: (() => void) | null = null
 let hookStarted = false
 let hookSuspended = false
@@ -63,6 +66,7 @@ let hookResumeTimer: ReturnType<typeof setTimeout> | null = null
 const DEDUPE_MS = 100
 let lastTriggerFireAt = 0
 let lastPriceCheckFireAt = 0
+let lastLauncherFireAt = 0
 let lastEscapeFireAt = 0
 
 // Escape is also registered as a real globalShortcut (not just the uiohook
@@ -107,6 +111,15 @@ function firePriceCheck(): void {
   lastPriceCheckFireAt = now
   releaseHotkeyKey(priceCheckCombo)
   if (onPriceCheck) onPriceCheck()
+}
+
+function fireLauncher(): void {
+  if (injecting || isTypingInOverlay() || !hotkeyContextIsActive()) return
+  const now = Date.now()
+  if (now - lastLauncherFireAt < DEDUPE_MS) return
+  lastLauncherFireAt = now
+  releaseHotkeyKey(launcherCombo)
+  if (onLauncher) onLauncher()
 }
 
 /** Shared entry point for both Escape delivery paths (the globalShortcut
@@ -263,6 +276,7 @@ export function startHotkeyListener(handler: () => void): void {
       // same foreground-context rule as the Electron callbacks.
       if (triggerCombo && matchesCombo(e, triggerCombo)) fireTrigger()
       if (priceCheckCombo && matchesCombo(e, priceCheckCombo)) firePriceCheck()
+      if (launcherCombo && matchesCombo(e, launcherCombo)) fireLauncher()
       // Chat commands / app macros / secondary overlays bound to international or
       // OEM keys globalShortcut cannot register (see ActionBinding above).
       fireMatchingActionBindings(e)
@@ -385,6 +399,7 @@ export function resumeHotkeys(): void {
   if (suspendDepth > 0) return
   if (currentAccelerator) setHotkey(currentAccelerator)
   if (priceCheckAccelerator) setPriceCheckHotkey(priceCheckAccelerator)
+  if (launcherAccelerator) setLauncherHotkey(launcherAccelerator)
   refreshScopedHotkeys('resume')
   setSecondaryOverlayHotkeys(secondaryOverlayHotkeys)
   syncEscapeShortcut()
@@ -430,6 +445,27 @@ export function setPriceCheckHotkey(accelerator: string): void {
   } catch (e) {
     console.error(`[hotkeys] Failed to register price check hotkey "${accelerator}":`, e)
   }
+}
+
+export function setLauncherHotkey(accelerator: string): void {
+  if (launcherAccelerator && suspendDepth === 0 && isElectronRegisterable(launcherAccelerator)) {
+    try {
+      globalShortcut.unregister(launcherAccelerator)
+    } catch {}
+  }
+  launcherAccelerator = accelerator
+  launcherCombo = parseAccelerator(accelerator)
+  if (suspendDepth > 0) return
+  if (!isElectronRegisterable(accelerator)) return
+  try {
+    globalShortcut.register(accelerator, () => fireLauncher())
+  } catch (e) {
+    console.error(`[hotkeys] Failed to register launcher hotkey "${accelerator}":`, e)
+  }
+}
+
+export function setLauncherHandler(handler: (() => void) | null): void {
+  onLauncher = handler
 }
 
 export function setPriceCheckHandler(handler: (() => void) | null): void {
@@ -1037,6 +1073,7 @@ function getHotkeyDiagnostics(): Record<string, unknown> {
     suspendDepth,
     triggerHotkeyConfigured: currentAccelerator !== null,
     priceCheckHotkeyConfigured: priceCheckAccelerator !== null,
+    launcherHotkeyConfigured: launcherAccelerator !== null,
     chatCommandConfiguredCount: configuredChatCommands.length,
     chatCommandApplicableCount: applicableChatCommandCount,
     chatCommandHotkeyCount: registeredChatAccelerators.length,

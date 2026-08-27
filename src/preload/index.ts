@@ -243,6 +243,15 @@ export const api = {
   unlockInteractive: (): void => ipcRenderer.send('unlock-interactive'),
   suspendHotkeys: (): void => ipcRenderer.send('suspend-hotkeys'),
   resumeHotkeys: (): void => ipcRenderer.send('resume-hotkeys'),
+  launcherList: (): Promise<import('@shared/launcher').LauncherPayload> => ipcRenderer.invoke('launcher:list'),
+  launcherRun: (action: string): void => ipcRenderer.send('launcher:run', action),
+  launcherClose: (): void => ipcRenderer.send('launcher:close'),
+  onLauncherItems: (cb: (payload: import('@shared/launcher').LauncherPayload) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, payload: import('@shared/launcher').LauncherPayload): void =>
+      cb(payload)
+    ipcRenderer.on('launcher:items', handler)
+    return () => ipcRenderer.removeListener('launcher:items', handler)
+  },
   suspendInputHook: (): Promise<void> => ipcRenderer.invoke('screen-pick:suspend-hook'),
   resumeInputHook: (): Promise<void> => ipcRenderer.invoke('screen-pick:resume-hook'),
   setOverlayInputFocused: (focused: boolean): void => ipcRenderer.send('overlay-input-focused', focused),

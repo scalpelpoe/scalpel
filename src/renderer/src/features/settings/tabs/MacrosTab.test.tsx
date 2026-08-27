@@ -21,6 +21,9 @@ function installApi(): void {
 const baseSettings = {
   hotkey: 'F5',
   priceCheckHotkey: 'F6',
+  launcherHotkey: 'Grave',
+  launcherSliceMode: 'names',
+  launcherStyle: 'classic',
   chatCommands: [],
   appMacros: [],
 } as unknown as RuntimeSettings
@@ -59,23 +62,43 @@ function recordHotkeyIn(host: HTMLElement, key: string): void {
 describe('MacrosTab built-in hotkeys', () => {
   beforeEach(() => installApi())
 
-  it('renders the filter and price-check rows in the Scalpel Hotkeys section', () => {
+  it('renders the filter, price-check, and launcher rows in the Scalpel Hotkeys section', () => {
     const { getByText } = renderTab(baseSettings)
     expect(getByText('Filter hotkey')).toBeTruthy()
     expect(getByText('Price check hotkey')).toBeTruthy()
+    expect(getByText('Tool launcher hotkey')).toBeTruthy()
+    expect(getByText('Tool launcher style')).toBeTruthy()
+    expect(getByText('Tool launcher labels')).toBeTruthy()
   })
 
-  it('clearing the filter row writes settings.hotkey and the trade row writes priceCheckHotkey', () => {
+  it('changing launcher style writes launcherStyle', () => {
     const { container, update } = renderTab(baseSettings)
-    // With appMacros empty, the only clearable recorders are the two built-in rows
-    // plus the radial one, in DOM order: filter, price check, radial. The radial
-    // recorder is unbound here, so it renders no clear button.
+    const select = container.querySelector('#setting-select-tool-launcher-style') as HTMLSelectElement
+    expect(select).toBeTruthy()
+    fireEvent.change(select, { target: { value: 'reticle' } })
+    expect(update).toHaveBeenCalledWith('launcherStyle', 'reticle')
+    fireEvent.change(select, { target: { value: 'minimal' } })
+    expect(update).toHaveBeenCalledWith('launcherStyle', 'minimal')
+  })
+
+  it('changing launcher slice mode writes launcherSliceMode', () => {
+    const { container, update } = renderTab(baseSettings)
+    const select = container.querySelector('#setting-select-tool-launcher-labels') as HTMLSelectElement
+    expect(select).toBeTruthy()
+    fireEvent.change(select, { target: { value: 'icons' } })
+    expect(update).toHaveBeenCalledWith('launcherSliceMode', 'icons')
+  })
+
+  it('clearing the built-in rows writes the matching settings keys', () => {
+    const { container, update } = renderTab(baseSettings)
     const clears = container.querySelectorAll('button[title="Clear hotkey"]')
-    expect(clears.length).toBe(2)
+    expect(clears.length).toBe(3)
     fireEvent.click(clears[0])
     expect(update).toHaveBeenCalledWith('hotkey', '')
     fireEvent.click(clears[1])
     expect(update).toHaveBeenCalledWith('priceCheckHotkey', '')
+    fireEvent.click(clears[2])
+    expect(update).toHaveBeenCalledWith('launcherHotkey', '')
   })
 
   it('recomputes explicit scope when a command or action changes', () => {

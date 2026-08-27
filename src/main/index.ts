@@ -38,6 +38,8 @@ import {
   startHotkeyListener,
   setHotkey,
   setPriceCheckHotkey,
+  setLauncherHotkey,
+  setLauncherHandler,
   setPriceCheckHandler,
   setEscapeHandler,
   stopHotkeyListener,
@@ -82,6 +84,8 @@ import {
 } from './cheat-sheets'
 import { registerWhiteboardOverlay, toggleWhiteboard } from './whiteboard'
 import { togglePluginOverlay } from './plugin-overlay'
+import { initLauncher, registerLauncherOverlay, showLauncherAtCursor } from './launcher'
+import { normalizeLauncherStyle } from '@shared/launcher'
 import { registerPinnedZoneOverlay, applyPinnedZoneEnabled } from './pinned-zone'
 import { getOverlayAnchor, setMainOverlayGetter, setOnLeaveScalpel, subscribeToPoeMoves } from './windowing'
 import { initAppMacrosRefresh, withPluginHotkeys } from './app-macros'
@@ -155,6 +159,9 @@ const store = new Store<AppSettings>({
   defaults: {
     hotkey: 'CommandOrControl+D',
     priceCheckHotkey: 'CommandOrControl+A',
+    launcherHotkey: 'Grave',
+    launcherSliceMode: 'names',
+    launcherStyle: 'classic',
     overlayOpacity: 0.95,
     overlayScale: 1,
     openSide: 'both',
@@ -209,6 +216,19 @@ if (store.get('startInTray') === undefined) store.set('startInTray', true)
 if (store.get('pluginAutoUpdate') === undefined) store.set('pluginAutoUpdate', false)
 if (store.get('locale') === undefined) store.set('locale', 'en')
 if (store.get('radialMenu') === undefined) store.set('radialMenu', { slices: [] })
+if (store.get('launcherHotkey') === undefined) store.set('launcherHotkey', 'Grave')
+if (store.get('launcherSliceMode') === undefined) store.set('launcherSliceMode', 'names')
+if (store.get('launcherStyle') === undefined) store.set('launcherStyle', 'classic')
+if ((store.get('launcherStyle') as string | undefined) === 'fan') store.set('launcherStyle', 'hub')
+{
+  const macros = store.get('appMacros') ?? []
+  const launcherMacro = macros.find((m) => m.action === 'openLauncher')
+  if (launcherMacro?.hotkey && launcherMacro.hotkey !== 'CommandOrControl+Shift+Space') {
+    store.set('launcherHotkey', launcherMacro.hotkey)
+  }
+  const withoutLauncher = macros.filter((m) => m.action !== 'openLauncher')
+  if (withoutLauncher.length !== macros.length) store.set('appMacros', withoutLauncher)
+}
 
 // tradeDefaultToBase (boolean) became tradeAffixesPrechecked (three-way). Gate on the OLD
 // key's presence, not on the new one being undefined: the new key is in `defaults`, so
@@ -348,6 +368,13 @@ app.whenReady().then(() => {
     setHotkey(hotkey)
     setPriceCheckHandler(onPriceCheckFired)
     setPriceCheckHotkey(store.get('priceCheckHotkey'))
+    setLauncherHandler(() => {
+      const main = getOverlayWindow()
+      if (main && !main.isDestroyed() && main.isVisible()) hideOverlay()
+      getCheatSheetsOverlay()?.hide()
+      showLauncherAtCursor()
+    })
+    setLauncherHotkey(store.get('launcherHotkey'))
     setEscapeHandler(() => hideOverlay())
     setChatCommands(store.get('chatCommands') ?? [])
   }
@@ -412,6 +439,13 @@ app.whenReady().then(() => {
   const dispatchAppMacro = (action: string, tag?: string, presetId?: string): void => {
     if (action === RADIAL_MACRO_ACTION) {
       toggleRadialMenu()
+      return
+    }
+    if (action === 'openLauncher') {
+      const main = getOverlayWindow()
+      if (main && !main.isDestroyed() && main.isVisible()) hideOverlay()
+      getCheatSheetsOverlay()?.hide()
+      showLauncherAtCursor()
       return
     }
     if (action === 'pasteRegex') {
@@ -486,6 +520,11 @@ app.whenReady().then(() => {
     }
   }
   setAppMacroHandler(dispatchAppMacro)
+  initLauncher({
+    dispatch: dispatchAppMacro,
+    getSliceMode: () => store.get('launcherSliceMode') ?? 'names',
+    getStyle: () => normalizeLauncherStyle(store.get('launcherStyle')),
+  })
   setAppMacros(withPluginHotkeys((store.get('appMacros') as AppSettings['appMacros']) ?? []))
 
   const patchCheatSheets = (patch: Partial<CheatSheetsSettings>): void => {
@@ -510,6 +549,7 @@ app.whenReady().then(() => {
     getTargetBounds: () => OverlayController.targetBounds,
     getPanelState: () => getCurrentPanelState(),
   })
+  registerLauncherOverlay()
   registerRadialMenuOverlay({
     getSlices: () => (store.get('radialMenu') as RadialMenuSettings | undefined)?.slices ?? [],
     getScale: () => (store.get('radialMenu') as RadialMenuSettings | undefined)?.scale,

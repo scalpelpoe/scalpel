@@ -239,6 +239,37 @@ export function MacrosTab({ settings, update, updateMany, tryHotkey }: Props): J
               update('priceCheckHotkey', hotkey)
             }}
           />
+          <FixedHotkeyRow
+            value={settings.launcherHotkey}
+            label={m.settings_launcher_hotkey()}
+            onChange={(hotkey) => {
+              if (!tryHotkey(hotkey, { kind: 'launcher' })) return
+              update('launcherHotkey', hotkey)
+            }}
+          />
+          <SettingSelectBox
+            label={m.settings_launcher_style()}
+            value={settings.launcherStyle ?? 'classic'}
+            options={[
+              { value: 'classic', label: m.settings_launcher_style_classic() },
+              { value: 'hub', label: m.settings_launcher_style_hub() },
+              { value: 'reticle', label: m.settings_launcher_style_reticle() },
+              { value: 'minimal', label: m.settings_launcher_style_minimal() },
+              { value: 'grouped', label: m.settings_launcher_style_grouped() },
+              { value: 'twotier', label: m.settings_launcher_style_twotier() },
+            ]}
+            onChange={(v) => update('launcherStyle', v)}
+          />
+          <SettingSelectBox
+            label={m.settings_launcher_slice_mode()}
+            value={settings.launcherSliceMode ?? 'names'}
+            options={[
+              { value: 'names', label: m.settings_launcher_slice_names() },
+              { value: 'icons', label: m.settings_launcher_slice_icons() },
+              { value: 'both', label: m.settings_launcher_slice_both() },
+            ]}
+            onChange={(v) => update('launcherSliceMode', v)}
+          />
           {visibleAppMacros.map(({ macro, i }) => {
             const usedActions = new Set((settings.appMacros ?? []).map((m, j) => (j !== i ? m.action : '')))
             const availableActions = APP_MACRO_DEFS.filter(
