@@ -55,14 +55,15 @@ export type PluginApiHandler = (method: string, params: unknown) => unknown | Pr
 export interface PluginApiClient {
   readonly pluginId: string
   readonly apiVersion: string
+  readonly serviceTypeName: string
   call<TResult = unknown, TParams = unknown>(method: string, params?: TParams): Promise<TResult>
 }
 
 export interface PluginCommunicationApi {
   /** Expose the API declared by this plugin's manifest. Must be called during activation. */
-  expose(handler: PluginApiHandler): void
+  expose(serviceTypeName: string, handler: PluginApiHandler): void
   /** Get a client for an explicitly declared dependency. */
-  get(pluginId: string): PluginApiClient | null
+  get(pluginId: string, serviceTypeName: string): PluginApiClient | null
 }
 
 export interface PluginNativeBackendApi {

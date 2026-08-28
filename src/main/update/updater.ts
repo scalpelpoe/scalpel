@@ -13,7 +13,7 @@ import {
 import { dirname, join } from 'node:path'
 import { app, type BrowserWindow, ipcMain } from 'electron'
 import { ELECTRON_RELEASES, GITHUB_RELEASES_API } from '@shared/endpoints'
-import { pluginNativeBackends } from '../plugins/native-backend'
+import { gracefulRestart, gracefulShutdown } from '../restart'
 import type { InstallManifest } from '@shared/types'
 import { findBrickedMatch } from '@shared/version-match'
 import { selectListRelease } from './select-release'
@@ -487,7 +487,7 @@ function unpackedNeedsReplacing(destDir: string, pendingManifestPath: string): b
   }
 }
 
-ipcMain.handle('install-update', () => {
+ipcMain.handle('install-update', async () => {
   if (IS_DEV) return
   const stagingDir = getStagingDir()
   const asarNew = join(stagingDir, 'app.asar.new')
@@ -511,9 +511,7 @@ ipcMain.handle('install-update', () => {
     // during env cleanup with events in flight (tsfn-proxy abort risk).
     recordMainBreadcrumb('updater: relaunch (no pending update)')
     stopHotkeyListener()
-    app.relaunch()
-    pluginNativeBackends.stopAllNow()
-    app.exit(0)
+    await gracefulRestart({ exitImmediately: true })
     return
   }
 
@@ -611,7 +609,7 @@ ipcMain.handle('install-update', () => {
 
   recordMainBreadcrumb('updater: exit to apply update')
   stopHotkeyListener()
-  pluginNativeBackends.stopAllNow()
+  await gracefulShutdown()
   app.exit(0)
 })
 

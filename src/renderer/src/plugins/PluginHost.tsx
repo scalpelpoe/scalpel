@@ -84,13 +84,15 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
   }, [tabs, props.onTabsChange])
 
   // Extracted per-plugin load logic used by both the initial-load loop and the
-  // hot-install event handler. Wrapped in useCallback([]) so identity is stable
+  // dev hot-install event handler. Wrapped in useCallback([]) so identity is stable
   // across renders; all prop callbacks are read through refs.
-  const loadPlugin = useCallback(async (entry: { manifest: PluginManifest; entryUrl: string }): Promise<void> => {
+  const loadPlugin = useCallback(async (entry: { manifest: PluginManifest; entryUrl: string }): Promise<boolean> => {
     const m = entry.manifest
-    if (m.poeVersions && !m.poeVersions.includes(poeVersionRef.current)) return
+    if (m.poeVersions && !m.poeVersions.includes(poeVersionRef.current)) return false
     const disposers: Array<() => void> = []
+    let activationTeardown: (() => void) | undefined
     try {
+      communicationRef.current.assertDependenciesAvailable(m)
       const mod = (await importPluginModule(entry.entryUrl)) as { default: PluginActivate }
       if (typeof mod.default !== 'function') {
         throw new Error('plugin module has no default export function')
@@ -204,9 +206,12 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       // PluginActivate may be async and may return a teardown fn (host runtime
       // honors it regardless of the SDK's published type; see the SDK task).
       const teardown = await mod.default(ctx)
-      if (typeof teardown === 'function') {
-        pluginTeardownRef.current.set(m.id, teardown as () => void)
+      if (typeof teardown === 'function') activationTeardown = teardown
+      communicationRef.current.assertActivationComplete(m)
+      if (activationTeardown) {
+        pluginTeardownRef.current.set(m.id, activationTeardown)
       }
+      return true
     } catch (err) {
       // activate() may have subscribed before throwing; dispose what it set up
       // so a failed load does not leak subscriptions.
@@ -217,6 +222,11 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
           // ignore: one bad unsubscribe must not block the rest
         }
       }
+      try {
+        activationTeardown?.()
+      } catch {
+        // A failed plugin's teardown must not block failure propagation.
+      }
       pluginDisposersRef.current.delete(m.id)
       pluginTeardownRef.current.delete(m.id)
       communicationRef.current.remove(m.id)
@@ -224,6 +234,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       pluginHotkeyHandlersRef.current.delete(m.id)
       pendingOverlayRef.current.delete(m.id)
       onPluginErrorRef.current?.(m.id, err instanceof Error ? err : new Error(String(err)))
+      return false
     }
   }, [])
 
@@ -265,7 +276,8 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     let cancelled = false
 
     void (async () => {
-      const installed = (await window.api.listInstalledPlugins()).filter(
+      const listLoadable = window.api.listLoadablePlugins ?? window.api.listInstalledPlugins
+      const installed = (await listLoadable()).filter(
         (entry) => !entry.manifest.poeVersions || entry.manifest.poeVersions.includes(poeVersionRef.current),
       )
       if (cancelled) return
@@ -273,9 +285,20 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       for (const [pluginId, error] of plan.errors) {
         onPluginErrorRef.current?.(pluginId, error)
       }
+      const activated = new Set<string>()
       for (const entry of plan.entries) {
         if (cancelled) return
-        await loadPlugin(entry)
+        const failedDependency = entry.manifest.dependencies?.find(
+          (dependency) => !dependency.optional && !activated.has(dependency.pluginId),
+        )
+        if (failedDependency) {
+          onPluginErrorRef.current?.(
+            entry.manifest.id,
+            new Error(`required plugin "${failedDependency.pluginId}" could not be activated`),
+          )
+          continue
+        }
+        if (await loadPlugin(entry)) activated.add(entry.manifest.id)
       }
     })()
 
@@ -284,26 +307,27 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     }
   }, [props.ready])
 
-  // Hot-install: load a newly installed plugin without restart.
+  // Unpacked development reload is intentionally separate from registry
+  // mutations. Production changes preserve this graph until app restart.
   useEffect(() => {
-    return window.api.onPluginInstalled(async (entry) => {
+    return window.api.onPluginDevInstalled(async (entry) => {
       await loadPlugin(entry)
     })
   }, [])
 
-  // Hot-update: unload the running instance, then reload the new code. The
+  // Dev hot-update: unload the running instance, then reload the new code. The
   // cache-busted entryUrl (?v=<newVersion>) makes importPluginModule fetch fresh.
   useEffect(() => {
-    return window.api.onPluginUpdated(async (entry) => {
+    return window.api.onPluginDevUpdated(async (entry) => {
       unloadPlugin(entry.manifest.id)
       await loadPlugin(entry)
     })
   }, [unloadPlugin])
 
-  // Hot-uninstall: fully unload the plugin (this also disposes subscriptions the
+  // Dev hot-uninstall: fully unload the plugin (this also disposes subscriptions the
   // old inline handler leaked).
   useEffect(() => {
-    return window.api.onPluginUninstalled((pluginId) => {
+    return window.api.onPluginDevUninstalled((pluginId) => {
       unloadPlugin(pluginId)
       onPluginUnloadedRef.current?.(pluginId)
     })

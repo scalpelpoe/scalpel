@@ -70,6 +70,7 @@ export function PluginsStep({
   const [failed, setFailed] = useState(false)
   const [installedIds, setInstalledIds] = useState<string[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [restartRequired, setRestartRequired] = useState(false)
   const { error, tone, showError } = useStepError()
 
   useEffect(() => {
@@ -84,8 +85,10 @@ export function PluginsStep({
     setBusyId(entry.id)
     const result = await window.api.pluginInstallFromRegistry(entry)
     setBusyId(null)
-    if (result.ok) setInstalledIds((prev) => [...prev, entry.id])
-    else showError(m.settings_plg_install_failed({ error: result.error }))
+    if (result.ok) {
+      setInstalledIds((prev) => [...prev, entry.id])
+      setRestartRequired(result.restartRequired)
+    } else showError(m.settings_plg_install_failed({ error: result.error }))
   }
 
   const { featured, rest } = partitionFeatured(entries ?? [])
@@ -134,6 +137,11 @@ export function PluginsStep({
   return (
     <div>
       <ErrorBanner message={error} tone={tone} inline />
+      {restartRequired && (
+        <div className="mb-3 rounded border border-amber-500/35 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100">
+          Restart Scalpel after setup to activate newly installed plugins. The current plugin graph is unchanged.
+        </div>
+      )}
       {header}
       <div className="flex flex-col gap-4">
         {featured.length > 0 && (

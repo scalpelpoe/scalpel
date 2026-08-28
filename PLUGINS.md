@@ -689,7 +689,7 @@ Externalize React and the SDK - Scalpel injects them at runtime via a custom pro
 ### Installing the SDK
 
 ```bash
-npm install --save-dev @scalpelpoe/plugin-sdk
+npm install --save-dev @scalpelpoe/plugin-sdk @scalpelpoe/plugin-tools
 ```
 
 The package is **types only**. At runtime, Scalpel serves the real implementations via its `scalpel-internal://sdk.js` custom protocol; the renderer's importmap reroutes `@scalpelpoe/plugin-sdk` to that URL. The npm package ships:
@@ -776,10 +776,10 @@ Field notes:
 - `dependencies` explicitly names plugin APIs this plugin consumes. API versions use exact `major.minor.patch` matching in the initial implementation.
 - `nativeBackend` declares one private, supervised unary Protobuf service. The initial target is `win32-x64`; all files are root-level release assets. The normal context routes `ctx.native` to its owning plugin and cannot choose paths, arguments, or environment variables.
 - Use Protobuf-ES service descriptors with `exposePluginService`, `createPluginServiceClient`, and `createNativeServiceClient`. These helpers infer every method signature directly from standard generated code.
-- Native requests and responses use length-prefixed Protobuf frames with a one-MiB limit, at most 32 concurrent calls, and a ten-second call timeout. Standard output is reserved for protocol frames; diagnostics belong on standard error.
+- Native requests and responses use length-prefixed Protobuf frames with a one-MiB limit, at most 32 in-flight calls, a four-MiB bounded write queue, and a ten-second call timeout. Standard output is reserved for protocol frames; diagnostics belong on standard error. Protocol v1 is a bounded unary control plane, not the final transport for OCR images or other large workloads.
 - Plugins remain trusted and share renderer/preload access. Owner routing prevents accidental cross-plugin calls; it is not a security boundary against a hostile plugin.
 - Native backends install only from Scalpel's curated registry (or a process-level developer registry override). User-configured self-hosted registries remain JavaScript-only because renderer code can change that setting.
-- Add `@bufbuild/protobuf`, `@bufbuild/buf`, and `@bufbuild/protoc-gen-es` alongside the SDK, then configure `scalpelPlugin` in `package.json`. Run `scalpel-plugin generate`, `check`, `build`, or `pack` instead of maintaining custom contract scripts.
+- Install `@scalpelpoe/plugin-tools` for the `scalpel-plugin` command and add `@bufbuild/protobuf` when generated service code is part of your plugin. Buf, Protobuf generation, and esbuild are dependencies of the tools package rather than the runtime SDK. Configure `scalpelPlugin` in `package.json`, then run `scalpel-plugin generate`, `check`, `build`, or `pack` instead of maintaining custom contract scripts.
 - See `PLUGIN_SERVICES.md` and `plugin-service-examples/` for the complete workflow.
 
 ## Local testing
@@ -791,7 +791,7 @@ While developing, skip the registry and install your plugin directly.
 1. In Scalpel, open Settings → Developer.
 2. Toggle "Developer mode" on.
 3. Click "Load unpacked plugin..." and pick the directory containing your built `plugin.js`, `manifest.json`, declared contracts, and native executable when applicable.
-4. Your tab appears in the title bar immediately.
+4. Unpacked plugins load immediately. Reload is a developer-only best-effort hot swap; restart Scalpel after changing dependencies, service declarations, native state, or overlay registrations.
 
 **Option 2: Manual file copy**
 
@@ -816,6 +816,8 @@ Releases are GitHub-driven. Tag your repo with `v<version>` matching your manife
 3. On the GitHub release page, attach `dist/plugin.js`, `dist/manifest.json`, and every root-level contract/native asset declared by the manifest.
 
 Scalpel downloads files from `https://github.com/<your-repo>/releases/download/v<version>/<file>`, so the version tag and asset filenames must match exactly.
+
+Production plugin installs, updates, and removals replace files transactionally but leave the currently running plugin graph unchanged. Scalpel prompts for a restart, blocks affected native workers, and activates the new dependency graph only after a full relaunch. Mutations that would leave required dependents missing or API-incompatible are rejected.
 
 ## Listing in the registry
 

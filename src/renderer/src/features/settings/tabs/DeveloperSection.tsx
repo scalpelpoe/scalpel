@@ -26,10 +26,10 @@ export function DeveloperSection({ settings, update, onError }: Props): JSX.Elem
 
   useEffect(() => {
     void refresh()
-    const unsubInstalled = window.api.onPluginInstalled(() => void refresh())
+    const unsubInstalled = window.api.onPluginDevInstalled(() => void refresh())
     // A reload re-installs over the running plugin, which reports as an update.
-    const unsubUpdated = window.api.onPluginUpdated(() => void refresh())
-    const unsubUninstalled = window.api.onPluginUninstalled(() => void refresh())
+    const unsubUpdated = window.api.onPluginDevUpdated(() => void refresh())
+    const unsubUninstalled = window.api.onPluginDevUninstalled(() => void refresh())
     return () => {
       unsubInstalled()
       unsubUpdated()
@@ -56,7 +56,7 @@ export function DeveloperSection({ settings, update, onError }: Props): JSX.Elem
   }
 
   const remove = async (id: string, name: string): Promise<void> => {
-    const r = await window.api.pluginUninstall(id)
+    const r = await window.api.pluginUninstallUnpacked(id)
     if (!r.ok) {
       onError(r.error)
       return
@@ -94,8 +94,9 @@ export function DeveloperSection({ settings, update, onError }: Props): JSX.Elem
           <div className="flex flex-col gap-1 mt-1">
             <span className="text-xs text-zinc-400">Loaded unpacked plugins</span>
             <span className="text-[10px] text-zinc-500">
-              Reload re-copies the plugin from the directory you loaded it from and swaps the running code - rebuild,
-              reload, no restart. Removing only deletes Scalpel's copy; your source directory is untouched.
+              Reload re-copies the plugin from the directory you loaded it from and attempts a development-only hot
+              swap. Hot reload is imperfect; restart Scalpel if registrations or native state look stale. Removing only
+              deletes Scalpel's copy; your source directory is untouched.
             </span>
             {unpacked.length === 0 ? (
               <span className="text-xs text-zinc-500">None loaded.</span>

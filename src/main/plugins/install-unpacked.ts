@@ -1,10 +1,12 @@
 import { createHash } from 'node:crypto'
-import { copyFileSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
+import { copyFileSync, existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import type { InstallResult } from './install-types'
+import { replacePackageAtomically, restoreFiles, snapshotFiles } from './install-transaction'
 import { addInstalledId } from './installed-list'
 import { validateManifest } from './manifest-validator'
-import { pluginDir } from './paths'
+import { installedJsonPath, pendingPluginStorageDeletionsPath, pluginDir, unpackedJsonPath } from './paths'
+import { cancelStorageRemoval, migrateLegacyStorage } from './storage'
 import { addUnpackedId } from './unpacked-list'
 
 export type { InstallResult }
@@ -53,24 +55,29 @@ export function installUnpacked(sourceDir: string): InstallResult {
   const id = v.manifest.id
   const destDir = pluginDir(id)
   try {
-    mkdirSync(destDir, { recursive: true })
-    copyFileSync(manifestPath, join(destDir, 'manifest.json'))
-    copyFileSync(entryPath, join(destDir, 'plugin.js'))
-    if (contractPath && v.manifest.api) {
-      copyFileSync(contractPath, join(destDir, v.manifest.api.contract))
-    }
-    if (backendContractPath && v.manifest.nativeBackend) {
-      copyFileSync(backendContractPath, join(destDir, v.manifest.nativeBackend.contract))
-    }
-    if (nativePath && nativeTarget) copyFileSync(nativePath, join(destDir, nativeTarget.file))
-
-    // Append to installed.json and unpacked.json if new. The source dir rides
-    // along so the Developer settings can re-copy from it (Reload) without
-    // making the author pick the directory again.
-    addInstalledId(id)
-    addUnpackedId(id, sourceDir)
+    migrateLegacyStorage(id)
+    const metadata = snapshotFiles([installedJsonPath(), unpackedJsonPath(), pendingPluginStorageDeletionsPath()])
+    replacePackageAtomically(
+      destDir,
+      (incomingDir) => {
+        copyFileSync(manifestPath, join(incomingDir, 'manifest.json'))
+        copyFileSync(entryPath, join(incomingDir, 'plugin.js'))
+        if (contractPath && v.manifest.api) {
+          copyFileSync(contractPath, join(incomingDir, v.manifest.api.contract))
+        }
+        if (backendContractPath && v.manifest.nativeBackend) {
+          copyFileSync(backendContractPath, join(incomingDir, v.manifest.nativeBackend.contract))
+        }
+        if (nativePath && nativeTarget) copyFileSync(nativePath, join(incomingDir, nativeTarget.file))
+      },
+      () => {
+        addInstalledId(id)
+        addUnpackedId(id, sourceDir)
+        cancelStorageRemoval(id)
+      },
+      () => restoreFiles(metadata),
+    )
   } catch (e) {
-    rmSync(destDir, { recursive: true, force: true })
     return { ok: false, error: `install write failed: ${(e as Error).message}` }
   }
 

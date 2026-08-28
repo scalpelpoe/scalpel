@@ -100,8 +100,10 @@ describe('plugin-overlay registry', () => {
     registeredSpecs.at(-1)?.onDidFinishLoad?.(win)
     registeredSpecs.at(-1)?.onDidFinishLoad?.(win)
 
-    expect(send).toHaveBeenCalledTimes(2)
-    expect(send).toHaveBeenCalledWith('plugin-overlay:init', 'reload-demo')
+    expect(send.mock.calls.filter(([channel]) => channel === 'plugin-overlay:init')).toEqual([
+      ['plugin-overlay:init', 'reload-demo'],
+      ['plugin-overlay:init', 'reload-demo'],
+    ])
   })
 
   it('reloads an existing plugin overlay renderer', () => {
@@ -242,6 +244,7 @@ describe('plugin-overlay registry', () => {
 
   it('forwards onAnchorChanged so a user move can be persisted', () => {
     const onAnchorChanged = vi.fn()
+    fakeOverlay.getWindow.mockReturnValue(null)
     registerPluginOverlay('persist-demo', { title: 'Persist', onAnchorChanged })
     const moved = { fracX: 0.7, fracY: 0.1, fracW: 0.16, fracH: 0.4 }
     registeredSpecs.at(-1)?.onAnchorChanged?.(moved)

@@ -1,9 +1,9 @@
-import { existsSync, rmSync } from 'node:fs'
-import { removeInstalledId } from './installed-list'
+import { existsSync, renameSync, rmSync } from 'node:fs'
+import { readInstalledIds, writeInstalledIds } from './installed-list'
 import { PLUGIN_ID_PATTERN } from './manifest-validator'
 import { pluginDir } from './paths'
-import { clearCache } from './storage'
-import { removeUnpackedId } from './unpacked-list'
+import { scheduleStorageRemoval } from './storage'
+import { readUnpackedEntries, writeUnpackedEntries } from './unpacked-list'
 
 export type UninstallResult = { ok: true } | { ok: false; error: string }
 
@@ -12,16 +12,38 @@ export function uninstallPlugin(pluginId: string): UninstallResult {
     return { ok: false, error: 'invalid plugin id' }
   }
 
-  // Remove the plugin directory if it exists.
   const dir = pluginDir(pluginId)
-  if (existsSync(dir)) {
-    rmSync(dir, { recursive: true, force: true })
+  const backup = `${dir}.uninstalling`
+  const installed = readInstalledIds()
+  const unpacked = readUnpackedEntries()
+  let moved = false
+  try {
+    rmSync(backup, { recursive: true, force: true })
+    if (existsSync(dir)) {
+      renameSync(dir, backup)
+      moved = true
+    }
+    writeInstalledIds(installed.filter((id) => id !== pluginId))
+    writeUnpackedEntries(unpacked.filter((entry) => entry.id !== pluginId))
+    scheduleStorageRemoval(pluginId)
+  } catch (error) {
+    try {
+      writeInstalledIds(installed)
+      writeUnpackedEntries(unpacked)
+      if (moved && !existsSync(dir)) renameSync(backup, dir)
+    } catch (rollbackError) {
+      return {
+        ok: false,
+        error: `uninstall failed: ${(error as Error).message}; rollback failed: ${(rollbackError as Error).message}`,
+      }
+    }
+    return { ok: false, error: `uninstall failed: ${(error as Error).message}` }
   }
-
-  // Update installed.json and unpacked.json.
-  removeInstalledId(pluginId)
-  removeUnpackedId(pluginId)
-  clearCache(pluginId)
-
+  try {
+    rmSync(backup, { recursive: true, force: true })
+  } catch {
+    // Package and metadata are committed. The next mutation removes a stale
+    // backup before doing any work, so cleanup failure must not undo success.
+  }
   return { ok: true }
 }

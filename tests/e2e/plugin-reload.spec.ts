@@ -18,12 +18,12 @@ const manifest = JSON.stringify({
 
 const pluginSource = (marker: string): string => `export default function activate() { return () => {} } // ${marker}`
 
-/** Wait for the next plugin-updated broadcast while triggering a reload. */
+/** Wait for the next developer-only plugin update broadcast while triggering a reload. */
 const reloadAndCaptureBroadcast = `
   new Promise((resolve) => {
-    const off = window.api.onPluginUpdated((entry) => {
+    const off = window.api.onPluginDevUpdated((entry) => {
       off()
-      resolve({ event: 'plugin-updated', entryUrl: entry.entryUrl, version: entry.manifest.version })
+      resolve({ event: 'plugin-dev-updated', entryUrl: entry.entryUrl, version: entry.manifest.version })
     })
     window.api.pluginReloadUnpacked('${PLUGIN_ID}').then((r) => {
       if (!r.ok) resolve({ event: 'error', error: r.error })
@@ -61,7 +61,7 @@ test('reloads an unpacked plugin from its source dir, cache-busting the entry UR
     }
 
     // The renderer is told to unload-then-reload, not to fresh-load.
-    expect(result.event).toBe('plugin-updated')
+    expect(result.event).toBe('plugin-dev-updated')
     expect(result.version).toBe('1.0.0')
     // ...with a cache key that changes even though the version did not, so
     // dynamic import() cannot hand back the module it already has.

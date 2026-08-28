@@ -6,6 +6,7 @@ out/
 dist/
 **/target/
 plugin-service-examples/native-item-analyzer/dist/
+/plugin-service-examples/*/plugin.js
 playwright-report/
 test-results/
 

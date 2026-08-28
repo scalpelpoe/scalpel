@@ -36,15 +36,19 @@ export function exposePluginService<S extends DescService>(
   service: S,
   implementation: PluginServiceImplementation<S>,
 ): void {
-  const methods = new Map(unaryMethods(service).map((method) => [methodPath(service, method.name), method]))
+  const serviceMethods = unaryMethods(service)
+  for (const method of serviceMethods) {
+    const handler = implementation[method.localName as keyof PluginServiceImplementation<S>]
+    if (!Object.prototype.hasOwnProperty.call(implementation, method.localName) || typeof handler !== 'function') {
+      throw new Error(`plugin API method is not implemented: ${methodPath(service, method.name)}`)
+    }
+  }
+  const methods = new Map(serviceMethods.map((method) => [methodPath(service, method.name), method]))
 
-  plugins.expose(async (path, params) => {
+  plugins.expose(service.typeName, async (path, params) => {
     const method = methods.get(path)
     if (!method) throw new Error(`unknown plugin API method: ${path}`)
     const handler = implementation[method.localName as keyof PluginServiceImplementation<S>]
-    if (!Object.prototype.hasOwnProperty.call(implementation, method.localName) || typeof handler !== 'function') {
-      throw new Error(`plugin API method is not implemented: ${path}`)
-    }
     const request = create(method.input, params == null ? {} : (params as MessageInitShape<DescMessage>))
     const response = await (handler as (value: unknown) => unknown | Promise<unknown>)(request)
     return create(method.output, response as MessageInitShape<DescMessage>)
@@ -57,7 +61,7 @@ export function getPluginServiceClient<S extends DescService>(
   pluginId: string,
   service: S,
 ): PluginServiceClient<S> | null {
-  const transport = plugins.get(pluginId)
+  const transport = plugins.get(pluginId, service.typeName)
   if (!transport) return null
   return createServiceClient(service, async (path, _method, request) => transport.call(path, request))
 }

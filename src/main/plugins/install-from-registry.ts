@@ -1,14 +1,17 @@
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { app, net } from 'electron'
 import { pluginReleaseAssetUrl } from '@shared/endpoints'
 import type { RegistryEntry } from '@shared/plugin-registry-types'
 import { versionMatches } from '@shared/version-match'
 import type { InstallResult } from './install-types'
+import { replacePackageAtomically, restoreFiles, snapshotFiles } from './install-transaction'
 import { addInstalledId } from './installed-list'
 import { validateManifest } from './manifest-validator'
-import { pluginDir } from './paths'
+import { installedJsonPath, pendingPluginStorageDeletionsPath, pluginDir, unpackedJsonPath } from './paths'
+import { cancelStorageRemoval, migrateLegacyStorage } from './storage'
+import { removeUnpackedId } from './unpacked-list'
 
 function currentScalpelVersion(): string {
   return app.getVersion()
@@ -16,7 +19,10 @@ function currentScalpelVersion(): string {
 
 export async function installFromRegistry(
   entry: RegistryEntry,
-  options: { allowNativeBackend?: boolean } = {},
+  options: {
+    allowNativeBackend?: boolean
+    validateMutation?: (manifest: import('../../plugin-sdk/src/types').PluginManifest) => string | null
+  } = {},
 ): Promise<InstallResult> {
   // 1. Version check
   if (!versionMatches(entry.scalpelMinVersion, currentScalpelVersion())) {
@@ -71,6 +77,8 @@ export async function installFromRegistry(
   if (v.manifest.nativeBackend && options.allowNativeBackend !== true) {
     return { ok: false, error: 'native backends are not allowed from a self-hosted registry' }
   }
+  const mutationError = options.validateMutation?.(v.manifest)
+  if (mutationError) return { ok: false, error: `plugin dependency check failed: ${mutationError}` }
 
   // 4.5. Verify plugin.js checksum
   const actual = createHash('sha256').update(pluginBytes).digest('hex')
@@ -146,42 +154,31 @@ export async function installFromRegistry(
     }
   }
 
-  // 5. Write atomically: stage into a temp dir, then swap the whole directory
-  // into place - move any existing install aside first and restore it if the
-  // swap throws. A failed write can no longer delete, half-overwrite, or tear a
-  // working plugin into a mismatched plugin.js/manifest.json pair.
   const destDir = pluginDir(entry.id)
-  const tmpDir = `${destDir}.incoming`
-  const bakDir = `${destDir}.backup`
   try {
-    rmSync(tmpDir, { recursive: true, force: true })
-    mkdirSync(tmpDir, { recursive: true })
-    writeFileSync(join(tmpDir, 'plugin.js'), pluginBytes)
-    writeFileSync(join(tmpDir, 'manifest.json'), manifestText)
-    if (v.manifest.api && contractBytes !== null) {
-      writeFileSync(join(tmpDir, v.manifest.api.contract), contractBytes)
-    }
-    if (v.manifest.nativeBackend && backendContractBytes !== null) {
-      writeFileSync(join(tmpDir, v.manifest.nativeBackend.contract), backendContractBytes)
-    }
-    if (nativeTarget && nativeBytes) writeFileSync(join(tmpDir, nativeTarget.file), nativeBytes)
-
-    rmSync(bakDir, { recursive: true, force: true })
-    const hadPrevious = existsSync(destDir)
-    if (hadPrevious) renameSync(destDir, bakDir)
-    try {
-      renameSync(tmpDir, destDir)
-    } catch (swapErr) {
-      // Restore the previous install if the swap threw (move it back into place).
-      if (hadPrevious) renameSync(bakDir, destDir)
-      throw swapErr
-    }
-    rmSync(bakDir, { recursive: true, force: true })
-
-    // 6. Append to installed.json
-    addInstalledId(entry.id)
+    migrateLegacyStorage(entry.id)
+    const metadata = snapshotFiles([installedJsonPath(), unpackedJsonPath(), pendingPluginStorageDeletionsPath()])
+    replacePackageAtomically(
+      destDir,
+      (incomingDir) => {
+        writeFileSync(join(incomingDir, 'plugin.js'), pluginBytes)
+        writeFileSync(join(incomingDir, 'manifest.json'), manifestText)
+        if (v.manifest.api && contractBytes !== null) {
+          writeFileSync(join(incomingDir, v.manifest.api.contract), contractBytes)
+        }
+        if (v.manifest.nativeBackend && backendContractBytes !== null) {
+          writeFileSync(join(incomingDir, v.manifest.nativeBackend.contract), backendContractBytes)
+        }
+        if (nativeTarget && nativeBytes) writeFileSync(join(incomingDir, nativeTarget.file), nativeBytes)
+      },
+      () => {
+        addInstalledId(entry.id)
+        removeUnpackedId(entry.id)
+        cancelStorageRemoval(entry.id)
+      },
+      () => restoreFiles(metadata),
+    )
   } catch (e) {
-    rmSync(tmpDir, { recursive: true, force: true })
     return { ok: false, error: `install write failed: ${(e as Error).message}` }
   }
 

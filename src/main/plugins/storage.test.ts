@@ -24,6 +24,21 @@ vi.mock('fs', () => ({
     mockFs.writes.push({ path: p, data })
   },
   mkdirSync: () => {},
+  renameSync: (from: string, to: string) => {
+    const value = mockFs.files.get(from)
+    if (value == null) throw new Error('source missing')
+    mockFs.files.set(to, value)
+    mockFs.files.delete(from)
+  },
+  rmSync: (p: string, options?: { recursive?: boolean }) => {
+    if (options?.recursive) {
+      for (const key of [...mockFs.files.keys()]) {
+        if (key === p || key.startsWith(`${p}\\`) || key.startsWith(`${p}/`)) mockFs.files.delete(key)
+      }
+    } else {
+      mockFs.files.delete(p)
+    }
+  },
 }))
 
 beforeEach(() => {
@@ -37,7 +52,8 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const storagePath = join(TEST_USER_DATA, 'plugins', 'p1', 'storage.json')
+const storagePath = join(TEST_USER_DATA, 'plugin-storage', 'p1', 'storage.json')
+const legacyStoragePath = join(TEST_USER_DATA, 'plugins', 'p1', 'storage.json')
 
 describe('plugin storage', () => {
   it('returns null when key is missing and file does not exist', async () => {
@@ -101,5 +117,19 @@ describe('plugin storage', () => {
     setValue('p1', 'k', 1)
     flushAll()
     expect(mockFs.writes[0].path).toBe(storagePath)
+  })
+
+  it('migrates legacy storage out of the package directory once', async () => {
+    mockFs.files.set(legacyStoragePath, JSON.stringify({ key: 'legacy' }))
+    const { getValue, _resetForTests } = await import('./storage')
+
+    expect(getValue('p1', 'key')).toBe('legacy')
+    expect(mockFs.files.get(storagePath)).toBe(JSON.stringify({ key: 'legacy' }))
+    expect(mockFs.files.has(legacyStoragePath)).toBe(false)
+
+    _resetForTests()
+    mockFs.files.set(legacyStoragePath, JSON.stringify({ key: 'stale' }))
+    expect(getValue('p1', 'key')).toBe('legacy')
+    expect(mockFs.files.has(legacyStoragePath)).toBe(true)
   })
 })

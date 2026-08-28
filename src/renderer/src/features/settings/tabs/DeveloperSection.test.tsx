@@ -17,10 +17,10 @@ function installApi(
     listUnpackedPlugins: vi.fn(async () => unpackedPlugins),
     pluginInstallUnpacked: vi.fn(async () => ({ ok: false, error: 'cancelled' })),
     pluginReloadUnpacked: vi.fn(async () => ({ ok: true, id: 'test-plugin' })),
-    pluginUninstall: vi.fn(async () => ({ ok: true })),
-    onPluginInstalled: vi.fn(() => () => {}),
-    onPluginUpdated: vi.fn(() => () => {}),
-    onPluginUninstalled: vi.fn(() => () => {}),
+    pluginUninstallUnpacked: vi.fn(async () => ({ ok: true })),
+    onPluginDevInstalled: vi.fn(() => () => {}),
+    onPluginDevUpdated: vi.fn(() => () => {}),
+    onPluginDevUninstalled: vi.fn(() => () => {}),
     restartApp: vi.fn(),
     ...overrides,
   }
@@ -52,13 +52,13 @@ describe('DeveloperSection unpacked plugins list', () => {
     expect(await findByText('Test Plugin')).toBeTruthy()
   })
 
-  it('calls pluginUninstall with the plugin id when Remove is clicked', async () => {
-    const pluginUninstall = vi.fn(async () => ({ ok: true as const }))
-    installApi(loaded('/src/test-plugin'), { pluginUninstall })
+  it('calls pluginUninstallUnpacked with the plugin id when Remove is clicked', async () => {
+    const pluginUninstallUnpacked = vi.fn(async () => ({ ok: true as const }))
+    installApi(loaded('/src/test-plugin'), { pluginUninstallUnpacked })
     const { findByText } = render(<DeveloperSection settings={settings} update={noop} onError={noop} />)
     const removeBtn = await findByText('Remove')
     fireEvent.click(removeBtn)
-    await waitFor(() => expect(pluginUninstall).toHaveBeenCalledWith('test-plugin'))
+    await waitFor(() => expect(pluginUninstallUnpacked).toHaveBeenCalledWith('test-plugin'))
   })
 })
 
@@ -114,7 +114,7 @@ describe('DeveloperSection reload button', () => {
   it('refreshes the list when a plugin is hot-updated', async () => {
     let fire: (() => void) | undefined
     installApi(loaded('/src/test-plugin'), {
-      onPluginUpdated: vi.fn((cb: () => void) => {
+      onPluginDevUpdated: vi.fn((cb: () => void) => {
         fire = cb
         return () => {}
       }),

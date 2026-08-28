@@ -8,7 +8,7 @@ import { PassThrough } from 'node:stream'
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { NativeFrameSchema, type NativeFrame } from './generated/scalpel/plugin/native/v1/transport_pb'
-import { PluginNativeBackendManager } from './native-backend'
+import { NativeCallError, PluginNativeBackendManager } from './native-backend'
 
 const SERVICE = 'example.v1.NativeDemo'
 const METHOD = `/${SERVICE}/AnalyzeItem`
@@ -47,6 +47,22 @@ class FakeChild extends EventEmitter {
     })
   }
 
+  forceBackpressure(): void {
+    const original = this.stdin.write.bind(this.stdin) as (
+      chunk: Uint8Array,
+      encodingOrCallback?: BufferEncoding | ((error?: Error | null) => void),
+      callback?: (error?: Error | null) => void,
+    ) => boolean
+    this.stdin.write = ((
+      chunk: Uint8Array,
+      encodingOrCallback?: BufferEncoding | ((error?: Error | null) => void),
+      callback?: (error?: Error | null) => void,
+    ) => {
+      original(chunk, encodingOrCallback, callback)
+      return false
+    }) as typeof this.stdin.write
+  }
+
   initialize(request: NativeFrame): void {
     this.respond(
       create(NativeFrameSchema, {
@@ -64,6 +80,15 @@ class FakeChild extends EventEmitter {
       create(NativeFrameSchema, {
         requestId: request.requestId,
         body: { case: 'callResponse', value: { payload } },
+      }),
+    )
+  }
+
+  callError(request: NativeFrame, code: string, message: string): void {
+    this.respond(
+      create(NativeFrameSchema, {
+        requestId: request.requestId,
+        body: { case: 'callError', value: { code, message } },
       }),
     )
   }
@@ -151,6 +176,24 @@ describe('PluginNativeBackendManager', () => {
     await manager.stop('native-demo')
   })
 
+  it('rejects calls when the worker closes stdin without exiting', async () => {
+    const requests: NativeFrame[] = []
+    const child = new FakeChild((request, process) => {
+      requests.push(request)
+      if (request.body.case === 'initializeRequest') process.initialize(request)
+    })
+    const manager = new PluginNativeBackendManager(
+      () => backendFile(),
+      () => child.asChildProcess(),
+    )
+
+    const call = manager.call('native-demo', METHOD, Uint8Array.of(1))
+    await vi.waitFor(() => expect(requests.some((request) => request.body.case === 'callRequest')).toBe(true))
+    child.stdin.emit('error', new Error('EPIPE'))
+
+    await expect(call).rejects.toThrow(/stdin failed: EPIPE/)
+  })
+
   it('rejects pending calls with bounded stderr diagnostics when the process crashes', async () => {
     const child = new FakeChild((request, process) => {
       if (request.body.case === 'initializeRequest') process.initialize(request)
@@ -228,6 +271,63 @@ describe('PluginNativeBackendManager', () => {
     expect(spawnBackend).toHaveBeenCalledOnce()
   })
 
+  it('keeps a successfully mutated plugin blocked until restart and unblocks failure', async () => {
+    const child = new FakeChild((request, process) => {
+      if (request.body.case === 'initializeRequest') process.initialize(request)
+      else if (request.body.case === 'callRequest') process.callResult(request, request.body.value.payload)
+    })
+    const manager = new PluginNativeBackendManager(
+      () => backendFile(),
+      () => child.asChildProcess(),
+    )
+
+    await manager.withPluginStoppedUntilRestart(
+      'native-demo',
+      () => ({ ok: false }),
+      (result) => result.ok,
+    )
+    await expect(manager.call('native-demo', METHOD, new Uint8Array())).resolves.toEqual(new Uint8Array())
+    await manager.withPluginStoppedUntilRestart(
+      'native-demo',
+      () => ({ ok: true }),
+      (result) => result.ok,
+    )
+
+    expect(manager.isRestartRequired()).toBe(true)
+    await expect(manager.call('native-demo', METHOD, new Uint8Array())).rejects.toThrow(/temporarily unavailable/)
+  })
+
+  it('preserves the typed native CallError code', async () => {
+    const child = new FakeChild((request, process) => {
+      if (request.body.case === 'initializeRequest') process.initialize(request)
+      else process.callError(request, 'INVALID_ITEM', 'item payload is invalid')
+    })
+    const manager = new PluginNativeBackendManager(
+      () => backendFile(),
+      () => child.asChildProcess(),
+    )
+
+    const error = await manager.call('native-demo', METHOD, new Uint8Array()).catch((caught) => caught)
+    expect(error).toBeInstanceOf(NativeCallError)
+    expect(error).toMatchObject({ code: 'INVALID_ITEM', message: 'item payload is invalid' })
+    await manager.stop('native-demo')
+  })
+
+  it('bounds frames queued while native stdin is backpressured', async () => {
+    const child = new FakeChild((request, process) => {
+      if (request.body.case === 'initializeRequest') process.initialize(request)
+    })
+    child.forceBackpressure()
+    const manager = new PluginNativeBackendManager(
+      () => backendFile(),
+      () => child.asChildProcess(),
+    )
+
+    const calls = Array.from({ length: 7 }, () => manager.call('native-demo', METHOD, new Uint8Array(700_000)))
+    await expect(Promise.all(calls)).rejects.toThrow(/stdin queue is full/)
+    await manager.stop('native-demo')
+  })
+
   it('serializes competing lifecycle operations', async () => {
     const manager = new PluginNativeBackendManager(() => backendFile(), vi.fn())
     const events: string[] = []
@@ -249,5 +349,13 @@ describe('PluginNativeBackendManager', () => {
     await Promise.all([first, second])
 
     expect(events).toEqual(['first-start', 'first-end', 'second'])
+  })
+
+  it('blocks all worker respawns during graceful shutdown', async () => {
+    const manager = new PluginNativeBackendManager(() => backendFile(), vi.fn())
+
+    await manager.shutdown()
+
+    await expect(manager.call('native-demo', METHOD, new Uint8Array())).rejects.toThrow(/temporarily unavailable/)
   })
 })

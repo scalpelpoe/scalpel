@@ -29,6 +29,8 @@ const mockFs = {
   files: new Map<string, string>(),
   bufs: new Map<string, Uint8Array>(),
   failRenameFrom: null as string | null,
+  failWritePath: null as string | null,
+  failWrites: 0,
 }
 
 vi.mock('fs', () => ({
@@ -44,6 +46,10 @@ vi.mock('fs', () => ({
     return false
   },
   writeFileSync: (p: string, data: string | Uint8Array) => {
+    if (mockFs.failWritePath === p && mockFs.failWrites > 0) {
+      mockFs.failWrites--
+      throw new Error('simulated metadata write failure')
+    }
     if (typeof data === 'string') mockFs.files.set(p, data)
     else mockFs.bufs.set(p, data)
   },
@@ -64,13 +70,25 @@ vi.mock('fs', () => ({
     move(mockFs.files)
   },
   mkdirSync: () => {},
-  rmSync: () => {},
+  rmSync: (p: string, options?: { recursive?: boolean }) => {
+    const remove = <T>(map: Map<string, T>): void => {
+      for (const key of [...map.keys()]) {
+        if (key === p || (options?.recursive && (key.startsWith(`${p}/`) || key.startsWith(`${p}\\`)))) {
+          map.delete(key)
+        }
+      }
+    }
+    remove(mockFs.files)
+    remove(mockFs.bufs)
+  },
 }))
 
 beforeEach(() => {
   mockFs.files.clear()
   mockFs.bufs.clear()
   mockFs.failRenameFrom = null
+  mockFs.failWritePath = null
+  mockFs.failWrites = 0
   mockNetFetchFn.mockReset()
   vi.resetModules()
 })
@@ -412,5 +430,50 @@ describe('installFromRegistry', () => {
       version: '2.0.0',
     })
     expect(readMockJson(join(TEST_USER_DATA, 'plugins', 'installed.json'))).toEqual(['hello-world'])
+  })
+
+  it('clears unpacked provenance when a registry package replaces it', async () => {
+    const unpackedPath = join(TEST_USER_DATA, 'plugins', 'unpacked.json')
+    mockFs.files.set(unpackedPath, JSON.stringify([{ id: 'hello-world', sourceDir: '/src/plugin' }]))
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingManifest)),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    expect((await installFromRegistry(validEntry)).ok).toBe(true)
+    expect(readMockJson(unpackedPath)).toEqual([])
+  })
+
+  it('restores the old package and metadata when provenance cleanup fails', async () => {
+    const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
+    const installedPath = join(TEST_USER_DATA, 'plugins', 'installed.json')
+    const unpackedPath = join(TEST_USER_DATA, 'plugins', 'unpacked.json')
+    const oldUnpacked = JSON.stringify([{ id: 'hello-world', sourceDir: '/src/plugin' }])
+    mockFs.bufs.set(join(destDir, 'plugin.js'), PLUGIN_BYTES)
+    mockFs.files.set(join(destDir, 'manifest.json'), JSON.stringify({ ...matchingManifest, version: '0.9.0' }))
+    mockFs.files.set(installedPath, JSON.stringify(['hello-world']))
+    mockFs.files.set(unpackedPath, oldUnpacked)
+    mockFs.failWritePath = `${unpackedPath}.tmp`
+    mockFs.failWrites = 1
+
+    const newEntry = { ...validEntry, latestVersion: '2.0.0', sha256: NEW_SHA }
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v2.0.0/plugin.js': new Response(
+        NEW_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v2.0.0/manifest.json':
+        new Response(JSON.stringify({ ...matchingManifest, version: '2.0.0' })),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    expect((await installFromRegistry(newEntry)).ok).toBe(false)
+    expect(mockFs.bufs.get(join(destDir, 'plugin.js'))).toEqual(PLUGIN_BYTES)
+    expect(readMockJson(join(destDir, 'manifest.json'))).toMatchObject({ version: '0.9.0' })
+    expect(mockFs.files.get(installedPath)).toBe(JSON.stringify(['hello-world']))
+    expect(mockFs.files.get(unpackedPath)).toBe(oldUnpacked)
   })
 })
