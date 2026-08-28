@@ -199,7 +199,7 @@ export function isPluginOverlayVisible(pluginId: string): boolean {
 }
 
 /** Reload a plugin's popped-out overlay window if one exists, so it re-imports
- *  the new plugin.js after an update (the pop-out never receives plugin-updated
+ *  the new plugin.js after a dev update (the pop-out does not host PluginHost
  *  and would otherwise run stale code). No-op when there is no pop-out. */
 export function reloadPluginOverlay(pluginId: string): void {
   overlays.get(pluginId)?.getWindow()?.webContents.reload()

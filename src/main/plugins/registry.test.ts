@@ -261,7 +261,14 @@ describe('scalpelMinVersion gate', () => {
 
   it('filters the cached snapshot on a 304 too', async () => {
     const cachePath = join(TEST_USER_DATA, 'plugins', 'registry-cache.json')
-    mockFs.files.set(cachePath, JSON.stringify({ etag: '"abc123"', snapshot: mixedRegistry }))
+    mockFs.files.set(
+      cachePath,
+      JSON.stringify({
+        url: 'https://raw.githubusercontent.com/scalpelpoe/scalpel-plugins-registry/main/registry.json',
+        etag: '"abc123"',
+        snapshot: mixedRegistry,
+      }),
+    )
     mockNetFetch(async () => new Response(null, { status: 304 }))
     const { fetchRegistry } = await import('./registry')
     const result = await fetchRegistry()

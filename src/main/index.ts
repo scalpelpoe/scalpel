@@ -68,7 +68,7 @@ import {
 } from './evaluation'
 import { initLearning } from './learning'
 import { initMainLocale } from './locale'
-import { flushAll as flushPluginStorage } from './plugins/storage'
+import { finalizePendingStorageRemovals, flushAll as flushPluginStorage } from './plugins/storage'
 import { pluginNativeBackends } from './plugins/native-backend'
 import { registerCheatSheetProtocol } from './cheat-sheet-protocol'
 import { registerScalpelInternalProtocol, registerScalpelInternalSchemePrivileges } from './plugins/protocol'
@@ -125,6 +125,7 @@ import { createTray, refreshTrayMenu } from './app/tray'
 import { startLiveServices } from './app/lifecycle'
 import { getOverlayAttachStrategy } from './experimental'
 import { relaunchApp } from './relaunch'
+import { gracefulRestart } from './restart'
 
 // ---- Linux display-server setup --------------------------------------------
 
@@ -303,6 +304,15 @@ initLearning(store, store.get('poeVersion'))
 initAppMacrosRefresh(() => store.get('appMacros') ?? [])
 
 // ---- Register IPC handlers -------------------------------------------------
+
+// Complete deferred uninstall cleanup before any renderer can activate a
+// plugin. Shutdown only flushes the old graph; deleting here avoids late writes
+// recreating storage after its tombstone was cleared.
+try {
+  finalizePendingStorageRemovals()
+} catch (err) {
+  recordMainDiagnostic('plugin-storage-cleanup', err)
+}
 
 registerAllIpc({ store, isElevated, getAppWindow, showAppWindow, hideOverlay })
 
@@ -576,6 +586,8 @@ app.whenReady().then(() => {
     relaunchApp()
     app.quit()
   })
+  // Shared restart endpoint for plugin changes and the Developer control.
+  ipcMain.handle('app-restart', () => gracefulRestart())
 
   ipcMain.on('overlay-input-focused', (e, focused: boolean) => {
     setWindowInputFocused(e.sender.id, focused)

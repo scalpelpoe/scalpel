@@ -28,23 +28,23 @@ function deps(overrides: Partial<UnpackedFlowDeps> = {}): UnpackedFlowDeps {
 }
 
 describe('installUnpackedAndNotify', () => {
-  it('broadcasts plugin-installed for an id that was not installed yet', async () => {
+  it('broadcasts plugin-dev-installed for an id that was not installed yet', async () => {
     const { installUnpackedAndNotify } = await import('./unpacked-flow')
     const d = deps()
     const r = installUnpackedAndNotify('/src/hello-world', d)
     expect(r).toEqual({ ok: true, id: 'hello-world' })
-    expect(d.broadcast).toHaveBeenCalledWith('plugin-installed', {
+    expect(d.broadcast).toHaveBeenCalledWith('plugin-dev-installed', {
       manifest: manifest(),
       entryUrl: 'scalpel-plugin://hello-world/plugin.js?v=1.0.0-1',
     })
     expect(d.reloadOverlay).not.toHaveBeenCalled()
   })
 
-  it('broadcasts plugin-updated when re-installing over a running plugin', async () => {
+  it('broadcasts plugin-dev-updated when re-installing over a running plugin', async () => {
     const { installUnpackedAndNotify } = await import('./unpacked-flow')
     const d = deps({ installedIds: () => ['hello-world'] })
     installUnpackedAndNotify('/src/hello-world', d)
-    expect(d.broadcast).toHaveBeenCalledWith('plugin-updated', {
+    expect(d.broadcast).toHaveBeenCalledWith('plugin-dev-updated', {
       manifest: manifest(),
       entryUrl: 'scalpel-plugin://hello-world/plugin.js?v=1.0.0-1',
     })
@@ -69,7 +69,7 @@ describe('installUnpackedAndNotify', () => {
       }),
     })
     installUnpackedAndNotify('/src/hello-world', d)
-    expect(d.broadcast).toHaveBeenCalledWith('plugin-installed', expect.anything())
+    expect(d.broadcast).toHaveBeenCalledWith('plugin-dev-installed', expect.anything())
   })
 
   it('does not broadcast when the install fails', async () => {
@@ -96,7 +96,7 @@ describe('reloadUnpackedPlugin', () => {
     const r = reloadUnpackedPlugin('hello-world', d)
     expect(r).toEqual({ ok: true, id: 'hello-world' })
     expect(d.install).toHaveBeenCalledWith('/src/hello-world')
-    expect(d.broadcast).toHaveBeenCalledWith('plugin-updated', expect.anything())
+    expect(d.broadcast).toHaveBeenCalledWith('plugin-dev-updated', expect.anything())
   })
 
   it('fails when no source dir was recorded for the plugin', async () => {

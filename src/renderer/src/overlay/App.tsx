@@ -204,7 +204,7 @@ export default function App(): JSX.Element {
     registryUrl: settings?.pluginRegistryUrl,
     onApplied: (applied) => {
       showSettingsError(
-        applied.map((a) => m.settings_plg_auto_updated({ name: a.name, version: a.version })).join(' · '),
+        `${applied.map((a) => m.settings_plg_auto_updated({ name: a.name, version: a.version })).join(' · ')} · Restart Scalpel to apply plugin updates.`,
         'warn',
       )
     },

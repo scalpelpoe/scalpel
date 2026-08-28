@@ -26,7 +26,8 @@ export function useActivatePlugin(pluginId: string): ActivatedPlugin {
       latestZone = z
     })
     void (async () => {
-      const entry = await window.api.getInstalledPlugin(pluginId)
+      const getLoadable = window.api.getLoadablePlugin ?? window.api.getInstalledPlugin
+      const entry = await getLoadable(pluginId)
       if (cancelled || !entry) return
       const state = await window.api.getOverlayState().catch(() => null)
       const poeVersion: 1 | 2 = (state?.poeVersion as 1 | 2) ?? 1
@@ -41,10 +42,10 @@ export function useActivatePlugin(pluginId: string): ActivatedPlugin {
         pluginId,
         pluginVersion: entry.manifest.version,
         plugins: {
-          expose: () => {
+          expose: (_serviceTypeName, _handler) => {
             throw new Error('plugin APIs are not available in secondary overlay windows yet')
           },
-          get: () => null,
+          get: (_providerId, _serviceTypeName) => null,
         },
         native: {
           call: (method, payload) => window.api.pluginNativeCall(pluginId, method, payload),

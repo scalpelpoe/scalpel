@@ -9,6 +9,18 @@ export function pluginDir(id: string): string {
   return join(pluginsDir(), id)
 }
 
+export function pluginStorageDir(id: string): string {
+  return join(app.getPath('userData'), 'plugin-storage', id)
+}
+
+export function pluginStoragePath(id: string): string {
+  return join(pluginStorageDir(id), 'storage.json')
+}
+
+export function pendingPluginStorageDeletionsPath(): string {
+  return join(app.getPath('userData'), 'plugin-storage', 'pending-deletions.json')
+}
+
 export function installedJsonPath(): string {
   return join(pluginsDir(), 'installed.json')
 }

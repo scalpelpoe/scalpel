@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -68,8 +68,8 @@ describe('install-update', () => {
     stage()
   })
 
-  it('spawns the apply batch detached so it outlives app.exit', () => {
-    HANDLERS.get('install-update')?.()
+  it('spawns the apply batch detached so it outlives app.exit', async () => {
+    await HANDLERS.get('install-update')?.()
 
     // Regression guard for the rc4/rc5 dead-update bug: libuv puts every non-detached
     // child into a job object with JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, so dropping
@@ -84,8 +84,8 @@ describe('install-update', () => {
     expect(options.windowsHide).toBe(true)
   })
 
-  it('uses only cmd built-ins, so nothing flashes a console', () => {
-    HANDLERS.get('install-update')?.()
+  it('uses only cmd built-ins, so nothing flashes a console', async () => {
+    await HANDLERS.get('install-update')?.()
 
     // The batch runs detached and so has no console of its own; any external executable
     // it launches gets a fresh visible one (#543). Restoring `detached` made that the
@@ -94,8 +94,8 @@ describe('install-update', () => {
     expect(offenders).toEqual([])
   })
 
-  it('retries the asar copy instead of sleeping, since the old process still holds it', () => {
-    HANDLERS.get('install-update')?.()
+  it('retries the asar copy instead of sleeping, since the old process still holds it', async () => {
+    await HANDLERS.get('install-update')?.()
 
     const bat = readFileSync(BAT_PATH, 'utf8')
     expect(bat).toContain(join(STAGING, 'app.asar.new'))
@@ -105,21 +105,21 @@ describe('install-update', () => {
     expect(APP_EXIT).toHaveBeenCalledWith(0)
   })
 
-  it('skips the native-module copy when nothing about them changed', () => {
-    HANDLERS.get('install-update')?.()
+  it('skips the native-module copy when nothing about them changed', async () => {
+    await HANDLERS.get('install-update')?.()
 
     expect(readFileSync(BAT_PATH, 'utf8')).not.toContain('xcopy')
   })
 
-  it('copies native modules when a version moved', () => {
+  it('copies native modules when a version moved', async () => {
     stage({ installedNative: { 'electron-overlay-window': '4.0.0', 'uiohook-napi': '1.5.4' } })
-    HANDLERS.get('install-update')?.()
+    await HANDLERS.get('install-update')?.()
 
     expect(readFileSync(BAT_PATH, 'utf8')).toContain('xcopy')
   })
 
-  it('records the pending version so the post-update banner can name it', () => {
-    HANDLERS.get('install-update')?.()
+  it('records the pending version so the post-update banner can name it', async () => {
+    await HANDLERS.get('install-update')?.()
 
     const justUpdated = JSON.parse(readFileSync(join(MOCK_USER_DATA, 'just-updated.json'), 'utf8'))
     expect(justUpdated.version).toBe('1.0.2-rc5')
