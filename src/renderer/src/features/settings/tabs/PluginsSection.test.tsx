@@ -12,8 +12,8 @@ function installApi(hotkeys: Array<{ action: string; pluginId: string; label: st
     pluginListRegisteredHotkeys: vi.fn(async () => hotkeys),
     pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
     pluginUninstall: vi.fn(async () => ({ ok: true })),
-    onPluginInstalled: vi.fn(() => () => {}),
-    onPluginUpdated: vi.fn(() => () => {}),
+    pluginRestartRequired: vi.fn(async () => false),
+    onPluginRestartRequired: vi.fn(() => () => {}),
     onPluginHotkeysChanged: vi.fn(() => () => {}),
   }
 }
@@ -67,8 +67,8 @@ describe('PluginsSection installed icon', () => {
         snapshot: { plugins: [{ id: 'demo', latestVersion: '1.0.0', iconUrl: 'http://example/demo-icon.png' }] },
       })),
       pluginUninstall: vi.fn(async () => ({ ok: true })),
-      onPluginInstalled: vi.fn(() => () => {}),
-      onPluginUpdated: vi.fn(() => () => {}),
+      pluginRestartRequired: vi.fn(async () => false),
+      onPluginRestartRequired: vi.fn(() => () => {}),
       onPluginHotkeysChanged: vi.fn(() => () => {}),
     }
     const { container, findByText } = render(
@@ -90,8 +90,8 @@ describe('PluginsSection icon fallback', () => {
       pluginListRegisteredHotkeys: vi.fn(async () => []),
       pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
       pluginUninstall: vi.fn(async () => ({ ok: true })),
-      onPluginInstalled: vi.fn(() => () => {}),
-      onPluginUpdated: vi.fn(() => () => {}),
+      pluginRestartRequired: vi.fn(async () => false),
+      onPluginRestartRequired: vi.fn(() => () => {}),
       onPluginHotkeysChanged: vi.fn(() => () => {}),
     }
   }
@@ -147,7 +147,11 @@ it('renders the auto-update toggle and flips pluginAutoUpdate', async () => {
 
 describe('PluginsSection update button', () => {
   it('shows an Update button when the registry has a newer version and calls update', async () => {
-    const pluginUpdateFromRegistry = vi.fn(async () => ({ ok: true as const, id: 'demo' }))
+    const pluginUpdateFromRegistry = vi.fn(async () => ({
+      ok: true as const,
+      id: 'demo',
+      restartRequired: true as const,
+    }))
     ;(window as unknown as { api: Record<string, unknown> }).api = {
       listInstalledPlugins: vi.fn(async () => [
         {
@@ -184,8 +188,8 @@ describe('PluginsSection update button', () => {
       })),
       pluginUninstall: vi.fn(async () => ({ ok: true })),
       pluginUpdateFromRegistry,
-      onPluginInstalled: vi.fn(() => () => {}),
-      onPluginUpdated: vi.fn(() => () => {}),
+      pluginRestartRequired: vi.fn(async () => false),
+      onPluginRestartRequired: vi.fn(() => () => {}),
       onPluginHotkeysChanged: vi.fn(() => () => {}),
     }
     const { findByText } = render(
@@ -194,5 +198,6 @@ describe('PluginsSection update button', () => {
     const btn = await findByText('Update to v2.0.0')
     fireEvent.click(btn)
     await waitFor(() => expect(pluginUpdateFromRegistry).toHaveBeenCalled())
+    expect(await findByText('Restart required')).toBeTruthy()
   })
 })

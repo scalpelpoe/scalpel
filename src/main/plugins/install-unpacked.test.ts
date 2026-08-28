@@ -12,6 +12,9 @@ const mockFs = {
   files: new Map<string, string>(),
   dirs: new Set<string>(),
   copied: [] as Array<{ from: string; to: string }>,
+  failCopyTo: null as string | null,
+  failWritePath: null as string | null,
+  failWrites: 0,
 }
 
 vi.mock('fs', () => ({
@@ -20,11 +23,22 @@ vi.mock('fs', () => ({
     if (v == null) throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
     return v
   },
-  existsSync: (p: string) => mockFs.files.has(p) || mockFs.dirs.has(p),
+  existsSync: (p: string) => {
+    if (mockFs.files.has(p) || mockFs.dirs.has(p)) return true
+    for (const key of mockFs.files.keys()) {
+      if (key.startsWith(`${p}/`) || key.startsWith(`${p}\\`)) return true
+    }
+    return false
+  },
   writeFileSync: (p: string, data: string) => {
+    if (mockFs.failWritePath === p && mockFs.failWrites > 0) {
+      mockFs.failWrites--
+      throw new Error('simulated metadata write failure')
+    }
     mockFs.files.set(p, data)
   },
   copyFileSync: (from: string, to: string) => {
+    if (mockFs.failCopyTo === to) throw new Error('simulated copy failure')
     const data = mockFs.files.get(from)
     if (data == null) throw new Error('source missing')
     mockFs.files.set(to, data)
@@ -33,7 +47,33 @@ vi.mock('fs', () => ({
   mkdirSync: (p: string) => {
     mockFs.dirs.add(p)
   },
-  rmSync: () => {},
+  renameSync: (from: string, to: string) => {
+    for (const key of [...mockFs.files.keys()]) {
+      if (key === from || key.startsWith(`${from}/`) || key.startsWith(`${from}\\`)) {
+        mockFs.files.set(to + key.slice(from.length), mockFs.files.get(key)!)
+        mockFs.files.delete(key)
+      }
+    }
+    for (const dir of [...mockFs.dirs]) {
+      if (dir === from || dir.startsWith(`${from}/`) || dir.startsWith(`${from}\\`)) {
+        mockFs.dirs.add(to + dir.slice(from.length))
+        mockFs.dirs.delete(dir)
+      }
+    }
+  },
+  rmSync: (p: string, options?: { recursive?: boolean }) => {
+    if (options?.recursive) {
+      for (const key of [...mockFs.files.keys()]) {
+        if (key === p || key.startsWith(`${p}/`) || key.startsWith(`${p}\\`)) mockFs.files.delete(key)
+      }
+      for (const dir of [...mockFs.dirs]) {
+        if (dir === p || dir.startsWith(`${p}/`) || dir.startsWith(`${p}\\`)) mockFs.dirs.delete(dir)
+      }
+    } else {
+      mockFs.files.delete(p)
+      mockFs.dirs.delete(p)
+    }
+  },
   readdirSync: (p: string) =>
     [...mockFs.files.keys()].filter((f) => f.startsWith(`${p}/`)).map((f) => f.slice(p.length + 1)),
 }))
@@ -44,6 +84,9 @@ beforeEach(() => {
   mockFs.files.clear()
   mockFs.dirs.clear()
   mockFs.copied.length = 0
+  mockFs.failCopyTo = null
+  mockFs.failWritePath = null
+  mockFs.failWrites = 0
   vi.resetModules()
 })
 
@@ -229,5 +272,55 @@ describe('installUnpacked', () => {
     installUnpacked(SRC_PLUGIN)
     const unpacked = JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'unpacked.json'))!)
     expect(unpacked).toEqual([{ id: 'hello-world', sourceDir: SRC_PLUGIN }])
+  })
+
+  it('removes files left by the previous package', async () => {
+    const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
+    mockFs.files.set(join(destDir, 'plugin.js'), '// old')
+    mockFs.files.set(join(destDir, 'obsolete.bin'), 'obsolete')
+    mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// new')
+
+    const { installUnpacked } = await import('./install-unpacked')
+    expect(installUnpacked(SRC_PLUGIN).ok).toBe(true)
+    expect(mockFs.files.get(join(destDir, 'plugin.js'))).toBe('// new')
+    expect(mockFs.files.has(join(destDir, 'obsolete.bin'))).toBe(false)
+  })
+
+  it('migrates legacy storage before replacing the package', async () => {
+    const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
+    const legacyStorage = join(destDir, 'storage.json')
+    const currentStorage = join(TEST_USER_DATA, 'plugin-storage', 'hello-world', 'storage.json')
+    mockFs.files.set(join(destDir, 'plugin.js'), '// old')
+    mockFs.files.set(legacyStorage, JSON.stringify({ retained: true }))
+    mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// new')
+
+    const { installUnpacked } = await import('./install-unpacked')
+    expect(installUnpacked(SRC_PLUGIN).ok).toBe(true)
+    expect(mockFs.files.get(currentStorage)).toBe(JSON.stringify({ retained: true }))
+    expect(mockFs.files.has(legacyStorage)).toBe(false)
+  })
+
+  it('restores the old package and metadata when metadata commit fails', async () => {
+    const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
+    const installedPath = join(TEST_USER_DATA, 'plugins', 'installed.json')
+    const unpackedPath = join(TEST_USER_DATA, 'plugins', 'unpacked.json')
+    const oldUnpacked = JSON.stringify([{ id: 'hello-world', sourceDir: '/old/location' }])
+    mockFs.files.set(join(destDir, 'plugin.js'), '// old')
+    mockFs.files.set(join(destDir, 'manifest.json'), JSON.stringify({ version: '0.9.0' }))
+    const oldInstalled = JSON.stringify(['other-plugin'])
+    mockFs.files.set(installedPath, oldInstalled)
+    mockFs.files.set(unpackedPath, oldUnpacked)
+    mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// new')
+    mockFs.failWritePath = `${unpackedPath}.tmp`
+    mockFs.failWrites = 1
+
+    const { installUnpacked } = await import('./install-unpacked')
+    expect(installUnpacked(SRC_PLUGIN).ok).toBe(false)
+    expect(mockFs.files.get(join(destDir, 'plugin.js'))).toBe('// old')
+    expect(mockFs.files.get(installedPath)).toBe(oldInstalled)
+    expect(mockFs.files.get(unpackedPath)).toBe(oldUnpacked)
   })
 })

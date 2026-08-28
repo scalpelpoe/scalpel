@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { outdatedPluginIds } from './plugin-update-check'
 
-/** Out-of-date plugin count for the Plugins-tab badge. Fetches the registry +
- *  installed list, recomputes on plugin install/update/uninstall, so the badge
- *  reflects reality as soon as Settings is open (any tab). */
+/** Out-of-date plugin count for the Plugins-tab badge. Registry mutations need
+ * a restart, so the installed graph is recomputed when that state changes. */
 export function usePluginUpdates(): number {
   const [count, setCount] = useState(0)
 
@@ -15,13 +14,9 @@ export function usePluginUpdates(): number {
 
   useEffect(() => {
     void recompute()
-    const offInstalled = window.api.onPluginInstalled(() => void recompute())
-    const offUpdated = window.api.onPluginUpdated(() => void recompute())
-    const offUninstalled = window.api.onPluginUninstalled(() => void recompute())
+    const offRestart = window.api.onPluginRestartRequired(() => void recompute())
     return () => {
-      offInstalled()
-      offUpdated()
-      offUninstalled()
+      offRestart()
     }
   }, [recompute])
 

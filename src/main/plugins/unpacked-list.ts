@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { unpackedJsonPath } from './paths'
 
@@ -49,7 +49,13 @@ export function readUnpackedIds(): string[] {
 export function writeUnpackedEntries(entries: UnpackedEntry[]): void {
   const p = unpackedJsonPath()
   mkdirSync(dirname(p), { recursive: true })
-  writeFileSync(p, JSON.stringify(entries.map(serializeEntry)))
+  const temporary = `${p}.tmp`
+  try {
+    writeFileSync(temporary, JSON.stringify(entries.map(serializeEntry)))
+    renameSync(temporary, p)
+  } finally {
+    rmSync(temporary, { force: true })
+  }
 }
 
 /** Write the unpacked plugin list from bare ids, dropping any known source dirs. */

@@ -41,9 +41,9 @@ beforeEach(() => {
       }
     }),
     onLogLine: vi.fn(() => () => {}),
-    onPluginInstalled: vi.fn(() => () => {}),
-    onPluginUninstalled: vi.fn(() => () => {}),
-    onPluginUpdated: vi.fn(() => () => {}),
+    onPluginDevInstalled: vi.fn(() => () => {}),
+    onPluginDevUninstalled: vi.fn(() => () => {}),
+    onPluginDevUpdated: vi.fn(() => () => {}),
   }
   // mock the dynamic import that the host will perform
   ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn()
@@ -166,6 +166,58 @@ describe('PluginHost', () => {
     await waitFor(() => expect(onError).toHaveBeenCalledWith('hello', expect.any(Error)))
   })
 
+  it.each([
+    [
+      'throws during activation',
+      () => {
+        throw new Error('provider failed')
+      },
+    ],
+    ['does not expose its declared API', () => {}],
+  ])('blocks required consumers when their provider %s', async (_label, providerActivate) => {
+    const providerManifest: PluginManifest = {
+      ...manifest,
+      id: 'provider',
+      api: { version: '1.0.0', contract: 'api.binpb', service: 'example.v1.Provider' },
+    }
+    const consumerManifest: PluginManifest = {
+      ...manifest,
+      id: 'consumer',
+      dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0' }],
+    }
+    installedList.push(
+      { manifest: consumerManifest, entryUrl: 'plugin://consumer' },
+      { manifest: providerManifest, entryUrl: 'plugin://provider' },
+    )
+    const consumerActivate = vi.fn()
+    ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn(async (url) => ({
+      default: url.endsWith('provider') ? providerActivate : consumerActivate,
+    }))
+    const { PluginHost } = await import('./PluginHost')
+    const onError = vi.fn()
+    render(
+      <PluginHost
+        ready
+        poeVersion={1}
+        league="Mirage"
+        currentItem={null}
+        currentZone={null}
+        onSubscribeCurrentItem={() => () => {}}
+        onSubscribeCurrentZone={() => () => {}}
+        onSubscribeLeagueChange={() => () => {}}
+        onOpenExternal={() => {}}
+        onTabsChange={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
+        onPluginError={onError}
+      />,
+    )
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith('provider', expect.any(Error)))
+    await waitFor(() => expect(onError).toHaveBeenCalledWith('consumer', expect.any(Error)))
+    expect(consumerActivate).not.toHaveBeenCalled()
+  })
+
   it('filters by poeVersions in the manifest', async () => {
     installedList.push({
       manifest: { ...manifest, poeVersions: [2] },
@@ -275,14 +327,14 @@ describe('PluginHost', () => {
       pluginRegisterTab: vi.fn(async () => undefined),
       pluginUnregisterTab: vi.fn(async () => undefined),
       onPluginMacro: vi.fn(() => () => {}),
-      onPluginInstalled: vi.fn((h: (entry: unknown) => void) => {
+      onPluginDevInstalled: vi.fn((h: (entry: unknown) => void) => {
         installedListener = h
         return () => {
           installedListener = null
         }
       }),
-      onPluginUninstalled: vi.fn(() => () => {}),
-      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginDevUninstalled: vi.fn(() => () => {}),
+      onPluginDevUpdated: vi.fn(() => () => {}),
       pluginTriggerMainHotkey: vi.fn(async () => null),
       pluginShowOverlay: vi.fn(async () => undefined),
     }
@@ -349,9 +401,9 @@ describe('PluginHost', () => {
       pluginUnregisterTab: vi.fn(async () => undefined),
       pluginRegisterOverlay,
       onPluginMacro: vi.fn(() => () => {}),
-      onPluginInstalled: vi.fn(() => () => {}),
-      onPluginUninstalled: vi.fn(() => () => {}),
-      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginDevInstalled: vi.fn(() => () => {}),
+      onPluginDevUninstalled: vi.fn(() => () => {}),
+      onPluginDevUpdated: vi.fn(() => () => {}),
       pluginTriggerMainHotkey: vi.fn(async () => null),
     }
     ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn(async () => ({
@@ -403,9 +455,9 @@ describe('PluginHost', () => {
       pluginUnregisterTab: vi.fn(async () => undefined),
       pluginRegisterOverlay,
       onPluginMacro: vi.fn(() => () => {}),
-      onPluginInstalled: vi.fn(() => () => {}),
-      onPluginUninstalled: vi.fn(() => () => {}),
-      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginDevInstalled: vi.fn(() => () => {}),
+      onPluginDevUninstalled: vi.fn(() => () => {}),
+      onPluginDevUpdated: vi.fn(() => () => {}),
       pluginTriggerMainHotkey: vi.fn(async () => null),
     }
     ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn(async () => ({
@@ -456,14 +508,14 @@ describe('PluginHost', () => {
       pluginRegisterTab: vi.fn(async () => undefined),
       pluginUnregisterTab: vi.fn(async () => undefined),
       onPluginMacro: vi.fn(() => () => {}),
-      onPluginInstalled: vi.fn(() => () => {}),
-      onPluginUninstalled: vi.fn((h: (pluginId: string) => void) => {
+      onPluginDevInstalled: vi.fn(() => () => {}),
+      onPluginDevUninstalled: vi.fn((h: (pluginId: string) => void) => {
         uninstalledListener = h
         return () => {
           uninstalledListener = null
         }
       }),
-      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginDevUpdated: vi.fn(() => () => {}),
       pluginTriggerMainHotkey: vi.fn(async () => null),
       pluginShowOverlay: vi.fn(async () => undefined),
     }
@@ -511,7 +563,7 @@ describe('PluginHost', () => {
     expect(window.api.pluginUnregisterHotkey).toHaveBeenCalledWith('hello')
   })
 
-  it('reloads a plugin in place on plugin-updated with no duplicate tabs', async () => {
+  it('reloads an unpacked plugin on plugin-dev-updated with no duplicate tabs', async () => {
     const activate = vi.fn((ctx: ScalpelPluginContext) => {
       ctx.registerTab({ label: 'Hello', icon: '<svg/>', render: () => {} })
     })
@@ -528,9 +580,9 @@ describe('PluginHost', () => {
       pluginUnregisterTab: vi.fn(async () => undefined),
       onLogLine: vi.fn(() => () => {}),
       onPluginMacro: vi.fn(() => () => {}),
-      onPluginInstalled: vi.fn(() => () => {}),
-      onPluginUninstalled: vi.fn(() => () => {}),
-      onPluginUpdated: vi.fn((h: (entry: { manifest: PluginManifest; entryUrl: string }) => void) => {
+      onPluginDevInstalled: vi.fn(() => () => {}),
+      onPluginDevUninstalled: vi.fn(() => () => {}),
+      onPluginDevUpdated: vi.fn((h: (entry: { manifest: PluginManifest; entryUrl: string }) => void) => {
         updatedListener = h
         return () => {
           updatedListener = null
@@ -629,9 +681,9 @@ describe('PluginHost', () => {
       pluginUnregisterTab: vi.fn(async () => undefined),
       onLogLine: vi.fn(() => () => {}),
       onPluginMacro: vi.fn(() => () => {}),
-      onPluginInstalled: vi.fn(() => () => {}),
-      onPluginUpdated: vi.fn(() => () => {}),
-      onPluginUninstalled: vi.fn((h: (pluginId: string) => void) => {
+      onPluginDevInstalled: vi.fn(() => () => {}),
+      onPluginDevUpdated: vi.fn(() => () => {}),
+      onPluginDevUninstalled: vi.fn((h: (pluginId: string) => void) => {
         uninstalledListener = h
         return () => {
           uninstalledListener = null

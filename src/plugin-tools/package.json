@@ -1,0 +1,40 @@
+{
+  "name": "@scalpelpoe/plugin-tools",
+  "version": "0.11.0",
+  "description": "Build and packaging tools for Scalpel plugins.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "scalpel-plugin": "cli/scalpel-plugin.mjs"
+  },
+  "files": [
+    "cli",
+    "LICENSE",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scalpelpoe/scalpel.git",
+    "directory": "src/plugin-tools"
+  },
+  "homepage": "https://github.com/scalpelpoe/scalpel/tree/main/src/plugin-tools",
+  "keywords": [
+    "scalpel",
+    "path-of-exile",
+    "poe",
+    "plugin",
+    "build-tools"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@bufbuild/buf": "1.72.0",
+    "@bufbuild/protobuf": "2.14.0",
+    "@bufbuild/protoc-gen-es": "2.14.0",
+    "esbuild": "0.28.0"
+  }
+}

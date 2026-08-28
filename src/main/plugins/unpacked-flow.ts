@@ -9,7 +9,7 @@ export interface UnpackedFlowDeps {
   manifestOf: (id: string) => PluginManifest | undefined
   entryUrl: (id: string, version: string) => string
   broadcast: (
-    channel: 'plugin-installed' | 'plugin-updated',
+    channel: 'plugin-dev-installed' | 'plugin-dev-updated',
     payload: { manifest: PluginManifest; entryUrl: string },
   ) => void
   reloadOverlay: (id: string) => void
@@ -23,7 +23,7 @@ export interface UnpackedFlowDeps {
  *  renderer which path to take.
  *
  *  A first install is a fresh load. A re-install - the plugin dev loop: rebuild,
- *  load again - must be an unload-then-reload instead, because `plugin-installed`
+ *  load again - must be an unload-then-reload instead, because the dev install
  *  re-runs activate() on a plugin that never tore down: its tab registration
  *  no-ops and the previous subscription set is orphaned. That is what used to
  *  make an app restart the only way to pick up freshly-built plugin code. */
@@ -35,11 +35,11 @@ export function installUnpackedAndNotify(sourceDir: string, deps: UnpackedFlowDe
   const manifest = deps.manifestOf(result.id)
   if (!manifest) return result
 
-  const channel = wasInstalled.has(result.id) ? 'plugin-updated' : 'plugin-installed'
+  const channel = wasInstalled.has(result.id) ? 'plugin-dev-updated' : 'plugin-dev-installed'
   deps.broadcast(channel, { manifest, entryUrl: deps.entryUrl(manifest.id, manifest.version) })
-  // The popped-out overlay window does not listen for plugin-updated; reload it
+  // The popped-out overlay window does not listen for the dev update; reload it
   // so it re-imports the new code instead of running stale.
-  if (channel === 'plugin-updated') deps.reloadOverlay(manifest.id)
+  if (channel === 'plugin-dev-updated') deps.reloadOverlay(manifest.id)
   return result
 }
 

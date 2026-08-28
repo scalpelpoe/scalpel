@@ -12,6 +12,7 @@ const MAX_IN_FLIGHT = 32
 const CALL_TIMEOUT_MS = 10_000
 const STOP_TIMEOUT_MS = 750
 const MAX_STDERR_BYTES = 8 * 1024
+const MAX_QUEUED_STDIN_BYTES = 4 * 1024 * 1024
 const METHOD_PATTERN = /^\/[A-Za-z_][A-Za-z0-9_.]*\/[A-Za-z_][A-Za-z0-9_]*$/
 
 interface NativeBackendDescriptor {
@@ -32,6 +33,7 @@ type ResolveBackend = (pluginId: string) => NativeBackendDescriptor
 export class PluginNativeBackendManager {
   private readonly processes = new Map<string, NativeBackendProcess>()
   private readonly blockedPlugins = new Map<string, number>()
+  private readonly restartBlockedPlugins = new Set<string>()
   private blockAllCount = 0
   private lifecycleTail: Promise<void> = Promise.resolve()
 
@@ -41,7 +43,11 @@ export class PluginNativeBackendManager {
   ) {}
 
   async call(pluginId: string, method: string, payload: Uint8Array): Promise<Uint8Array> {
-    if (this.blockAllCount > 0 || (this.blockedPlugins.get(pluginId) ?? 0) > 0) {
+    if (
+      this.blockAllCount > 0 ||
+      this.restartBlockedPlugins.has(pluginId) ||
+      (this.blockedPlugins.get(pluginId) ?? 0) > 0
+    ) {
       throw new Error(`native backend for plugin "${pluginId}" is temporarily unavailable`)
     }
     if (!METHOD_PATTERN.test(method)) throw new Error('native backend method must be a fully qualified Protobuf method')
@@ -77,9 +83,16 @@ export class PluginNativeBackendManager {
     await Promise.all(backends.map((backend) => backend.stop()))
   }
 
+  async shutdown(): Promise<void> {
+    this.blockAllCount += 1
+    await this.serializeLifecycle(async () => {
+      await this.stopAll()
+    })
+  }
+
   async withPluginStopped<TResult>(pluginId: string, operation: () => TResult | Promise<TResult>): Promise<TResult> {
+    this.blockedPlugins.set(pluginId, (this.blockedPlugins.get(pluginId) ?? 0) + 1)
     return this.serializeLifecycle(async () => {
-      this.blockedPlugins.set(pluginId, (this.blockedPlugins.get(pluginId) ?? 0) + 1)
       try {
         await this.stop(pluginId)
         return await operation()
@@ -91,9 +104,35 @@ export class PluginNativeBackendManager {
     })
   }
 
-  async withAllStopped<TResult>(operation: () => TResult | Promise<TResult>): Promise<TResult> {
+  /** Stop before mutating files. A successful mutation stays blocked for the
+   * rest of this process; a failed mutation restores normal worker spawning. */
+  async withPluginStoppedUntilRestart<TResult>(
+    pluginId: string,
+    operation: () => TResult | Promise<TResult>,
+    succeeded: (result: TResult) => boolean,
+  ): Promise<TResult> {
+    this.blockedPlugins.set(pluginId, (this.blockedPlugins.get(pluginId) ?? 0) + 1)
     return this.serializeLifecycle(async () => {
-      this.blockAllCount += 1
+      try {
+        await this.stop(pluginId)
+        const result = await operation()
+        if (succeeded(result)) this.restartBlockedPlugins.add(pluginId)
+        return result
+      } finally {
+        const remaining = (this.blockedPlugins.get(pluginId) ?? 1) - 1
+        if (remaining > 0) this.blockedPlugins.set(pluginId, remaining)
+        else this.blockedPlugins.delete(pluginId)
+      }
+    })
+  }
+
+  isRestartRequired(): boolean {
+    return this.restartBlockedPlugins.size > 0
+  }
+
+  async withAllStopped<TResult>(operation: () => TResult | Promise<TResult>): Promise<TResult> {
+    this.blockAllCount += 1
+    return this.serializeLifecycle(async () => {
       try {
         await this.stopAll()
         return await operation()
@@ -131,6 +170,9 @@ class NativeBackendProcess {
   private stderr = ''
   private stopped = false
   private terminalError: Error | null = null
+  private writeBlocked = false
+  private queuedWriteBytes = 0
+  private readonly queuedWrites: Array<{ id: number; frame: Buffer }> = []
 
   constructor(
     private readonly pluginId: string,
@@ -142,6 +184,13 @@ class NativeBackendProcess {
     child.stdout.on('data', (chunk: Buffer) => this.acceptStdout(chunk))
     child.stderr.on('data', (chunk: string) => {
       this.stderr = `${this.stderr}${chunk}`.slice(-MAX_STDERR_BYTES)
+    })
+    child.stdin.on('drain', () => {
+      this.writeBlocked = false
+      this.flushWrites()
+    })
+    child.stdin.on('error', (error) => {
+      if (!this.stopped) this.fail(new Error(`native backend stdin failed: ${error.message}`))
     })
     child.once('error', (error) => this.fail(new Error(`native backend failed to start: ${error.message}`)))
     child.once('exit', (code, signal) => {
@@ -234,15 +283,40 @@ class NativeBackendProcess {
         this.fail(error)
       }, CALL_TIMEOUT_MS)
       this.pending.set(id, { resolve, reject, timer })
-      this.child.stdin.write(frame, (error) => {
-        if (!error) return
-        const pending = this.pending.get(id)
-        if (!pending) return
-        clearTimeout(pending.timer)
-        this.pending.delete(id)
-        pending.reject(new Error(`native backend write failed: ${error.message}`))
-      })
+      if (this.writeBlocked) {
+        if (this.queuedWriteBytes + frame.byteLength > MAX_QUEUED_STDIN_BYTES) {
+          clearTimeout(timer)
+          this.pending.delete(id)
+          reject(new Error('native backend stdin queue is full'))
+          return
+        }
+        this.queuedWrites.push({ id, frame })
+        this.queuedWriteBytes += frame.byteLength
+      } else {
+        this.writeFrame(id, frame)
+      }
     })
+  }
+
+  private writeFrame(id: number, frame: Buffer): void {
+    this.writeBlocked = !this.child.stdin.write(frame, (error) => {
+      if (!error) return
+      const pending = this.pending.get(id)
+      if (!pending) return
+      clearTimeout(pending.timer)
+      this.pending.delete(id)
+      pending.reject(new Error(`native backend write failed: ${error.message}`))
+    })
+  }
+
+  private flushWrites(): void {
+    while (!this.writeBlocked && this.queuedWrites.length > 0 && !this.stopped) {
+      const next = this.queuedWrites.shift()
+      if (!next) return
+      this.queuedWriteBytes -= next.frame.byteLength
+      if (!this.pending.has(next.id)) continue
+      this.writeFrame(next.id, next.frame)
+    }
   }
 
   private acceptStdout(chunk: Buffer): void {
@@ -279,7 +353,12 @@ class NativeBackendProcess {
     clearTimeout(pending.timer)
     this.pending.delete(response.requestId)
     if (response.body.case === 'callError') {
-      pending.reject(new Error(response.body.value.message || 'native backend returned an error'))
+      pending.reject(
+        new NativeCallError(
+          response.body.value.message || 'native backend returned an error',
+          response.body.value.code,
+        ),
+      )
       return
     }
     if (response.body.case !== 'callResponse' && response.body.case !== 'initializeResponse') {
@@ -306,10 +385,23 @@ class NativeBackendProcess {
       pending.reject(error)
     }
     this.pending.clear()
+    this.queuedWrites.length = 0
+    this.queuedWriteBytes = 0
   }
 
   private finish(): void {
     this.onExit()
+  }
+}
+
+export class NativeCallError extends Error {
+  readonly name = 'NativeCallError'
+
+  constructor(
+    message: string,
+    readonly code: string,
+  ) {
+    super(message)
   }
 }
 

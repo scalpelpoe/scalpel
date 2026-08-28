@@ -8,13 +8,13 @@ TypeScript SDK for building [Scalpel](https://github.com/scalpelpoe/scalpel) plu
 npm install --save-dev @scalpelpoe/plugin-sdk
 ```
 
-The renderer import remains host-provided: Scalpel serves it through `scalpel-internal://sdk.js`, while `dist/index.js` is a protective stub outside the app. The npm package also ships the real Node-only `scalpel-plugin` authoring CLI.
+The renderer import remains host-provided: Scalpel serves it through `scalpel-internal://sdk.js`, while `dist/index.js` is a protective stub outside the app. Install [`@scalpelpoe/plugin-tools`](https://www.npmjs.com/package/@scalpelpoe/plugin-tools) for the Node-only `scalpel-plugin` authoring CLI.
 
 Pin `scalpelMinVersion` in your `manifest.json` to whatever Scalpel version first shipped the API surface you depend on - SDK additions land lockstep with host releases.
 
 ## Plugin authoring loop
 
-1. `npm install --save-dev @scalpelpoe/plugin-sdk @bufbuild/buf @bufbuild/protoc-gen-es react react-dom` and `npm install @bufbuild/protobuf` when using services.
+1. `npm install --save-dev @scalpelpoe/plugin-sdk @scalpelpoe/plugin-tools react react-dom` and `npm install @bufbuild/protobuf` when using services.
 2. Write `src/index.tsx` (see [Plugin entry shape](#plugin-entry-shape) below) and a `manifest.json` (schema in [PLUGINS.md](https://github.com/scalpelpoe/scalpel/blob/main/PLUGINS.md)).
 3. Run `scalpel-plugin pack`; service contracts and generated sources are configured under `scalpelPlugin` in `package.json`.
 4. Attach every file under `dist/` to the matching GitHub release.
@@ -126,7 +126,7 @@ module.exports = {
 
 ## Build setup for plugin authors
 
-The recommended path is the SDK CLI:
+The recommended path is the `scalpel-plugin` CLI from `@scalpelpoe/plugin-tools`:
 
 ```bash
 npx scalpel-plugin generate
