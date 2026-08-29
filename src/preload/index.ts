@@ -915,34 +915,23 @@ export const api = {
   radialFire: (sliceId: string): void => ipcRenderer.send(IPC_CHANNELS.RADIAL.FIRE, sliceId),
   radialCancel: (): void => ipcRenderer.send(IPC_CHANNELS.RADIAL.CANCEL),
   // Plugins
-  listInstalledPlugins: (): Promise<
-    Array<{
-      manifest: import('../plugin-sdk/src/types').PluginManifest
-      entryUrl: string
-    }>
-  > => ipcRenderer.invoke('plugins:list-installed'),
-  listLoadablePlugins: (): Promise<
-    Array<{
-      manifest: import('../plugin-sdk/src/types').PluginManifest
-      entryUrl: string
-    }>
-  > => ipcRenderer.invoke('plugins:list-loadable'),
+  listInstalledPlugins: (): Promise<Array<import('@shared/plugin-dependencies').InstalledPluginEntry>> =>
+    ipcRenderer.invoke('plugins:list-installed'),
+  listLoadablePlugins: (): Promise<Array<import('@shared/plugin-dependencies').InstalledPluginEntry>> =>
+    ipcRenderer.invoke('plugins:list-loadable'),
   listUnpackedPlugins: (): Promise<
     Array<{
       manifest: import('../plugin-sdk/src/types').PluginManifest
       entryUrl: string
+      availability: import('@shared/plugin-dependencies').PluginAvailability
       /** Absent when the plugin was side-loaded before source dirs were
        *  tracked - Reload needs it, so the button stays disabled without one. */
       sourceDir?: string
     }>
   > => ipcRenderer.invoke('plugins:list-unpacked'),
-  getInstalledPlugin: (
-    pluginId: string,
-  ): Promise<{ manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string } | null> =>
+  getInstalledPlugin: (pluginId: string): Promise<import('@shared/plugin-dependencies').InstalledPluginEntry | null> =>
     ipcRenderer.invoke('plugins:get-installed', pluginId),
-  getLoadablePlugin: (
-    pluginId: string,
-  ): Promise<{ manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string } | null> =>
+  getLoadablePlugin: (pluginId: string): Promise<import('@shared/plugin-dependencies').InstalledPluginEntry | null> =>
     ipcRenderer.invoke('plugins:get-loadable', pluginId),
   pluginStorageGet: (pluginId: string, key: string): Promise<unknown> =>
     ipcRenderer.invoke('plugins:storage-get', pluginId, key),

@@ -10,12 +10,21 @@ function installApi(
     manifest: { id: string; name: string; version: string }
     entryUrl: string
     sourceDir?: string
+    availability?:
+      | { status: 'available' }
+      | {
+          status: 'unavailable'
+          reason: { code: string; message: string; [key: string]: unknown }
+        }
   }>,
   overrides: Record<string, unknown> = {},
 ): void {
   ;(window as unknown as { api: Record<string, unknown> }).api = {
     listUnpackedPlugins: vi.fn(async () => unpackedPlugins),
-    pluginInstallUnpacked: vi.fn(async () => ({ ok: false, error: 'cancelled' })),
+    pluginInstallUnpacked: vi.fn(async () => ({
+      ok: false,
+      error: 'cancelled',
+    })),
     pluginReloadUnpacked: vi.fn(async () => ({ ok: true, id: 'test-plugin' })),
     pluginUninstallUnpacked: vi.fn(async () => ({ ok: true })),
     onPluginDevInstalled: vi.fn(() => () => {}),
@@ -32,7 +41,13 @@ const loaded = (
   manifest: { id: string; name: string; version: string }
   entryUrl: string
   sourceDir?: string
-}> => [{ manifest: { id: 'test-plugin', name: 'Test Plugin', version: '2.0.0' }, entryUrl: '', sourceDir }]
+}> => [
+  {
+    manifest: { id: 'test-plugin', name: 'Test Plugin', version: '2.0.0' },
+    entryUrl: '',
+    sourceDir,
+  },
+]
 
 const settings = { developerMode: true } as unknown as AppSettings
 const noop = (): void => {}
@@ -47,7 +62,12 @@ describe('DeveloperSection unpacked plugins list', () => {
   })
 
   it('renders the plugin name when one unpacked plugin is installed', async () => {
-    installApi([{ manifest: { id: 'test-plugin', name: 'Test Plugin', version: '2.0.0' }, entryUrl: '' }])
+    installApi([
+      {
+        manifest: { id: 'test-plugin', name: 'Test Plugin', version: '2.0.0' },
+        entryUrl: '',
+      },
+    ])
     const { findByText } = render(<DeveloperSection settings={settings} update={noop} onError={noop} />)
     expect(await findByText('Test Plugin')).toBeTruthy()
   })
@@ -59,6 +79,30 @@ describe('DeveloperSection unpacked plugins list', () => {
     const removeBtn = await findByText('Remove')
     fireEvent.click(removeBtn)
     await waitFor(() => expect(pluginUninstallUnpacked).toHaveBeenCalledWith('test-plugin'))
+  })
+
+  it('grays an unavailable plugin, shows its reason, and retains repair controls', async () => {
+    installApi([
+      {
+        manifest: { id: 'test-plugin', name: 'Test Plugin', version: '2.0.0' },
+        entryUrl: '',
+        sourceDir: '/src/test-plugin',
+        availability: {
+          status: 'unavailable',
+          reason: {
+            code: 'missing-required-dependency',
+            message: 'required plugin "provider" is not installed',
+          },
+        },
+      },
+    ])
+    const { findByRole, findByText } = render(<DeveloperSection settings={settings} update={noop} onError={noop} />)
+
+    const reason = await findByRole('status')
+    expect(reason.textContent).toContain('required plugin "provider" is not installed')
+    expect(reason.closest('[data-plugin-availability]')?.getAttribute('data-plugin-availability')).toBe('unavailable')
+    expect(((await findByText('Reload')) as HTMLButtonElement).disabled).toBe(false)
+    expect(((await findByText('Remove')) as HTMLButtonElement).disabled).toBe(false)
   })
 })
 
@@ -87,7 +131,10 @@ describe('DeveloperSection restart button', () => {
 
 describe('DeveloperSection reload button', () => {
   it('calls pluginReloadUnpacked with the plugin id when Reload is clicked', async () => {
-    const pluginReloadUnpacked = vi.fn(async () => ({ ok: true as const, id: 'test-plugin' }))
+    const pluginReloadUnpacked = vi.fn(async () => ({
+      ok: true as const,
+      id: 'test-plugin',
+    }))
     installApi(loaded('/src/test-plugin'), { pluginReloadUnpacked })
     const { findByText } = render(<DeveloperSection settings={settings} update={noop} onError={noop} />)
     fireEvent.click(await findByText('Reload'))
@@ -104,7 +151,10 @@ describe('DeveloperSection reload button', () => {
   it('reports the error when a reload fails', async () => {
     const onError = vi.fn()
     installApi(loaded('/src/test-plugin'), {
-      pluginReloadUnpacked: vi.fn(async () => ({ ok: false as const, error: 'Source directory no longer exists' })),
+      pluginReloadUnpacked: vi.fn(async () => ({
+        ok: false as const,
+        error: 'Source directory no longer exists',
+      })),
     })
     const { findByText } = render(<DeveloperSection settings={settings} update={noop} onError={onError} />)
     fireEvent.click(await findByText('Reload'))

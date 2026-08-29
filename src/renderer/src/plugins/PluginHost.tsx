@@ -39,6 +39,8 @@ export interface PluginHostProps {
 export function PluginHost(props: PluginHostProps): JSX.Element | null {
   const [tabs, setTabs] = useState<RegisteredTab[]>([])
   const loadedRef = useRef(false)
+  const activePluginIdsRef = useRef<Set<string>>(new Set())
+  const reconciliationQueueRef = useRef<Promise<void>>(Promise.resolve())
   const pluginHotkeyHandlersRef = useRef<Map<string, () => void>>(new Map())
   const pendingOverlayRef = useRef<Map<string, { title: string; icon?: string; mode?: 'window' | 'annotation' }>>(
     new Map(),
@@ -93,7 +95,9 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     let activationTeardown: (() => void) | undefined
     try {
       communicationRef.current.assertDependenciesAvailable(m)
-      const mod = (await importPluginModule(entry.entryUrl)) as { default: PluginActivate }
+      const mod = (await importPluginModule(entry.entryUrl)) as {
+        default: PluginActivate
+      }
       if (typeof mod.default !== 'function') {
         throw new Error('plugin module has no default export function')
       }
@@ -158,7 +162,14 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
         registerTab: (pluginId, opts) => {
           setTabs((prev) => {
             if (prev.find((t) => t.pluginId === pluginId)) return prev
-            return [...prev, { pluginId, ...opts, overlay: pendingOverlayRef.current.get(pluginId) }]
+            return [
+              ...prev,
+              {
+                pluginId,
+                ...opts,
+                overlay: pendingOverlayRef.current.get(pluginId),
+              },
+            ]
           })
           // Mirror registerHotkey: report to main so any window (incl. the
           // standalone app settings) can list this tab for the Show/Hide UI.
@@ -171,10 +182,23 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
         openTab: (pluginId) => onOpenPluginTabRef.current(pluginId),
         copyAndEvaluateItem: (opts) => onCopyAndEvaluateItemRef.current(opts),
         registerOverlay: (pluginId, opts) => {
-          pendingOverlayRef.current.set(pluginId, { title: opts.title, icon: opts.icon, mode: opts.mode })
+          pendingOverlayRef.current.set(pluginId, {
+            title: opts.title,
+            icon: opts.icon,
+            mode: opts.mode,
+          })
           setTabs((prev) =>
             prev.map((t) =>
-              t.pluginId === pluginId ? { ...t, overlay: { title: opts.title, icon: opts.icon, mode: opts.mode } } : t,
+              t.pluginId === pluginId
+                ? {
+                    ...t,
+                    overlay: {
+                      title: opts.title,
+                      icon: opts.icon,
+                      mode: opts.mode,
+                    },
+                  }
+                : t,
             ),
           )
           void window.api.pluginRegisterOverlay(pluginId, {
@@ -211,6 +235,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       if (activationTeardown) {
         pluginTeardownRef.current.set(m.id, activationTeardown)
       }
+      activePluginIdsRef.current.add(m.id)
       return true
     } catch (err) {
       // activate() may have subscribed before throwing; dispose what it set up
@@ -229,6 +254,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       }
       pluginDisposersRef.current.delete(m.id)
       pluginTeardownRef.current.delete(m.id)
+      activePluginIdsRef.current.delete(m.id)
       communicationRef.current.remove(m.id)
       setTabs((prev) => prev.filter((tab) => tab.pluginId !== m.id))
       pluginHotkeyHandlersRef.current.delete(m.id)
@@ -265,64 +291,125 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     setTabs((prev) => prev.filter((t) => t.pluginId !== pluginId))
     pluginHotkeyHandlersRef.current.delete(pluginId)
     pendingOverlayRef.current.delete(pluginId)
+    activePluginIdsRef.current.delete(pluginId)
     communicationRef.current.remove(pluginId)
     void window.api.pluginUnregisterHotkey(pluginId)
     void window.api.pluginUnregisterTab(pluginId)
   }, [])
 
+  const reconcilePlugins = useCallback(
+    async (
+      preferredEntry?: { manifest: PluginManifest; entryUrl: string },
+      reloadPluginId?: string,
+      cancelled: () => boolean = () => false,
+    ): Promise<void> => {
+      // Production registry mutations intentionally preserve the running graph
+      // until restart. A coincident dev event must not unload that graph just
+      // because list-loadable is empty while restart is pending.
+      if (preferredEntry && (await window.api.pluginRestartRequired?.())) return
+      const listLoadable = window.api.listLoadablePlugins ?? window.api.listInstalledPlugins
+      const listed = (await listLoadable()).filter(
+        (entry) => !entry.manifest.poeVersions || entry.manifest.poeVersions.includes(poeVersionRef.current),
+      )
+      if (cancelled()) return
+
+      // Keep main's graph decision authoritative. The event payload only
+      // replaces a loadable entry's URL so a dev update bypasses import caches.
+      const entries = listed.map((entry) =>
+        preferredEntry?.manifest.id === entry.manifest.id ? preferredEntry : entry,
+      )
+      const plan = planPluginLoad(entries)
+      const desiredIds = new Set(plan.entries.map((entry) => entry.manifest.id))
+
+      for (const pluginId of [...activePluginIdsRef.current]) {
+        if (!desiredIds.has(pluginId)) {
+          unloadPlugin(pluginId)
+          onPluginUnloadedRef.current?.(pluginId)
+        }
+      }
+      if (reloadPluginId && desiredIds.has(reloadPluginId)) {
+        const reloadIds = new Set([reloadPluginId])
+        let changed = true
+        while (changed) {
+          changed = false
+          for (const entry of plan.entries) {
+            if (
+              !reloadIds.has(entry.manifest.id) &&
+              entry.manifest.dependencies?.some(
+                (dependency) => !dependency.optional && reloadIds.has(dependency.pluginId),
+              )
+            ) {
+              reloadIds.add(entry.manifest.id)
+              changed = true
+            }
+          }
+        }
+        // Consumers must stop before their providers. They are then activated
+        // again in provider-first plan order below.
+        for (const entry of [...plan.entries].reverse()) {
+          if (reloadIds.has(entry.manifest.id) && activePluginIdsRef.current.has(entry.manifest.id)) {
+            unloadPlugin(entry.manifest.id)
+          }
+        }
+      }
+
+      for (const entry of plan.entries) {
+        if (cancelled()) return
+        if (activePluginIdsRef.current.has(entry.manifest.id)) continue
+        const failedDependency = entry.manifest.dependencies?.find(
+          (dependency) => !dependency.optional && !activePluginIdsRef.current.has(dependency.pluginId),
+        )
+        // Runtime activation can still fail after the static graph passes. Do
+        // not activate or label its consumers as crashed in that case.
+        if (failedDependency) continue
+        await loadPlugin(entry)
+      }
+    },
+    [loadPlugin, unloadPlugin],
+  )
+
+  const enqueueReconciliation = useCallback(
+    (
+      preferredEntry?: { manifest: PluginManifest; entryUrl: string },
+      reloadPluginId?: string,
+      cancelled?: () => boolean,
+    ): Promise<void> => {
+      const next = reconciliationQueueRef.current
+        .catch(() => undefined)
+        .then(() => reconcilePlugins(preferredEntry, reloadPluginId, cancelled))
+      reconciliationQueueRef.current = next.catch(() => undefined)
+      return next
+    },
+    [reconcilePlugins],
+  )
+
   useEffect(() => {
     if (!props.ready || loadedRef.current) return
     loadedRef.current = true
     let cancelled = false
-
-    void (async () => {
-      const listLoadable = window.api.listLoadablePlugins ?? window.api.listInstalledPlugins
-      const installed = (await listLoadable()).filter(
-        (entry) => !entry.manifest.poeVersions || entry.manifest.poeVersions.includes(poeVersionRef.current),
-      )
-      if (cancelled) return
-      const plan = planPluginLoad(installed)
-      for (const [pluginId, error] of plan.errors) {
-        onPluginErrorRef.current?.(pluginId, error)
-      }
-      const activated = new Set<string>()
-      for (const entry of plan.entries) {
-        if (cancelled) return
-        const failedDependency = entry.manifest.dependencies?.find(
-          (dependency) => !dependency.optional && !activated.has(dependency.pluginId),
-        )
-        if (failedDependency) {
-          onPluginErrorRef.current?.(
-            entry.manifest.id,
-            new Error(`required plugin "${failedDependency.pluginId}" could not be activated`),
-          )
-          continue
-        }
-        if (await loadPlugin(entry)) activated.add(entry.manifest.id)
-      }
-    })()
-
+    void enqueueReconciliation(undefined, undefined, () => cancelled).catch(() => undefined)
     return () => {
       cancelled = true
     }
-  }, [props.ready])
+  }, [enqueueReconciliation, props.ready])
 
   // Unpacked development reload is intentionally separate from registry
   // mutations. Production changes preserve this graph until app restart.
   useEffect(() => {
-    return window.api.onPluginDevInstalled(async (entry) => {
-      await loadPlugin(entry)
+    return window.api.onPluginDevInstalled((entry) => {
+      if (!loadedRef.current) return
+      void enqueueReconciliation(entry).catch(() => undefined)
     })
-  }, [])
+  }, [enqueueReconciliation])
 
   // Dev hot-update: unload the running instance, then reload the new code. The
   // cache-busted entryUrl (?v=<newVersion>) makes importPluginModule fetch fresh.
   useEffect(() => {
-    return window.api.onPluginDevUpdated(async (entry) => {
-      unloadPlugin(entry.manifest.id)
-      await loadPlugin(entry)
+    return window.api.onPluginDevUpdated((entry) => {
+      if (!loadedRef.current) return
+      void enqueueReconciliation(entry, entry.manifest.id).catch(() => undefined)
     })
-  }, [unloadPlugin])
+  }, [enqueueReconciliation])
 
   // Dev hot-uninstall: fully unload the plugin (this also disposes subscriptions the
   // old inline handler leaked).

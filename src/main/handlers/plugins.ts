@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import type Store from 'electron-store'
-import type { PluginManifest } from '../../plugin-sdk/src/types'
+import type { InstalledPluginEntry, PluginLoadEntry } from '@shared/plugin-dependencies'
 import type { AppSettings } from '@shared/types'
 import { refreshAppMacros } from '../app-macros'
 import { runMainHotkeyFlow } from '../evaluation'
@@ -28,6 +28,7 @@ import { versionedPluginEntryUrl } from '../plugins/entry-url'
 import { validateDependencyMutation } from '../plugins/dependency-mutation'
 import { installFromRegistry } from '../plugins/install-from-registry'
 import { installUnpacked } from '../plugins/install-unpacked'
+import { resolvePluginLoadability } from '../plugins/loadability'
 import { getInstalledPlugins, getUnpackedPlugins } from '../plugins/manager'
 import { PLUGIN_ID_PATTERN } from '../plugins/manifest-validator'
 import { NativeCallError, pluginNativeBackends } from '../plugins/native-backend'
@@ -41,10 +42,9 @@ import { uninstallPlugin } from '../plugins/uninstall'
 import { getUnpackedSourceDir } from '../plugins/unpacked-list'
 import { type UnpackedFlowDeps, installUnpackedAndNotify, reloadUnpackedPlugin } from '../plugins/unpacked-flow'
 
-export interface InstalledPluginIpc {
-  manifest: PluginManifest
-  entryUrl: string
-}
+export type InstalledPluginIpc = InstalledPluginEntry
+
+type PluginDevEntryIpc = PluginLoadEntry
 
 export interface UnpackedPluginIpc extends InstalledPluginIpc {
   /** Absent for plugins side-loaded before Scalpel started tracking source
@@ -52,8 +52,22 @@ export interface UnpackedPluginIpc extends InstalledPluginIpc {
   sourceDir?: string
 }
 
+function resolveInstalledEntries(): {
+  installed: InstalledPluginIpc[]
+  loadable: InstalledPluginIpc[]
+} {
+  const entries: PluginLoadEntry[] = getInstalledPlugins().map((plugin) => ({
+    manifest: plugin.manifest,
+    entryUrl: pluginEntryUrl(plugin.manifest.id),
+  }))
+  return resolvePluginLoadability(entries)
+}
+
 export function register(store: Store<AppSettings>, isElevated: () => boolean = () => false): void {
-  const registryConfig = (): { url: string | undefined; allowNativeBackend: boolean } => {
+  const registryConfig = (): {
+    url: string | undefined
+    allowNativeBackend: boolean
+  } => {
     const processOverride = process.env.SCALPEL_PLUGIN_REGISTRY_URL
     const userRegistry = store.get('pluginRegistryUrl') as AppSettings['pluginRegistryUrl']
     return {
@@ -80,7 +94,7 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
   // so only it hot-swaps; other windows just refresh their plugin UI.
   const broadcastDevPlugin = (
     channel: 'plugin-dev-installed' | 'plugin-dev-updated',
-    payload: InstalledPluginIpc,
+    payload: PluginDevEntryIpc,
   ): void => {
     for (const win of BrowserWindow.getAllWindows()) {
       win.webContents.send(channel, payload)
@@ -105,45 +119,38 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
   }
 
   ipcMain.handle('plugins:list-installed', (): InstalledPluginIpc[] => {
-    return getInstalledPlugins().map((p) => ({
-      manifest: p.manifest,
-      entryUrl: pluginEntryUrl(p.manifest.id),
-    }))
+    return resolveInstalledEntries().installed
   })
 
   ipcMain.handle('plugins:list-loadable', (): InstalledPluginIpc[] => {
     if (pluginNativeBackends.isRestartRequired()) return []
-    return getInstalledPlugins().map((p) => ({
-      manifest: p.manifest,
-      entryUrl: pluginEntryUrl(p.manifest.id),
-    }))
+    return resolveInstalledEntries().loadable
   })
 
   ipcMain.handle('plugins:list-unpacked', (): UnpackedPluginIpc[] => {
-    return getUnpackedPlugins().map((p) => {
-      const sourceDir = getUnpackedSourceDir(p.manifest.id)
-      return {
-        manifest: p.manifest,
-        entryUrl: pluginEntryUrl(p.manifest.id),
-        ...(sourceDir ? { sourceDir } : {}),
-      }
-    })
+    const unpackedIds = new Set(getUnpackedPlugins().map((plugin) => plugin.manifest.id))
+    return resolveInstalledEntries()
+      .installed.filter((plugin) => unpackedIds.has(plugin.manifest.id))
+      .map((plugin) => {
+        const sourceDir = getUnpackedSourceDir(plugin.manifest.id)
+        return {
+          ...plugin,
+          ...(sourceDir ? { sourceDir } : {}),
+        }
+      })
   })
 
   ipcMain.handle('plugins:restart-required', (): boolean => pluginNativeBackends.isRestartRequired())
 
   ipcMain.handle('plugins:get-installed', (_evt, pluginId: string): InstalledPluginIpc | null => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
-    const found = getInstalledPlugins().find((p) => p.manifest.id === pluginId)
-    if (!found) return null
-    return { manifest: found.manifest, entryUrl: pluginEntryUrl(found.manifest.id) }
+    return resolveInstalledEntries().installed.find((plugin) => plugin.manifest.id === pluginId) ?? null
   })
 
   ipcMain.handle('plugins:get-loadable', (_evt, pluginId: string): InstalledPluginIpc | null => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
     if (pluginNativeBackends.isRestartRequired()) return null
-    const found = getInstalledPlugins().find((p) => p.manifest.id === pluginId)
-    return found ? { manifest: found.manifest, entryUrl: pluginEntryUrl(found.manifest.id) } : null
+    return resolveInstalledEntries().loadable.find((plugin) => plugin.manifest.id === pluginId) ?? null
   })
 
   ipcMain.handle('plugins:storage-get', (_evt, pluginId: string, key: string) => {
@@ -168,10 +175,16 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
   ipcMain.handle('plugins:native-call', async (_evt, pluginId: string, method: string, payload: Uint8Array) => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
     try {
-      return { ok: true as const, payload: await pluginNativeBackends.call(pluginId, method, payload) }
+      return {
+        ok: true as const,
+        payload: await pluginNativeBackends.call(pluginId, method, payload),
+      }
     } catch (error) {
       if (error instanceof NativeCallError) {
-        return { ok: false as const, error: { message: error.message, code: error.code } }
+        return {
+          ok: false as const,
+          error: { message: error.message, code: error.code },
+        }
       }
       throw error
     }
@@ -218,11 +231,11 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     const win = BrowserWindow.fromWebContents(evt.sender)
     const result = win
       ? await dialog.showOpenDialog(win, {
-          title: 'Select plugin directory (containing manifest.json and plugin.js)',
+          title: 'Select plugin project or package directory',
           properties: ['openDirectory'],
         })
       : await dialog.showOpenDialog({
-          title: 'Select plugin directory (containing manifest.json and plugin.js)',
+          title: 'Select plugin project or package directory',
           properties: ['openDirectory'],
         })
     if (result.canceled || result.filePaths.length === 0) {
@@ -356,7 +369,10 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
           null,
         )
         if (dependencyError) {
-          return { ok: false as const, error: `plugin dependency check failed: ${dependencyError}` }
+          return {
+            ok: false as const,
+            error: `plugin dependency check failed: ${dependencyError}`,
+          }
         }
         return uninstallPlugin(pluginId)
       },
@@ -372,7 +388,10 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
   ipcMain.handle('plugins:uninstall-unpacked', async (_evt, pluginId: string) => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) return { ok: false as const, error: 'invalid plugin id' }
     if (!getUnpackedPlugins().some((plugin) => plugin.manifest.id === pluginId)) {
-      return { ok: false as const, error: `plugin "${pluginId}" is not installed unpacked` }
+      return {
+        ok: false as const,
+        error: `plugin "${pluginId}" is not installed unpacked`,
+      }
     }
     return pluginNativeBackends.withPluginStopped(pluginId, () => {
       const dependencyError = validateDependencyMutation(
@@ -381,7 +400,10 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
         null,
       )
       if (dependencyError) {
-        return { ok: false as const, error: `plugin dependency check failed: ${dependencyError}` }
+        return {
+          ok: false as const,
+          error: `plugin dependency check failed: ${dependencyError}`,
+        }
       }
       const uninstallResult = uninstallPlugin(pluginId)
       if (uninstallResult.ok) {
