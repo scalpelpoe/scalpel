@@ -12,14 +12,22 @@ import { addUnpackedId } from './unpacked-list'
 export type { InstallResult }
 
 export function installUnpacked(sourceDir: string): InstallResult {
-  const manifestPath = join(sourceDir, 'manifest.json')
-  const entryPath = join(sourceDir, 'plugin.js')
-  if (!existsSync(manifestPath)) {
-    return { ok: false, error: 'source directory does not contain manifest.json' }
+  const distDir = join(sourceDir, 'dist')
+  const packageDir =
+    existsSync(join(sourceDir, 'manifest.json')) && existsSync(join(sourceDir, 'plugin.js'))
+      ? sourceDir
+      : existsSync(join(distDir, 'manifest.json')) && existsSync(join(distDir, 'plugin.js'))
+        ? distDir
+        : null
+  if (!packageDir) {
+    return {
+      ok: false,
+      error:
+        'selected directory must contain both manifest.json and plugin.js, either directly or in its immediate dist directory',
+    }
   }
-  if (!existsSync(entryPath)) {
-    return { ok: false, error: 'source directory does not contain plugin.js' }
-  }
+  const manifestPath = join(packageDir, 'manifest.json')
+  const entryPath = join(packageDir, 'plugin.js')
   let raw: unknown
   try {
     raw = JSON.parse(readFileSync(manifestPath, 'utf-8'))
@@ -28,17 +36,17 @@ export function installUnpacked(sourceDir: string): InstallResult {
   }
   const v = validateManifest(raw)
   if (!v.ok) return { ok: false, error: v.error }
-  const contractPath = v.manifest.api ? join(sourceDir, v.manifest.api.contract) : null
+  const contractPath = v.manifest.api ? join(packageDir, v.manifest.api.contract) : null
   if (contractPath && !existsSync(contractPath)) {
     return { ok: false, error: `source directory does not contain ${v.manifest.api?.contract}` }
   }
-  const backendContractPath = v.manifest.nativeBackend ? join(sourceDir, v.manifest.nativeBackend.contract) : null
+  const backendContractPath = v.manifest.nativeBackend ? join(packageDir, v.manifest.nativeBackend.contract) : null
   if (backendContractPath && !existsSync(backendContractPath)) {
     return { ok: false, error: `source directory does not contain ${v.manifest.nativeBackend?.contract}` }
   }
   const nativeTarget =
     process.platform === 'win32' && process.arch === 'x64' ? v.manifest.nativeBackend?.targets['win32-x64'] : undefined
-  const nativePath = nativeTarget ? join(sourceDir, nativeTarget.file) : null
+  const nativePath = nativeTarget ? join(packageDir, nativeTarget.file) : null
   if (nativePath && !existsSync(nativePath)) {
     return { ok: false, error: `source directory does not contain ${nativeTarget?.file}` }
   }
@@ -72,7 +80,7 @@ export function installUnpacked(sourceDir: string): InstallResult {
       },
       () => {
         addInstalledId(id)
-        addUnpackedId(id, sourceDir)
+        addUnpackedId(id, packageDir)
         cancelStorageRemoval(id)
       },
       () => restoreFiles(metadata),

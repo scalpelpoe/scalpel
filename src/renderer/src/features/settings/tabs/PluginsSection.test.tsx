@@ -7,7 +7,10 @@ import type { RuntimeSettings } from '@shared/types'
 function installApi(hotkeys: Array<{ action: string; pluginId: string; label: string }>): void {
   ;(window as unknown as { api: Record<string, unknown> }).api = {
     listInstalledPlugins: vi.fn(async () => [
-      { manifest: { id: 'demo', name: 'Demo', version: '1.0.0', author: 'me' }, entryUrl: '' },
+      {
+        manifest: { id: 'demo', name: 'Demo', version: '1.0.0', author: 'me' },
+        entryUrl: '',
+      },
     ]),
     pluginListRegisteredHotkeys: vi.fn(async () => hotkeys),
     pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
@@ -26,7 +29,13 @@ describe('PluginsSection hotkey rows', () => {
   beforeEach(() => installApi([]))
 
   it('shows a bind row labeled by the hotkey for a plugin with one registered hotkey', async () => {
-    installApi([{ action: 'plugin-overlay:demo', pluginId: 'demo', label: 'Toggle Event Log' }])
+    installApi([
+      {
+        action: 'plugin-overlay:demo',
+        pluginId: 'demo',
+        label: 'Toggle Event Log',
+      },
+    ])
     const { findByText } = render(
       <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
     )
@@ -36,7 +45,11 @@ describe('PluginsSection hotkey rows', () => {
   it('shows two bind rows for a plugin with both an action and an overlay hotkey', async () => {
     installApi([
       { action: 'plugin:demo', pluginId: 'demo', label: 'Quick check' },
-      { action: 'plugin-overlay:demo', pluginId: 'demo', label: 'Toggle Event Log' },
+      {
+        action: 'plugin-overlay:demo',
+        pluginId: 'demo',
+        label: 'Toggle Event Log',
+      },
     ])
     const { findByText } = render(
       <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
@@ -59,12 +72,28 @@ describe('PluginsSection installed icon', () => {
   it('falls back to the registry iconUrl when the installed manifest omits one', async () => {
     ;(window as unknown as { api: Record<string, unknown> }).api = {
       listInstalledPlugins: vi.fn(async () => [
-        { manifest: { id: 'demo', name: 'Demo', version: '1.0.0', author: 'me' }, entryUrl: '' },
+        {
+          manifest: {
+            id: 'demo',
+            name: 'Demo',
+            version: '1.0.0',
+            author: 'me',
+          },
+          entryUrl: '',
+        },
       ]),
       pluginListRegisteredHotkeys: vi.fn(async () => []),
       pluginFetchRegistry: vi.fn(async () => ({
         ok: true,
-        snapshot: { plugins: [{ id: 'demo', latestVersion: '1.0.0', iconUrl: 'http://example/demo-icon.png' }] },
+        snapshot: {
+          plugins: [
+            {
+              id: 'demo',
+              latestVersion: '1.0.0',
+              iconUrl: 'http://example/demo-icon.png',
+            },
+          ],
+        },
       })),
       pluginUninstall: vi.fn(async () => ({ ok: true })),
       pluginRestartRequired: vi.fn(async () => false),
@@ -81,11 +110,70 @@ describe('PluginsSection installed icon', () => {
   })
 })
 
+describe('PluginsSection unavailable plugins', () => {
+  it('grays the row, shows the reason, and keeps uninstall available', async () => {
+    const pluginUninstall = vi.fn(async () => ({
+      ok: true as const,
+      restartRequired: true as const,
+    }))
+    ;(window as unknown as { api: Record<string, unknown> }).api = {
+      listInstalledPlugins: vi.fn(async () => [
+        {
+          manifest: {
+            id: 'demo',
+            name: 'Demo',
+            version: '1.0.0',
+            author: 'me',
+          },
+          entryUrl: '',
+          availability: {
+            status: 'unavailable',
+            reason: {
+              code: 'missing-required-dependency',
+              dependencyId: 'provider',
+              requiredApiVersion: '1.0.0',
+              message: 'required plugin "provider" is not installed',
+            },
+          },
+        },
+      ]),
+      pluginListRegisteredHotkeys: vi.fn(async () => [{ action: 'plugin:demo', pluginId: 'demo', label: 'Analyze' }]),
+      pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
+      pluginUninstall,
+      pluginRestartRequired: vi.fn(async () => false),
+      onPluginRestartRequired: vi.fn(() => () => {}),
+      onPluginHotkeysChanged: vi.fn(() => () => {}),
+    }
+
+    const { container, findByRole, findByText } = render(
+      <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    )
+    const reason = await findByRole('status')
+    expect(reason.textContent).toContain('required plugin "provider" is not installed')
+    expect(reason.closest('[data-plugin-availability]')?.getAttribute('data-plugin-availability')).toBe('unavailable')
+    expect(container.querySelector('[aria-disabled="true"]')).toBeTruthy()
+
+    const uninstall = await findByText('Uninstall')
+    expect((uninstall as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.click(uninstall)
+    await waitFor(() => expect(pluginUninstall).toHaveBeenCalledWith('demo'))
+  })
+})
+
 describe('PluginsSection icon fallback', () => {
   function installApiWithIcon(iconUrl?: string): void {
     ;(window as unknown as { api: Record<string, unknown> }).api = {
       listInstalledPlugins: vi.fn(async () => [
-        { manifest: { id: 'demo', name: 'Demo', version: '1.0.0', author: 'me', iconUrl }, entryUrl: '' },
+        {
+          manifest: {
+            id: 'demo',
+            name: 'Demo',
+            version: '1.0.0',
+            author: 'me',
+            iconUrl,
+          },
+          entryUrl: '',
+        },
       ]),
       pluginListRegisteredHotkeys: vi.fn(async () => []),
       pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
@@ -132,7 +220,10 @@ describe('PluginsSection icon fallback', () => {
 it('renders the auto-update toggle and flips pluginAutoUpdate', async () => {
   installApi([])
   const update = vi.fn()
-  const settings = { appMacros: [], pluginAutoUpdate: false } as unknown as RuntimeSettings
+  const settings = {
+    appMacros: [],
+    pluginAutoUpdate: false,
+  } as unknown as RuntimeSettings
   const { findByText } = render(
     <PluginsSection onError={() => {}} settings={settings} update={update} tryHotkey={() => true} />,
   )

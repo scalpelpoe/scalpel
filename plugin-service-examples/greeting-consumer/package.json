@@ -9,9 +9,9 @@
     "outDir": "dist",
     "contracts": [
       {
-        "input": "../greeting-provider/api.binpb",
+        "input": "../greeting-relay/api.binpb",
         "generated": "src/generated",
-        "service": "scalpel.examples.greeting.v1.GreetingProvider"
+        "service": "scalpel.examples.greeting.relay.v1.GreetingRelay"
       }
     ]
   }
