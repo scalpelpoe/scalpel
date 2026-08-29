@@ -1,8 +1,8 @@
 import { create, fromBinary, toBinary } from '@bufbuild/protobuf'
 import { describe, expect, it, vi } from 'vitest'
 import {
-  GreetRequestSchema,
-  GreetResponseSchema,
+  GetLastSeenCharacterRequestSchema,
+  GetLastSeenCharacterResponseSchema,
   GreetingProvider,
 } from '../../../plugin-service-examples/greeting-provider/src/generated/greeting_pb'
 import {
@@ -24,8 +24,8 @@ describe('Protobuf service adapters', () => {
       get: () => null,
     }
     exposePluginService(provider, GreetingProvider, {
-      greet(request) {
-        return { message: `Hello, ${request.name}`, calls: 1 }
+      getLastSeenCharacter() {
+        return { result: { case: 'character', value: { name: 'Exile' } } }
       },
     })
     const consumer: PluginCommunicationApi = {
@@ -40,7 +40,9 @@ describe('Protobuf service adapters', () => {
     }
 
     const client = createPluginServiceClient(consumer, 'greeting-provider', GreetingProvider)
-    await expect(client.greet({ name: 'Exile' })).resolves.toMatchObject({ message: 'Hello, Exile', calls: 1 })
+    await expect(client.getLastSeenCharacter()).resolves.toMatchObject({
+      result: { case: 'character', value: { name: 'Exile' } },
+    })
   })
 
   it('forwards the generated service type when resolving a client', () => {
@@ -65,16 +67,20 @@ describe('Protobuf service adapters', () => {
   it('encodes and decodes native service payloads', async () => {
     const native: PluginNativeBackendApi = {
       async call(method, payload) {
-        expect(method).toBe('/scalpel.examples.greeting.v1.GreetingProvider/Greet')
-        const request = fromBinary(GreetRequestSchema, payload)
+        expect(method).toBe('/scalpel.examples.greeting.v1.GreetingProvider/GetLastSeenCharacter')
+        fromBinary(GetLastSeenCharacterRequestSchema, payload)
         return toBinary(
-          GreetResponseSchema,
-          create(GreetResponseSchema, { message: `Native ${request.name}`, calls: 2 }),
+          GetLastSeenCharacterResponseSchema,
+          create(GetLastSeenCharacterResponseSchema, {
+            result: { case: 'character', value: { name: 'Native Exile' } },
+          }),
         )
       },
     }
 
     const client = createNativeServiceClient(native, GreetingProvider)
-    await expect(client.greet({ name: 'Exile' })).resolves.toMatchObject({ message: 'Native Exile', calls: 2 })
+    await expect(client.getLastSeenCharacter()).resolves.toMatchObject({
+      result: { case: 'character', value: { name: 'Native Exile' } },
+    })
   })
 })

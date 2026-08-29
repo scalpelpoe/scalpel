@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { RegistryEntry, RegistrySnapshot } from '@shared/plugin-registry-types'
+import type { PluginAvailability } from '@shared/plugin-dependencies'
 import type { PluginManifest } from '../../../../../plugin-sdk/src/types'
 import type { AppSettings, RuntimeSettings } from '@shared/types'
 import type { HotkeySlot } from '@renderer/components/primitives/hotkey-collisions'
@@ -19,6 +20,7 @@ interface Props {
 
 interface InstalledEntry {
   manifest: PluginManifest
+  availability?: PluginAvailability
 }
 
 /** Shared row column template: icon | flexible meta | trailing actions. Used by
@@ -64,14 +66,21 @@ function PluginHotkeyBindRow({
   settings,
   update,
   tryHotkey,
+  disabled = false,
 }: {
   action: string
   label: string
   settings: RuntimeSettings
   update: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
   tryHotkey: (hotkey: string, slot: HotkeySlot) => boolean
+  disabled?: boolean
 }): JSX.Element {
-  const { hotkey, setHotkey } = pluginHotkeyBinding({ action, settings, update, tryHotkey })
+  const { hotkey, setHotkey } = pluginHotkeyBinding({
+    action,
+    settings,
+    update,
+    tryHotkey,
+  })
   return (
     <div className="flex items-center gap-[6px] min-w-0">
       <HotkeyRecorder
@@ -80,6 +89,7 @@ function PluginHotkeyBindRow({
         className="w-[200px] shrink-0"
         placeholder={m.settings_plg_set_hotkey()}
         clearable
+        disabled={disabled}
       />
       {/* Read-only on purpose: the plugin + action are fixed by context, so unlike
           the Macros-tab row there is no editable select or remove control here. */}
@@ -101,6 +111,7 @@ function InstalledRow({
   settings,
   update,
   tryHotkey,
+  availability,
 }: {
   manifest: PluginManifest
   /** Registry iconUrl, used when the installed manifest omits its own (so the
@@ -114,12 +125,22 @@ function InstalledRow({
   settings: RuntimeSettings
   update: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
   tryHotkey: (hotkey: string, slot: HotkeySlot) => boolean
+  availability?: PluginAvailability
 }): JSX.Element {
+  const unavailable = availability?.status === 'unavailable' ? availability.reason : null
   return (
-    <div className="flex flex-col gap-2 px-3 py-2.5 rounded-[10px] bg-white/[0.04]">
+    <div
+      data-plugin-availability={unavailable ? 'unavailable' : 'available'}
+      className={
+        'flex flex-col gap-2 px-3 py-2.5 rounded-[10px] ' +
+        (unavailable ? 'bg-zinc-800/35 border border-zinc-700/60' : 'bg-white/[0.04]')
+      }
+    >
       <div className={`${ROW_GRID} items-center`}>
-        <PluginIcon iconUrl={manifest.iconUrl ?? iconUrlFallback} name={manifest.name} />
-        <div className="min-w-0">
+        <div className={unavailable ? 'opacity-45 grayscale' : ''}>
+          <PluginIcon iconUrl={manifest.iconUrl ?? iconUrlFallback} name={manifest.name} />
+        </div>
+        <div className={'min-w-0 ' + (unavailable ? 'opacity-55 grayscale' : '')}>
           <div className="flex items-center gap-x-2.5 flex-wrap leading-tight">
             <span className="text-[13.5px] font-semibold text-text truncate">{manifest.name}</span>
             <span className="font-mono text-[10.5px] text-zinc-500">v{manifest.version}</span>
@@ -139,6 +160,11 @@ function InstalledRow({
           </Button>
         </div>
       </div>
+      {unavailable && (
+        <div className="pl-[52px] text-[11px] leading-snug text-zinc-500" role="status">
+          Unavailable: {unavailable.message}
+        </div>
+      )}
       {hotkeys.length > 0 && (
         <div className="flex flex-col gap-1.5 pl-[52px]">
           {hotkeys.map((h) => (
@@ -149,6 +175,7 @@ function InstalledRow({
               settings={settings}
               update={update}
               tryHotkey={tryHotkey}
+              disabled={!!unavailable}
             />
           ))}
         </div>
@@ -233,7 +260,9 @@ function BrowseRow({
               {shots.length > 0 && (
                 <span
                   className="inline-flex items-center gap-1 font-mono text-[10.5px] text-zinc-500"
-                  title={m.settings_plg_screenshots_count({ count: shots.length })}
+                  title={m.settings_plg_screenshots_count({
+                    count: shots.length,
+                  })}
                 >
                   <svg width="10" height="10" viewBox="0 0 16 16" aria-hidden="true">
                     <rect x="1.5" y="3" width="13" height="10" rx="1.5" fill="currentColor" opacity="0.22" />
@@ -356,7 +385,7 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
       window.api.listInstalledPlugins(),
       window.api.pluginListRegisteredHotkeys(),
     ])
-    setInstalled(list.map((p) => ({ manifest: p.manifest })))
+    setInstalled(list.map((p) => ({ manifest: p.manifest, availability: p.availability })))
     setRegisteredHotkeys(hotkeys)
   }, [])
 
@@ -383,9 +412,15 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
       void refreshAll()
     })
     const offHotkeys = window.api.onPluginHotkeysChanged(() => void refreshAll())
+    const offInstalled = window.api.onPluginDevInstalled?.(() => void refreshAll())
+    const offUpdated = window.api.onPluginDevUpdated?.(() => void refreshAll())
+    const offUninstalled = window.api.onPluginDevUninstalled?.(() => void refreshAll())
     return () => {
       offRestart()
       offHotkeys()
+      offInstalled?.()
+      offUpdated?.()
+      offUninstalled?.()
     }
   }, [refreshAll])
 
@@ -413,7 +448,13 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
       return
     }
     setRestartRequired(r.restartRequired)
-    onError(m.settings_plg_update_success({ name: entry.name, version: entry.newVersion }), 'warn')
+    onError(
+      m.settings_plg_update_success({
+        name: entry.name,
+        version: entry.newVersion,
+      }),
+      'warn',
+    )
     void refreshAll()
   }
 
@@ -471,7 +512,7 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
           <div className="text-xs text-zinc-500">{m.settings_plg_none_installed()}</div>
         ) : (
           <div className="flex flex-col gap-1">
-            {installed.map(({ manifest }) => {
+            {installed.map(({ manifest, availability }) => {
               const updateVersion = latestVersionFor(registry, manifest)
               return (
                 <InstalledRow
@@ -483,7 +524,11 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
                   updateVersion={updateVersion}
                   onUpdate={() => {
                     if (updateVersion)
-                      void doUpdate({ id: manifest.id, name: manifest.name, newVersion: updateVersion })
+                      void doUpdate({
+                        id: manifest.id,
+                        name: manifest.name,
+                        newVersion: updateVersion,
+                      })
                   }}
                   hotkeys={registeredHotkeys
                     .filter((h) => h.pluginId === manifest.id)
@@ -491,6 +536,7 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
                   settings={settings}
                   update={update}
                   tryHotkey={tryHotkey}
+                  availability={availability}
                 />
               )
             })}

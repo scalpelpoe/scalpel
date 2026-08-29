@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createPluginServiceClient, exposePluginService } from '../../../plugin-sdk/src/protobuf'
 import type { PluginActivate, PluginManifest } from '../../../plugin-sdk/src/types'
 import type { RegisteredTab } from './PluginHost'
-import { GreetingProvider } from '../../../../plugin-service-examples/greeting-consumer/src/generated/greeting_pb'
+import { GreetingProvider } from '../../../../plugin-service-examples/greeting-relay/src/generated/provider/greeting_pb'
+import { GreetingRelay } from '../../../../plugin-service-examples/greeting-consumer/src/generated/greeting_relay_pb'
 
 const providerManifest: PluginManifest = {
   manifestVersion: 1,
@@ -22,6 +23,22 @@ const providerManifest: PluginManifest = {
   },
 }
 
+const relayManifest: PluginManifest = {
+  manifestVersion: 1,
+  id: 'greeting-relay',
+  version: '1.0.0',
+  name: 'Greeting Relay',
+  description: 'test relay',
+  author: 'test',
+  scalpelMinVersion: '>=0.0.0',
+  api: {
+    version: '1.0.0',
+    contract: 'api.binpb',
+    service: 'scalpel.examples.greeting.relay.v1.GreetingRelay',
+  },
+  dependencies: [{ pluginId: 'greeting-provider', apiVersion: '1.0.0' }],
+}
+
 const consumerManifest: PluginManifest = {
   manifestVersion: 1,
   id: 'greeting-consumer',
@@ -30,7 +47,7 @@ const consumerManifest: PluginManifest = {
   description: 'test consumer',
   author: 'test',
   scalpelMinVersion: '>=0.0.0',
-  dependencies: [{ pluginId: 'greeting-provider', apiVersion: '1.0.0' }],
+  dependencies: [{ pluginId: 'greeting-relay', apiVersion: '1.0.0' }],
 }
 
 beforeEach(() => {
@@ -38,6 +55,7 @@ beforeEach(() => {
   ;(window as unknown as { api: unknown }).api = {
     listInstalledPlugins: vi.fn(async () => [
       { manifest: consumerManifest, entryUrl: 'plugin://consumer' },
+      { manifest: relayManifest, entryUrl: 'plugin://relay' },
       { manifest: providerManifest, entryUrl: 'plugin://provider' },
     ]),
     getSettings: vi.fn(async () => null),
@@ -58,30 +76,55 @@ beforeEach(() => {
 })
 
 describe('plugin communication UI slice', () => {
-  it('loads reverse-ordered plugins, renders the consumer, and calls the provider', async () => {
+  it('loads a reverse-ordered provider-relay-consumer chain and renders both UI plugins', async () => {
     const activationOrder: string[] = []
     const provider: PluginActivate = (ctx) => {
       activationOrder.push(ctx.pluginId)
       exposePluginService(ctx.plugins, GreetingProvider, {
-        greet(request) {
-          return { message: `Hello, ${request.name}!` }
+        getLastSeenCharacter() {
+          return {
+            result: {
+              case: 'character',
+              value: { name: 'Exile' },
+            },
+          }
         },
       })
-      ctx.registerTab({ label: 'Provider', icon: '<svg/>', render: () => {} })
+    }
+    const relay: PluginActivate = (ctx) => {
+      activationOrder.push(ctx.pluginId)
+      const providerClient = createPluginServiceClient(ctx.plugins, 'greeting-provider', GreetingProvider)
+      exposePluginService(ctx.plugins, GreetingRelay, {
+        async getGreeting() {
+          const character = await providerClient.getLastSeenCharacter()
+          const name = character.result.case === 'character' ? character.result.value.name : 'Unknown'
+          return {
+            result: {
+              case: 'greeting',
+              value: {
+                message: `${name} says Stay sane`,
+                characterName: name,
+                submittedMessage: 'Stay sane',
+              },
+            },
+          }
+        },
+      })
+      ctx.registerTab({ label: 'Relay', icon: '<svg/>', render: () => {} })
     }
     const consumer: PluginActivate = (ctx) => {
       activationOrder.push(ctx.pluginId)
-      const client = createPluginServiceClient(ctx.plugins, 'greeting-provider', GreetingProvider)
+      const client = createPluginServiceClient(ctx.plugins, 'greeting-relay', GreetingRelay)
       ctx.registerTab({
         label: 'Consumer',
         icon: '<svg/>',
         render: (container) => {
           const button = document.createElement('button')
           const result = document.createElement('p')
-          button.textContent = 'Ask provider'
+          button.textContent = 'Ask relay'
           button.addEventListener('click', () => {
-            void client.greet({ name: 'Exile' }).then((response) => {
-              result.textContent = response.message
+            void client.getGreeting().then((response) => {
+              result.textContent = response.result.case === 'greeting' ? response.result.value.message : 'Unavailable'
             })
           })
           container.append(button, result)
@@ -89,7 +132,9 @@ describe('plugin communication UI slice', () => {
       })
     }
     ;(window as unknown as { __pluginImport: (url: string) => Promise<{ default: PluginActivate }> }).__pluginImport =
-      vi.fn(async (url: string) => ({ default: url.endsWith('provider') ? provider : consumer }))
+      vi.fn(async (url: string) => ({
+        default: url.endsWith('provider') ? provider : url.endsWith('relay') ? relay : consumer,
+      }))
 
     const { PluginHost } = await import('./PluginHost')
     const { PluginTabHost } = await import('./PluginTabHost')
@@ -114,11 +159,11 @@ describe('plugin communication UI slice', () => {
     )
 
     await waitFor(() => expect(tabs).toHaveLength(2))
-    expect(activationOrder).toEqual(['greeting-provider', 'greeting-consumer'])
+    expect(activationOrder).toEqual(['greeting-provider', 'greeting-relay', 'greeting-consumer'])
 
     const view = render(<PluginTabHost pluginTabs={tabs} activeId="greeting-consumer" />)
-    fireEvent.click(view.getByRole('button', { name: 'Ask provider' }))
+    fireEvent.click(view.getByRole('button', { name: 'Ask relay' }))
     await act(async () => {})
-    await waitFor(() => expect(view.getByText('Hello, Exile!')).toBeInTheDocument())
+    await waitFor(() => expect(view.getByText('Exile says Stay sane')).toBeInTheDocument())
   }, 15_000)
 })

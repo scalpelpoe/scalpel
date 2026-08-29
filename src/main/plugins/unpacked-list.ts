@@ -2,8 +2,8 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync 
 import { dirname } from 'node:path'
 import { unpackedJsonPath } from './paths'
 
-/** One side-loaded plugin. `sourceDir` is the directory the user picked in the
- *  "Load unpacked" dialog; it is what the Reload button re-copies from. Entries
+/** One side-loaded plugin. `sourceDir` is the resolved package directory from
+ *  the "Load unpacked" selection; it is what Reload re-copies from. Entries
  *  written before source dirs were tracked are plain id strings on disk and
  *  come back with no `sourceDir`. */
 export interface UnpackedEntry {

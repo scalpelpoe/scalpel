@@ -790,8 +790,9 @@ While developing, skip the registry and install your plugin directly.
 
 1. In Scalpel, open Settings → Developer.
 2. Toggle "Developer mode" on.
-3. Click "Load unpacked plugin..." and pick the directory containing your built `plugin.js`, `manifest.json`, declared contracts, and native executable when applicable.
-4. Unpacked plugins load immediately. Reload is a developer-only best-effort hot swap; restart Scalpel after changing dependencies, service declarations, native state, or overlay registrations.
+3. Click "Load unpacked plugin..." and pick either the package directory containing `plugin.js`, `manifest.json`, declared contracts, and any native executable, or its project root when that package is in the immediate `dist/` directory. Scalpel checks the selected directory first and then `dist/`; it does not recursively search other descendants.
+4. Unpacked plugins load immediately when their required dependency graph is available. Plugins with missing, incompatible, cyclic, or transitively unavailable required dependencies remain installed but disabled, with the reason shown in Settings. Loading a missing provider re-evaluates the development graph.
+5. Reload is a developer-only best-effort hot swap; restart Scalpel if registrations or native state look stale.
 
 **Option 2: Manual file copy**
 

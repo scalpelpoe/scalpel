@@ -79,6 +79,7 @@ vi.mock('fs', () => ({
 }))
 
 const SRC_PLUGIN = join('/src', 'plugin')
+const DIST_PLUGIN = join(SRC_PLUGIN, 'dist')
 
 beforeEach(() => {
   mockFs.files.clear()
@@ -101,11 +102,17 @@ const validManifest = JSON.stringify({
 })
 
 describe('installUnpacked', () => {
-  it('rejects when manifest.json is missing', async () => {
+  it('rejects when neither the selected directory nor its immediate dist contains the package', async () => {
     mockFs.dirs.add(SRC_PLUGIN)
     const { installUnpacked } = await import('./install-unpacked')
     const r = installUnpacked(SRC_PLUGIN)
     expect(r.ok).toBe(false)
+    if (!r.ok) {
+      expect(r.error).toContain('manifest.json')
+      expect(r.error).toContain('plugin.js')
+      expect(r.error).toContain('directly')
+      expect(r.error).toContain('immediate dist')
+    }
   })
 
   it('rejects when plugin.js is missing', async () => {
@@ -113,6 +120,17 @@ describe('installUnpacked', () => {
     mockFs.dirs.add(SRC_PLUGIN)
     const { installUnpacked } = await import('./install-unpacked')
     const r = installUnpacked(SRC_PLUGIN)
+    expect(r.ok).toBe(false)
+  })
+
+  it('does not recursively search below the immediate dist directory', async () => {
+    const nestedPackage = join(DIST_PLUGIN, 'nested')
+    mockFs.files.set(join(nestedPackage, 'manifest.json'), validManifest)
+    mockFs.files.set(join(nestedPackage, 'plugin.js'), '// nested')
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN)
+
     expect(r.ok).toBe(false)
   })
 
@@ -135,6 +153,38 @@ describe('installUnpacked', () => {
     const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
     expect(mockFs.files.has(join(destDir, 'manifest.json'))).toBe(true)
     expect(mockFs.files.has(join(destDir, 'plugin.js'))).toBe(true)
+  })
+
+  it('uses the immediate dist package and stores that directory as its provenance', async () => {
+    mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
+    mockFs.files.set(join(DIST_PLUGIN, 'manifest.json'), validManifest)
+    mockFs.files.set(join(DIST_PLUGIN, 'plugin.js'), '// built plugin')
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN)
+
+    expect(r).toEqual({ ok: true, id: 'hello-world' })
+    const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
+    expect(mockFs.files.get(join(destDir, 'plugin.js'))).toBe('// built plugin')
+    const unpacked = JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'unpacked.json'))!)
+    expect(unpacked).toEqual([{ id: 'hello-world', sourceDir: DIST_PLUGIN }])
+  })
+
+  it('prefers the selected directory when both it and dist contain packages', async () => {
+    const distManifest = JSON.stringify({ ...JSON.parse(validManifest), id: 'dist-plugin', name: 'Dist Plugin' })
+    mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// root plugin')
+    mockFs.files.set(join(DIST_PLUGIN, 'manifest.json'), distManifest)
+    mockFs.files.set(join(DIST_PLUGIN, 'plugin.js'), '// dist plugin')
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN)
+
+    expect(r).toEqual({ ok: true, id: 'hello-world' })
+    const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
+    expect(mockFs.files.get(join(destDir, 'plugin.js'))).toBe('// root plugin')
+    const unpacked = JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'unpacked.json'))!)
+    expect(unpacked).toEqual([{ id: 'hello-world', sourceDir: SRC_PLUGIN }])
   })
 
   it('copies a declared API contract', async () => {
@@ -202,6 +252,65 @@ describe('installUnpacked', () => {
     const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
     expect(mockFs.files.get(join(destDir, 'backend.binpb'))).toBe('descriptor bytes')
     expect(mockFs.files.get(join(destDir, 'worker.exe'))).toBe(nativeBytes)
+  })
+
+  it('resolves API and native backend assets from the immediate dist package', async () => {
+    const nativeBytes = 'dist native worker bytes'
+    const manifest = JSON.stringify({
+      ...JSON.parse(validManifest),
+      api: { version: '1.0.0', contract: 'api.binpb', service: 'example.greeting.v1.GreetingProvider' },
+      nativeBackend: {
+        protocolVersion: 1,
+        contract: 'backend.binpb',
+        service: 'example.items.v1.ItemAnalyzer',
+        targets: {
+          'win32-x64': {
+            file: 'worker.exe',
+            sha256: createHash('sha256').update(nativeBytes).digest('hex'),
+          },
+        },
+      },
+    })
+    mockFs.files.set(join(DIST_PLUGIN, 'manifest.json'), manifest)
+    mockFs.files.set(join(DIST_PLUGIN, 'plugin.js'), '// built plugin')
+    mockFs.files.set(join(DIST_PLUGIN, 'api.binpb'), 'dist api contract')
+    mockFs.files.set(join(DIST_PLUGIN, 'backend.binpb'), 'dist backend contract')
+    mockFs.files.set(join(DIST_PLUGIN, 'worker.exe'), nativeBytes)
+    mockFs.files.set(join(SRC_PLUGIN, 'api.binpb'), 'root api decoy')
+    mockFs.files.set(join(SRC_PLUGIN, 'backend.binpb'), 'root backend decoy')
+    mockFs.files.set(join(SRC_PLUGIN, 'worker.exe'), 'root worker decoy')
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN)
+
+    expect(r.ok).toBe(true)
+    const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
+    expect(mockFs.files.get(join(destDir, 'api.binpb'))).toBe('dist api contract')
+    expect(mockFs.files.get(join(destDir, 'backend.binpb'))).toBe('dist backend contract')
+    expect(mockFs.files.get(join(destDir, 'worker.exe'))).toBe(nativeBytes)
+    expect(mockFs.copied).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ from: join(DIST_PLUGIN, 'api.binpb') }),
+        expect.objectContaining({ from: join(DIST_PLUGIN, 'backend.binpb') }),
+        expect.objectContaining({ from: join(DIST_PLUGIN, 'worker.exe') }),
+      ]),
+    )
+  })
+
+  it('does not resolve a dist package contract from the selected directory', async () => {
+    const manifest = JSON.stringify({
+      ...JSON.parse(validManifest),
+      api: { version: '1.0.0', contract: 'api.binpb', service: 'example.greeting.v1.GreetingProvider' },
+    })
+    mockFs.files.set(join(DIST_PLUGIN, 'manifest.json'), manifest)
+    mockFs.files.set(join(DIST_PLUGIN, 'plugin.js'), '// built plugin')
+    mockFs.files.set(join(SRC_PLUGIN, 'api.binpb'), 'root-only contract')
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN)
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('api.binpb')
   })
 
   it('rejects a native backend whose checksum does not match', async () => {

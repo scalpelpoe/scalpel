@@ -178,7 +178,11 @@ describe('PluginHost', () => {
     const providerManifest: PluginManifest = {
       ...manifest,
       id: 'provider',
-      api: { version: '1.0.0', contract: 'api.binpb', service: 'example.v1.Provider' },
+      api: {
+        version: '1.0.0',
+        contract: 'api.binpb',
+        service: 'example.v1.Provider',
+      },
     }
     const consumerManifest: PluginManifest = {
       ...manifest,
@@ -214,8 +218,115 @@ describe('PluginHost', () => {
     )
 
     await waitFor(() => expect(onError).toHaveBeenCalledWith('provider', expect.any(Error)))
-    await waitFor(() => expect(onError).toHaveBeenCalledWith('consumer', expect.any(Error)))
+    expect(onError).not.toHaveBeenCalledWith('consumer', expect.any(Error))
     expect(consumerActivate).not.toHaveBeenCalled()
+  })
+
+  it('does not label a statically unavailable plugin as crashed', async () => {
+    installedList.push({
+      manifest: {
+        ...manifest,
+        id: 'consumer',
+        dependencies: [{ pluginId: 'missing-provider', apiVersion: '1.0.0' }],
+      },
+      entryUrl: 'plugin://consumer',
+    })
+    const onError = vi.fn()
+    const pluginImport = vi.fn()
+    ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = pluginImport
+    const { PluginHost } = await import('./PluginHost')
+    render(
+      <PluginHost
+        ready
+        poeVersion={1}
+        league="Mirage"
+        currentItem={null}
+        currentZone={null}
+        onSubscribeCurrentItem={() => () => {}}
+        onSubscribeCurrentZone={() => () => {}}
+        onSubscribeLeagueChange={() => () => {}}
+        onOpenExternal={() => {}}
+        onTabsChange={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
+        onPluginError={onError}
+      />,
+    )
+
+    await waitFor(() => expect(window.api.listInstalledPlugins).toHaveBeenCalled())
+    expect(pluginImport).not.toHaveBeenCalled()
+    expect(onError).not.toHaveBeenCalled()
+  })
+
+  it('reconciles the graph after dev install and activates a formerly dangling consumer', async () => {
+    const providerManifest: PluginManifest = {
+      ...manifest,
+      id: 'provider',
+      api: {
+        version: '1.0.0',
+        contract: 'api.binpb',
+        service: 'example.v1.Provider',
+      },
+    }
+    const consumerManifest: PluginManifest = {
+      ...manifest,
+      id: 'consumer',
+      dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0' }],
+    }
+    let loadable: Array<{ manifest: PluginManifest; entryUrl: string }> = []
+    let installedListener: ((entry: { manifest: PluginManifest; entryUrl: string }) => void) | null = null
+    const calls: string[] = []
+    const providerActivate = vi.fn((ctx: ScalpelPluginContext) => {
+      calls.push('provider')
+      ctx.plugins.expose('example.v1.Provider', () => null)
+    })
+    const consumerActivate = vi.fn(() => calls.push('consumer'))
+    const currentApi = window.api
+    ;(window as unknown as { api: unknown }).api = {
+      ...currentApi,
+      listLoadablePlugins: vi.fn(async () => loadable),
+      onPluginDevInstalled: vi.fn((listener: (entry: { manifest: PluginManifest; entryUrl: string }) => void) => {
+        installedListener = listener
+        return () => {
+          installedListener = null
+        }
+      }),
+    }
+    ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn(async (url) => ({
+      default: url.includes('provider') ? providerActivate : consumerActivate,
+    }))
+
+    const { PluginHost } = await import('./PluginHost')
+    render(
+      <PluginHost
+        ready
+        poeVersion={1}
+        league="Mirage"
+        currentItem={null}
+        currentZone={null}
+        onSubscribeCurrentItem={() => () => {}}
+        onSubscribeCurrentZone={() => () => {}}
+        onSubscribeLeagueChange={() => () => {}}
+        onOpenExternal={() => {}}
+        onTabsChange={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
+      />,
+    )
+    await waitFor(() => expect(window.api.listLoadablePlugins).toHaveBeenCalledTimes(1))
+    expect(consumerActivate).not.toHaveBeenCalled()
+
+    loadable = [
+      { manifest: consumerManifest, entryUrl: 'plugin://consumer' },
+      { manifest: providerManifest, entryUrl: 'plugin://provider' },
+    ]
+    ;(installedListener as ((entry: { manifest: PluginManifest; entryUrl: string }) => void) | null)?.({
+      manifest: providerManifest,
+      entryUrl: 'plugin://provider?v=1',
+    })
+
+    await waitFor(() => expect(consumerActivate).toHaveBeenCalledTimes(1))
+    expect(calls).toEqual(['provider', 'consumer'])
   })
 
   it('filters by poeVersions in the manifest', async () => {
@@ -316,8 +427,9 @@ describe('PluginHost', () => {
       ctx.registerTab({ label: 'Late', icon: '<svg/>', render: () => {} })
     })
     let installedListener: ((entry: unknown) => void) | null = null
+    let loadable: Array<{ manifest: PluginManifest; entryUrl: string }> = []
     ;(window as unknown as { api: unknown }).api = {
-      listInstalledPlugins: vi.fn(async () => []),
+      listInstalledPlugins: vi.fn(async () => loadable),
       pluginStorageGet: vi.fn(async () => null),
       pluginStorageSet: vi.fn(async () => undefined),
       pluginStorageDelete: vi.fn(async () => undefined),
@@ -364,8 +476,8 @@ describe('PluginHost', () => {
     // Initial state: no tabs.
     await waitFor(() => expect(onTabsChange.mock.calls[onTabsChange.mock.calls.length - 1]?.[0]).toEqual([]))
 
-    // Fire the install event.
-    ;(installedListener as ((entry: unknown) => void) | null)?.({
+    // Main has re-evaluated the graph by the time it broadcasts the event.
+    const lateEntry: { manifest: PluginManifest; entryUrl: string } = {
       manifest: {
         manifestVersion: 1,
         id: 'late',
@@ -376,7 +488,9 @@ describe('PluginHost', () => {
         scalpelMinVersion: '>=0.0.0',
       },
       entryUrl: 'file:///fake/late.js?v=1.0.0',
-    })
+    }
+    loadable = [lateEntry]
+    ;(installedListener as ((entry: unknown) => void) | null)?.(lateEntry)
 
     await waitFor(() => expect(activate).toHaveBeenCalled())
     await waitFor(() => {
@@ -625,6 +739,79 @@ describe('PluginHost', () => {
       expect(last).toHaveLength(1)
       expect(last[0].pluginId).toBe('hello')
     })
+  })
+
+  it('reloads required dependents after a provider dev update', async () => {
+    const providerManifest: PluginManifest = {
+      ...manifest,
+      id: 'provider',
+      api: {
+        version: '1.0.0',
+        contract: 'api.binpb',
+        service: 'example.v1.Provider',
+      },
+    }
+    const consumerManifest: PluginManifest = {
+      ...manifest,
+      id: 'consumer',
+      dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0' }],
+    }
+    const entries = [
+      { manifest: consumerManifest, entryUrl: 'plugin://consumer' },
+      { manifest: providerManifest, entryUrl: 'plugin://provider' },
+    ]
+    let updatedListener: ((entry: { manifest: PluginManifest; entryUrl: string }) => void) | null = null
+    const providerTeardown = vi.fn()
+    const consumerTeardown = vi.fn()
+    const providerActivate = vi.fn((ctx: ScalpelPluginContext) => {
+      ctx.plugins.expose('example.v1.Provider', () => null)
+      return providerTeardown
+    })
+    const consumerActivate = vi.fn(() => consumerTeardown)
+    const currentApi = window.api
+    ;(window as unknown as { api: unknown }).api = {
+      ...currentApi,
+      listLoadablePlugins: vi.fn(async () => entries),
+      pluginRestartRequired: vi.fn(async () => false),
+      onPluginDevUpdated: vi.fn((listener: (entry: { manifest: PluginManifest; entryUrl: string }) => void) => {
+        updatedListener = listener
+        return () => {
+          updatedListener = null
+        }
+      }),
+    }
+    ;(window as unknown as { __pluginImport: (url: string) => Promise<unknown> }).__pluginImport = vi.fn(
+      async (url: string) => ({ default: url.includes('provider') ? providerActivate : consumerActivate }),
+    )
+
+    const { PluginHost } = await import('./PluginHost')
+    render(
+      <PluginHost
+        ready
+        poeVersion={1}
+        league="Mirage"
+        currentItem={null}
+        currentZone={null}
+        onSubscribeCurrentItem={() => () => {}}
+        onSubscribeCurrentZone={() => () => {}}
+        onSubscribeLeagueChange={() => () => {}}
+        onOpenExternal={() => {}}
+        onTabsChange={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
+      />,
+    )
+
+    await waitFor(() => expect(consumerActivate).toHaveBeenCalledTimes(1))
+    ;(updatedListener as ((entry: { manifest: PluginManifest; entryUrl: string }) => void) | null)?.({
+      manifest: { ...providerManifest, version: '2.0.0' },
+      entryUrl: 'plugin://provider?v=2',
+    })
+
+    await waitFor(() => expect(providerActivate).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(consumerActivate).toHaveBeenCalledTimes(2))
+    expect(consumerTeardown).toHaveBeenCalledOnce()
+    expect(providerTeardown).toHaveBeenCalledOnce()
   })
 
   it('disposes subscriptions made before activate throws', async () => {

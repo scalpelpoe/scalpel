@@ -3,12 +3,12 @@
   "id": "greeting-consumer",
   "version": "1.0.0",
   "name": "Greeting Consumer",
-  "description": "Calls an explicitly declared plugin dependency from normal UI.",
+  "description": "Displays greetings from the relay's explicitly declared plugin API.",
   "author": "Scalpel",
   "scalpelMinVersion": ">=1.1.0",
   "dependencies": [
     {
-      "pluginId": "greeting-provider",
+      "pluginId": "greeting-relay",
       "apiVersion": "1.0.0"
     }
   ]
