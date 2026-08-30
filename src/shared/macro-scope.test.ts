@@ -37,9 +37,10 @@ describe('chatCommandScope', () => {
 })
 
 describe('appMacroScope', () => {
-  it('returns poe1 for openDust and openDivCards', () => {
+  it('returns poe1 for openDust, openDivCards, and openScarabs', () => {
     expect(appMacroScope('openDust')).toBe('poe1')
     expect(appMacroScope('openDivCards')).toBe('poe1')
+    expect(appMacroScope('openScarabs')).toBe('poe1')
   })
 
   it('returns both for all other known app macro action ids', () => {

@@ -17,6 +17,7 @@ import { SettingsPanel } from '../features/settings/SettingsPanel'
 import { SocketRecolor } from '../features/socket-recolor'
 import { DustExplorer } from '../features/dust-explorer'
 import { DivCardExplorer } from '../features/div-card-explorer'
+import { ScarabAtlas } from '../features/scarab-atlas'
 import { RegexTool } from '../features/regex'
 import { ExtraFeaturesPanel } from '../components/extra-features/ExtraFeaturesPanel'
 import { PriceCheck } from '../features/price-check'
@@ -408,12 +409,13 @@ export default function App(): JSX.Element {
         if (v === 'audit') {
           auditPending.current = true
         } else {
-          const valid = ['setup', 'dust', 'divcards', 'regex'] as const
+          const valid = ['setup', 'dust', 'divcards', 'scarabs', 'regex'] as const
           if (!valid.includes(v as (typeof valid)[number])) return
           // Don't reopen tabs that the active game has disabled (e.g. regex on PoE2).
           const active = getGameFeatures(settings?.poeVersion ?? 1)
           if (v === 'dust' && !active.dustExplorer) return
           if (v === 'divcards' && !active.divCards) return
+          if (v === 'scarabs' && !active.scarabAtlas) return
           if (v === 'regex' && !active.regexTool) return
           setView(v as View)
           // Optional second arg: the settings sub-tab to focus. Bump a
@@ -699,6 +701,7 @@ export default function App(): JSX.Element {
   const isFullHeightView =
     view === 'dust' ||
     view === 'divcards' ||
+    view === 'scarabs' ||
     view === 'pricecheck' ||
     view === 'item' ||
     view === 'regex' ||
@@ -1066,6 +1069,11 @@ export default function App(): JSX.Element {
                 {features.divCards && (
                   <div className="flex-col flex-1 min-h-0" style={{ display: view === 'divcards' ? 'flex' : 'none' }}>
                     <DivCardExplorer onSelectItem={() => setView('item')} />
+                  </div>
+                )}
+                {features.scarabAtlas && (
+                  <div className="flex-col flex-1 min-h-0" style={{ display: view === 'scarabs' ? 'flex' : 'none' }}>
+                    <ScarabAtlas />
                   </div>
                 )}
                 {features.regexTool && poeVersion !== null && settings && (

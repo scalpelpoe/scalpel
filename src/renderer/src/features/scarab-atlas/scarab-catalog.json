@@ -1,0 +1,1069 @@
+{
+  "version": 1,
+  "vendorCategoryOrder": [
+    "titanic",
+    "sulphite",
+    "divination",
+    "anarchy",
+    "ritual",
+    "harvest",
+    "kalguuran",
+    "influencing",
+    "bestiary",
+    "trarthan",
+    "betrayal",
+    "incursion",
+    "domination",
+    "torment",
+    "cartography",
+    "beyond",
+    "ambush",
+    "ultimatum",
+    "expedition",
+    "delirium",
+    "legion",
+    "blight",
+    "abyss",
+    "essence",
+    "breach",
+    "misc",
+    "horned"
+  ],
+  "categories": [
+    {
+      "id": "titanic",
+      "name": "Titanic",
+      "atlasModifier": "boostable",
+      "investmentBoost": false,
+      "scarabs": [
+        {
+          "id": "titanic-scarab",
+          "name": "Titanic Scarab",
+          "weight": 616,
+          "signature": "Titanic Scarab",
+          "limit": 1
+        },
+        {
+          "id": "titanic-scarab-of-legend",
+          "name": "Titanic Scarab of Legend",
+          "weight": 212,
+          "signature": "Legend",
+          "limit": 1
+        },
+        {
+          "id": "titanic-scarab-of-treasures",
+          "name": "Titanic Scarab of Treasures",
+          "weight": 187,
+          "signature": "Titanic Scarab of Treasures",
+          "limit": 3
+        }
+      ]
+    },
+    {
+      "id": "sulphite",
+      "name": "Sulphite",
+      "atlasModifier": "none",
+      "investmentBoost": false,
+      "scarabs": [
+        {
+          "id": "sulphite-scarab",
+          "name": "Sulphite Scarab",
+          "weight": 657,
+          "signature": "Sulphite Scarab",
+          "limit": 1
+        },
+        {
+          "id": "sulphite-scarab-of-fumes",
+          "name": "Sulphite Scarab of Fumes",
+          "weight": 224,
+          "signature": "Fumes",
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "id": "divination",
+      "name": "Divination",
+      "atlasModifier": "boostable",
+      "investmentBoost": false,
+      "scarabs": [
+        {
+          "id": "divination-scarab-of-pilfering",
+          "name": "Divination Scarab of Pilfering",
+          "weight": 19,
+          "signature": "Pilfering",
+          "limit": 1
+        },
+        {
+          "id": "divination-scarab-of-plenty",
+          "name": "Divination Scarab of Plenty",
+          "weight": 211,
+          "signature": "Plenty",
+          "limit": 5
+        },
+        {
+          "id": "divination-scarab-of-the-cloister",
+          "name": "Divination Scarab of The Cloister",
+          "weight": 661,
+          "signature": "Cloister",
+          "limit": 5
+        }
+      ]
+    },
+    {
+      "id": "anarchy",
+      "name": "Anarchy",
+      "atlasModifier": "boostable",
+      "investmentBoost": false,
+      "scarabs": [
+        {
+          "id": "anarchy-scarab",
+          "name": "Anarchy Scarab",
+          "weight": 628,
+          "signature": "Anarchy Scarab",
+          "limit": 5
+        },
+        {
+          "id": "anarchy-scarab-of-gigantification",
+          "name": "Anarchy Scarab of Gigantification",
+          "weight": 414,
+          "signature": "Gigantification",
+          "limit": 2
+        },
+        {
+          "id": "anarchy-scarab-of-partnership",
+          "name": "Anarchy Scarab of Partnership",
+          "weight": 239,
+          "signature": "Partnership",
+          "limit": 1
+        },
+        {
+          "id": "anarchy-scarab-of-the-exceptional",
+          "name": "Anarchy Scarab of the Exceptional",
+          "weight": 0,
+          "signature": "Exceptional",
+          "limit": 2
+        }
+      ]
+    },
+    {
+      "id": "ritual",
+      "name": "Ritual",
+      "atlasModifier": "blockable",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "ritual-scarab-of-abundance",
+          "name": "Ritual Scarab of Abundance",
+          "weight": 226,
+          "signature": "Abundance",
+          "limit": 2
+        },
+        {
+          "id": "ritual-scarab-of-corpses",
+          "name": "Ritual Scarab of Corpses",
+          "weight": 0,
+          "signature": "Corpses",
+          "limit": 2
+        },
+        {
+          "id": "ritual-scarab-of-selectiveness",
+          "name": "Ritual Scarab of Selectiveness",
+          "weight": 674,
+          "signature": "Selectiveness",
+          "limit": 2
+        },
+        {
+          "id": "ritual-scarab-of-wisps",
+          "name": "Ritual Scarab of Wisps",
+          "weight": 421,
+          "signature": "Ritual Scarab of Wisps",
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "id": "harvest",
+      "name": "Harvest",
+      "atlasModifier": "blockable",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "harvest-scarab",
+          "name": "Harvest Scarab",
+          "weight": 649,
+          "signature": "Harvest Scarab",
+          "limit": 1
+        },
+        {
+          "id": "harvest-scarab-of-cornucopia",
+          "name": "Harvest Scarab of Cornucopia",
+          "weight": 25,
+          "signature": "Cornucopia",
+          "limit": 1
+        },
+        {
+          "id": "harvest-scarab-of-doubling",
+          "name": "Harvest Scarab of Doubling",
+          "weight": 218,
+          "signature": "Doubling",
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "id": "kalguuran",
+      "name": "Kalguuran",
+      "atlasModifier": "blockable",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "kalguuran-scarab",
+          "name": "Kalguuran Scarab",
+          "weight": 612,
+          "signature": "Kalguuran Scarab",
+          "limit": 2
+        },
+        {
+          "id": "kalguuran-scarab-of-enriching",
+          "name": "Kalguuran Scarab of Enriching",
+          "weight": 0,
+          "signature": "Enriching",
+          "limit": 1
+        },
+        {
+          "id": "kalguuran-scarab-of-guarded-riches",
+          "name": "Kalguuran Scarab of Guarded Riches",
+          "weight": 420,
+          "signature": "Riches",
+          "limit": 1
+        },
+        {
+          "id": "kalguuran-scarab-of-refinement",
+          "name": "Kalguuran Scarab of Refinement",
+          "weight": 29,
+          "signature": "Refinement",
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "id": "influencing",
+      "name": "Influencing",
+      "atlasModifier": "blockable",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "influencing-scarab-of-hordes",
+          "name": "Influencing Scarab of Hordes",
+          "weight": 436,
+          "signature": "Hordes",
+          "limit": 1
+        },
+        {
+          "id": "influencing-scarab-of-interference",
+          "name": "Influencing Scarab of Interference",
+          "weight": 0,
+          "signature": "Interference",
+          "limit": 1
+        },
+        {
+          "id": "influencing-scarab-of-the-elder",
+          "name": "Influencing Scarab of the Elder",
+          "weight": 518,
+          "signature": "Elder",
+          "limit": 1
+        },
+        {
+          "id": "influencing-scarab-of-the-shaper",
+          "name": "Influencing Scarab of the Shaper",
+          "weight": 558,
+          "signature": "Shaper",
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "id": "bestiary",
+      "name": "Bestiary",
+      "atlasModifier": "none",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "bestiary-scarab",
+          "name": "Bestiary Scarab",
+          "weight": 576,
+          "signature": "Bestiary Scarab",
+          "limit": 1
+        },
+        {
+          "id": "bestiary-scarab-of-duplicating",
+          "name": "Bestiary Scarab of Duplicating",
+          "weight": 217,
+          "signature": "Duplicating",
+          "limit": 1
+        },
+        {
+          "id": "bestiary-scarab-of-the-herd",
+          "name": "Bestiary Scarab of the Herd",
+          "weight": 389,
+          "signature": "Herd",
+          "limit": 2
+        }
+      ]
+    },
+    {
+      "id": "trarthan",
+      "name": "Trarthan",
+      "atlasModifier": "blockable",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "trarthan-scarab",
+          "name": "Trarthan Scarab",
+          "weight": 0,
+          "signature": "Trarthan Scarab",
+          "limit": null
+        },
+        {
+          "id": "trarthan-scarab-of-infamy",
+          "name": "Trarthan Scarab of Infamy",
+          "weight": 0,
+          "signature": "Infamy",
+          "limit": null
+        },
+        {
+          "id": "trarthan-scarab-of-renown",
+          "name": "Trarthan Scarab of Renown",
+          "weight": 0,
+          "signature": "Renown",
+          "limit": null
+        },
+        {
+          "id": "trarthan-scarab-of-surprising-alliances",
+          "name": "Trarthan Scarab of Surprising Alliances",
+          "weight": 0,
+          "signature": "Alliances",
+          "limit": null
+        }
+      ]
+    },
+    {
+      "id": "betrayal",
+      "name": "Betrayal",
+      "atlasModifier": "blockable",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "betrayal-scarab",
+          "name": "Betrayal Scarab",
+          "weight": 593,
+          "signature": "Betrayal Scarab",
+          "limit": 1
+        },
+        {
+          "id": "betrayal-scarab-of-reinforcements",
+          "name": "Betrayal Scarab of Reinforcements",
+          "weight": 439,
+          "signature": "Reinforcements",
+          "limit": 1
+        },
+        {
+          "id": "betrayal-scarab-of-the-allflame",
+          "name": "Betrayal Scarab of the Allflame",
+          "weight": 426,
+          "signature": "Allflame",
+          "limit": 1
+        },
+        {
+          "id": "betrayal-scarab-of-unbreaking",
+          "name": "Betrayal Scarab of Unbreaking",
+          "weight": 0,
+          "signature": "Unbreaking",
+          "limit": 2
+        }
+      ]
+    },
+    {
+      "id": "incursion",
+      "name": "Incursion",
+      "atlasModifier": "blockable",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "incursion-scarab",
+          "name": "Incursion Scarab",
+          "weight": 617,
+          "signature": "Incursion Scarab",
+          "limit": 1
+        },
+        {
+          "id": "incursion-scarab-of-champions",
+          "name": "Incursion Scarab of Champions",
+          "weight": 187,
+          "signature": "Champions",
+          "limit": 2
+        },
+        {
+          "id": "incursion-scarab-of-invasion",
+          "name": "Incursion Scarab of Invasion",
+          "weight": 421,
+          "signature": "Incursion Scarab of Invasion",
+          "limit": 3
+        },
+        {
+          "id": "incursion-scarab-of-timelines",
+          "name": "Incursion Scarab of Timelines",
+          "weight": 24,
+          "signature": "Timelines",
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "id": "domination",
+      "name": "Domination",
+      "atlasModifier": "boostable",
+      "investmentBoost": false,
+      "scarabs": [
+        {
+          "id": "domination-scarab",
+          "name": "Domination Scarab",
+          "weight": 652,
+          "signature": "Domination Scarab",
+          "limit": 4
+        },
+        {
+          "id": "domination-scarab-of-apparitions",
+          "name": "Domination Scarab of Apparitions",
+          "weight": 365,
+          "signature": "Apparitions",
+          "limit": 1
+        },
+        {
+          "id": "domination-scarab-of-evolution",
+          "name": "Domination Scarab of Evolution",
+          "weight": 215,
+          "signature": "Evolution",
+          "limit": 2
+        },
+        {
+          "id": "domination-scarab-of-terrors",
+          "name": "Domination Scarab of Terrors",
+          "weight": 26,
+          "signature": "Terrors",
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "id": "torment",
+      "name": "Torment",
+      "atlasModifier": "boostable",
+      "investmentBoost": false,
+      "scarabs": [
+        {
+          "id": "torment-scarab",
+          "name": "Torment Scarab",
+          "weight": 605,
+          "signature": "Torment Scarab",
+          "limit": 2
+        },
+        {
+          "id": "torment-scarab-of-peculiarity",
+          "name": "Torment Scarab of Peculiarity",
+          "weight": 403,
+          "signature": "Peculiarity",
+          "limit": 1
+        },
+        {
+          "id": "torment-scarab-of-possession",
+          "name": "Torment Scarab of Possession",
+          "weight": 197,
+          "signature": "Possession",
+          "limit": 3
+        }
+      ]
+    },
+    {
+      "id": "cartography",
+      "name": "Cartography",
+      "atlasModifier": "boostable",
+      "investmentBoost": false,
+      "scarabs": [
+        {
+          "id": "cartography-scarab-of-corruption",
+          "name": "Cartography Scarab of Corruption",
+          "weight": 192,
+          "signature": "Corruption",
+          "limit": 1
+        },
+        {
+          "id": "cartography-scarab-of-escalation",
+          "name": "Cartography Scarab of Escalation",
+          "weight": 645,
+          "signature": "Escalation",
+          "limit": 1
+        },
+        {
+          "id": "cartography-scarab-of-risk",
+          "name": "Cartography Scarab of Risk",
+          "weight": 30,
+          "signature": "Risk",
+          "limit": 1
+        },
+        {
+          "id": "cartography-scarab-of-the-multitude",
+          "name": "Cartography Scarab of the Multitude",
+          "weight": 430,
+          "signature": "the Multitude",
+          "limit": 3
+        }
+      ]
+    },
+    {
+      "id": "beyond",
+      "name": "Beyond",
+      "atlasModifier": "boostable",
+      "investmentBoost": false,
+      "scarabs": [
+        {
+          "id": "beyond-scarab",
+          "name": "Beyond Scarab",
+          "weight": 558,
+          "signature": "Beyond Scarab",
+          "limit": 1
+        },
+        {
+          "id": "beyond-scarab-of-haemophilia",
+          "name": "Beyond Scarab of Haemophilia",
+          "weight": 418,
+          "signature": "Haemophilia",
+          "limit": 2
+        },
+        {
+          "id": "beyond-scarab-of-resurgence",
+          "name": "Beyond Scarab of Resurgence",
+          "weight": 208,
+          "signature": "Resurgence",
+          "limit": 1
+        },
+        {
+          "id": "beyond-scarab-of-the-invasion",
+          "name": "Beyond Scarab of the Invasion",
+          "weight": 213,
+          "signature": "the Invasion",
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "id": "ambush",
+      "name": "Ambush",
+      "atlasModifier": "boostable",
+      "investmentBoost": false,
+      "scarabs": [
+        {
+          "id": "ambush-scarab",
+          "name": "Ambush Scarab",
+          "weight": 646,
+          "signature": "Ambush Scarab",
+          "limit": 3
+        },
+        {
+          "id": "ambush-scarab-of-containment",
+          "name": "Ambush Scarab of Containment",
+          "weight": 13,
+          "signature": "Containment",
+          "limit": 1
+        },
+        {
+          "id": "ambush-scarab-of-discernment",
+          "name": "Ambush Scarab of Discernment",
+          "weight": 210,
+          "signature": "Discernment",
+          "limit": 1
+        },
+        {
+          "id": "ambush-scarab-of-hidden-compartments",
+          "name": "Ambush Scarab of Hidden Compartments",
+          "weight": 415,
+          "signature": "Hidden",
+          "limit": 1
+        },
+        {
+          "id": "ambush-scarab-of-potency",
+          "name": "Ambush Scarab of Potency",
+          "weight": 400,
+          "signature": "Potency",
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "id": "ultimatum",
+      "name": "Ultimatum",
+      "atlasModifier": "blockable",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "ultimatum-scarab",
+          "name": "Ultimatum Scarab",
+          "weight": 514,
+          "signature": "Ultimatum Scarab",
+          "limit": 1
+        },
+        {
+          "id": "ultimatum-scarab-of-bribing",
+          "name": "Ultimatum Scarab of Bribing",
+          "weight": 420,
+          "signature": "Bribing",
+          "limit": 2
+        },
+        {
+          "id": "ultimatum-scarab-of-catalysing",
+          "name": "Ultimatum Scarab of Catalysing",
+          "weight": 22,
+          "signature": "Catalysing",
+          "limit": 1
+        },
+        {
+          "id": "ultimatum-scarab-of-dueling",
+          "name": "Ultimatum Scarab of Dueling",
+          "weight": 18,
+          "signature": "Dueling",
+          "limit": 1
+        },
+        {
+          "id": "ultimatum-scarab-of-inscription",
+          "name": "Ultimatum Scarab of Inscription",
+          "weight": 179,
+          "signature": "Inscription",
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "id": "expedition",
+      "name": "Expedition",
+      "atlasModifier": "blockable",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "expedition-scarab",
+          "name": "Expedition Scarab",
+          "weight": 652,
+          "signature": "Expedition Scarab",
+          "limit": 1
+        },
+        {
+          "id": "expedition-scarab-of-archaeology",
+          "name": "Expedition Scarab of Archaeology",
+          "weight": 234,
+          "signature": "Archaeology",
+          "limit": 1
+        },
+        {
+          "id": "expedition-scarab-of-infusion",
+          "name": "Expedition Scarab of Infusion",
+          "weight": 0,
+          "signature": "Infusion",
+          "limit": 1
+        },
+        {
+          "id": "expedition-scarab-of-runefinding",
+          "name": "Expedition Scarab of Runefinding",
+          "weight": 406,
+          "signature": "Runefinding",
+          "limit": 2
+        },
+        {
+          "id": "expedition-scarab-of-verisium-powder",
+          "name": "Expedition Scarab of Verisium Powder",
+          "weight": 412,
+          "signature": "Powder",
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "id": "delirium",
+      "name": "Delirium",
+      "atlasModifier": "blockable",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "delirium-scarab",
+          "name": "Delirium Scarab",
+          "weight": 631,
+          "signature": "Delirium Scarab",
+          "limit": 1
+        },
+        {
+          "id": "delirium-scarab-of-delusions",
+          "name": "Delirium Scarab of Delusions",
+          "weight": 193,
+          "signature": "Delusions",
+          "limit": 1
+        },
+        {
+          "id": "delirium-scarab-of-mania",
+          "name": "Delirium Scarab of Mania",
+          "weight": 434,
+          "signature": "Mania",
+          "limit": 2
+        },
+        {
+          "id": "delirium-scarab-of-neuroses",
+          "name": "Delirium Scarab of Neuroses",
+          "weight": 210,
+          "signature": "Neuroses",
+          "limit": 1
+        },
+        {
+          "id": "delirium-scarab-of-paranoia",
+          "name": "Delirium Scarab of Paranoia",
+          "weight": 413,
+          "signature": "Paranoia",
+          "limit": 5
+        }
+      ]
+    },
+    {
+      "id": "legion",
+      "name": "Legion",
+      "atlasModifier": "blockable",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "legion-scarab",
+          "name": "Legion Scarab",
+          "weight": 630,
+          "signature": "Legion Scarab",
+          "limit": 5
+        },
+        {
+          "id": "legion-scarab-of-eternal-conflict",
+          "name": "Legion Scarab of Eternal Conflict",
+          "weight": 24,
+          "signature": "Eternal",
+          "limit": 1
+        },
+        {
+          "id": "legion-scarab-of-officers",
+          "name": "Legion Scarab of Officers",
+          "weight": 208,
+          "signature": "Officers",
+          "limit": 1
+        },
+        {
+          "id": "legion-scarab-of-treasures",
+          "name": "Legion Scarab of Treasures",
+          "weight": 0,
+          "signature": "Legion Scarab of Treasures",
+          "limit": 3
+        }
+      ]
+    },
+    {
+      "id": "blight",
+      "name": "Blight",
+      "atlasModifier": "blockable",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "blight-scarab",
+          "name": "Blight Scarab",
+          "weight": 479,
+          "signature": "Blight Scarab",
+          "limit": 1
+        },
+        {
+          "id": "blight-scarab-of-blooming",
+          "name": "Blight Scarab of Blooming",
+          "weight": 32,
+          "signature": "Blooming",
+          "limit": 1
+        },
+        {
+          "id": "blight-scarab-of-invigoration",
+          "name": "Blight Scarab of Invigoration",
+          "weight": 23,
+          "signature": "Invigoration",
+          "limit": 1
+        },
+        {
+          "id": "blight-scarab-of-the-blightheart",
+          "name": "Blight Scarab of the Blightheart",
+          "weight": 201,
+          "signature": "Blightheart",
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "id": "abyss",
+      "name": "Abyss",
+      "atlasModifier": "blockable",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "abyss-scarab",
+          "name": "Abyss Scarab",
+          "weight": 601,
+          "signature": "Abyss Scarab",
+          "limit": 2
+        },
+        {
+          "id": "abyss-scarab-of-crystals",
+          "name": "Abyss Scarab of Crystals",
+          "weight": 0,
+          "signature": "Crystals",
+          "limit": null
+        },
+        {
+          "id": "abyss-scarab-of-descending",
+          "name": "Abyss Scarab of Descending",
+          "weight": 0,
+          "signature": "Descending",
+          "limit": 1
+        },
+        {
+          "id": "abyss-scarab-of-edifice",
+          "name": "Abyss Scarab of Edifice",
+          "weight": 190,
+          "signature": "Edifice",
+          "limit": 1
+        },
+        {
+          "id": "abyss-scarab-of-multitudes",
+          "name": "Abyss Scarab of Multitudes",
+          "weight": 411,
+          "signature": "Multitudes",
+          "limit": 2
+        },
+        {
+          "id": "abyss-scarab-of-profound-depth",
+          "name": "Abyss Scarab of Profound Depth",
+          "weight": 26,
+          "signature": "Depth",
+          "limit": 1
+        },
+        {
+          "id": "abyss-scarab-of-the-consort",
+          "name": "Abyss Scarab of the Consort",
+          "weight": 0,
+          "signature": "Consort",
+          "limit": null
+        }
+      ]
+    },
+    {
+      "id": "essence",
+      "name": "Essence",
+      "atlasModifier": "boostable",
+      "investmentBoost": false,
+      "scarabs": [
+        {
+          "id": "essence-scarab",
+          "name": "Essence Scarab",
+          "weight": 603,
+          "signature": "Essence Scarab",
+          "limit": 5
+        },
+        {
+          "id": "essence-scarab-of-adaptation",
+          "name": "Essence Scarab of Adaptation",
+          "weight": 21,
+          "signature": "Adaptation",
+          "limit": 1
+        },
+        {
+          "id": "essence-scarab-of-ascent",
+          "name": "Essence Scarab of Ascent",
+          "weight": 203,
+          "signature": "Ascent",
+          "limit": 1
+        },
+        {
+          "id": "essence-scarab-of-calcification",
+          "name": "Essence Scarab of Calcification",
+          "weight": 24,
+          "signature": "Calcification",
+          "limit": 1
+        },
+        {
+          "id": "essence-scarab-of-stability",
+          "name": "Essence Scarab of Stability",
+          "weight": 407,
+          "signature": "Essence Scarab of Stability",
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "id": "breach",
+      "name": "Breach",
+      "atlasModifier": "blockable",
+      "investmentBoost": true,
+      "scarabs": [
+        {
+          "id": "breach-scarab-of-instability",
+          "name": "Breach Scarab of Instability",
+          "weight": 0,
+          "signature": "Instability",
+          "limit": 2
+        },
+        {
+          "id": "breach-scarab-of-resonant-cascade",
+          "name": "Breach Scarab of Resonant Cascade",
+          "weight": 0,
+          "signature": "Cascade",
+          "limit": 1
+        },
+        {
+          "id": "breach-scarab-of-the-hive",
+          "name": "Breach Scarab of the Hive",
+          "weight": 0,
+          "signature": "Hive",
+          "limit": 1
+        },
+        {
+          "id": "breach-scarab-of-the-incensed-swarm",
+          "name": "Breach Scarab of the Incensed Swarm",
+          "weight": 0,
+          "signature": "Swarm",
+          "limit": 1
+        },
+        {
+          "id": "breach-scarab-of-the-marshal",
+          "name": "Breach Scarab of the Marshal",
+          "weight": 0,
+          "signature": "Marshal",
+          "limit": 1
+        }
+      ]
+    },
+    {
+      "id": "misc",
+      "name": "Miscellaneous",
+      "atlasModifier": "none",
+      "investmentBoost": false,
+      "scarabs": [
+        {
+          "id": "scarab-of-adversaries",
+          "name": "Scarab of Adversaries",
+          "weight": 634,
+          "signature": "Adversaries",
+          "limit": 2
+        },
+        {
+          "id": "scarab-of-divinity",
+          "name": "Scarab of Divinity",
+          "weight": 403,
+          "signature": "Divinity",
+          "limit": 3
+        },
+        {
+          "id": "scarab-of-monstrous-lineage",
+          "name": "Scarab of Monstrous Lineage",
+          "weight": 613,
+          "signature": "Lineage",
+          "limit": 2
+        },
+        {
+          "id": "scarab-of-radiant-storms",
+          "name": "Scarab of Radiant Storms",
+          "weight": 32,
+          "signature": "Storms",
+          "limit": 1
+        },
+        {
+          "id": "scarab-of-stability",
+          "name": "Scarab of Stability",
+          "weight": 183,
+          "signature": "Scarab of Stability",
+          "limit": 1
+        },
+        {
+          "id": "scarab-of-the-dextral",
+          "name": "Scarab of the Dextral",
+          "weight": 0,
+          "signature": "Dextral",
+          "limit": 1
+        },
+        {
+          "id": "scarab-of-the-sinistral",
+          "name": "Scarab of the Sinistral",
+          "weight": 0,
+          "signature": "Sinistral",
+          "limit": 1
+        },
+        {
+          "id": "scarab-of-wisps",
+          "name": "Scarab of Wisps",
+          "weight": 212,
+          "signature": "Scarab of Wisps",
+          "limit": 2
+        }
+      ]
+    },
+    {
+      "id": "horned",
+      "name": "Horned",
+      "atlasModifier": "none",
+      "investmentBoost": false,
+      "scarabs": [
+        {
+          "id": "horned-scarab-of-awakening",
+          "name": "Horned Scarab of Awakening",
+          "weight": 19,
+          "signature": "Awakening",
+          "limit": 1
+        },
+        {
+          "id": "horned-scarab-of-bloodlines",
+          "name": "Horned Scarab of Bloodlines",
+          "weight": 34,
+          "signature": "Bloodlines",
+          "limit": 1
+        },
+        {
+          "id": "horned-scarab-of-glittering",
+          "name": "Horned Scarab of Glittering",
+          "weight": 24,
+          "signature": "Glittering",
+          "limit": 1
+        },
+        {
+          "id": "horned-scarab-of-nemeses",
+          "name": "Horned Scarab of Nemeses",
+          "weight": 219,
+          "signature": "Nemeses",
+          "limit": 2
+        },
+        {
+          "id": "horned-scarab-of-pandemonium",
+          "name": "Horned Scarab of Pandemonium",
+          "weight": 19,
+          "signature": "Pandemonium",
+          "limit": 1
+        },
+        {
+          "id": "horned-scarab-of-preservation",
+          "name": "Horned Scarab of Preservation",
+          "weight": 3,
+          "signature": "Preservation",
+          "limit": 1
+        },
+        {
+          "id": "horned-scarab-of-tradition",
+          "name": "Horned Scarab of Tradition",
+          "weight": 23,
+          "signature": "Tradition",
+          "limit": 1
+        }
+      ]
+    }
+  ]
+}
