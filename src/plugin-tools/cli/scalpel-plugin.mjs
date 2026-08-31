@@ -95,7 +95,7 @@ function generateContracts(projectDir, config, check) {
 
 async function bundlePlugin(projectDir, config, check) {
   const bundlePath = resolve(projectDir, config.bundle ?? 'plugin.js')
-  const entryPoint = `./${relative(projectDir, resolve(projectDir, config.entry)).split(sep).join('/')}`
+  const entryPoint = resolve(projectDir, config.entry)
   const result = await esbuild({
     absWorkingDir: projectDir,
     entryPoints: [entryPoint],

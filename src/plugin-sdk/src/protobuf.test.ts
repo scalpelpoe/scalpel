@@ -32,7 +32,7 @@ describe('Protobuf service adapters', () => {
       expose: vi.fn(),
       get: () => ({
         pluginId: 'greeting-provider',
-        apiVersion: '1.0.0',
+        apiVersion: '2.0.0',
         serviceTypeName: GreetingProvider.typeName,
         call: async <TResult>(method: string, params?: unknown): Promise<TResult> =>
           Promise.resolve(handler!(method, params)) as Promise<TResult>,
