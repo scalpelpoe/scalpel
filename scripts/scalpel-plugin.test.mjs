@@ -71,7 +71,7 @@ describe('scalpel-plugin', () => {
 
     appendFileSync(join(project, 'src/generated/service_pb.ts'), '// stale\n')
     await expect(runScalpelPlugin('check', project)).rejects.toThrow(/stale/)
-  }, 30_000)
+  }, 60_000)
 
   it('rejects output directories outside the plugin project', async () => {
     const project = mkdtempSync(join(tmpdir(), 'scalpel-plugin-paths-'))

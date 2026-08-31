@@ -17,7 +17,7 @@ const providerManifest: PluginManifest = {
   author: 'test',
   scalpelMinVersion: '>=0.0.0',
   api: {
-    version: '1.0.0',
+    version: '2.0.0',
     contract: 'api.binpb',
     service: 'scalpel.examples.greeting.v1.GreetingProvider',
   },
@@ -36,7 +36,7 @@ const relayManifest: PluginManifest = {
     contract: 'api.binpb',
     service: 'scalpel.examples.greeting.relay.v1.GreetingRelay',
   },
-  dependencies: [{ pluginId: 'greeting-provider', apiVersion: '1.0.0' }],
+  dependencies: [{ pluginId: 'greeting-provider', apiVersion: '2.0.0' }],
 }
 
 const consumerManifest: PluginManifest = {
