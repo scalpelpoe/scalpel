@@ -88,7 +88,7 @@ export const NoItem: Story = {
   args: { overlayData: null, view: 'no-item' },
 }
 
-/** Plugin tabs overflow within their own strip while permanent controls remain visible. */
+/** Row one fills at 11 icons; plugin tabs beyond the free slots wrap to a right-justified second row. */
 export const ManyPluginTabs: Story = {
   args: {
     overlayData,

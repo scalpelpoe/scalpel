@@ -38,18 +38,58 @@ export function TitleBar({
 }: TitleBarProps): JSX.Element {
   const fallbackIcon = getCurrencyIcons(poeVersion ?? 1).baseline
   const visiblePluginTabs = pluginTabs.filter((tab) => !hiddenPluginTabIds.has(tab.pluginId))
+
+  // Row 1 fits 11 30px buttons at the fixed 540px panel: 512px of content
+  // minus the brand block and its gap leaves ~415px, and 11 buttons at a
+  // 36px pitch take 390px while 12 would take 426px. Plugin tabs fill the
+  // slots the built-in buttons don't use; the rest wrap to a second row.
+  const ROW_CAPACITY = 11
+  const builtInCount = [
+    view === 'tools',
+    view === 'audit',
+    true, // search is always rendered
+    Boolean(overlayData) && !hiddenTabs.has('item'),
+    !hiddenTabs.has('pricecheck'),
+    features.dustExplorer && !hiddenTabs.has('dust'),
+    features.divCards && !hiddenTabs.has('divcards'),
+    features.regexTool && !hiddenTabs.has('regex'),
+  ].filter(Boolean).length
+  const rightCount = (hiddenTabs.has('extras') ? 0 : 1) + 2 // setup + close
+  const pluginSlots = Math.max(0, ROW_CAPACITY - builtInCount - rightCount)
+  const rowOnePluginTabs = visiblePluginTabs.slice(0, pluginSlots)
+  const overflowPluginTabs = visiblePluginTabs.slice(pluginSlots)
+
+  const renderPluginTab = (t: { pluginId: string; label: string; icon: string }): JSX.Element => {
+    // Clamp every plugin-supplied SVG to the canonical 16x16 title-bar
+    // size. The descendant selector picks up SVGs wrapped in any depth of
+    // host element from the plugin's markup (iconpark output wraps its
+    // svg in an outer span, for example). CSS wins over the SVG's
+    // width/height attrs, so plugin authors don't need to set sizing.
+    const base = 'btn-bounce w-[30px] h-[30px] flex items-center justify-center [&_svg]:w-4 [&_svg]:h-4 [&_svg]:block'
+    const className = view === `plugin:${t.pluginId}` ? `${base} bg-accent text-[#171821]` : base
+    return (
+      <button
+        key={t.pluginId}
+        onClick={() => onSetView(`plugin:${t.pluginId}`)}
+        title={t.label}
+        className={className}
+        dangerouslySetInnerHTML={{ __html: t.icon }}
+      />
+    )
+  }
+
   return (
-    <div className="flex items-center gap-3 px-3.5 py-2.5 border-b border-border cursor-grab" onMouseDown={onMouseDown}>
-      <span className="text-accent font-bold tracking-[1px] flex shrink-0 items-center gap-1.5">
-        <img src={appIcon} alt="" className="w-4 h-4" />
-        {/* Name over version, both flush to the icon's right edge */}
-        <span className="flex flex-col items-start leading-none">
-          Scalpel
-          <span className="text-[9px] font-medium tracking-normal opacity-60 mt-0.5">v{__APP_VERSION__}</span>
+    <div className="px-3.5 py-2.5 border-b border-border cursor-grab" onMouseDown={onMouseDown}>
+      <div className="flex items-center gap-3">
+        <span className="text-accent font-bold tracking-[1px] flex shrink-0 items-center gap-1.5">
+          <img src={appIcon} alt="" className="w-4 h-4" />
+          {/* Name over version, both flush to the icon's right edge */}
+          <span className="flex flex-col items-start leading-none">
+            Scalpel
+            <span className="text-[9px] font-medium tracking-normal opacity-60 mt-0.5">v{__APP_VERSION__}</span>
+          </span>
         </span>
-      </span>
-      <div className="ml-auto flex min-w-0 flex-1 items-center justify-end gap-1.5">
-        <div className="flex shrink-0 items-center gap-1.5">
+        <div className="ml-auto flex items-center gap-1.5">
           {/* Tools tab -- only visible when active */}
           {view === 'tools' && (
             <button
@@ -175,34 +215,7 @@ export function TitleBar({
               />
             </button>
           )}
-        </div>
-        {visiblePluginTabs.length > 0 && (
-          <nav
-            aria-label="Plugin tabs"
-            className="no-scrollbar flex min-w-0 items-center gap-1.5 overflow-x-auto overflow-y-hidden"
-          >
-            {visiblePluginTabs.map((t) => {
-              // Clamp every plugin-supplied SVG to the canonical 16x16 title-bar
-              // size. The descendant selector picks up SVGs wrapped in any depth of
-              // host element from the plugin's markup (iconpark output wraps its
-              // svg in an outer span, for example). CSS wins over the SVG's
-              // width/height attrs, so plugin authors don't need to set sizing.
-              const base =
-                'btn-bounce w-[30px] h-[30px] flex shrink-0 items-center justify-center [&_svg]:w-4 [&_svg]:h-4 [&_svg]:block'
-              const className = view === `plugin:${t.pluginId}` ? `${base} bg-accent text-[#171821]` : base
-              return (
-                <button
-                  key={t.pluginId}
-                  onClick={() => onSetView(`plugin:${t.pluginId}`)}
-                  title={t.label}
-                  className={className}
-                  dangerouslySetInnerHTML={{ __html: t.icon }}
-                />
-              )
-            })}
-          </nav>
-        )}
-        <div className="flex shrink-0 items-center gap-1.5">
+          {rowOnePluginTabs.map(renderPluginTab)}
           {!hiddenTabs.has('extras') && (
             <button
               onClick={() => onSetView('extras')}
@@ -235,6 +248,13 @@ export function TitleBar({
           </button>
         </div>
       </div>
+      {overflowPluginTabs.length > 0 && (
+        // pr-9 keeps the close button's 36px slot (30px button + 6px gap) clear,
+        // so the wrapped row ends one slot short of the panel edge, under the gear.
+        <nav aria-label="Plugin tabs" className="mt-1.5 flex flex-wrap items-center justify-end gap-1.5 pr-9">
+          {overflowPluginTabs.map(renderPluginTab)}
+        </nav>
+      )}
     </div>
   )
 }
