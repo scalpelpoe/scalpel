@@ -65,8 +65,9 @@ describe('toGameCursor', () => {
   })
 })
 
-describe('getGameCursorPosition', () => {
+describe('getGameCursorPosition (Windows)', () => {
   beforeEach(() => {
+    vi.stubGlobal('process', { ...process, platform: 'win32' })
     mock.state.targetHasFocus = true
     mock.state.targetBounds = { x: 100, y: 50, width: 1920, height: 1080 }
     // Identity conversion by default: physical == DIP (scale 1.0).
@@ -82,10 +83,11 @@ describe('getGameCursorPosition', () => {
   })
 
   afterEach(() => {
+    vi.unstubAllGlobals()
     vi.clearAllMocks()
   })
 
-  it('returns the cursor position at scale 1.0', () => {
+  it('returns the cursor position at scale 1.0 via screenToDipRect', () => {
     expect(getGameCursorPosition()).toEqual({ x: 600, y: 350 })
     expect(mock.screenToDipRect).toHaveBeenCalledWith(null, { x: 100, y: 50, width: 1920, height: 1080 })
   })
@@ -157,10 +159,39 @@ describe('getGameCursorPosition', () => {
     expect(getGameCursorPosition()).toBeNull()
   })
 
-  it('returns null instead of throwing when the underlying electron call throws', () => {
+  it('returns null instead of throwing when screenToDipRect throws', () => {
     mock.screenToDipRect.mockImplementation(() => {
       throw new Error('boom')
     })
     expect(getGameCursorPosition()).toBeNull()
+  })
+})
+
+describe('getGameCursorPosition (Linux)', () => {
+  beforeEach(() => {
+    vi.stubGlobal('process', { ...process, platform: 'linux' })
+    mock.state.targetHasFocus = true
+    mock.state.targetBounds = { x: 100, y: 50, width: 1920, height: 1080 }
+    mock.getCursorScreenPoint.mockReturnValue({ x: 700, y: 400 })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.clearAllMocks()
+  })
+
+  it('uses targetBounds as-is and does not call screenToDipRect', () => {
+    // electron-overlay-window already reports logical coords on Linux;
+    // screenToDipRect is Windows-only and must not be touched.
+    expect(getGameCursorPosition()).toEqual({ x: 600, y: 350 })
+    expect(mock.screenToDipRect).not.toHaveBeenCalled()
+  })
+
+  it('still works if screenToDipRect is missing (Electron Linux)', () => {
+    // Regression: calling a missing screenToDipRect used to throw and blank Pop out.
+    mock.screenToDipRect.mockImplementation(() => {
+      throw new TypeError('screen.screenToDipRect is not a function')
+    })
+    expect(getGameCursorPosition()).toEqual({ x: 600, y: 350 })
   })
 })
