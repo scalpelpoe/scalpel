@@ -38,6 +38,7 @@ import { pluginEntryUrl } from '../plugins/plugin-protocol'
 import { fetchRegistry } from '../plugins/registry'
 import { resolveRegistrySelection } from '../plugins/registry-selection'
 import { deleteValue, getValue, listKeys, setValue } from '../plugins/storage'
+import { readInstalledIds } from '../plugins/installed-list'
 import { type UninstallResult, uninstallPlugin } from '../plugins/uninstall'
 import { getUnpackedSourceDir } from '../plugins/unpacked-list'
 import { type UnpackedFlowDeps, installUnpackedAndNotify, reloadUnpackedPlugin } from '../plugins/unpacked-flow'
@@ -401,10 +402,9 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
       pluginId,
       () => {
         const installed = getInstalledPlugins()
-        const preconditionError = validateUninstallPrecondition(
-          pluginId,
-          new Set(installed.map((plugin) => plugin.manifest.id)),
-        )
+        // installed.json is the source of truth here: a plugin whose manifest
+        // went missing or no longer validates must still be removable.
+        const preconditionError = validateUninstallPrecondition(pluginId, new Set(readInstalledIds()))
         if (preconditionError) return { ok: false as const, error: preconditionError }
         const dependencyError = validateDependencyMutation(
           installed.map((plugin) => plugin.manifest),
