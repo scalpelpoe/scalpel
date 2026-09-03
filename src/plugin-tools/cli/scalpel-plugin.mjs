@@ -10,13 +10,14 @@ import {
   mkdtempSync,
   readFileSync,
   readdirSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { createRequire } from 'node:module'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { build as esbuild } from 'esbuild'
 import { fromBinary } from '@bufbuild/protobuf'
 import { FileDescriptorSetSchema } from '@bufbuild/protobuf/wkt'
@@ -335,7 +336,22 @@ function argument(name) {
   return index === -1 ? null : process.argv[index + 1]
 }
 
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+/** True when this file is the process entry. npm installs the bin as a symlink
+ * on POSIX and Node resolves the main module through realpath while argv[1]
+ * keeps the symlink path, so both sides are compared by real path. */
+export function isInvokedAsMain(argv1, moduleUrl) {
+  if (!argv1) return false
+  const realPath = (path) => {
+    try {
+      return realpathSync(path)
+    } catch {
+      return path
+    }
+  }
+  return realPath(resolve(argv1)) === realPath(fileURLToPath(moduleUrl))
+}
+
+if (isInvokedAsMain(process.argv[1], import.meta.url)) {
   const command = process.argv[2]
   runScalpelPlugin(command, argument('--project') ?? '.')
     .then(() => {
