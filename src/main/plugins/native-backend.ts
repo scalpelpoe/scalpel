@@ -130,6 +130,12 @@ export class PluginNativeBackendManager {
     return this.restartBlockedPlugins.size > 0
   }
 
+  /** Plugins whose on-disk package changed this session. They are excluded from
+   * the loadable graph until restart; everything else keeps loading normally. */
+  restartBlockedPluginIds(): ReadonlySet<string> {
+    return this.restartBlockedPlugins
+  }
+
   async withAllStopped<TResult>(operation: () => TResult | Promise<TResult>): Promise<TResult> {
     this.blockAllCount += 1
     return this.serializeLifecycle(async () => {
