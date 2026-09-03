@@ -40,6 +40,9 @@ export function replacePackageAtomically(
   let metadataStarted = false
 
   try {
+    // A backup left behind by an earlier failed swap is the only copy of the
+    // previous install; put it back before discarding anything.
+    if (existsSync(backupDir) && !existsSync(destDir)) renameSync(backupDir, destDir)
     rmSync(incomingDir, { recursive: true, force: true })
     mkdirSync(incomingDir, { recursive: true })
     stage(incomingDir)
@@ -47,13 +50,8 @@ export function replacePackageAtomically(
     rmSync(backupDir, { recursive: true, force: true })
     hadPrevious = existsSync(destDir)
     if (hadPrevious) renameSync(destDir, backupDir)
-    try {
-      renameSync(incomingDir, destDir)
-      swapped = true
-    } catch (error) {
-      if (hadPrevious) renameSync(backupDir, destDir)
-      throw error
-    }
+    renameSync(incomingDir, destDir)
+    swapped = true
 
     metadataStarted = true
     commitMetadata()
@@ -67,10 +65,8 @@ export function replacePackageAtomically(
       }
     }
     try {
-      if (swapped) {
-        rmSync(destDir, { recursive: true, force: true })
-        if (hadPrevious) renameSync(backupDir, destDir)
-      }
+      if (swapped) rmSync(destDir, { recursive: true, force: true })
+      if (hadPrevious && !existsSync(destDir)) renameSync(backupDir, destDir)
       rmSync(incomingDir, { recursive: true, force: true })
     } catch (caught) {
       rollbackError ??= caught
