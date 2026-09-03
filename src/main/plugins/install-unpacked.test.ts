@@ -155,7 +155,7 @@ describe('installUnpacked', () => {
     expect(mockFs.files.has(join(destDir, 'plugin.js'))).toBe(true)
   })
 
-  it('uses the immediate dist package and stores that directory as its provenance', async () => {
+  it('uses the immediate dist package and keeps the selected directory as provenance', async () => {
     mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
     mockFs.files.set(join(DIST_PLUGIN, 'manifest.json'), validManifest)
     mockFs.files.set(join(DIST_PLUGIN, 'plugin.js'), '// built plugin')
@@ -167,10 +167,10 @@ describe('installUnpacked', () => {
     const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
     expect(mockFs.files.get(join(destDir, 'plugin.js'))).toBe('// built plugin')
     const unpacked = JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'unpacked.json'))!)
-    expect(unpacked).toEqual([{ id: 'hello-world', sourceDir: DIST_PLUGIN }])
+    expect(unpacked).toEqual([{ id: 'hello-world', sourceDir: SRC_PLUGIN }])
   })
 
-  it('prefers the selected directory when both it and dist contain packages', async () => {
+  it('prefers dist when both it and the selected directory contain packages', async () => {
     const distManifest = JSON.stringify({ ...JSON.parse(validManifest), id: 'dist-plugin', name: 'Dist Plugin' })
     mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
     mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// root plugin')
@@ -180,11 +180,11 @@ describe('installUnpacked', () => {
     const { installUnpacked } = await import('./install-unpacked')
     const r = installUnpacked(SRC_PLUGIN)
 
-    expect(r).toEqual({ ok: true, id: 'hello-world' })
-    const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
-    expect(mockFs.files.get(join(destDir, 'plugin.js'))).toBe('// root plugin')
+    expect(r).toEqual({ ok: true, id: 'dist-plugin' })
+    const destDir = join(TEST_USER_DATA, 'plugins', 'dist-plugin')
+    expect(mockFs.files.get(join(destDir, 'plugin.js'))).toBe('// dist plugin')
     const unpacked = JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'unpacked.json'))!)
-    expect(unpacked).toEqual([{ id: 'hello-world', sourceDir: SRC_PLUGIN }])
+    expect(unpacked).toEqual([{ id: 'dist-plugin', sourceDir: SRC_PLUGIN }])
   })
 
   it('copies a declared API contract', async () => {

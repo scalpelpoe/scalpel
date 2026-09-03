@@ -13,12 +13,12 @@ export type { InstallResult }
 
 export function installUnpacked(sourceDir: string): InstallResult {
   const distDir = join(sourceDir, 'dist')
-  const packageDir =
-    existsSync(join(sourceDir, 'manifest.json')) && existsSync(join(sourceDir, 'plugin.js'))
-      ? sourceDir
-      : existsSync(join(distDir, 'manifest.json')) && existsSync(join(distDir, 'plugin.js'))
-        ? distDir
-        : null
+  const hasPackage = (dir: string): boolean =>
+    existsSync(join(dir, 'manifest.json')) && existsSync(join(dir, 'plugin.js'))
+  // A built dist/ wins over root files: scalpel-plugin pack leaves the source
+  // manifest and an intermediate bundle at the root next to the generated
+  // package in dist/, and only the generated one is the installable artifact.
+  const packageDir = hasPackage(distDir) ? distDir : hasPackage(sourceDir) ? sourceDir : null
   if (!packageDir) {
     return {
       ok: false,
@@ -80,7 +80,9 @@ export function installUnpacked(sourceDir: string): InstallResult {
       },
       () => {
         addInstalledId(id)
-        addUnpackedId(id, packageDir)
+        // Provenance is the directory the user picked, so Reload re-resolves
+        // root vs dist each time instead of pinning a build output directory.
+        addUnpackedId(id, sourceDir)
         cancelStorageRemoval(id)
       },
       () => restoreFiles(metadata),
