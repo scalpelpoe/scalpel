@@ -64,6 +64,23 @@ describe('Protobuf service adapters', () => {
     expect(expose).not.toHaveBeenCalled()
   })
 
+  it('accepts implementations whose methods live on a class prototype', () => {
+    class Implementation {}
+    for (const method of GreetingProvider.methods) {
+      Object.defineProperty(Implementation.prototype, method.localName, { value: async () => ({}) })
+    }
+    const expose = vi.fn()
+
+    expect(() =>
+      exposePluginService(
+        { expose, get: vi.fn() },
+        GreetingProvider,
+        new Implementation() as Parameters<typeof exposePluginService<typeof GreetingProvider>>[2],
+      ),
+    ).not.toThrow()
+    expect(expose).toHaveBeenCalledWith(GreetingProvider.typeName, expect.any(Function))
+  })
+
   it('encodes and decodes native service payloads', async () => {
     const native: PluginNativeBackendApi = {
       async call(method, payload) {
