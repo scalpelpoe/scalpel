@@ -422,6 +422,13 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
       (mutation) => mutation.ok,
     )
     if (result.ok) {
+      // The package is gone, so the pop-out cannot be reloaded: close it and
+      // forget its geometry now instead of leaving a stale anchor in the store.
+      disposePluginOverlay(pluginId)
+      clearPluginOverlayAnchor(store, pluginId)
+      removePluginOverlayHotkey(pluginId)
+      refreshAppMacros()
+      notifyHotkeysChanged()
       notifyRestartRequired()
       return { ...result, restartRequired: true as const }
     }
