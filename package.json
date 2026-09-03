@@ -23,9 +23,12 @@
   },
   "main": "out/main/index.js",
   "scripts": {
+    "predev": "npm run prepare:plugins",
     "dev": "npm run build:i18n && npm run build:internal-assets && node scripts/sync-regex-data.js & electron-vite dev",
+    "prebuild": "npm run prepare:plugins",
     "build": "npm run build:i18n && npm run build:internal-assets && electron-vite build",
     "build:internal-assets": "node scripts/build-internal-assets.mjs",
+    "prepare:plugins": "node src/plugin-tools/cli/scalpel-plugin.mjs check --project . && npm run build:plugin-service-examples && node src/plugin-tools/cli/scalpel-plugin.mjs build --project plugin-service-examples/native-item-analyzer",
     "generate:plugin-services": "node src/plugin-tools/cli/scalpel-plugin.mjs generate --project . && node src/plugin-tools/cli/scalpel-plugin.mjs generate --project plugin-service-examples/greeting-provider && node src/plugin-tools/cli/scalpel-plugin.mjs generate --project plugin-service-examples/greeting-relay && node src/plugin-tools/cli/scalpel-plugin.mjs generate --project plugin-service-examples/greeting-consumer && node src/plugin-tools/cli/scalpel-plugin.mjs generate --project plugin-service-examples/native-item-analyzer",
     "build:plugin-service-examples": "node src/plugin-tools/cli/scalpel-plugin.mjs build --project plugin-service-examples/greeting-provider && node src/plugin-tools/cli/scalpel-plugin.mjs build --project plugin-service-examples/greeting-relay && node src/plugin-tools/cli/scalpel-plugin.mjs build --project plugin-service-examples/greeting-consumer",
     "check:plugin-service-examples": "node src/plugin-tools/cli/scalpel-plugin.mjs check --project . && node src/plugin-tools/cli/scalpel-plugin.mjs check --project plugin-service-examples/greeting-provider && node src/plugin-tools/cli/scalpel-plugin.mjs check --project plugin-service-examples/greeting-relay && node src/plugin-tools/cli/scalpel-plugin.mjs check --project plugin-service-examples/greeting-consumer",
