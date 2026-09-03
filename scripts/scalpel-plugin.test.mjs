@@ -1,8 +1,18 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync, appendFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+  mkdirSync,
+  appendFileSync,
+  symlinkSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { runScalpelPlugin } from '../src/plugin-tools/cli/scalpel-plugin.mjs'
+import { pathToFileURL } from 'node:url'
+import { isInvokedAsMain, runScalpelPlugin } from '../src/plugin-tools/cli/scalpel-plugin.mjs'
 
 const temporaryDirectories = []
 
@@ -11,6 +21,22 @@ afterEach(() => {
 })
 
 describe('scalpel-plugin', () => {
+  it('detects the main module when argv[1] reaches it through a symlink', () => {
+    const root = mkdtempSync(join(tmpdir(), 'scalpel-plugin-bin-'))
+    temporaryDirectories.push(root)
+    const realDir = join(root, 'real')
+    const linkDir = join(root, 'link')
+    mkdirSync(realDir)
+    writeFileSync(join(realDir, 'entry.mjs'), '')
+    symlinkSync(realDir, linkDir, 'junction')
+    const moduleUrl = pathToFileURL(join(realDir, 'entry.mjs')).href
+
+    expect(isInvokedAsMain(join(linkDir, 'entry.mjs'), moduleUrl)).toBe(true)
+    expect(isInvokedAsMain(join(realDir, 'entry.mjs'), moduleUrl)).toBe(true)
+    expect(isInvokedAsMain(join(realDir, 'other.mjs'), moduleUrl)).toBe(false)
+    expect(isInvokedAsMain(undefined, moduleUrl)).toBe(false)
+  })
+
   it('generates, checks, bundles, and packages a generic plugin project', async () => {
     const project = mkdtempSync(join(tmpdir(), 'scalpel-plugin-cli-'))
     temporaryDirectories.push(project)
