@@ -15,8 +15,8 @@ describe('plugin mutation endpoint preconditions', () => {
     )
   })
 
-  it('routes unpacked removal through its development endpoint', () => {
-    expect(validateUninstallPrecondition('demo', new Set(['demo']), new Set(['demo']))).toMatch(/Developer settings/)
-    expect(validateUninstallPrecondition('missing', new Set(), new Set())).toMatch(/not installed/)
+  it('rejects uninstalling a plugin that is not installed', () => {
+    expect(validateUninstallPrecondition('demo', new Set(['demo']))).toBeNull()
+    expect(validateUninstallPrecondition('missing', new Set())).toMatch(/not installed/)
   })
 })
