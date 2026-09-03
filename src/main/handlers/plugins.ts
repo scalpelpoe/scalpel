@@ -38,7 +38,7 @@ import { pluginEntryUrl } from '../plugins/plugin-protocol'
 import { fetchRegistry } from '../plugins/registry'
 import { resolveRegistrySelection } from '../plugins/registry-selection'
 import { deleteValue, getValue, listKeys, setValue } from '../plugins/storage'
-import { uninstallPlugin } from '../plugins/uninstall'
+import { type UninstallResult, uninstallPlugin } from '../plugins/uninstall'
 import { getUnpackedSourceDir } from '../plugins/unpacked-list'
 import { type UnpackedFlowDeps, installUnpackedAndNotify, reloadUnpackedPlugin } from '../plugins/unpacked-flow'
 
@@ -361,8 +361,42 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     return isPluginOverlayVisible(pluginId)
   })
 
+  // Side-loaded plugins are hot-unloaded immediately rather than deferred to
+  // restart, so both uninstall entry points route them through this path.
+  const uninstallUnpacked = (pluginId: string): Promise<UninstallResult> =>
+    pluginNativeBackends.withPluginStopped(pluginId, () => {
+      const dependencyError = validateDependencyMutation(
+        getInstalledPlugins().map((plugin) => plugin.manifest),
+        pluginId,
+        null,
+      )
+      if (dependencyError) {
+        return {
+          ok: false as const,
+          error: `plugin dependency check failed: ${dependencyError}`,
+        }
+      }
+      const uninstallResult = uninstallPlugin(pluginId)
+      if (uninstallResult.ok) {
+        for (const win of BrowserWindow.getAllWindows()) win.webContents.send('plugin-dev-uninstalled', pluginId)
+        disposePluginOverlay(pluginId)
+        clearPluginOverlayAnchor(store, pluginId)
+        removePluginHotkey(pluginId)
+        removePluginOverlayHotkey(pluginId)
+        removePluginTab(pluginId)
+        notifyTabsChanged()
+        refreshAppMacros()
+        notifyHotkeysChanged()
+      }
+      return uninstallResult
+    })
+
+  const isUnpacked = (pluginId: string): boolean =>
+    getUnpackedPlugins().some((plugin) => plugin.manifest.id === pluginId)
+
   ipcMain.handle('plugins:uninstall', async (_evt, pluginId: string) => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) return { ok: false as const, error: 'invalid plugin id' }
+    if (isUnpacked(pluginId)) return uninstallUnpacked(pluginId)
     const result = await pluginNativeBackends.withPluginStoppedUntilRestart(
       pluginId,
       () => {
@@ -370,7 +404,6 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
         const preconditionError = validateUninstallPrecondition(
           pluginId,
           new Set(installed.map((plugin) => plugin.manifest.id)),
-          new Set(getUnpackedPlugins().map((plugin) => plugin.manifest.id)),
         )
         if (preconditionError) return { ok: false as const, error: preconditionError }
         const dependencyError = validateDependencyMutation(
@@ -397,38 +430,13 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
 
   ipcMain.handle('plugins:uninstall-unpacked', async (_evt, pluginId: string) => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) return { ok: false as const, error: 'invalid plugin id' }
-    if (!getUnpackedPlugins().some((plugin) => plugin.manifest.id === pluginId)) {
+    if (!isUnpacked(pluginId)) {
       return {
         ok: false as const,
         error: `plugin "${pluginId}" is not installed unpacked`,
       }
     }
-    return pluginNativeBackends.withPluginStopped(pluginId, () => {
-      const dependencyError = validateDependencyMutation(
-        getInstalledPlugins().map((plugin) => plugin.manifest),
-        pluginId,
-        null,
-      )
-      if (dependencyError) {
-        return {
-          ok: false as const,
-          error: `plugin dependency check failed: ${dependencyError}`,
-        }
-      }
-      const uninstallResult = uninstallPlugin(pluginId)
-      if (uninstallResult.ok) {
-        for (const win of BrowserWindow.getAllWindows()) win.webContents.send('plugin-dev-uninstalled', pluginId)
-        disposePluginOverlay(pluginId)
-        clearPluginOverlayAnchor(store, pluginId)
-        removePluginHotkey(pluginId)
-        removePluginOverlayHotkey(pluginId)
-        removePluginTab(pluginId)
-        notifyTabsChanged()
-        refreshAppMacros()
-        notifyHotkeysChanged()
-      }
-      return uninstallResult
-    })
+    return uninstallUnpacked(pluginId)
   })
 
   ipcMain.handle('plugins:unregister-hotkey', (_evt, pluginId: string) => {
