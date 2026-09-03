@@ -14,6 +14,35 @@ const manifest = (id: string, extra: Partial<PluginManifest> = {}): PluginManife
 })
 
 describe('validateDependencyMutation', () => {
+  it('ignores unrelated plugins that were already unsatisfied', () => {
+    const orphan = manifest('consumer', {
+      dependencies: [{ pluginId: 'provider', apiVersion: 'v1' }],
+    })
+    const unrelated = manifest('unrelated')
+    const incoming = manifest('foo')
+
+    expect(validateDependencyMutation([orphan, unrelated], 'foo', incoming)).toBeNull()
+    expect(validateDependencyMutation([orphan, unrelated], 'unrelated', null)).toBeNull()
+    expect(
+      validateDependencyMutation([orphan, unrelated], 'unrelated', manifest('unrelated', { version: '2.0.0' })),
+    ).toBeNull()
+  })
+
+  it('still validates transitive dependents of the mutated plugin', () => {
+    const provider = manifest('provider', { api: { version: 'v1', contract: 'api.binpb', service: 'demo.Api' } })
+    const relay = manifest('relay', {
+      api: { version: 'v1', contract: 'api.binpb', service: 'demo.Relay' },
+      dependencies: [{ pluginId: 'provider', apiVersion: 'v1' }],
+    })
+    const consumer = manifest('consumer', {
+      dependencies: [{ pluginId: 'relay', apiVersion: 'v1' }],
+    })
+
+    expect(validateDependencyMutation([provider, relay, consumer], 'provider', null)).toMatch(
+      /relay.*requires plugin.*provider/,
+    )
+  })
+
   it('rejects uninstalling a required provider', () => {
     const provider = manifest('provider', { api: { version: 'v1', contract: 'api.binpb', service: 'demo.Api' } })
     const consumer = manifest('consumer', {

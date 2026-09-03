@@ -23,7 +23,25 @@ export function validateDependencyMutation(
   if (replacement) next.set(pluginId, replacement)
   else next.delete(pluginId)
 
-  for (const manifest of next.values()) {
+  // Only the mutated plugin and its transitive dependents can be broken by this
+  // mutation. Unrelated plugins that were already unsatisfied stay the loader's
+  // problem (it marks them unavailable) and must not block this operation.
+  const affected = new Set<string>()
+  if (replacement) affected.add(pluginId)
+  const queue = [pluginId]
+  while (queue.length > 0) {
+    const current = queue.pop() as string
+    for (const manifest of next.values()) {
+      if (affected.has(manifest.id)) continue
+      if (manifest.dependencies?.some((dependency) => dependency.pluginId === current)) {
+        affected.add(manifest.id)
+        queue.push(manifest.id)
+      }
+    }
+  }
+  const affectedManifests = [...affected].map((id) => next.get(id) as PluginManifest)
+
+  for (const manifest of affectedManifests) {
     for (const dependency of manifest.dependencies ?? []) {
       if (dependency.optional) continue
       const provider = next.get(dependency.pluginId)
@@ -57,7 +75,7 @@ export function validateDependencyMutation(
     visited.add(manifest.id)
     return null
   }
-  for (const manifest of next.values()) {
+  for (const manifest of affectedManifests) {
     const error = visit(manifest)
     if (error) return error
   }
