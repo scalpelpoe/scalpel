@@ -98,6 +98,20 @@ describe('uninstallPlugin', () => {
     expect(unpacked).toEqual([])
   })
 
+  it('moves legacy in-package storage aside before removing the package', async () => {
+    const legacyFile = join(TEST_USER_DATA, 'plugins', 'hello-world', 'storage.json')
+    const storageFile = join(TEST_USER_DATA, 'plugin-storage', 'hello-world', 'storage.json')
+    mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'installed.json'), JSON.stringify(['hello-world']))
+    mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'hello-world', 'plugin.js'), 'X')
+    mockFs.files.set(legacyFile, JSON.stringify({ key: 'value' }))
+
+    const { uninstallPlugin } = await import('./uninstall')
+    expect(uninstallPlugin('hello-world')).toEqual({ ok: true })
+
+    expect(mockFs.files.has(legacyFile)).toBe(false)
+    expect(mockFs.files.get(storageFile)).toBe(JSON.stringify({ key: 'value' }))
+  })
+
   it('keeps storage available until shutdown, then removes it', async () => {
     const storageFile = join(TEST_USER_DATA, 'plugin-storage', 'hello-world', 'storage.json')
     mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'installed.json'), JSON.stringify(['hello-world']))
