@@ -119,6 +119,20 @@ describe('plugin storage', () => {
     expect(mockFs.writes[0].path).toBe(storagePath)
   })
 
+  it('removeStorageNow drops the cache, the file and any pending tombstone', async () => {
+    mockFs.files.set(storagePath, JSON.stringify({ key: 'value' }))
+    const { getValue, removeStorageNow, scheduleStorageRemoval } = await import('./storage')
+    expect(getValue('p1', 'key')).toBe('value')
+    scheduleStorageRemoval('p1')
+
+    removeStorageNow('p1')
+
+    expect(mockFs.files.has(storagePath)).toBe(false)
+    expect(getValue('p1', 'key')).toBeNull()
+    const pending = mockFs.files.get(join(TEST_USER_DATA, 'plugin-storage', 'pending-deletions.json'))
+    expect(pending).toBe('[]')
+  })
+
   it('migrates legacy storage out of the package directory once', async () => {
     mockFs.files.set(legacyStoragePath, JSON.stringify({ key: 'legacy' }))
     const { getValue, _resetForTests } = await import('./storage')

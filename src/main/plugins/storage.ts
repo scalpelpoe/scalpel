@@ -139,6 +139,14 @@ export function cancelStorageRemoval(pluginId: string): void {
   writePendingDeletions(readPendingDeletions().filter((id) => id !== pluginId))
 }
 
+/** Remove storage right away. Used when the plugin's graph is unloaded
+ * immediately (side-loaded removal) so a same-session reload starts clean. */
+export function removeStorageNow(pluginId: string): void {
+  clearCache(pluginId)
+  rmSync(pluginStorageDir(pluginId), { recursive: true, force: true })
+  cancelStorageRemoval(pluginId)
+}
+
 export function finalizePendingStorageRemovals(): void {
   flushAll()
   for (const pluginId of readPendingDeletions()) {

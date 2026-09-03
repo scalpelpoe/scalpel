@@ -37,7 +37,7 @@ import { clearPluginOverlayAnchor, getPluginOverlayAnchor, setPluginOverlayAncho
 import { pluginEntryUrl } from '../plugins/plugin-protocol'
 import { fetchRegistry } from '../plugins/registry'
 import { resolveRegistrySelection } from '../plugins/registry-selection'
-import { deleteValue, getValue, listKeys, setValue } from '../plugins/storage'
+import { deleteValue, getValue, listKeys, removeStorageNow, setValue } from '../plugins/storage'
 import { readInstalledIds } from '../plugins/installed-list'
 import { type UninstallResult, uninstallPlugin } from '../plugins/uninstall'
 import { getUnpackedSourceDir } from '../plugins/unpacked-list'
@@ -379,6 +379,7 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
       }
       const uninstallResult = uninstallPlugin(pluginId)
       if (uninstallResult.ok) {
+        removeStorageNow(pluginId)
         for (const win of BrowserWindow.getAllWindows()) win.webContents.send('plugin-dev-uninstalled', pluginId)
         disposePluginOverlay(pluginId)
         clearPluginOverlayAnchor(store, pluginId)
