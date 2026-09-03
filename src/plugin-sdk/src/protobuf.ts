@@ -39,7 +39,7 @@ export function exposePluginService<S extends DescService>(
   const serviceMethods = unaryMethods(service)
   for (const method of serviceMethods) {
     const handler = implementation[method.localName as keyof PluginServiceImplementation<S>]
-    if (!Object.prototype.hasOwnProperty.call(implementation, method.localName) || typeof handler !== 'function') {
+    if (typeof handler !== 'function') {
       throw new Error(`plugin API method is not implemented: ${methodPath(service, method.name)}`)
     }
   }
