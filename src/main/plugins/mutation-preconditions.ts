@@ -16,12 +16,7 @@ export function validateRegistryMutationPrecondition(
   return null
 }
 
-export function validateUninstallPrecondition(
-  pluginId: string,
-  installedIds: ReadonlySet<string>,
-  unpackedIds: ReadonlySet<string>,
-): string | null {
+export function validateUninstallPrecondition(pluginId: string, installedIds: ReadonlySet<string>): string | null {
   if (!installedIds.has(pluginId)) return `plugin "${pluginId}" is not installed`
-  if (unpackedIds.has(pluginId)) return 'unpacked plugins must be removed from Developer settings'
   return null
 }
