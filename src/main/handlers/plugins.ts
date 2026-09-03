@@ -52,7 +52,7 @@ export interface UnpackedPluginIpc extends InstalledPluginIpc {
   sourceDir?: string
 }
 
-function resolveInstalledEntries(): {
+function resolveInstalledEntries(restartBlocked: ReadonlySet<string> = new Set()): {
   installed: InstalledPluginIpc[]
   loadable: InstalledPluginIpc[]
 } {
@@ -60,7 +60,15 @@ function resolveInstalledEntries(): {
     manifest: plugin.manifest,
     entryUrl: pluginEntryUrl(plugin.manifest.id),
   }))
-  return resolvePluginLoadability(entries)
+  const resolved = resolvePluginLoadability(entries)
+  if (restartBlocked.size === 0) return resolved
+  // A plugin mutated this session stays out of the loadable graph until
+  // restart. Resolving without it also marks its dependents unavailable
+  // instead of loading them against a provider that is not running.
+  return {
+    installed: resolved.installed,
+    loadable: resolvePluginLoadability(entries.filter((entry) => !restartBlocked.has(entry.manifest.id))).loadable,
+  }
 }
 
 export function register(store: Store<AppSettings>, isElevated: () => boolean = () => false): void {
@@ -123,8 +131,7 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
   })
 
   ipcMain.handle('plugins:list-loadable', (): InstalledPluginIpc[] => {
-    if (pluginNativeBackends.isRestartRequired()) return []
-    return resolveInstalledEntries().loadable
+    return resolveInstalledEntries(pluginNativeBackends.restartBlockedPluginIds()).loadable
   })
 
   ipcMain.handle('plugins:list-unpacked', (): UnpackedPluginIpc[] => {
@@ -149,8 +156,11 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
 
   ipcMain.handle('plugins:get-loadable', (_evt, pluginId: string): InstalledPluginIpc | null => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
-    if (pluginNativeBackends.isRestartRequired()) return null
-    return resolveInstalledEntries().loadable.find((plugin) => plugin.manifest.id === pluginId) ?? null
+    return (
+      resolveInstalledEntries(pluginNativeBackends.restartBlockedPluginIds()).loadable.find(
+        (plugin) => plugin.manifest.id === pluginId,
+      ) ?? null
+    )
   })
 
   ipcMain.handle('plugins:storage-get', (_evt, pluginId: string, key: string) => {

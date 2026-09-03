@@ -294,6 +294,7 @@ describe('PluginNativeBackendManager', () => {
     )
 
     expect(manager.isRestartRequired()).toBe(true)
+    expect([...manager.restartBlockedPluginIds()]).toEqual(['native-demo'])
     await expect(manager.call('native-demo', METHOD, new Uint8Array())).rejects.toThrow(/temporarily unavailable/)
   })
 
