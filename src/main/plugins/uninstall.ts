@@ -2,7 +2,7 @@ import { existsSync, renameSync, rmSync } from 'node:fs'
 import { readInstalledIds, writeInstalledIds } from './installed-list'
 import { PLUGIN_ID_PATTERN } from './manifest-validator'
 import { pluginDir } from './paths'
-import { scheduleStorageRemoval } from './storage'
+import { migrateLegacyStorage, scheduleStorageRemoval } from './storage'
 import { readUnpackedEntries, writeUnpackedEntries } from './unpacked-list'
 
 export type UninstallResult = { ok: true } | { ok: false; error: string }
@@ -18,6 +18,9 @@ export function uninstallPlugin(pluginId: string): UninstallResult {
   const unpacked = readUnpackedEntries()
   let moved = false
   try {
+    // Storage that still lives inside the package directory would be deleted
+    // with it; move it to the storage dir so the deferred removal owns it.
+    migrateLegacyStorage(pluginId)
     rmSync(backup, { recursive: true, force: true })
     if (existsSync(dir)) {
       renameSync(dir, backup)
