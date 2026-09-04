@@ -63,4 +63,107 @@ describe('validateManifest', () => {
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error).toMatch(/id/)
   })
+
+  it('accepts a declared API and explicit dependencies', () => {
+    const r = validateManifest({
+      ...valid,
+      api: { version: '1.0.0', contract: 'api.binpb', service: 'example.greeting.v1.GreetingProvider' },
+      dependencies: [{ pluginId: 'greeting-provider', apiVersion: '1.0.0' }],
+    })
+    expect(r.ok).toBe(true)
+  })
+
+  it('rejects malformed API declarations and dependencies', () => {
+    expect(
+      validateManifest({
+        ...valid,
+        api: { version: '^1.0.0', contract: 'api.binpb', service: 'example.greeting.v1.GreetingProvider' },
+      }).ok,
+    ).toBe(false)
+    expect(validateManifest({ ...valid, api: { version: '1.0.0' } }).ok).toBe(false)
+    for (const contract of [
+      '../api.binpb',
+      'contracts/api.binpb',
+      'C:\\api.binpb',
+      'https://x/api.binpb',
+      'CON.binpb',
+      'lpt1.binpb',
+    ]) {
+      expect(
+        validateManifest({
+          ...valid,
+          api: { version: '1.0.0', contract, service: 'example.greeting.v1.GreetingProvider' },
+        }).ok,
+      ).toBe(false)
+    }
+    expect(
+      validateManifest({ ...valid, api: { version: '1.0.0', contract: 'api.binpb', service: 'not-qualified' } }).ok,
+    ).toBe(false)
+    expect(validateManifest({ ...valid, dependencies: 'greeting-provider' }).ok).toBe(false)
+    expect(validateManifest({ ...valid, dependencies: [{ pluginId: 'BAD', apiVersion: '1.0.0' }] }).ok).toBe(false)
+    expect(
+      validateManifest({
+        ...valid,
+        dependencies: [
+          { pluginId: 'greeting-provider', apiVersion: '1.0.0' },
+          { pluginId: 'greeting-provider', apiVersion: '1.0.0' },
+        ],
+      }).ok,
+    ).toBe(false)
+  })
+
+  it('rejects self dependencies', () => {
+    expect(
+      validateManifest({
+        ...valid,
+        dependencies: [{ pluginId: valid.id, apiVersion: '1.0.0' }],
+      }).ok,
+    ).toBe(false)
+  })
+
+  it('accepts a pinned Windows native backend', () => {
+    expect(
+      validateManifest({
+        ...valid,
+        nativeBackend: {
+          protocolVersion: 1,
+          contract: 'backend.binpb',
+          service: 'example.items.v1.ItemAnalyzer',
+          targets: { 'win32-x64': { file: 'item-analyzer.exe', sha256: 'a'.repeat(64) } },
+        },
+      }).ok,
+    ).toBe(true)
+  })
+
+  it('rejects unsafe or unpinned native backend declarations', () => {
+    const backend = {
+      protocolVersion: 1,
+      contract: 'backend.binpb',
+      service: 'example.items.v1.ItemAnalyzer',
+      targets: { 'win32-x64': { file: 'item-analyzer.exe', sha256: 'a'.repeat(64) } },
+    }
+    expect(validateManifest({ ...valid, nativeBackend: { ...backend, protocolVersion: 2 } }).ok).toBe(false)
+    expect(validateManifest({ ...valid, nativeBackend: { ...backend, contract: '../backend.binpb' } }).ok).toBe(false)
+    expect(
+      validateManifest({
+        ...valid,
+        nativeBackend: { ...backend, targets: { 'win32-x64': { file: '../worker.exe', sha256: 'a'.repeat(64) } } },
+      }).ok,
+    ).toBe(false)
+    expect(
+      validateManifest({
+        ...valid,
+        nativeBackend: { ...backend, targets: { 'win32-x64': { file: 'worker.exe', sha256: 'bad' } } },
+      }).ok,
+    ).toBe(false)
+    expect(
+      validateManifest({
+        ...valid,
+        nativeBackend: {
+          ...backend,
+          targets: { 'win32-x64': { file: 'plugin.js.', sha256: 'a'.repeat(64) } },
+        },
+      }).ok,
+    ).toBe(false)
+  })
 })

@@ -24,6 +24,12 @@ describe('PluginManifest', () => {
     expectTypeOf(m.poeVersions).toEqualTypeOf<(1 | 2)[] | undefined>()
     expectTypeOf(m.homepage).toEqualTypeOf<string | undefined>()
     expectTypeOf(m.tabIcon).toEqualTypeOf<string | undefined>()
+    expectTypeOf(m.api?.version).toEqualTypeOf<string | undefined>()
+    expectTypeOf(m.api?.contract).toEqualTypeOf<string | undefined>()
+    expectTypeOf(m.api?.service).toEqualTypeOf<string | undefined>()
+    expectTypeOf(m.dependencies?.[0]?.pluginId).toEqualTypeOf<string | undefined>()
+    expectTypeOf(m.nativeBackend?.targets['win32-x64']?.file).toEqualTypeOf<string | undefined>()
+    expectTypeOf(m.nativeBackend?.service).toEqualTypeOf<string | undefined>()
   })
 })
 
@@ -45,7 +51,7 @@ describe('PluginActivate', () => {
 
 describe('ScalpelPluginContext', () => {
   it('exposes identity, game state, events, registration, and utilities', () => {
-    const ctx = {} as ScalpelPluginContext
+    const ctx = { plugins: {}, native: {} } as ScalpelPluginContext
     expectTypeOf(ctx.pluginId).toEqualTypeOf<string>()
     expectTypeOf(ctx.pluginVersion).toEqualTypeOf<string>()
     expectTypeOf(ctx.getPoeVersion).returns.toEqualTypeOf<1 | 2>()
@@ -56,6 +62,9 @@ describe('ScalpelPluginContext', () => {
     expectTypeOf(ctx.registerTab).parameter(0).toEqualTypeOf<RegisterTabOptions>()
     expectTypeOf(ctx.onCurrentItem).toBeFunction()
     expectTypeOf(ctx.openExternal).toBeFunction()
+    expectTypeOf(ctx.plugins.expose).toBeFunction()
+    expectTypeOf(ctx.plugins.get).toBeFunction()
+    expectTypeOf(ctx.native.call).toBeFunction()
   })
 
   it('exposes registerHotkey', () => {

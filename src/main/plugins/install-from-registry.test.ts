@@ -7,6 +7,12 @@ const PLUGIN_SHA = createHash('sha256').update(PLUGIN_BYTES).digest('hex')
 
 const NEW_BYTES = new Uint8Array([9, 9, 9])
 const NEW_SHA = createHash('sha256').update(NEW_BYTES).digest('hex')
+const NATIVE_BYTES = new Uint8Array([7, 8, 9])
+const NATIVE_SHA = createHash('sha256').update(NATIVE_BYTES).digest('hex')
+const API_CONTRACT_BYTES = new Uint8Array([10, 11, 12])
+const API_CONTRACT_SHA = createHash('sha256').update(API_CONTRACT_BYTES).digest('hex')
+const BACKEND_CONTRACT_BYTES = new Uint8Array([13, 14, 15])
+const BACKEND_CONTRACT_SHA = createHash('sha256').update(BACKEND_CONTRACT_BYTES).digest('hex')
 
 const TEST_USER_DATA = '/test/userData'
 
@@ -23,6 +29,8 @@ const mockFs = {
   files: new Map<string, string>(),
   bufs: new Map<string, Uint8Array>(),
   failRenameFrom: null as string | null,
+  failWritePath: null as string | null,
+  failWrites: 0,
 }
 
 vi.mock('fs', () => ({
@@ -38,6 +46,10 @@ vi.mock('fs', () => ({
     return false
   },
   writeFileSync: (p: string, data: string | Uint8Array) => {
+    if (mockFs.failWritePath === p && mockFs.failWrites > 0) {
+      mockFs.failWrites--
+      throw new Error('simulated metadata write failure')
+    }
     if (typeof data === 'string') mockFs.files.set(p, data)
     else mockFs.bufs.set(p, data)
   },
@@ -58,13 +70,25 @@ vi.mock('fs', () => ({
     move(mockFs.files)
   },
   mkdirSync: () => {},
-  rmSync: () => {},
+  rmSync: (p: string, options?: { recursive?: boolean }) => {
+    const remove = <T>(map: Map<string, T>): void => {
+      for (const key of [...map.keys()]) {
+        if (key === p || (options?.recursive && (key.startsWith(`${p}/`) || key.startsWith(`${p}\\`)))) {
+          map.delete(key)
+        }
+      }
+    }
+    remove(mockFs.files)
+    remove(mockFs.bufs)
+  },
 }))
 
 beforeEach(() => {
   mockFs.files.clear()
   mockFs.bufs.clear()
   mockFs.failRenameFrom = null
+  mockFs.failWritePath = null
+  mockFs.failWrites = 0
   mockNetFetchFn.mockReset()
   vi.resetModules()
 })
@@ -88,6 +112,21 @@ const matchingManifest = {
   description: 'd',
   author: 'filterscalpel',
   scalpelMinVersion: '>=0.0.0',
+}
+
+const matchingApiManifest = {
+  ...matchingManifest,
+  api: { version: '1.0.0', contract: 'api.binpb', service: 'example.greeting.v1.GreetingProvider' },
+}
+
+const matchingNativeManifest = {
+  ...matchingManifest,
+  nativeBackend: {
+    protocolVersion: 1,
+    contract: 'backend.binpb',
+    service: 'example.items.v1.ItemAnalyzer',
+    targets: { 'win32-x64': { file: 'worker.exe', sha256: NATIVE_SHA } },
+  },
 }
 
 function readMockJson(path: string): unknown {
@@ -118,6 +157,108 @@ describe('installFromRegistry', () => {
     expect(r.ok).toBe(true)
     expect(mockFs.bufs.has(join(TEST_USER_DATA, 'plugins', 'hello-world', 'plugin.js'))).toBe(true)
     expect(mockFs.files.has(join(TEST_USER_DATA, 'plugins', 'hello-world', 'manifest.json'))).toBe(true)
+  })
+
+  it('downloads and stages a declared API contract', async () => {
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingApiManifest)),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/api.binpb': new Response(
+        API_CONTRACT_BYTES,
+      ),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry({ ...validEntry, assets: { 'api.binpb': API_CONTRACT_SHA } })
+
+    expect(r.ok).toBe(true)
+    expect(mockFs.bufs.get(join(TEST_USER_DATA, 'plugins', 'hello-world', 'api.binpb'))).toEqual(API_CONTRACT_BYTES)
+  })
+
+  it('rejects an API provider when its declared contract cannot be downloaded', async () => {
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingApiManifest)),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry({ ...validEntry, assets: { 'api.binpb': API_CONTRACT_SHA } })
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('api.binpb')
+  })
+
+  it('downloads and verifies registry-pinned native backend assets', async () => {
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingNativeManifest)),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/backend.binpb':
+        new Response(BACKEND_CONTRACT_BYTES),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/worker.exe': new Response(
+        NATIVE_BYTES,
+      ),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry(
+      {
+        ...validEntry,
+        assets: { 'backend.binpb': BACKEND_CONTRACT_SHA, 'worker.exe': NATIVE_SHA },
+      },
+      { allowNativeBackend: true },
+    )
+
+    expect(r.ok).toBe(true)
+    expect(mockFs.bufs.get(join(TEST_USER_DATA, 'plugins', 'hello-world', 'backend.binpb'))).toEqual(
+      BACKEND_CONTRACT_BYTES,
+    )
+    expect(mockFs.bufs.get(join(TEST_USER_DATA, 'plugins', 'hello-world', 'worker.exe'))).toEqual(NATIVE_BYTES)
+  })
+
+  it('rejects a native executable not independently pinned by the registry', async () => {
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingNativeManifest)),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/backend.binpb':
+        new Response(BACKEND_CONTRACT_BYTES),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry(
+      { ...validEntry, assets: { 'backend.binpb': BACKEND_CONTRACT_SHA } },
+      { allowNativeBackend: true },
+    )
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('registry does not pin worker.exe')
+  })
+
+  it('rejects native backends unless the caller marks the registry as trusted for native code', async () => {
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingNativeManifest)),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry({ ...validEntry, assets: { 'worker.exe': NATIVE_SHA } })
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('self-hosted registry')
   })
 
   it('appends to installed.json on success', async () => {
@@ -289,5 +430,50 @@ describe('installFromRegistry', () => {
       version: '2.0.0',
     })
     expect(readMockJson(join(TEST_USER_DATA, 'plugins', 'installed.json'))).toEqual(['hello-world'])
+  })
+
+  it('clears unpacked provenance when a registry package replaces it', async () => {
+    const unpackedPath = join(TEST_USER_DATA, 'plugins', 'unpacked.json')
+    mockFs.files.set(unpackedPath, JSON.stringify([{ id: 'hello-world', sourceDir: '/src/plugin' }]))
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingManifest)),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    expect((await installFromRegistry(validEntry)).ok).toBe(true)
+    expect(readMockJson(unpackedPath)).toEqual([])
+  })
+
+  it('restores the old package and metadata when provenance cleanup fails', async () => {
+    const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
+    const installedPath = join(TEST_USER_DATA, 'plugins', 'installed.json')
+    const unpackedPath = join(TEST_USER_DATA, 'plugins', 'unpacked.json')
+    const oldUnpacked = JSON.stringify([{ id: 'hello-world', sourceDir: '/src/plugin' }])
+    mockFs.bufs.set(join(destDir, 'plugin.js'), PLUGIN_BYTES)
+    mockFs.files.set(join(destDir, 'manifest.json'), JSON.stringify({ ...matchingManifest, version: '0.9.0' }))
+    mockFs.files.set(installedPath, JSON.stringify(['hello-world']))
+    mockFs.files.set(unpackedPath, oldUnpacked)
+    mockFs.failWritePath = `${unpackedPath}.tmp`
+    mockFs.failWrites = 1
+
+    const newEntry = { ...validEntry, latestVersion: '2.0.0', sha256: NEW_SHA }
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v2.0.0/plugin.js': new Response(
+        NEW_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v2.0.0/manifest.json':
+        new Response(JSON.stringify({ ...matchingManifest, version: '2.0.0' })),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    expect((await installFromRegistry(newEntry)).ok).toBe(false)
+    expect(mockFs.bufs.get(join(destDir, 'plugin.js'))).toEqual(PLUGIN_BYTES)
+    expect(readMockJson(join(destDir, 'manifest.json'))).toMatchObject({ version: '0.9.0' })
+    expect(mockFs.files.get(installedPath)).toBe(JSON.stringify(['hello-world']))
+    expect(mockFs.files.get(unpackedPath)).toBe(oldUnpacked)
   })
 })

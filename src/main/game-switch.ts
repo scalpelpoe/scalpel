@@ -3,6 +3,7 @@ import type Store from 'electron-store'
 import type { AppSettings, GameVariant } from '@shared/types'
 import { getAppWindow, showAppWindow } from './app-window'
 import { applySetting } from './settings-write'
+import { gracefulRestart } from './restart'
 
 // Only one prompt may be in-flight. Extra calls while a prompt is open are
 // ignored (requestGameSwitch returns immediately) so we never stack modals.
@@ -55,6 +56,5 @@ export async function requestGameSwitch(store: Store<AppSettings>, target: GameV
     console.warn(`[game-switch] target=${target}; restart dev to re-attach`)
     return
   }
-  app.relaunch()
-  app.quit()
+  await gracefulRestart()
 }

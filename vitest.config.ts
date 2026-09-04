@@ -9,11 +9,17 @@ export default defineConfig({
       '@shared': resolve(__dirname, 'src/shared'),
       '@renderer': resolve(__dirname, 'src/renderer/src'),
       '@main': resolve(__dirname, 'src/main'),
+      '@scalpelpoe/plugin-sdk': resolve(__dirname, 'src/plugin-sdk/src/index.ts'),
     },
   },
   test: {
     globals: true,
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'scripts/**/*.test.mjs'],
+    include: [
+      'src/**/*.test.ts',
+      'src/**/*.test.tsx',
+      'scripts/**/*.test.mjs',
+      'plugin-service-examples/**/*.test.ts',
+    ],
     exclude: ['node_modules', 'out', 'dist'],
     passWithNoTests: true,
     environmentMatchGlobs: [

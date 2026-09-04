@@ -6,6 +6,7 @@ import { broadcastToWindows } from '../window-broadcast'
 import { getColorFrequencies } from '../filter-state'
 import { refreshPrices } from '../trade/prices'
 import { refreshLeagues } from '../trade/leagues'
+import { gracefulRestart } from '../restart'
 import {
   applyProfileHydrationSideEffects,
   applyProfileSettingForGame,
@@ -28,6 +29,7 @@ import {
 import { getOverlayAttachedVersion } from '../overlay'
 import { shouldRelaunchAfterOnboarding } from '../onboarding-relaunch'
 import { getGameSwitchCoordinator } from '../experimental'
+import { pluginNativeBackends } from '../plugins/native-backend'
 
 export function register(store: Store<AppSettings>): void {
   ipcMain.handle('get-settings', () => getEffectiveSettings(store))
@@ -52,11 +54,12 @@ export function register(store: Store<AppSettings>): void {
   // the wrong game and price-check results never surface -- so relaunch to
   // rebind, mirroring the tray / set-active-profile cross-game switch. Main owns
   // both flag writes here so they persist before any relaunch.
-  ipcMain.handle('finish-onboarding', (event) => {
+  ipcMain.handle('finish-onboarding', async (event) => {
     applySetting(store, 'onboardingCompleted', true, event.sender)
     applySetting(store, 'onboardingStep', '', event.sender)
 
     const active = store.get('poeVersion') === 2 ? 2 : 1
+    const pluginRestartRequired = pluginNativeBackends.isRestartRequired()
     const action = shouldRelaunchAfterOnboarding(active, getOverlayAttachedVersion(), app.isPackaged)
     if (action === 'dev-warn') {
       console.warn(
@@ -64,10 +67,14 @@ export function register(store: Store<AppSettings>): void {
       )
       return { ok: true as const, devRestartRequired: true as const }
     }
-    if (action === 'relaunch') {
-      app.relaunch()
-      app.quit()
-      return { ok: true as const, restarting: true as const }
+    if (action === 'relaunch' || (pluginRestartRequired && app.isPackaged)) {
+      const result = await gracefulRestart()
+      if (result.ok) return { ok: true as const, restarting: true as const }
+      console.error(`[onboarding] restart failed: ${result.error ?? 'unknown error'}`)
+      return { ok: true as const, devRestartRequired: true as const }
+    }
+    if (pluginRestartRequired) {
+      return { ok: true as const, devRestartRequired: true as const }
     }
     return { ok: true as const }
   })

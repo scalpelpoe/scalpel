@@ -15,6 +15,60 @@ export interface PluginManifest {
   /** Absolute URL of a small icon shown in the Plugins settings store rows.
    *  PNG or SVG. The same URL the registry entry advertises pre-install. */
   iconUrl?: string
+  /** Public API exposed by this plugin's renderer entry point. */
+  api?: {
+    version: string
+    /** Root-level Protobuf FileDescriptorSet bundled with the plugin release. */
+    contract: string
+    /** Fully qualified unary Protobuf service exposed by this plugin. */
+    service: string
+  }
+  /** Explicit plugin API dependencies. No provider discovery is performed. */
+  dependencies?: PluginDependency[]
+  /** Optional private native process owned and supervised by Scalpel. */
+  nativeBackend?: {
+    protocolVersion: 1
+    /** Root-level Protobuf FileDescriptorSet describing the private worker API. */
+    contract: string
+    /** Fully qualified unary Protobuf service implemented by the worker. */
+    service: string
+    targets: {
+      /** The initial native backend slice supports Scalpel's Windows x64 build. */
+      'win32-x64'?: {
+        /** Root-level executable shipped with the plugin release. */
+        file: string
+        /** Lowercase SHA-256 of the executable. */
+        sha256: string
+      }
+    }
+  }
+}
+
+export interface PluginDependency {
+  pluginId: string
+  apiVersion: string
+  optional?: boolean
+}
+
+export type PluginApiHandler = (method: string, params: unknown) => unknown | Promise<unknown>
+
+export interface PluginApiClient {
+  readonly pluginId: string
+  readonly apiVersion: string
+  readonly serviceTypeName: string
+  call<TResult = unknown, TParams = unknown>(method: string, params?: TParams): Promise<TResult>
+}
+
+export interface PluginCommunicationApi {
+  /** Expose the API declared by this plugin's manifest. Must be called during activation. */
+  expose(serviceTypeName: string, handler: PluginApiHandler): void
+  /** Get a client for an explicitly declared dependency. */
+  get(pluginId: string, serviceTypeName: string): PluginApiClient | null
+}
+
+export interface PluginNativeBackendApi {
+  /** Call this plugin's declared private native backend with a Protobuf payload. */
+  call(method: string, payload: Uint8Array): Promise<Uint8Array>
 }
 
 /** Optional cleanup returned from activate(); the host calls it when the plugin
@@ -209,6 +263,8 @@ export interface MediaApi {
 export interface ScalpelPluginContext {
   readonly pluginId: string
   readonly pluginVersion: string
+  readonly plugins: PluginCommunicationApi
+  readonly native: PluginNativeBackendApi
 
   getPoeVersion(): 1 | 2
   getLeague(): string

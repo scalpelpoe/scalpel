@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { PluginManifest } from '../../../../../plugin-sdk/src/types'
+import type { PluginAvailability } from '@shared/plugin-dependencies'
 import type { AppSettings } from '@shared/types'
 import { m } from '@shared/paraglide/messages.js'
 
@@ -12,6 +13,7 @@ interface Props {
 interface UnpackedRow {
   manifest: PluginManifest
   sourceDir?: string
+  availability?: PluginAvailability
 }
 
 export function DeveloperSection({ settings, update, onError }: Props): JSX.Element {
@@ -21,15 +23,21 @@ export function DeveloperSection({ settings, update, onError }: Props): JSX.Elem
 
   const refresh = useCallback(async () => {
     const list = await window.api.listUnpackedPlugins()
-    setUnpacked(list.map((p) => ({ manifest: p.manifest, sourceDir: p.sourceDir })))
+    setUnpacked(
+      list.map((p) => ({
+        manifest: p.manifest,
+        sourceDir: p.sourceDir,
+        availability: p.availability,
+      })),
+    )
   }, [])
 
   useEffect(() => {
     void refresh()
-    const unsubInstalled = window.api.onPluginInstalled(() => void refresh())
+    const unsubInstalled = window.api.onPluginDevInstalled(() => void refresh())
     // A reload re-installs over the running plugin, which reports as an update.
-    const unsubUpdated = window.api.onPluginUpdated(() => void refresh())
-    const unsubUninstalled = window.api.onPluginUninstalled(() => void refresh())
+    const unsubUpdated = window.api.onPluginDevUpdated(() => void refresh())
+    const unsubUninstalled = window.api.onPluginDevUninstalled(() => void refresh())
     return () => {
       unsubInstalled()
       unsubUpdated()
@@ -56,7 +64,7 @@ export function DeveloperSection({ settings, update, onError }: Props): JSX.Elem
   }
 
   const remove = async (id: string, name: string): Promise<void> => {
-    const r = await window.api.pluginUninstall(id)
+    const r = await window.api.pluginUninstallUnpacked(id)
     if (!r.ok) {
       onError(r.error)
       return
@@ -94,50 +102,64 @@ export function DeveloperSection({ settings, update, onError }: Props): JSX.Elem
           <div className="flex flex-col gap-1 mt-1">
             <span className="text-xs text-zinc-400">Loaded unpacked plugins</span>
             <span className="text-[10px] text-zinc-500">
-              Reload re-copies the plugin from the directory you loaded it from and swaps the running code - rebuild,
-              reload, no restart. Removing only deletes Scalpel's copy; your source directory is untouched.
+              Reload re-copies the plugin from the directory you loaded it from and attempts a development-only hot
+              swap. Hot reload is imperfect; restart Scalpel if registrations or native state look stale. Removing only
+              deletes Scalpel's copy; your source directory is untouched.
             </span>
             {unpacked.length === 0 ? (
               <span className="text-xs text-zinc-500">None loaded.</span>
             ) : (
               <div className="flex flex-col gap-1">
-                {unpacked.map(({ manifest, sourceDir }) => (
-                  <div
-                    key={manifest.id}
-                    className="flex items-center justify-between gap-2 px-2 py-1.5 rounded bg-white/[0.04]"
-                  >
-                    <span className="flex flex-col min-w-0">
-                      <span className="text-xs text-zinc-200">
-                        {manifest.name} <span className="font-mono text-[10px] text-zinc-500">v{manifest.version}</span>
-                      </span>
-                      {sourceDir && (
-                        <span className="font-mono text-[10px] text-zinc-500 truncate" title={sourceDir}>
-                          {sourceDir}
+                {unpacked.map(({ manifest, sourceDir, availability }) => {
+                  const unavailable = availability?.status === 'unavailable' ? availability.reason : null
+                  return (
+                    <div
+                      key={manifest.id}
+                      data-plugin-availability={unavailable ? 'unavailable' : 'available'}
+                      className={
+                        'flex items-center justify-between gap-2 px-2 py-1.5 rounded ' +
+                        (unavailable ? 'bg-zinc-800/35 border border-zinc-700/60' : 'bg-white/[0.04]')
+                      }
+                    >
+                      <span className={'flex flex-col min-w-0 ' + (unavailable ? 'opacity-55 grayscale' : '')}>
+                        <span className="text-xs text-zinc-200">
+                          {manifest.name}{' '}
+                          <span className="font-mono text-[10px] text-zinc-500">v{manifest.version}</span>
                         </span>
-                      )}
-                    </span>
-                    <span className="flex items-center gap-1 shrink-0">
-                      <button
-                        className="btn-bounce px-2 py-1 text-[11px] bg-zinc-700 hover:bg-zinc-600 rounded disabled:opacity-40 disabled:cursor-not-allowed"
-                        disabled={!sourceDir}
-                        title={
-                          sourceDir
-                            ? `Re-copy from ${sourceDir} and hot-swap the running plugin`
-                            : 'Load this plugin unpacked again to enable reloading'
-                        }
-                        onClick={() => void reload(manifest.id, manifest.name)}
-                      >
-                        Reload
-                      </button>
-                      <button
-                        className="btn-bounce px-2 py-1 text-[11px] bg-zinc-700 hover:bg-zinc-600 rounded"
-                        onClick={() => void remove(manifest.id, manifest.name)}
-                      >
-                        Remove
-                      </button>
-                    </span>
-                  </div>
-                ))}
+                        {sourceDir && (
+                          <span className="font-mono text-[10px] text-zinc-500 truncate" title={sourceDir}>
+                            {sourceDir}
+                          </span>
+                        )}
+                        {unavailable && (
+                          <span className="text-[10px] leading-snug text-zinc-500" role="status">
+                            Unavailable: {unavailable.message}
+                          </span>
+                        )}
+                      </span>
+                      <span className="flex items-center gap-1 shrink-0">
+                        <button
+                          className="btn-bounce px-2 py-1 text-[11px] bg-zinc-700 hover:bg-zinc-600 rounded disabled:opacity-40 disabled:cursor-not-allowed"
+                          disabled={!sourceDir}
+                          title={
+                            sourceDir
+                              ? `Re-copy from ${sourceDir} and hot-swap the running plugin`
+                              : 'Load this plugin unpacked again to enable reloading'
+                          }
+                          onClick={() => void reload(manifest.id, manifest.name)}
+                        >
+                          Reload
+                        </button>
+                        <button
+                          className="btn-bounce px-2 py-1 text-[11px] bg-zinc-700 hover:bg-zinc-600 rounded"
+                          onClick={() => void remove(manifest.id, manifest.name)}
+                        >
+                          Remove
+                        </button>
+                      </span>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>

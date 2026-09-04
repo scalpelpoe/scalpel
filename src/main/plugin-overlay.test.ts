@@ -11,6 +11,7 @@ type CapturedSpec = {
   onVisibilityChange?: (visible: boolean) => void
   onFirstShow?: (win: unknown) => void
   defaultUserPinned?: boolean
+  onDidFinishLoad?: (win: unknown) => void
 }
 const registeredSpecs: CapturedSpec[] = []
 const fakeOverlay = {
@@ -20,6 +21,7 @@ const fakeOverlay = {
   isVisible: vi.fn(() => false),
   send: vi.fn(),
   getWindow: vi.fn(() => null),
+  destroy: vi.fn(),
   setBoundsProgrammatic: vi.fn(),
   setBoundsProgrammaticOnce: vi.fn(),
   setSizeProgrammatic: vi.fn(),
@@ -45,6 +47,8 @@ import {
   getPluginOverlay,
   registerPluginAnnotationOverlay,
   registerPluginOverlay,
+  disposePluginOverlay,
+  reloadPluginOverlay,
   togglePluginOverlay,
 } from './plugin-overlay'
 
@@ -86,6 +90,39 @@ describe('plugin-overlay registry', () => {
     registerPluginOverlay('demo4', { title: 'Demo4' })
     expect(getPluginOverlay('demo4')).toBe(fakeOverlay)
     expect(getPluginOverlay('nope')).toBeNull()
+  })
+
+  it('re-sends plugin initialization after every renderer load', () => {
+    const send = vi.fn()
+    const win = { webContents: { send } }
+    registerPluginOverlay('reload-demo', { title: 'Reload' })
+
+    registeredSpecs.at(-1)?.onDidFinishLoad?.(win)
+    registeredSpecs.at(-1)?.onDidFinishLoad?.(win)
+
+    expect(send.mock.calls.filter(([channel]) => channel === 'plugin-overlay:init')).toEqual([
+      ['plugin-overlay:init', 'reload-demo'],
+      ['plugin-overlay:init', 'reload-demo'],
+    ])
+  })
+
+  it('reloads an existing plugin overlay renderer', () => {
+    const reload = vi.fn()
+    fakeOverlay.getWindow.mockReturnValue({ webContents: { reload } } as never)
+    registerPluginOverlay('hot-reload-demo', { title: 'Reload' })
+
+    reloadPluginOverlay('hot-reload-demo')
+
+    expect(reload).toHaveBeenCalledOnce()
+  })
+
+  it('destroys and unregisters an overlay on uninstall', () => {
+    registerPluginOverlay('dispose-demo', { title: 'Dispose' })
+
+    disposePluginOverlay('dispose-demo')
+
+    expect(fakeOverlay.destroy).toHaveBeenCalledOnce()
+    expect(getPluginOverlay('dispose-demo')).toBeNull()
   })
 
   it('registers an annotation overlay with a full-game anchor and the annotation html entry', () => {
@@ -207,6 +244,7 @@ describe('plugin-overlay registry', () => {
 
   it('forwards onAnchorChanged so a user move can be persisted', () => {
     const onAnchorChanged = vi.fn()
+    fakeOverlay.getWindow.mockReturnValue(null)
     registerPluginOverlay('persist-demo', { title: 'Persist', onAnchorChanged })
     const moved = { fracX: 0.7, fracY: 0.1, fracW: 0.16, fracH: 0.4 }
     registeredSpecs.at(-1)?.onAnchorChanged?.(moved)

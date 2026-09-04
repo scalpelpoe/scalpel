@@ -1,0 +1,14 @@
+{
+  "manifestVersion": 1,
+  "id": "greeting-provider",
+  "version": "2.0.0",
+  "name": "Greeting Provider",
+  "description": "Headlessly observes Client.txt and exposes the most recently seen character.",
+  "author": "Scalpel",
+  "scalpelMinVersion": ">=1.1.0",
+  "api": {
+    "version": "2.0.0",
+    "contract": "api.binpb",
+    "service": "scalpel.examples.greeting.v1.GreetingProvider"
+  }
+}

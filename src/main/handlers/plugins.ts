@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { BrowserWindow, dialog, ipcMain } from 'electron'
 import type Store from 'electron-store'
-import type { PluginManifest } from '../../plugin-sdk/src/types'
+import type { InstalledPluginEntry, PluginLoadEntry } from '@shared/plugin-dependencies'
 import type { AppSettings } from '@shared/types'
 import { refreshAppMacros } from '../app-macros'
 import { runMainHotkeyFlow } from '../evaluation'
@@ -25,22 +25,27 @@ import {
 } from '../plugins/hotkey-registry'
 import { getRegisteredPluginTabs, removePluginTab, setPluginTab } from '../plugins/tab-registry'
 import { versionedPluginEntryUrl } from '../plugins/entry-url'
+import { validateDependencyMutation } from '../plugins/dependency-mutation'
 import { installFromRegistry } from '../plugins/install-from-registry'
 import { installUnpacked } from '../plugins/install-unpacked'
+import { resolvePluginLoadability } from '../plugins/loadability'
 import { getInstalledPlugins, getUnpackedPlugins } from '../plugins/manager'
 import { PLUGIN_ID_PATTERN } from '../plugins/manifest-validator'
+import { NativeCallError, pluginNativeBackends } from '../plugins/native-backend'
+import { validateRegistryMutationPrecondition, validateUninstallPrecondition } from '../plugins/mutation-preconditions'
 import { clearPluginOverlayAnchor, getPluginOverlayAnchor, setPluginOverlayAnchor } from '../plugins/overlay-anchors'
 import { pluginEntryUrl } from '../plugins/plugin-protocol'
 import { fetchRegistry } from '../plugins/registry'
-import { deleteValue, getValue, listKeys, setValue } from '../plugins/storage'
-import { uninstallPlugin } from '../plugins/uninstall'
+import { resolveRegistrySelection } from '../plugins/registry-selection'
+import { deleteValue, getValue, listKeys, removeStorageNow, setValue } from '../plugins/storage'
+import { readInstalledIds } from '../plugins/installed-list'
+import { type UninstallResult, uninstallPlugin } from '../plugins/uninstall'
 import { getUnpackedSourceDir } from '../plugins/unpacked-list'
 import { type UnpackedFlowDeps, installUnpackedAndNotify, reloadUnpackedPlugin } from '../plugins/unpacked-flow'
 
-export interface InstalledPluginIpc {
-  manifest: PluginManifest
-  entryUrl: string
-}
+export type InstalledPluginIpc = InstalledPluginEntry
+
+type PluginDevEntryIpc = PluginLoadEntry
 
 export interface UnpackedPluginIpc extends InstalledPluginIpc {
   /** Absent for plugins side-loaded before Scalpel started tracking source
@@ -48,7 +53,38 @@ export interface UnpackedPluginIpc extends InstalledPluginIpc {
   sourceDir?: string
 }
 
+function resolveInstalledEntries(restartBlocked: ReadonlySet<string> = new Set()): {
+  installed: InstalledPluginIpc[]
+  loadable: InstalledPluginIpc[]
+} {
+  const entries: PluginLoadEntry[] = getInstalledPlugins().map((plugin) => ({
+    manifest: plugin.manifest,
+    entryUrl: pluginEntryUrl(plugin.manifest.id),
+  }))
+  const resolved = resolvePluginLoadability(entries)
+  if (restartBlocked.size === 0) return resolved
+  // A plugin mutated this session stays out of the loadable graph until
+  // restart. Resolving without it also marks its dependents unavailable
+  // instead of loading them against a provider that is not running.
+  return {
+    installed: resolved.installed,
+    loadable: resolvePluginLoadability(entries.filter((entry) => !restartBlocked.has(entry.manifest.id))).loadable,
+  }
+}
+
 export function register(store: Store<AppSettings>, isElevated: () => boolean = () => false): void {
+  const registryConfig = (): {
+    url: string | undefined
+    allowNativeBackend: boolean
+  } => {
+    const processOverride = process.env.SCALPEL_PLUGIN_REGISTRY_URL
+    const userRegistry = store.get('pluginRegistryUrl') as AppSettings['pluginRegistryUrl']
+    return {
+      url: processOverride ?? userRegistry ?? undefined,
+      allowNativeBackend: Boolean(processOverride) || !userRegistry,
+    }
+  }
+
   const notifyHotkeysChanged = (): void => {
     getOverlayWindow()?.webContents.send('plugin-hotkeys-changed')
   }
@@ -65,9 +101,18 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
   // notifyTabsChanged does, so the standalone app-window Plugins tab refreshes
   // its update badge + installed list too. Only the overlay has a PluginHost,
   // so only it hot-swaps; other windows just refresh their plugin UI.
-  const broadcastPlugin = (channel: 'plugin-installed' | 'plugin-updated', payload: InstalledPluginIpc): void => {
+  const broadcastDevPlugin = (
+    channel: 'plugin-dev-installed' | 'plugin-dev-updated',
+    payload: PluginDevEntryIpc,
+  ): void => {
     for (const win of BrowserWindow.getAllWindows()) {
       win.webContents.send(channel, payload)
+    }
+  }
+
+  const notifyRestartRequired = (): void => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send('plugins:restart-required')
     }
   }
 
@@ -76,35 +121,47 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     install: installUnpacked,
     manifestOf: (id) => getInstalledPlugins().find((p) => p.manifest.id === id)?.manifest,
     entryUrl: versionedPluginEntryUrl,
-    broadcast: broadcastPlugin,
+    broadcast: broadcastDevPlugin,
     reloadOverlay: reloadPluginOverlay,
     sourceDirOf: getUnpackedSourceDir,
     dirExists: existsSync,
   }
 
   ipcMain.handle('plugins:list-installed', (): InstalledPluginIpc[] => {
-    return getInstalledPlugins().map((p) => ({
-      manifest: p.manifest,
-      entryUrl: pluginEntryUrl(p.manifest.id),
-    }))
+    return resolveInstalledEntries().installed
+  })
+
+  ipcMain.handle('plugins:list-loadable', (): InstalledPluginIpc[] => {
+    return resolveInstalledEntries(pluginNativeBackends.restartBlockedPluginIds()).loadable
   })
 
   ipcMain.handle('plugins:list-unpacked', (): UnpackedPluginIpc[] => {
-    return getUnpackedPlugins().map((p) => {
-      const sourceDir = getUnpackedSourceDir(p.manifest.id)
-      return {
-        manifest: p.manifest,
-        entryUrl: pluginEntryUrl(p.manifest.id),
-        ...(sourceDir ? { sourceDir } : {}),
-      }
-    })
+    const unpackedIds = new Set(getUnpackedPlugins().map((plugin) => plugin.manifest.id))
+    return resolveInstalledEntries()
+      .installed.filter((plugin) => unpackedIds.has(plugin.manifest.id))
+      .map((plugin) => {
+        const sourceDir = getUnpackedSourceDir(plugin.manifest.id)
+        return {
+          ...plugin,
+          ...(sourceDir ? { sourceDir } : {}),
+        }
+      })
   })
+
+  ipcMain.handle('plugins:restart-required', (): boolean => pluginNativeBackends.isRestartRequired())
 
   ipcMain.handle('plugins:get-installed', (_evt, pluginId: string): InstalledPluginIpc | null => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
-    const found = getInstalledPlugins().find((p) => p.manifest.id === pluginId)
-    if (!found) return null
-    return { manifest: found.manifest, entryUrl: pluginEntryUrl(found.manifest.id) }
+    return resolveInstalledEntries().installed.find((plugin) => plugin.manifest.id === pluginId) ?? null
+  })
+
+  ipcMain.handle('plugins:get-loadable', (_evt, pluginId: string): InstalledPluginIpc | null => {
+    if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
+    return (
+      resolveInstalledEntries(pluginNativeBackends.restartBlockedPluginIds()).loadable.find(
+        (plugin) => plugin.manifest.id === pluginId,
+      ) ?? null
+    )
   })
 
   ipcMain.handle('plugins:storage-get', (_evt, pluginId: string, key: string) => {
@@ -125,6 +182,23 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
   ipcMain.handle('plugins:storage-keys', (_evt, pluginId: string) => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
     return listKeys(pluginId)
+  })
+  ipcMain.handle('plugins:native-call', async (_evt, pluginId: string, method: string, payload: Uint8Array) => {
+    if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
+    try {
+      return {
+        ok: true as const,
+        payload: await pluginNativeBackends.call(pluginId, method, payload),
+      }
+    } catch (error) {
+      if (error instanceof NativeCallError) {
+        return {
+          ok: false as const,
+          error: { message: error.message, code: error.code },
+        }
+      }
+      throw error
+    }
   })
 
   ipcMain.handle('plugins:register-hotkey', (_evt, pluginId: string, label: string) => {
@@ -168,74 +242,77 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     const win = BrowserWindow.fromWebContents(evt.sender)
     const result = win
       ? await dialog.showOpenDialog(win, {
-          title: 'Select plugin directory (containing manifest.json and plugin.js)',
+          title: 'Select plugin project or package directory',
           properties: ['openDirectory'],
         })
       : await dialog.showOpenDialog({
-          title: 'Select plugin directory (containing manifest.json and plugin.js)',
+          title: 'Select plugin project or package directory',
           properties: ['openDirectory'],
         })
     if (result.canceled || result.filePaths.length === 0) {
       return { ok: false as const, error: 'cancelled' }
     }
-    return installUnpackedAndNotify(result.filePaths[0], unpackedFlowDeps)
+    return pluginNativeBackends.withAllStopped(() => installUnpackedAndNotify(result.filePaths[0], unpackedFlowDeps))
   })
 
   // Re-copy a side-loaded plugin from the directory it came from and hot-swap
   // it. Rebuild the plugin, hit Reload, run the new code - no app restart.
-  ipcMain.handle('plugins:reload-unpacked', (_evt, pluginId: string) => {
+  ipcMain.handle('plugins:reload-unpacked', async (_evt, pluginId: string) => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
-    return reloadUnpackedPlugin(pluginId, unpackedFlowDeps)
+    return pluginNativeBackends.withPluginStopped(pluginId, () => reloadUnpackedPlugin(pluginId, unpackedFlowDeps))
   })
 
   ipcMain.handle('plugins:fetch-registry', async () => {
     // Dev-only override (local test harness) takes precedence over the
     // self-host setting; never set SCALPEL_PLUGIN_REGISTRY_URL in production.
-    const overrideUrl =
-      process.env.SCALPEL_PLUGIN_REGISTRY_URL ??
-      (store.get('pluginRegistryUrl') as AppSettings['pluginRegistryUrl']) ??
-      undefined
-    return fetchRegistry(overrideUrl)
+    return fetchRegistry(registryConfig().url)
   })
 
-  // Install and update share the same download/validate/write path; they differ
-  // only in the event the renderer reacts to (fresh-load vs unload-then-reload).
+  // Registry mutations replace files on disk but deliberately leave the running
+  // renderer graph intact. The new graph is activated by a full app restart.
   const installOrUpdate = async (
     entry: unknown,
-    channel: 'plugin-installed' | 'plugin-updated',
-  ): Promise<import('../plugins/install-types').InstallResult> => {
-    if (!entry || typeof entry !== 'object') {
-      return { ok: false as const, error: 'invalid registry entry' }
-    }
-    const result = await installFromRegistry(entry as import('@shared/plugin-registry-types').RegistryEntry)
-    if (result.ok) {
-      const installed = getInstalledPlugins().find((p) => p.manifest.id === result.id)
-      if (installed) {
-        broadcastPlugin(channel, {
-          manifest: installed.manifest,
-          entryUrl: versionedPluginEntryUrl(installed.manifest.id, installed.manifest.version),
+    mode: 'install' | 'update',
+  ): Promise<{ ok: true; id: string; restartRequired: true } | { ok: false; error: string }> => {
+    // Only the id crosses the trust boundary. Main resolves repository
+    // coordinates and hashes from its configured registry.
+    const config = registryConfig()
+    const selection = await resolveRegistrySelection(entry, config.url)
+    if (!selection.ok) return selection
+    const result = await pluginNativeBackends.withPluginStoppedUntilRestart(
+      selection.entry.id,
+      () => {
+        const installed = getInstalledPlugins()
+        const preconditionError = validateRegistryMutationPrecondition(
+          mode,
+          selection.entry.id,
+          new Set(installed.map((plugin) => plugin.manifest.id)),
+          new Set(getUnpackedPlugins().map((plugin) => plugin.manifest.id)),
+        )
+        if (preconditionError) return { ok: false as const, error: preconditionError }
+        const manifests = installed.map((plugin) => plugin.manifest)
+        return installFromRegistry(selection.entry, {
+          allowNativeBackend: config.allowNativeBackend,
+          validateMutation: (manifest) => validateDependencyMutation(manifests, selection.entry.id, manifest),
         })
-        // The popped-out window does not listen for plugin-updated; reload it so
-        // it re-imports the new code instead of running stale.
-        if (channel === 'plugin-updated') reloadPluginOverlay(installed.manifest.id)
-      }
+      },
+      (mutation) => mutation.ok,
+    )
+    if (result.ok) {
+      notifyRestartRequired()
+      return { ...result, restartRequired: true }
     }
     return result
   }
 
   ipcMain.handle('plugins:install-from-registry', async (_evt, entry: unknown) => {
-    // Defensive shape check; the renderer should only pass entries it got
-    // back from `plugins:fetch-registry`, but trusting the IPC boundary is
-    // the same posture we take everywhere else.
-    return installOrUpdate(entry, 'plugin-installed')
+    // installOrUpdate treats this only as an id selector and re-resolves the
+    // trusted entry in main.
+    return installOrUpdate(entry, 'install')
   })
 
   ipcMain.handle('plugins:update-from-registry', async (_evt, entry: unknown) => {
-    // Distinct from `plugin-installed`: the renderer must take the
-    // unload-then-reload path, not the fresh-load path (which no-ops when a
-    // tab for this id already exists). Cache-bust the entry URL with the new
-    // version so importPluginModule fetches the new code.
-    return installOrUpdate(entry, 'plugin-updated')
+    return installOrUpdate(entry, 'update')
   })
 
   ipcMain.handle(
@@ -285,20 +362,89 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     return isPluginOverlayVisible(pluginId)
   })
 
+  // Side-loaded plugins are hot-unloaded immediately rather than deferred to
+  // restart, so both uninstall entry points route them through this path.
+  const uninstallUnpacked = (pluginId: string): Promise<UninstallResult> =>
+    pluginNativeBackends.withPluginStopped(pluginId, () => {
+      const dependencyError = validateDependencyMutation(
+        getInstalledPlugins().map((plugin) => plugin.manifest),
+        pluginId,
+        null,
+      )
+      if (dependencyError) {
+        return {
+          ok: false as const,
+          error: `plugin dependency check failed: ${dependencyError}`,
+        }
+      }
+      const uninstallResult = uninstallPlugin(pluginId)
+      if (uninstallResult.ok) {
+        removeStorageNow(pluginId)
+        for (const win of BrowserWindow.getAllWindows()) win.webContents.send('plugin-dev-uninstalled', pluginId)
+        disposePluginOverlay(pluginId)
+        clearPluginOverlayAnchor(store, pluginId)
+        removePluginHotkey(pluginId)
+        removePluginOverlayHotkey(pluginId)
+        removePluginTab(pluginId)
+        notifyTabsChanged()
+        refreshAppMacros()
+        notifyHotkeysChanged()
+      }
+      return uninstallResult
+    })
+
+  const isUnpacked = (pluginId: string): boolean =>
+    getUnpackedPlugins().some((plugin) => plugin.manifest.id === pluginId)
+
   ipcMain.handle('plugins:uninstall', async (_evt, pluginId: string) => {
-    const uninstallResult = uninstallPlugin(pluginId)
-    if (uninstallResult.ok) {
-      getOverlayWindow()?.webContents.send('plugin-uninstalled', pluginId)
+    if (!PLUGIN_ID_PATTERN.test(pluginId)) return { ok: false as const, error: 'invalid plugin id' }
+    if (isUnpacked(pluginId)) return uninstallUnpacked(pluginId)
+    const result = await pluginNativeBackends.withPluginStoppedUntilRestart(
+      pluginId,
+      () => {
+        const installed = getInstalledPlugins()
+        // installed.json is the source of truth here: a plugin whose manifest
+        // went missing or no longer validates must still be removable.
+        const preconditionError = validateUninstallPrecondition(pluginId, new Set(readInstalledIds()))
+        if (preconditionError) return { ok: false as const, error: preconditionError }
+        const dependencyError = validateDependencyMutation(
+          installed.map((plugin) => plugin.manifest),
+          pluginId,
+          null,
+        )
+        if (dependencyError) {
+          return {
+            ok: false as const,
+            error: `plugin dependency check failed: ${dependencyError}`,
+          }
+        }
+        return uninstallPlugin(pluginId)
+      },
+      (mutation) => mutation.ok,
+    )
+    if (result.ok) {
+      // The package is gone, so the pop-out cannot be reloaded: close it and
+      // forget its geometry now instead of leaving a stale anchor in the store.
       disposePluginOverlay(pluginId)
       clearPluginOverlayAnchor(store, pluginId)
-      removePluginHotkey(pluginId)
       removePluginOverlayHotkey(pluginId)
-      removePluginTab(pluginId)
-      notifyTabsChanged()
       refreshAppMacros()
       notifyHotkeysChanged()
+      notifyRestartRequired()
+      return { ...result, restartRequired: true as const }
     }
-    return uninstallResult
+    return result
+  })
+
+  ipcMain.handle('plugins:uninstall-unpacked', async (_evt, pluginId: string) => {
+    if (!PLUGIN_ID_PATTERN.test(pluginId)) return { ok: false as const, error: 'invalid plugin id' }
+    if (!isUnpacked(pluginId)) {
+      return {
+        ok: false as const,
+        error: `plugin "${pluginId}" is not installed unpacked`,
+      }
+    }
+    return uninstallUnpacked(pluginId)
   })
 
   ipcMain.handle('plugins:unregister-hotkey', (_evt, pluginId: string) => {

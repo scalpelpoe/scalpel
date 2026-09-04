@@ -8,16 +8,16 @@ TypeScript SDK for building [Scalpel](https://github.com/scalpelpoe/scalpel) plu
 npm install --save-dev @scalpelpoe/plugin-sdk
 ```
 
-This is a **types-only** npm package. At runtime, the Scalpel app you're loading into serves the actual implementations via its `scalpel-internal://sdk.js` custom protocol (the renderer's importmap reroutes `@scalpelpoe/plugin-sdk` to that URL). The npm tarball ships `dist/index.d.ts` for type-checking + IntelliSense and `dist/index.js` as a runtime stub that throws if anything tries to use it outside Scalpel.
+The renderer import remains host-provided: Scalpel serves it through `scalpel-internal://sdk.js`, while `dist/index.js` is a protective stub outside the app. Install [`@scalpelpoe/plugin-tools`](https://www.npmjs.com/package/@scalpelpoe/plugin-tools) for the Node-only `scalpel-plugin` authoring CLI.
 
 Pin `scalpelMinVersion` in your `manifest.json` to whatever Scalpel version first shipped the API surface you depend on - SDK additions land lockstep with host releases.
 
 ## Plugin authoring loop
 
-1. `npm install --save-dev @scalpelpoe/plugin-sdk react react-dom`
+1. `npm install --save-dev @scalpelpoe/plugin-sdk @scalpelpoe/plugin-tools react react-dom` and `npm install @bufbuild/protobuf` when using services.
 2. Write `src/index.tsx` (see [Plugin entry shape](#plugin-entry-shape) below) and a `manifest.json` (schema in [PLUGINS.md](https://github.com/scalpelpoe/scalpel/blob/main/PLUGINS.md)).
-3. Vite/Rollup build with `@scalpelpoe/plugin-sdk`, `react`, `react-dom/client`, `react-dom/server`, `react/jsx-runtime` all externalized - see [Build setup](#build-setup-for-plugin-authors).
-4. `gh release create v1.0.0 dist/plugin.js dist/manifest.json` on your plugin's repo.
+3. Run `scalpel-plugin pack`; service contracts and generated sources are configured under `scalpelPlugin` in `package.json`.
+4. Attach every file under `dist/` to the matching GitHub release.
 5. Open a PR against [`scalpelpoe/scalpel-plugins-registry`](https://github.com/scalpelpoe/scalpel-plugins-registry) so Scalpel users can install you with one click.
 
 The reference plugin lives at [`scalpelpoe/scalpel-plugin-examples`](https://github.com/scalpelpoe/scalpel-plugin-examples).
@@ -43,7 +43,9 @@ export default async function activate(ctx: ScalpelPluginContext): Promise<void>
 
 ## What's exported
 
-**Types:** `ScalpelPluginContext`, `PluginActivate`, `PluginManifest`, `RegisterTabOptions`, `RegisterHotkeyOptions`, `RegisterOverlayOptions`, `PluginStorage`.
+**Types:** `ScalpelPluginContext`, `PluginActivate`, `PluginManifest`, `PluginServiceClient`, `PluginServiceImplementation`, `RegisterTabOptions`, `RegisterHotkeyOptions`, `RegisterOverlayOptions`, `PluginStorage`.
+
+**Protobuf services:** `exposePluginService`, `getPluginServiceClient`, `createPluginServiceClient`, `createNativeServiceClient`.
 
 **Item helpers:** `isClusterJewel`, `isSkillGem`, `SKILL_GEM_CLASSES`, `defaultPoeItem`.
 
@@ -124,7 +126,18 @@ module.exports = {
 
 ## Build setup for plugin authors
 
-Plugin authors use their own bundler (Vite recommended). Externalize the SDK and React specifiers so Scalpel's runtime provides them at activation:
+The recommended path is the `scalpel-plugin` CLI from `@scalpelpoe/plugin-tools`:
+
+```bash
+npx scalpel-plugin generate
+npx scalpel-plugin check
+npx scalpel-plugin build
+npx scalpel-plugin pack
+```
+
+It generates standard Protobuf-ES sources and descriptor sets, bundles the renderer, and packages native artifacts. See `PLUGIN_SERVICES.md` for configuration and examples.
+
+For custom build pipelines, externalize the host SDK and React specifiers:
 
 ```js
 // vite.config.ts

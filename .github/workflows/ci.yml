@@ -18,11 +18,21 @@ jobs:
         with:
           node-version: 22
 
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
       - name: Install Python setuptools (needed by node-gyp)
         run: pip install setuptools
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Install SDK dependencies
+        run: npm ci --prefix src/plugin-sdk
+
+      - name: Install plugin tools dependencies
+        run: npm ci --prefix src/plugin-tools
 
       - name: Validate premium-mods schema
         run: npm run validate:premium-mods -- --require-verified
@@ -38,6 +48,36 @@ jobs:
 
       - name: Test
         run: npm run test
+
+      - name: Build SDK package
+        run: npm run build --prefix src/plugin-sdk
+
+      - name: Build plugin service examples
+        run: npm run build:plugin-service-examples
+
+      - name: Check generated plugin service examples
+        run: npm run check:plugin-service-examples
+
+      - name: Test native plugin example
+        run: npm run test:native-plugin-example
+
+      - name: Lint native plugin example
+        run: npm run lint:native-plugin-example
+
+      - name: Package native plugin example
+        run: npm run build:native-plugin-example
+
+      - name: Check generated native plugin example
+        run: npm run check:native-plugin-example
+
+      - name: Ensure generated sources are committed
+        shell: pwsh
+        run: |
+          $status = git status --porcelain --untracked-files=all
+          if ($status) {
+            $status
+            throw 'Generated sources are not committed'
+          }
 
       - name: Build
         run: npm run build
