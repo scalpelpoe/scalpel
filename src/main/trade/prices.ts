@@ -10,7 +10,12 @@ import { hasGeneratedName } from '@shared/poe-item'
 import type { PriceEntry, PriceInfo } from '@shared/types'
 import { getPoeVersion } from '../game-state'
 import { getManifest } from '../manifest'
-import { fetchAndBuildPoe2PriceMap, fetchPoe2PricesFromProxy, type Poe2PriceResult } from './prices.poe2'
+import {
+  fetchAndBuildPoe2PriceMap,
+  fetchPoe2PricesFromProxy,
+  poe2LeagueToProxySlug,
+  type Poe2PriceResult,
+} from './prices.poe2'
 
 const staticUniquesByVersion: Record<1 | 2, Record<string, string[]>> = {
   1: uniqueInfoPoe1 as Record<string, string[]>,
@@ -372,11 +377,17 @@ export async function refreshPrices(league: string): Promise<void> {
       const categoryByType = getManifest().poe2NinjaCategories
       const staticUniques = staticUniquesByVersion[2]
       let result: Poe2PriceResult
-      try {
-        result = await fetchPoe2PricesFromProxy(league, fetchJson, categoryByType, staticUniques)
-      } catch (proxyErr) {
-        console.error('[FilterScalpel] EE2 proxy failed, falling back to ninja direct:', proxyErr)
+      if (!poe2LeagueToProxySlug(league)) {
+        // The proxy only serves known league slots. A custom or older saved
+        // league is an ordinary direct-ninja request, not a failed proxy call.
         result = await fetchAndBuildPoe2PriceMap(league, fetchJson, categoryByType, staticUniques)
+      } else {
+        try {
+          result = await fetchPoe2PricesFromProxy(league, fetchJson, categoryByType, staticUniques)
+        } catch (proxyErr) {
+          console.warn('[FilterScalpel] EE2 proxy failed, falling back to ninja direct:', proxyErr)
+          result = await fetchAndBuildPoe2PriceMap(league, fetchJson, categoryByType, staticUniques)
+        }
       }
       resetCache(league, now)
       priceMap = result.priceMap
