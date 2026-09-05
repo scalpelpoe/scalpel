@@ -128,7 +128,7 @@ export function applyResponse(
 // this mapping stays stable.
 const POE2_PROXY_SLUGS = ['league', 'leaguehc', 'standard', 'standardhc'] as const
 
-function poe2LeagueToProxySlug(league: string): string | undefined {
+export function poe2LeagueToProxySlug(league: string): string | undefined {
   const idx = getGameFeatures(2).leagues.indexOf(league)
   return idx >= 0 ? POE2_PROXY_SLUGS[idx] : undefined
 }
