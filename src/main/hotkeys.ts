@@ -13,6 +13,7 @@ import {
 } from './diagnostics'
 import { getPoeVersion } from './game-state'
 import { focusGameWindow, isTypingInOverlay, setOverlayVisibilityListener } from './overlay'
+import { hyprlandInputAllowed, hyprlandOverlayActive } from './hyprland'
 import { advancedCopyTracker } from './trade/advanced-copy'
 import { hideFocusedOrAnyVisibleSecondaryOverlay, isAnyScalpelBrowserWindowFocused } from './windowing'
 
@@ -97,6 +98,10 @@ function fireTrigger(): void {
   if (now - lastTriggerFireAt < DEDUPE_MS) return
   lastTriggerFireAt = now
   releaseHotkeyKey(triggerCombo)
+  if (hyprlandOverlayActive() && overlayVisibleForEscape && onEscape) {
+    onEscape()
+    return
+  }
   if (onTrigger) onTrigger()
 }
 
@@ -106,6 +111,10 @@ function firePriceCheck(): void {
   if (now - lastPriceCheckFireAt < DEDUPE_MS) return
   lastPriceCheckFireAt = now
   releaseHotkeyKey(priceCheckCombo)
+  if (hyprlandOverlayActive() && overlayVisibleForEscape && onEscape) {
+    onEscape()
+    return
+  }
   if (onPriceCheck) onPriceCheck()
 }
 
@@ -275,7 +284,7 @@ export function startHotkeyListener(handler: () => void): void {
     guardNativeListener('wheel', (e) => {
       const modHeld =
         stashScrollModifier === 'Ctrl' ? e.ctrlKey : stashScrollModifier === 'Shift' ? e.shiftKey : e.altKey
-      if (!stashScrollEnabled || !modHeld || !OverlayController.targetHasFocus) return
+      if (!stashScrollEnabled || !modHeld || !OverlayController.targetHasFocus || !hyprlandInputAllowed()) return
       const tb = OverlayController.targetBounds
       if (!tb?.width) return
       // Only act when cursor is inside the PoE window but outside the stash grid area
@@ -400,7 +409,11 @@ function applySuspendTransition(wasSuspended: boolean, rearmReason: string): voi
  *  or one of Scalpel's gameplay overlays. Registration follows the same focus
  *  lifecycle, and this dispatch-time check closes uIOhook and transition races. */
 function hotkeyContextIsActive(): boolean {
-  return !hotkeysAreSuspended() && (OverlayController.targetHasFocus || isAnyScalpelBrowserWindowFocused())
+  return (
+    hyprlandInputAllowed() &&
+    !hotkeysAreSuspended() &&
+    (OverlayController.targetHasFocus || isAnyScalpelBrowserWindowFocused())
+  )
 }
 
 /** Idempotent: gameplay focus left PoE/Scalpel (PoE blur, overlay leave, boot).
@@ -662,10 +675,12 @@ const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms)
  *  the paste. targetHasFocus is the same signal that authorizes every gameplay
  *  hotkey (see hotkeyContextIsActive). */
 async function awaitGameFocus(): Promise<void> {
+  if (!hyprlandInputAllowed()) throw new Error('Game workspace is inactive - input not sent')
   if (OverlayController.targetHasFocus) return
   focusGameWindow()
   for (let waited = 0; waited < FOCUS_WAIT_MS; waited += FOCUS_POLL_MS) {
     await wait(FOCUS_POLL_MS)
+    if (!hyprlandInputAllowed()) throw new Error('Game workspace is inactive - input not sent')
     if (OverlayController.targetHasFocus) return
   }
   throw new Error('PoE did not take focus - chat command not sent')
@@ -1021,6 +1036,7 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
  * releaseCKeyedRegistrationsForInjection (#601).
  */
 export async function sendCtrlCToPoE(opts?: { withAlt?: boolean }): Promise<void> {
+  if (!hyprlandInputAllowed()) return
   injecting = true
   const restoreCKeyedRegistrations = releaseCKeyedRegistrationsForInjection()
 
