@@ -10,7 +10,7 @@
     "url": "https://github.com/scalpelpoe/scalpel.git"
   },
   "engines": {
-    "node": "^22"
+    "node": "^22.12.0"
   },
   "main": "out/main/index.js",
   "scripts": {
@@ -56,6 +56,7 @@
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
     "@electron/asar": "^4.1.1",
+    "@electron/rebuild": "^4.2.0",
     "@icon-park/react": "^1.4.2",
     "@inlang/paraglide-js": "^2.18.2",
     "@playwright/test": "^1.60.0",
@@ -69,9 +70,8 @@
     "ajv": "^8.20.0",
     "autoprefixer": "^10.4.27",
     "cheerio": "^1.2.0",
-    "electron": "^32.3.3",
+    "electron": "^43.6.0",
     "electron-builder": "^25.1.8",
-    "electron-rebuild": "^3.2.9",
     "electron-vite": "^2.3.0",
     "esbuild": "^0.28.0",
     "husky": "^9.1.7",
