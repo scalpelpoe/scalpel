@@ -1,0 +1,35 @@
+diff --git a/node_modules/electron-overlay-window/src/lib/x11.c b/node_modules/electron-overlay-window/src/lib/x11.c
+index 94e7695..148a55c 100644
+--- a/node_modules/electron-overlay-window/src/lib/x11.c
++++ b/node_modules/electron-overlay-window/src/lib/x11.c
+@@ -31,6 +31,8 @@ struct ow_overlay_window
+ static xcb_window_t active_window = XCB_WINDOW_NONE;
+ static uv_mutex_t target_mutex;
+ static bool hook_running = false;
++// Cleanup also runs when the addon was imported without starting its tracker.
++static bool hook_started = false;
+ 
+ static struct ow_target_window target_info = {
+   .titles = NULL,
+@@ -337,7 +339,11 @@ void ow_start_hook(char** target_window_titles, size_t titles_count, void* overl
+   if (overlay_window_id != NULL) {
+     overlay_info.window_id = *((xcb_window_t*)overlay_window_id);
+   }
+-  uv_thread_create(&hook_tid, hook_thread, NULL);
++  if (uv_thread_create(&hook_tid, hook_thread, NULL) == 0) {
++    hook_started = true;
++  } else {
++    uv_mutex_destroy(&target_mutex);
++  }
+ }
+ 
+ void ow_set_target_titles(char** titles, size_t count) {
+@@ -400,6 +406,8 @@ void ow_clear_target(void) {
+ }
+ 
+ void ow_stop_hook(void) {
++  if (!hook_started) return;
++  hook_started = false;
+   hook_running = false;
+   if (x_conn) {
+     xcb_disconnect(x_conn);
