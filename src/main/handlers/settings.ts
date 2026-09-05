@@ -28,6 +28,7 @@ import {
 import { getOverlayAttachedVersion } from '../overlay'
 import { shouldRelaunchAfterOnboarding } from '../onboarding-relaunch'
 import { getGameSwitchCoordinator } from '../experimental'
+import { relaunchApp } from '../relaunch'
 
 export function register(store: Store<AppSettings>): void {
   ipcMain.handle('get-settings', () => getEffectiveSettings(store))
@@ -65,7 +66,7 @@ export function register(store: Store<AppSettings>): void {
       return { ok: true as const, devRestartRequired: true as const }
     }
     if (action === 'relaunch') {
-      app.relaunch()
+      relaunchApp()
       app.quit()
       return { ok: true as const, restarting: true as const }
     }
