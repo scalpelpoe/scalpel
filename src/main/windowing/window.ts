@@ -2,6 +2,7 @@ import { join } from 'node:path'
 import { BrowserWindow } from 'electron'
 import { OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
 import type { Rect } from './snap-canvas'
+import { hyprlandOverlayActive, nameHyprlandOverlay } from '../hyprland'
 
 interface CreateOptions {
   htmlEntry: string
@@ -27,6 +28,7 @@ export function createOverlayWindow({ htmlEntry, bounds }: CreateOptions): Brows
       nodeIntegration: false,
     },
   })
+  nameHyprlandOverlay(win)
   // 'screen-saver' is the level the main overlay uses (set by electron-overlay-
   // window on attach). It sits above PoE, the taskbar, and other floating
   // windows, and lets the window's full bounds render including the taskbar
@@ -56,10 +58,12 @@ export function createOverlayWindow({ htmlEntry, bounds }: CreateOptions): Brows
  *  for interaction; we just don't take focus on our own. */
 function installOpacityHideShow(win: BrowserWindow): void {
   const origShowInactive = win.showInactive.bind(win)
+  const origHide = win.hide.bind(win)
   const origIsVisible = win.isVisible.bind(win)
   let opacityHidden = false
   win.hide = (): void => {
-    win.setOpacity(0)
+    if (hyprlandOverlayActive()) origHide()
+    else win.setOpacity(0)
     win.setIgnoreMouseEvents(true)
     opacityHidden = true
   }
