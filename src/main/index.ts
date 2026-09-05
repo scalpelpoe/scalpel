@@ -123,6 +123,7 @@ import { registerAllIpc } from './app/register-ipc'
 import { createTray, refreshTrayMenu } from './app/tray'
 import { startLiveServices } from './app/lifecycle'
 import { getOverlayAttachStrategy } from './experimental'
+import { relaunchApp } from './relaunch'
 
 // ---- Linux display-server setup --------------------------------------------
 
@@ -131,7 +132,7 @@ if (
   process.env.WAYLAND_DISPLAY &&
   !process.argv.some((a) => a.startsWith('--ozone-platform='))
 ) {
-  app.relaunch({ args: [...process.argv.slice(1), '--ozone-platform=x11'] })
+  relaunchApp([...process.argv.slice(1), '--ozone-platform=x11'])
   app.exit(0)
 }
 
@@ -571,7 +572,7 @@ app.whenReady().then(() => {
       console.warn('[app-restart] dev build — close and `npm run dev` to re-attach')
       return
     }
-    app.relaunch()
+    relaunchApp()
     app.quit()
   })
 
