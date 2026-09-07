@@ -67,6 +67,15 @@ describe('PluginsStep failure handling', () => {
 })
 
 describe('PluginsStep listing', () => {
+  it('discloses the temporary unsandboxed native-plugin trust model before installation', async () => {
+    installApi({ registry: { ok: true, snapshot: { schemaVersion: 1, plugins: [entry()] } } })
+    const { findByRole } = renderStep()
+
+    const warning = await findByRole('note')
+    expect(warning.textContent).toContain('without a sandbox')
+    expect(warning.textContent).toContain('temporary trust model')
+  })
+
   it('splits featured entries under Featured Plugins and the rest under More plugins', async () => {
     installApi({
       registry: {

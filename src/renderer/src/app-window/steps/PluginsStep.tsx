@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { RegistryEntry } from '@shared/plugin-registry-types'
 import { Button } from '@renderer/components/primitives/Button'
 import { ErrorBanner } from '@renderer/components/ErrorBanner'
+import { NativePluginSecurityNotice } from '@renderer/components/NativePluginSecurityNotice'
 import { partitionFeatured } from '@renderer/plugins/featured'
 import { m } from '@shared/paraglide/messages.js'
 import { NavButtons } from '../NavButtons'
@@ -143,6 +144,7 @@ export function PluginsStep({
         </div>
       )}
       {header}
+      <NativePluginSecurityNotice className="mb-3" />
       <div className="flex flex-col gap-4">
         {featured.length > 0 && (
           <section className="flex flex-col gap-2">

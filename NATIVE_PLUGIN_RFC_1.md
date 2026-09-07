@@ -8,9 +8,15 @@ This document is normative for RFC1. [`PLUGIN_SERVICES.md`](PLUGIN_SERVICES.md) 
 
 ## Security Model
 
-A native backend is trusted, unsandboxed executable code. It runs with the same user permissions as Scalpel and can access files, the network, processes, and other operating-system resources. The host's checksum verification, owner-only routing, process supervision, and curated registry do not make hostile native code safe.
+A native backend is an executable built and supplied by the plugin author. Scalpel currently runs it as-is, without a sandbox, with the same user permissions as Scalpel. If Scalpel is elevated, the executable inherits that elevation. It can access files, the network, processes, and other operating-system resources available to that account.
 
-Only install native plugins whose source and release artifacts you trust.
+SHA-256 verification confirms only that an artifact matches the bytes declared by the manifest or curated registry. Owner-only routing controls which plugin can call a backend, and process supervision controls startup, protocol limits, failures, and shutdown. Registry review controls official distribution. None of these controls establishes publisher identity, detects malware, restricts what the executable can do, or makes hostile native code safe.
+
+RFC1 is a temporary trust model shipped for development and early trusted use before enforced isolation is available. Authors are responsible for the native source, dependencies, build chain, DLLs, and release artifacts they distribute. Users assume the risk of installing and running them. This remains true unless and until a future native-plugin revision explicitly ships enforced containment; a higher version number alone is not a security guarantee.
+
+Only install native plugins whose authors, source, dependencies, and exact release artifacts you trust. Native executables may trigger antivirus or reputation warnings, including false positives. Treat every alert as potentially valid: do not disable security software or create broad exclusions merely to run a plugin.
+
+Plugins containing malicious, deceptive, concealed, or materially misrepresented behavior will be rejected or removed from official distribution. Their authors may be barred from future submissions and reported through applicable hosting or security channels.
 
 ## Supported Shape
 
@@ -47,7 +53,7 @@ The plugin's root-level `manifest.json` declares the backend:
 
 The contract and executable filenames must be safe, unique, root-level package filenames. `contract` is a binary Protobuf `FileDescriptorSet`. `service` is the fully qualified service name generated from that contract. `protocolVersion` must be `1`.
 
-The executable SHA-256 in `manifest.json` must match the packaged bytes. For registry installs, the curated registry must also pin the contract and executable hashes in its `assets` map. Scalpel verifies downloaded assets during installation and verifies the installed executable again before every process spawn.
+The executable SHA-256 in `manifest.json` must match the packaged bytes. For registry installs, the curated registry must also pin the contract and executable hashes in its `assets` map. Scalpel verifies downloaded assets during installation and verifies the installed executable again before every process spawn. A matching hash proves only that the expected bytes were received; expected bytes can still be malicious.
 
 The descriptor set is a generation, packaging, and review artifact. RFC1 does not parse it at runtime to negotiate or prove schema compatibility.
 
@@ -152,6 +158,8 @@ The in-flight count includes the initialization request while startup is pending
 
 Process errors and stdin, stdout, or stderr stream errors terminate the backend and reject all pending calls. An unexpected exit includes the retained stderr tail in its error when available. After an abnormal failure or synchronous spawn failure, that plugin enters the five-second restart cooldown.
 
+These lifecycle controls mitigate hangs, crashes, malformed protocol traffic, and failed shutdown. They cannot prevent filesystem, network, process, or other system actions the executable performs before it terminates.
+
 Intentional stop uses a bounded, confirmed sequence:
 
 1. close stdin and wait up to 750 ms for process exit or close
@@ -195,6 +203,7 @@ RFC1 does not define:
 
 - sandboxing, capability permissions, or operating-system isolation
 - code signing or publisher identity
+- malware detection, antivirus certification, or safety attestation
 - streaming RPC
 - multiple native services or executables per plugin
 - cross-plugin access to native backends

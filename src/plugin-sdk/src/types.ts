@@ -26,7 +26,10 @@ export interface PluginManifest {
   }
   /** Explicit plugin API dependencies. No provider discovery is performed. */
   dependencies?: PluginDependency[]
-  /** Optional private native process owned and supervised by Scalpel. */
+  /**
+   * Optional private executable supplied by the plugin author. Scalpel owns its
+   * lifecycle but runs it unsandboxed with Scalpel's user permissions.
+   */
   nativeBackend?: {
     protocolVersion: 1
     /** Root-level Protobuf FileDescriptorSet describing the private worker API. */
@@ -38,7 +41,7 @@ export interface PluginManifest {
       'win32-x64'?: {
         /** Root-level executable shipped with the plugin release. */
         file: string
-        /** Lowercase SHA-256 of the executable. */
+        /** Lowercase SHA-256 for byte integrity only; it does not establish safety. */
         sha256: string
       }
     }
@@ -68,7 +71,7 @@ export interface PluginCommunicationApi {
 }
 
 export interface PluginNativeBackendApi {
-  /** Call this plugin's declared private native backend with a Protobuf payload. */
+  /** Call this plugin's declared, author-supplied, unsandboxed native backend with a Protobuf payload. */
   call(method: string, payload: Uint8Array): Promise<Uint8Array>
 }
 

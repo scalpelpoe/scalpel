@@ -28,6 +28,17 @@ const tryHotkey = (): boolean => true
 describe('PluginsSection hotkey rows', () => {
   beforeEach(() => installApi([]))
 
+  it('warns that native plugins run unsandboxed and that auto-update can replace their executables', async () => {
+    const { findByRole, findByText } = render(
+      <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    )
+
+    const warning = await findByRole('note')
+    expect(warning.textContent).toContain('without a sandbox')
+    expect(warning.textContent).toContain('temporary trust model')
+    expect(await findByText(/Auto-update may replace executable code/)).toBeTruthy()
+  })
+
   it('shows a bind row labeled by the hotkey for a plugin with one registered hotkey', async () => {
     installApi([
       {
@@ -107,6 +118,41 @@ describe('PluginsSection installed icon', () => {
     await waitFor(() => {
       expect(container.querySelector('img[src="http://example/demo-icon.png"]')).toBeTruthy()
     })
+  })
+})
+
+describe('PluginsSection native plugin badge', () => {
+  it('identifies an installed manifest that contains an author-supplied executable', async () => {
+    ;(window as unknown as { api: Record<string, unknown> }).api = {
+      listInstalledPlugins: vi.fn(async () => [
+        {
+          manifest: {
+            id: 'native-demo',
+            name: 'Native Demo',
+            version: '1.0.0',
+            author: 'me',
+            nativeBackend: {
+              protocolVersion: 1,
+              contract: 'backend.binpb',
+              service: 'example.v1.Backend',
+              targets: { 'win32-x64': { file: 'backend.exe', sha256: '0'.repeat(64) } },
+            },
+          },
+          entryUrl: '',
+        },
+      ]),
+      pluginListRegisteredHotkeys: vi.fn(async () => []),
+      pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
+      pluginUninstall: vi.fn(async () => ({ ok: true })),
+      pluginRestartRequired: vi.fn(async () => false),
+      onPluginRestartRequired: vi.fn(() => () => {}),
+      onPluginHotkeysChanged: vi.fn(() => () => {}),
+    }
+
+    const { findByText } = render(
+      <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    )
+    expect(await findByText('Native executable')).toBeTruthy()
   })
 })
 
