@@ -1,6 +1,6 @@
 # Writing Scalpel plugins
 
-Scalpel supports third-party plugins that show up as new tabs in the overlay. A plugin is a single bundled JavaScript file you author against a typed SDK, distributed via your own GitHub repository, and discovered through a curated registry. This document is for plugin authors.
+Scalpel supports third-party plugins that extend the overlay or provide services to other plugins. A plugin normally consists of bundled JavaScript authored against a typed SDK; the experimental Native Plugin RFC1 also permits a reviewed package to include one private Windows x64 executable. Plugins are distributed through the author's GitHub repository and discovered through a curated registry. This document is for plugin authors.
 
 A complete reference plugin that exercises every SDK component lives at [`scalpelpoe/scalpel-plugin-examples`](https://github.com/scalpelpoe/scalpel-plugin-examples). Read it alongside this doc.
 
@@ -14,12 +14,15 @@ A plugin can:
 - Persist its own settings to disk
 - Call out to the internet (poe.ninja, your own backend, etc.)
 - Use Scalpel's helpers for item identity, URL building, formatting, and rendering
+- Experimentally call one private unary Protobuf service in a packaged Windows x64 native sidecar
 
-A plugin can NOT:
+The JavaScript host API does NOT let a plugin:
 
 - Read Scalpel's loaded filter, audit data, or settings beyond its own storage
 - Modify or read other plugins' state
 - Affect the built-in tabs
+
+Those API limits are not an operating-system sandbox. In particular, an RFC1 native backend is trusted executable code with Scalpel's user permissions and can access resources outside the JavaScript host API.
 
 ## Quickstart
 
@@ -145,9 +148,10 @@ interface ScalpelPluginContext {
 
   // Owner-only request/response calls to the native backend declared by this
   // plugin. Scalpel owns the executable path, process, integrity check, and
-  // lifetime. Calls reject when no compatible backend is declared.
+  // lifetime. Prefer createNativeServiceClient over calling this raw API.
+  // Calls reject when no compatible backend is declared.
   native: {
-    call<TResult = unknown, TParams = unknown>(method: string, params?: TParams): Promise<TResult>
+    call(method: string, payload: Uint8Array): Promise<Uint8Array>
   }
 
   // Read / write / watch the running game's _Config.ini. The host resolves the
@@ -689,10 +693,13 @@ Externalize React and the SDK - Scalpel injects them at runtime via a custom pro
 ### Installing the SDK
 
 ```bash
-npm install --save-dev @scalpelpoe/plugin-sdk @scalpelpoe/plugin-tools
+npm install --save-dev @scalpelpoe/plugin-sdk@0.11.0
+npm install --save-dev https://github.com/scalpelpoe/scalpel/releases/download/sdk-v0.11.0/scalpelpoe-plugin-tools-0.11.0.tgz
 ```
 
-The package is **types only**. At runtime, Scalpel serves the real implementations via its `scalpel-internal://sdk.js` custom protocol; the renderer's importmap reroutes `@scalpelpoe/plugin-sdk` to that URL. The npm package ships:
+The SDK is published to npm. The RFC preview tools are distributed as the `scalpelpoe-plugin-tools-0.11.0.tgz` asset on the `sdk-v0.11.0` GitHub Release, not as an npm package. Node 22 or newer is required by both packages.
+
+The SDK package is **types only**. At runtime, Scalpel serves the real implementations via its `scalpel-internal://sdk.js` custom protocol; the renderer's importmap reroutes `@scalpelpoe/plugin-sdk` to that URL. The npm package ships:
 
 - `dist/index.d.ts` - bundled TypeScript declarations (`PoeItem`, `ScalpelPluginContext`, every component, every helper) plus the `Window.api` ambient that `HotkeyField` / `useCurrentZone` and friends need.
 - `dist/index.js` - a runtime stub. Each export is a Proxy that throws with a helpful message if anything actually calls it. Inside Scalpel the importmap shadows this file; outside Scalpel (test runners, tools that don't honour your bundler's `external` config), the throw tells you to fix your config.
@@ -769,18 +776,29 @@ Field notes:
 
 - `id` must match `^[a-z][a-z0-9-]{2,49}$` and matches the directory name in `userData/plugins/<id>/`.
 - `version` is your plugin's own version, separate from `manifestVersion` (the manifest schema version, currently 1).
-- `scalpelMinVersion` is a comparator expression (`">=0.9.8"`, `">=0.9.8 <1.0"`). If the running Scalpel doesn't satisfy it, the plugin won't load.
+- `scalpelMinVersion` is a supported version range (`">=0.9.8"`, `">=0.9.8 <1.0"`, `"^1.2.0"`, or `"~1.2.0"`). Whitespace-separated comparators are combined with logical AND. If the running Scalpel doesn't satisfy the range, the plugin remains installed with an unavailable reason but does not activate.
 - `poeVersions` gates which games the plugin appears under. Omit for both.
 - `tabIcon` is optional; you can also pass an inline SVG string via `registerTab({ icon })`.
 - `api` declares one public unary Protobuf service. `contract` is a root-level binary `FileDescriptorSet`; `service` is its fully qualified service name.
 - `dependencies` explicitly names plugin APIs this plugin consumes. API versions use exact `major.minor.patch` matching in the initial implementation.
-- `nativeBackend` declares one private, supervised unary Protobuf service. The initial target is `win32-x64`; all files are root-level release assets. The normal context routes `ctx.native` to its owning plugin and cannot choose paths, arguments, or environment variables.
+- `nativeBackend` is an **experimental RFC1 preview** declaring one private, supervised unary Protobuf service. RFC1 recognizes only `win32-x64`; all files are root-level release assets. The context routes `ctx.native` to its owning plugin and cannot choose a path, arguments, environment, or working directory.
 - Use Protobuf-ES service descriptors with `exposePluginService`, `createPluginServiceClient`, and `createNativeServiceClient`. These helpers infer every method signature directly from standard generated code.
-- Native requests and responses use length-prefixed Protobuf frames with a one-MiB limit, at most 32 in-flight calls, a four-MiB bounded write queue, and a ten-second call timeout. Standard output is reserved for protocol frames; diagnostics belong on standard error. Protocol v1 is a bounded unary control plane, not the final transport for OCR images or other large workloads.
-- Plugins remain trusted and share renderer/preload access. Owner routing prevents accidental cross-plugin calls; it is not a security boundary against a hostile plugin.
+- Native backends are trusted, unsandboxed executables. They run with Scalpel's user permissions and are not restricted from files, the network, processes, or other operating-system resources. Checksums, supervision, and owner routing are not a hostile-code security boundary.
 - Native backends install only from Scalpel's curated registry (or a process-level developer registry override). User-configured self-hosted registries remain JavaScript-only because renderer code can change that setting.
-- Install `@scalpelpoe/plugin-tools` for the `scalpel-plugin` command and add `@bufbuild/protobuf` when generated service code is part of your plugin. Buf, Protobuf generation, and esbuild are dependencies of the tools package rather than the runtime SDK. Configure `scalpelPlugin` in `package.json`, then run `scalpel-plugin generate`, `check`, `build`, or `pack` instead of maintaining custom contract scripts.
-- See `PLUGIN_SERVICES.md` and `plugin-service-examples/` for the complete workflow.
+- Add `@bufbuild/protobuf@2.14.0` as a project dependency when generated service code is part of your plugin. Buf, Protobuf generation, and esbuild come from the tools tarball rather than the runtime SDK. Configure `scalpelPlugin` in `package.json`, then run `scalpel-plugin generate`, `check`, `build`, or `pack` instead of maintaining custom contract scripts.
+- See [`PLUGIN_SERVICES.md`](PLUGIN_SERVICES.md) for the service workflow and the normative [`NATIVE_PLUGIN_RFC_1.md`](NATIVE_PLUGIN_RFC_1.md) for exact native framing, handshake, response rules, limits, lifecycle, checksums, platform support, and non-goals.
+
+### Native RFC1 dependency
+
+The preview Rust transport helper is not on crates.io. Pin the public commit that contains the implementation used by the current host:
+
+```toml
+[dependencies]
+prost = "0.14"
+scalpel-plugin-native = { git = "https://github.com/scalpelpoe/scalpel.git", rev = "41275dcbc339b8c6af7fcea20325575a49b0ecc6" }
+```
+
+The helper's `serve_stdio` dispatcher is sequential. The host can correlate concurrent calls, but RFC1 does not promise concurrent worker execution. See the [crate README](crates/scalpel-plugin-native/README.md) for usage.
 
 ## Local testing
 
@@ -790,7 +808,7 @@ While developing, skip the registry and install your plugin directly.
 
 1. In Scalpel, open Settings → Developer.
 2. Toggle "Developer mode" on.
-3. Click "Load unpacked plugin..." and pick either the package directory containing `plugin.js`, `manifest.json`, declared contracts, and any native executable, or its project root when that package is in the immediate `dist/` directory. Scalpel checks the selected directory first and then `dist/`; it does not recursively search other descendants.
+3. Click "Load unpacked plugin..." and pick either the package directory containing `plugin.js`, `manifest.json`, declared contracts, and any native executable, or its project root when that package is in the immediate `dist/` directory. A complete immediate `dist/` package takes precedence over root files; Scalpel checks that its identity, version, and bundle match the selected project before loading it. It does not recursively search other descendants.
 4. Unpacked plugins load immediately when their required dependency graph is available. Plugins with missing, incompatible, cyclic, or transitively unavailable required dependencies remain installed but disabled, with the reason shown in Settings. Loading a missing provider re-evaluates the development graph.
 5. Reload is a developer-only best-effort hot swap; restart Scalpel if registrations or native state look stale.
 
@@ -800,7 +818,7 @@ While developing, skip the registry and install your plugin directly.
    - Windows: `%APPDATA%\Scalpel`
    - macOS: `~/Library/Application Support/Scalpel`
    - Linux: `~/.config/Scalpel`
-2. Create `userData/plugins/<your-id>/` and copy `dist/plugin.js` + `dist/manifest.json` into it.
+2. Create `userData/plugins/<your-id>/` and copy `dist/plugin.js`, `dist/manifest.json`, and every contract or native file declared by the manifest into it.
 3. Edit `userData/plugins/installed.json` to include your id: `["your-id"]`.
 4. Restart Scalpel to load the manually placed plugin.
 
@@ -808,7 +826,7 @@ While developing, skip the registry and install your plugin directly.
 
 Releases are GitHub-driven. Tag your repo with `v<version>` matching your manifest's `version`, and attach the built artifacts:
 
-1. `npx scalpel-plugin pack` produces `dist/plugin.js`, `dist/manifest.json`, and every declared contract and native asset.
+1. `npx scalpel-plugin pack` produces `dist/plugin.js`, `dist/manifest.json`, and every declared contract and native asset. For native packages, it computes the executable checksum and writes it to the generated `dist/manifest.json`; publish that file rather than a source template containing a placeholder.
 2. Tag and release on GitHub:
    ```bash
    git tag v1.0.0

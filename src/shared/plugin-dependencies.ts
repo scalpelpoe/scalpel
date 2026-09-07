@@ -7,6 +7,12 @@ export interface PluginLoadEntry {
 
 export type PluginUnavailableReason =
   | {
+      code: 'scalpel-version-incompatible'
+      requiredVersion: string
+      currentVersion: string
+      message: string
+    }
+  | {
       code: 'missing-required-dependency'
       dependencyId: string
       requiredApiVersion: string
@@ -47,11 +53,13 @@ const AVAILABLE: PluginAvailability = { status: 'available' }
 /** Resolve required plugin dependencies without importing or activating code. */
 export function resolvePluginDependencies<T extends { manifest: PluginManifest }>(
   entries: T[],
+  initialAvailability: ReadonlyMap<string, PluginAvailability> = new Map(),
 ): PluginDependencyResolution<T> {
   const byId = new Map(entries.map((entry) => [entry.manifest.id, entry]))
-  const availability = new Map<string, PluginAvailability>()
+  const availability = new Map(initialAvailability)
 
   for (const entry of entries) {
+    if (availability.has(entry.manifest.id)) continue
     for (const dependency of entry.manifest.dependencies ?? []) {
       if (dependency.optional) continue
       const provider = byId.get(dependency.pluginId)
@@ -94,6 +102,7 @@ export function resolvePluginDependencies<T extends { manifest: PluginManifest }
       const start = stack.indexOf(id)
       const cycle = [...stack.slice(start), id]
       for (const pluginId of cycle.slice(0, -1)) {
+        if (availability.has(pluginId)) continue
         availability.set(pluginId, {
           status: 'unavailable',
           reason: {

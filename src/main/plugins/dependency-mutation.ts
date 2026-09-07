@@ -1,4 +1,5 @@
 import type { PluginManifest } from '../../plugin-sdk/src/types'
+import { resolvePluginDependencies } from '@shared/plugin-dependencies'
 
 /** Validate the graph that would exist after replacing or removing one plugin. */
 export function validateDependencyMutation(
@@ -23,9 +24,25 @@ export function validateDependencyMutation(
   if (replacement) next.set(pluginId, replacement)
   else next.delete(pluginId)
 
-  // Only the mutated plugin and its transitive dependents can be broken by this
-  // mutation. Unrelated plugins that were already unsatisfied stay the loader's
-  // problem (it marks them unavailable) and must not block this operation.
+  const before = resolvePluginDependencies(installed.map((manifest) => ({ manifest }))).availability
+  const after = resolvePluginDependencies([...next.values()].map((manifest) => ({ manifest }))).availability
+  for (const [id, availability] of after) {
+    if (availability.status === 'unavailable' && before.get(id)?.status !== 'unavailable') {
+      const reason = availability.reason
+      if (reason.code === 'missing-required-dependency') {
+        return `plugin "${id}" requires plugin "${reason.dependencyId}"`
+      }
+      if (reason.code === 'api-version-mismatch') {
+        return `plugin "${id}" requires API ${reason.requiredApiVersion} from plugin "${reason.dependencyId}"`
+      }
+      if (reason.code === 'dependency-cycle') return `plugin dependency cycle includes "${id}"`
+      if (reason.code === 'scalpel-version-incompatible') return `plugin "${id}" ${reason.message}`
+      return `plugin "${id}" requires plugin "${reason.dependencyId}", which is unavailable: ${reason.cause.message}`
+    }
+  }
+
+  // Game support is not part of the canonical resolver, so check it separately
+  // for the mutated plugin and its transitive dependents.
   const affected = new Set<string>()
   if (replacement) affected.add(pluginId)
   const queue = [pluginId]
@@ -45,39 +62,13 @@ export function validateDependencyMutation(
     for (const dependency of manifest.dependencies ?? []) {
       if (dependency.optional) continue
       const provider = next.get(dependency.pluginId)
-      if (!provider) {
-        return `plugin "${manifest.id}" requires plugin "${dependency.pluginId}"`
-      }
-      if (provider.api?.version !== dependency.apiVersion) {
-        return `plugin "${manifest.id}" requires API ${dependency.apiVersion} from plugin "${dependency.pluginId}"`
-      }
+      if (!provider || provider.api?.version !== dependency.apiVersion) continue
       const consumerGames = manifest.poeVersions ?? [1, 2]
       const providerGames = new Set(provider.poeVersions ?? [1, 2])
       if (consumerGames.some((version) => !providerGames.has(version))) {
         return `plugin "${manifest.id}" requires plugin "${dependency.pluginId}" for an unsupported PoE version`
       }
     }
-  }
-
-  const visiting = new Set<string>()
-  const visited = new Set<string>()
-  const visit = (manifest: PluginManifest): string | null => {
-    if (visiting.has(manifest.id)) return `plugin dependency cycle includes "${manifest.id}"`
-    if (visited.has(manifest.id)) return null
-    visiting.add(manifest.id)
-    for (const dependency of manifest.dependencies ?? []) {
-      const provider = next.get(dependency.pluginId)
-      if (!provider || provider.api?.version !== dependency.apiVersion) continue
-      const error = visit(provider)
-      if (error) return error
-    }
-    visiting.delete(manifest.id)
-    visited.add(manifest.id)
-    return null
-  }
-  for (const manifest of affectedManifests) {
-    const error = visit(manifest)
-    if (error) return error
   }
   return null
 }

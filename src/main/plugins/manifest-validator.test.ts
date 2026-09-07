@@ -18,6 +18,20 @@ describe('validateManifest', () => {
     if (r.ok) expect(r.manifest.id).toBe('jewel-economy')
   })
 
+  it('accepts supported scalpelMinVersion ranges', () => {
+    for (const scalpelMinVersion of ['1.2.3', '^1.2.3', '~1.2.3', '>=1.2.0 <2.0.0']) {
+      expect(validateManifest({ ...valid, scalpelMinVersion }).ok, scalpelMinVersion).toBe(true)
+    }
+  })
+
+  it('rejects malformed scalpelMinVersion ranges', () => {
+    for (const scalpelMinVersion of ['>=1.2.0 || <2.0.0', '>=1.2.0 nope', '1.2.3.4']) {
+      const result = validateManifest({ ...valid, scalpelMinVersion })
+      expect(result.ok, scalpelMinVersion).toBe(false)
+      if (!result.ok) expect(result.error).toMatch(/scalpelMinVersion/)
+    }
+  })
+
   it('rejects when manifestVersion is missing', () => {
     const r = validateManifest({ ...valid, manifestVersion: undefined })
     expect(r.ok).toBe(false)

@@ -11,6 +11,7 @@ const MAX_FRAME_BYTES = 1024 * 1024
 const MAX_IN_FLIGHT = 32
 const CALL_TIMEOUT_MS = 10_000
 const STOP_TIMEOUT_MS = 750
+const RESTART_COOLDOWN_MS = 5_000
 const MAX_STDERR_BYTES = 8 * 1024
 const MAX_QUEUED_STDIN_BYTES = 4 * 1024 * 1024
 const METHOD_PATTERN = /^\/[A-Za-z_][A-Za-z0-9_.]*\/[A-Za-z_][A-Za-z0-9_]*$/
@@ -25,6 +26,7 @@ interface PendingCall {
   resolve(value: NativeFrame['body']): void
   reject(error: Error): void
   timer: NodeJS.Timeout
+  responseCase: 'initializeResponse' | 'callResponse'
 }
 
 type SpawnBackend = (executablePath: string) => ChildProcessWithoutNullStreams
@@ -34,6 +36,7 @@ export class PluginNativeBackendManager {
   private readonly processes = new Map<string, NativeBackendProcess>()
   private readonly blockedPlugins = new Map<string, number>()
   private readonly restartBlockedPlugins = new Set<string>()
+  private readonly restartCooldowns = new Map<string, number>()
   private blockAllCount = 0
   private lifecycleTail: Promise<void> = Promise.resolve()
 
@@ -50,20 +53,33 @@ export class PluginNativeBackendManager {
     ) {
       throw new Error(`native backend for plugin "${pluginId}" is temporarily unavailable`)
     }
+    const cooldownUntil = this.restartCooldowns.get(pluginId)
+    if (cooldownUntil !== undefined) {
+      const remaining = cooldownUntil - Date.now()
+      if (remaining > 0) {
+        throw new Error(`native backend for plugin "${pluginId}" is in restart cooldown (${remaining}ms remaining)`)
+      }
+      this.restartCooldowns.delete(pluginId)
+    }
     if (!METHOD_PATTERN.test(method)) throw new Error('native backend method must be a fully qualified Protobuf method')
     if (!(payload instanceof Uint8Array)) throw new Error('native backend payload must be a Uint8Array')
     let backend = this.processes.get(pluginId)
     if (!backend) {
       const descriptor = this.resolveBackend(pluginId)
       verifyExecutable(descriptor)
-      backend = new NativeBackendProcess(
-        pluginId,
-        descriptor.service,
-        this.spawnBackend(descriptor.executablePath),
-        () => {
+      let child: ChildProcessWithoutNullStreams
+      try {
+        child = this.spawnBackend(descriptor.executablePath)
+      } catch (error) {
+        this.restartCooldowns.set(pluginId, Date.now() + RESTART_COOLDOWN_MS)
+        throw new Error(`native backend failed to start: ${(error as Error).message}`)
+      }
+      backend = new NativeBackendProcess(pluginId, descriptor.service, child, {
+        failed: () => this.restartCooldowns.set(pluginId, Date.now() + RESTART_COOLDOWN_MS),
+        exited: () => {
           if (this.processes.get(pluginId) === backend) this.processes.delete(pluginId)
         },
-      )
+      })
       this.processes.set(pluginId, backend)
     }
     await backend.ready
@@ -73,14 +89,18 @@ export class PluginNativeBackendManager {
   async stop(pluginId: string): Promise<void> {
     const backend = this.processes.get(pluginId)
     if (!backend) return
-    this.processes.delete(pluginId)
     await backend.stop()
+    if (this.processes.get(pluginId) === backend) this.processes.delete(pluginId)
   }
 
   async stopAll(): Promise<void> {
     const backends = [...this.processes.values()]
-    this.processes.clear()
     await Promise.all(backends.map((backend) => backend.stop()))
+    for (const backend of backends) {
+      for (const [pluginId, current] of this.processes) {
+        if (current === backend) this.processes.delete(pluginId)
+      }
+    }
   }
 
   async shutdown(): Promise<void> {
@@ -133,7 +153,13 @@ export class PluginNativeBackendManager {
   /** Plugins whose on-disk package changed this session. They are excluded from
    * the loadable graph until restart; everything else keeps loading normally. */
   restartBlockedPluginIds(): ReadonlySet<string> {
-    return this.restartBlockedPlugins
+    return new Set(this.restartBlockedPlugins)
+  }
+
+  /** Snapshot used by loadability queries to exclude packages while their files
+   * are changing as well as packages whose changes require a restart. */
+  loadBlockedPluginIds(): ReadonlySet<string> {
+    return new Set([...this.restartBlockedPlugins, ...this.blockedPlugins.keys()])
   }
 
   async withAllStopped<TResult>(operation: () => TResult | Promise<TResult>): Promise<TResult> {
@@ -179,17 +205,36 @@ class NativeBackendProcess {
   private writeBlocked = false
   private queuedWriteBytes = 0
   private readonly queuedWrites: Array<{ id: number; frame: Buffer }> = []
+  private readonly exited: Promise<void>
+  private exitConfirmed = false
+  private failureReported = false
+  private exitReported = false
+  private stopPromise: Promise<void> | null = null
 
   constructor(
     private readonly pluginId: string,
     private readonly service: string,
     private readonly child: ChildProcessWithoutNullStreams,
-    private readonly onExit: () => void,
+    private readonly events: { failed(): void; exited(): void },
   ) {
+    let confirmExit!: () => void
+    this.exited = new Promise<void>((resolve) => {
+      confirmExit = () => {
+        if (this.exitConfirmed) return
+        this.exitConfirmed = true
+        resolve()
+      }
+    })
     child.stderr.setEncoding('utf8')
     child.stdout.on('data', (chunk: Buffer) => this.acceptStdout(chunk))
+    child.stdout.on('error', (error) => {
+      if (!this.stopped) this.fail(new Error(`native backend stdout failed: ${error.message}`))
+    })
     child.stderr.on('data', (chunk: string) => {
       this.stderr = `${this.stderr}${chunk}`.slice(-MAX_STDERR_BYTES)
+    })
+    child.stderr.on('error', (error) => {
+      if (!this.stopped) this.fail(new Error(`native backend stderr failed: ${error.message}`))
     })
     child.stdin.on('drain', () => {
       this.writeBlocked = false
@@ -198,15 +243,22 @@ class NativeBackendProcess {
     child.stdin.on('error', (error) => {
       if (!this.stopped) this.fail(new Error(`native backend stdin failed: ${error.message}`))
     })
-    child.once('error', (error) => this.fail(new Error(`native backend failed to start: ${error.message}`)))
+    child.on('error', (error) => this.fail(new Error(`native backend process error: ${error.message}`)))
     child.once('exit', (code, signal) => {
-      if (this.stopped) return this.finish()
+      confirmExit()
+      if (this.stopped) return this.reportExit()
       const detail = this.stderr.trim()
       this.fail(
         new Error(
           `native backend exited (${signal ? `signal ${signal}` : `code ${String(code)}`})${detail ? `: ${detail}` : ''}`,
         ),
       )
+      this.reportExit()
+    })
+    child.once('close', () => {
+      confirmExit()
+      if (!this.stopped) this.fail(new Error('native backend closed unexpectedly'))
+      this.reportExit()
     })
     this.ready = this.request(
       {
@@ -214,6 +266,7 @@ class NativeBackendProcess {
         value: { protocolVersion: 1, pluginId, service },
       },
       'initialize',
+      'initializeResponse',
       0,
     ).then((body) => {
       if (
@@ -232,27 +285,32 @@ class NativeBackendProcess {
     if (!method.startsWith(`/${this.service}/`)) {
       throw new Error(`native backend method must belong to service "${this.service}"`)
     }
-    const body = await this.request({ case: 'callRequest', value: { method, payload } }, method)
+    const body = await this.request({ case: 'callRequest', value: { method, payload } }, method, 'callResponse')
     if (body.case !== 'callResponse') throw new Error('native backend returned an invalid call response')
     return Uint8Array.from(body.value.payload)
   }
 
   async stop(): Promise<void> {
-    if (this.stopped) return
+    if (this.stopPromise) return this.stopPromise
+    this.stopPromise = this.stopConfirmed()
+    return this.stopPromise
+  }
+
+  private async stopConfirmed(): Promise<void> {
+    if (this.exitConfirmed) {
+      this.reportExit()
+      return
+    }
     this.stopped = true
     this.terminalError = new Error('native backend stopped')
     this.rejectPending(this.terminalError)
-    const exited = new Promise<void>((resolve) => this.child.once('exit', () => resolve()))
     this.child.stdin.end()
-    const graceful = await Promise.race([
-      exited.then(() => true),
-      new Promise<false>((resolve) => setTimeout(() => resolve(false), STOP_TIMEOUT_MS)),
-    ])
-    if (!graceful && this.child.exitCode === null && this.child.signalCode === null) {
-      this.child.kill()
-      await Promise.race([exited, new Promise<void>((resolve) => setTimeout(resolve, STOP_TIMEOUT_MS))])
-    }
-    this.finish()
+    if (await this.waitForExit()) return
+    this.child.kill('SIGTERM')
+    if (await this.waitForExit()) return
+    this.child.kill('SIGKILL')
+    if (await this.waitForExit()) return
+    throw new Error(`native backend for plugin "${this.pluginId}" did not exit after forced termination`)
   }
 
   stopNow(): void {
@@ -261,13 +319,13 @@ class NativeBackendProcess {
     this.terminalError = new Error('native backend stopped')
     this.rejectPending(this.terminalError)
     this.child.stdin.end()
-    if (this.child.exitCode === null && this.child.signalCode === null) this.child.kill()
-    this.finish()
+    if (!this.exitConfirmed) this.child.kill('SIGKILL')
   }
 
   private request(
     body: MessageInitShape<typeof NativeFrameSchema>['body'],
     label: string,
+    responseCase: PendingCall['responseCase'],
     requestId?: number,
   ): Promise<NativeFrame['body']> {
     if (this.stopped) return Promise.reject(this.terminalError ?? new Error('native backend is unavailable'))
@@ -288,7 +346,7 @@ class NativeBackendProcess {
         reject(error)
         this.fail(error)
       }, CALL_TIMEOUT_MS)
-      this.pending.set(id, { resolve, reject, timer })
+      this.pending.set(id, { resolve, reject, timer, responseCase })
       if (this.writeBlocked) {
         if (this.queuedWriteBytes + frame.byteLength > MAX_QUEUED_STDIN_BYTES) {
           clearTimeout(timer)
@@ -307,11 +365,8 @@ class NativeBackendProcess {
   private writeFrame(id: number, frame: Buffer): void {
     this.writeBlocked = !this.child.stdin.write(frame, (error) => {
       if (!error) return
-      const pending = this.pending.get(id)
-      if (!pending) return
-      clearTimeout(pending.timer)
-      this.pending.delete(id)
-      pending.reject(new Error(`native backend write failed: ${error.message}`))
+      if (!this.pending.has(id)) return
+      this.fail(new Error(`native backend write failed: ${error.message}`))
     })
   }
 
@@ -358,6 +413,17 @@ class NativeBackendProcess {
     }
     clearTimeout(pending.timer)
     this.pending.delete(response.requestId)
+    const validResponse =
+      response.body.case === pending.responseCase ||
+      (pending.responseCase === 'callResponse' && response.body.case === 'callError')
+    if (!validResponse) {
+      const error = new Error(
+        `native backend emitted ${response.body.case || 'an empty body'} for a pending ${pending.responseCase === 'initializeResponse' ? 'initialize' : 'call'} request`,
+      )
+      pending.reject(error)
+      this.fail(error)
+      return
+    }
     if (response.body.case === 'callError') {
       pending.reject(
         new NativeCallError(
@@ -365,12 +431,6 @@ class NativeBackendProcess {
           response.body.value.code,
         ),
       )
-      return
-    }
-    if (response.body.case !== 'callResponse' && response.body.case !== 'initializeResponse') {
-      const error = new Error('native backend emitted an invalid response body')
-      pending.reject(error)
-      this.fail(error)
       return
     }
     pending.resolve(response.body)
@@ -381,8 +441,11 @@ class NativeBackendProcess {
     this.stopped = true
     this.terminalError = error
     this.rejectPending(error)
-    if (this.child.exitCode === null && this.child.signalCode === null) this.child.kill()
-    this.finish()
+    if (!this.failureReported) {
+      this.failureReported = true
+      this.events.failed()
+    }
+    if (!this.exitConfirmed) this.child.kill('SIGKILL')
   }
 
   private rejectPending(error: Error): void {
@@ -395,8 +458,21 @@ class NativeBackendProcess {
     this.queuedWriteBytes = 0
   }
 
-  private finish(): void {
-    this.onExit()
+  private waitForExit(): Promise<boolean> {
+    if (this.exitConfirmed) return Promise.resolve(true)
+    return new Promise((resolve) => {
+      const timer = setTimeout(() => resolve(false), STOP_TIMEOUT_MS)
+      void this.exited.then(() => {
+        clearTimeout(timer)
+        resolve(true)
+      })
+    })
+  }
+
+  private reportExit(): void {
+    if (this.exitReported) return
+    this.exitReported = true
+    this.events.exited()
   }
 }
 

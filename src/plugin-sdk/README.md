@@ -5,16 +5,20 @@ TypeScript SDK for building [Scalpel](https://github.com/scalpelpoe/scalpel) plu
 ## Install
 
 ```bash
-npm install --save-dev @scalpelpoe/plugin-sdk
+npm install --save-dev @scalpelpoe/plugin-sdk@0.11.0
 ```
 
-The renderer import remains host-provided: Scalpel serves it through `scalpel-internal://sdk.js`, while `dist/index.js` is a protective stub outside the app. Install [`@scalpelpoe/plugin-tools`](https://www.npmjs.com/package/@scalpelpoe/plugin-tools) for the Node-only `scalpel-plugin` authoring CLI.
+The renderer import remains host-provided: Scalpel serves it through `scalpel-internal://sdk.js`, while `dist/index.js` is a protective stub outside the app. The Node-only `scalpel-plugin` authoring CLI is distributed in the matching GitHub Release rather than npm:
+
+```bash
+npm install --save-dev https://github.com/scalpelpoe/scalpel/releases/download/sdk-v0.11.0/scalpelpoe-plugin-tools-0.11.0.tgz
+```
 
 Pin `scalpelMinVersion` in your `manifest.json` to whatever Scalpel version first shipped the API surface you depend on - SDK additions land lockstep with host releases.
 
 ## Plugin authoring loop
 
-1. `npm install --save-dev @scalpelpoe/plugin-sdk @scalpelpoe/plugin-tools react react-dom` and `npm install @bufbuild/protobuf` when using services.
+1. Install `@scalpelpoe/plugin-sdk@0.11.0`, the `plugin-tools` release tarball shown above, React, and React DOM. Run `npm install @bufbuild/protobuf@2.14.0` when using generated services.
 2. Write `src/index.tsx` (see [Plugin entry shape](#plugin-entry-shape) below) and a `manifest.json` (schema in [PLUGINS.md](https://github.com/scalpelpoe/scalpel/blob/main/PLUGINS.md)).
 3. Run `scalpel-plugin pack`; service contracts and generated sources are configured under `scalpelPlugin` in `package.json`.
 4. Attach every file under `dist/` to the matching GitHub release.
@@ -135,7 +139,9 @@ npx scalpel-plugin build
 npx scalpel-plugin pack
 ```
 
-It generates standard Protobuf-ES sources and descriptor sets, bundles the renderer, and packages native artifacts. See `PLUGIN_SERVICES.md` for configuration and examples.
+It generates standard Protobuf-ES sources and descriptor sets, bundles the renderer, and packages native artifacts. See [`PLUGIN_SERVICES.md`](../../PLUGIN_SERVICES.md) for configuration and examples.
+
+Native backends are an **experimental RFC1 preview** and are trusted, unsandboxed executables. Use `createNativeServiceClient(ctx.native, Service)` instead of the raw byte API. Read [`NATIVE_PLUGIN_RFC_1.md`](../../NATIVE_PLUGIN_RFC_1.md) for the normative wire protocol, fixed limits, lifecycle, Windows x64 support, checksum requirements, and non-goals before shipping one.
 
 For custom build pipelines, externalize the host SDK and React specifiers:
 

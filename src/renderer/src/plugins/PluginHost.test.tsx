@@ -814,6 +814,66 @@ describe('PluginHost', () => {
     expect(providerTeardown).toHaveBeenCalledOnce()
   })
 
+  it('reloads an unrelated plugin while preserving a restart-blocked active graph', async () => {
+    const blockedManifest = { ...manifest, id: 'blocked' }
+    const unrelatedManifest = { ...manifest, id: 'unrelated' }
+    let loadable = [
+      { manifest: blockedManifest, entryUrl: 'plugin://blocked' },
+      { manifest: unrelatedManifest, entryUrl: 'plugin://unrelated' },
+    ]
+    let updatedListener: ((entry: { manifest: PluginManifest; entryUrl: string }) => void) | null = null
+    const blockedTeardown = vi.fn()
+    const unrelatedTeardown = vi.fn()
+    const blockedActivate = vi.fn(() => blockedTeardown)
+    const unrelatedActivate = vi.fn(() => unrelatedTeardown)
+    const currentApi = window.api
+    ;(window as unknown as { api: unknown }).api = {
+      ...currentApi,
+      listLoadablePlugins: vi.fn(async () => loadable),
+      pluginRestartRequired: vi.fn(async () => true),
+      onPluginDevUpdated: vi.fn((listener: (entry: { manifest: PluginManifest; entryUrl: string }) => void) => {
+        updatedListener = listener
+        return () => {
+          updatedListener = null
+        }
+      }),
+    }
+    ;(window as unknown as { __pluginImport: (url: string) => Promise<unknown> }).__pluginImport = vi.fn(
+      async (url: string) => ({ default: url.includes('blocked') ? blockedActivate : unrelatedActivate }),
+    )
+
+    const { PluginHost } = await import('./PluginHost')
+    render(
+      <PluginHost
+        ready
+        poeVersion={1}
+        league="Mirage"
+        currentItem={null}
+        currentZone={null}
+        onSubscribeCurrentItem={() => () => {}}
+        onSubscribeCurrentZone={() => () => {}}
+        onSubscribeLeagueChange={() => () => {}}
+        onOpenExternal={() => {}}
+        onTabsChange={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
+      />,
+    )
+
+    await waitFor(() => expect(unrelatedActivate).toHaveBeenCalledOnce())
+    await waitFor(() => expect(blockedActivate).toHaveBeenCalledOnce())
+    loadable = [{ manifest: unrelatedManifest, entryUrl: 'plugin://unrelated' }]
+    ;(updatedListener as ((entry: { manifest: PluginManifest; entryUrl: string }) => void) | null)?.({
+      manifest: { ...unrelatedManifest, version: '2.0.0' },
+      entryUrl: 'plugin://unrelated?v=2',
+    })
+
+    await waitFor(() => expect(unrelatedActivate).toHaveBeenCalledTimes(2))
+    expect(unrelatedTeardown).toHaveBeenCalledOnce()
+    expect(blockedActivate).toHaveBeenCalledOnce()
+    expect(blockedTeardown).not.toHaveBeenCalled()
+  })
+
   it('disposes subscriptions made before activate throws', async () => {
     const unsub = vi.fn()
     const activate = vi.fn((ctx: ScalpelPluginContext) => {

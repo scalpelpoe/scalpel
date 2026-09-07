@@ -18,21 +18,66 @@ export function compareVersions(a: string, b: string): number {
   return aPre.localeCompare(bPre)
 }
 
+type VersionOperator = '=' | '<' | '<=' | '>' | '>=' | '^' | '~'
+
+interface VersionComparator {
+  operator: VersionOperator
+  version: string
+  segments: number[]
+}
+
+const VERSION_PATTERN = /^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?$/
+
+function parseComparator(entry: string): VersionComparator | null {
+  const match = entry.match(/^(<=|>=|<|>|=|\^|~)?(.+)$/)
+  if (!match || !VERSION_PATTERN.test(match[2])) return null
+  return {
+    operator: (match[1] ?? '=') as VersionOperator,
+    version: match[2],
+    segments: match[2].split('-', 1)[0].split('.').map(Number),
+  }
+}
+
+function exclusiveUpperBound(comparator: VersionComparator): string {
+  const segments = [...comparator.segments, 0, 0].slice(0, 3)
+  let incrementAt: number
+  if (comparator.operator === '~') {
+    incrementAt = comparator.segments.length === 1 ? 0 : 1
+  } else {
+    const firstNonZero = comparator.segments.findIndex((segment) => segment !== 0)
+    incrementAt = firstNonZero === -1 ? comparator.segments.length - 1 : firstNonZero
+  }
+  segments[incrementAt]++
+  segments.fill(0, incrementAt + 1)
+  return segments.join('.')
+}
+
+function comparatorMatches(comparator: VersionComparator, current: string): boolean {
+  const cmp = compareVersions(current, comparator.version)
+  if (comparator.operator === '=') return cmp === 0
+  if (comparator.operator === '<') return cmp < 0
+  if (comparator.operator === '<=') return cmp <= 0
+  if (comparator.operator === '>') return cmp > 0
+  if (comparator.operator === '>=') return cmp >= 0
+  return cmp >= 0 && compareVersions(current, exclusiveUpperBound(comparator)) < 0
+}
+
+/** Whether an expression uses the version range syntax supported by versionMatches. */
+export function isValidVersionRange(entry: string): boolean {
+  const comparators = entry.trim().split(/\s+/)
+  return entry.trim().length > 0 && comparators.every((comparator) => parseComparator(comparator) !== null)
+}
+
 /**
- * Test a version entry against the current version. Entries can be either
+ * Test a version range against the current version. Whitespace-separated
+ * entries are combined with logical AND. An entry can be any of:
  * - bare versions: `"0.10.1"` (exact match)
  * - prefixed comparators: `"<0.9.5"`, `"<=0.9.3"`, `">=0.11.0-rc1"`, `">0.8"`
+ * - caret or tilde ranges: `"^1.2.3"`, `"~1.2.3"`
  */
 export function versionMatches(entry: string, current: string): boolean {
-  const m = entry.match(/^(<=|>=|<|>|=)?(.+)$/)
-  if (!m) return false
-  const op = m[1] ?? '='
-  const cmp = compareVersions(current, m[2].trim())
-  if (op === '=') return cmp === 0
-  if (op === '<') return cmp < 0
-  if (op === '<=') return cmp <= 0
-  if (op === '>') return cmp > 0
-  return cmp >= 0
+  const comparators = entry.trim().split(/\s+/).map(parseComparator)
+  return comparators.every((comparator) => comparator !== null && comparatorMatches(comparator, current))
 }
 
 /** First matching entry (or null) from a list of bricked-version rules. */

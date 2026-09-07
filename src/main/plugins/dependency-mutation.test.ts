@@ -43,6 +43,20 @@ describe('validateDependencyMutation', () => {
     )
   })
 
+  it('rejects a new consumer of a transitively unavailable provider', () => {
+    const provider = manifest('provider', {
+      api: { version: 'v1', contract: 'api.binpb', service: 'demo.Api' },
+      dependencies: [{ pluginId: 'missing', apiVersion: 'v1' }],
+    })
+    const consumer = manifest('consumer', {
+      dependencies: [{ pluginId: 'provider', apiVersion: 'v1' }],
+    })
+
+    expect(validateDependencyMutation([provider], 'consumer', consumer)).toMatch(
+      /consumer.*provider.*unavailable.*missing/,
+    )
+  })
+
   it('rejects uninstalling a required provider', () => {
     const provider = manifest('provider', { api: { version: 'v1', contract: 'api.binpb', service: 'demo.Api' } })
     const consumer = manifest('consumer', {

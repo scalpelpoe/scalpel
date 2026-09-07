@@ -72,6 +72,14 @@ function resolveInstalledEntries(restartBlocked: ReadonlySet<string> = new Set()
   }
 }
 
+function runPostUninstallCleanup(pluginId: string, operation: () => void): void {
+  try {
+    operation()
+  } catch (error) {
+    console.error(`[plugins] post-uninstall cleanup failed for ${pluginId}:`, error)
+  }
+}
+
 export function register(store: Store<AppSettings>, isElevated: () => boolean = () => false): void {
   const registryConfig = (): {
     url: string | undefined
@@ -132,7 +140,7 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
   })
 
   ipcMain.handle('plugins:list-loadable', (): InstalledPluginIpc[] => {
-    return resolveInstalledEntries(pluginNativeBackends.restartBlockedPluginIds()).loadable
+    return resolveInstalledEntries(pluginNativeBackends.loadBlockedPluginIds()).loadable
   })
 
   ipcMain.handle('plugins:list-unpacked', (): UnpackedPluginIpc[] => {
@@ -158,7 +166,7 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
   ipcMain.handle('plugins:get-loadable', (_evt, pluginId: string): InstalledPluginIpc | null => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
     return (
-      resolveInstalledEntries(pluginNativeBackends.restartBlockedPluginIds()).loadable.find(
+      resolveInstalledEntries(pluginNativeBackends.loadBlockedPluginIds()).loadable.find(
         (plugin) => plugin.manifest.id === pluginId,
       ) ?? null
     )
@@ -379,16 +387,28 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
       }
       const uninstallResult = uninstallPlugin(pluginId)
       if (uninstallResult.ok) {
-        removeStorageNow(pluginId)
-        for (const win of BrowserWindow.getAllWindows()) win.webContents.send('plugin-dev-uninstalled', pluginId)
-        disposePluginOverlay(pluginId)
-        clearPluginOverlayAnchor(store, pluginId)
-        removePluginHotkey(pluginId)
-        removePluginOverlayHotkey(pluginId)
-        removePluginTab(pluginId)
-        notifyTabsChanged()
-        refreshAppMacros()
-        notifyHotkeysChanged()
+        for (const win of BrowserWindow.getAllWindows()) {
+          try {
+            win.webContents.send('plugin-dev-uninstalled', pluginId)
+          } catch (error) {
+            console.error(`[plugins] failed to notify a window that ${pluginId} was uninstalled:`, error)
+          }
+        }
+        try {
+          removeStorageNow(pluginId)
+        } catch (error) {
+          // The package and metadata are already committed. Keep the successful
+          // result; the pending deletion retries storage cleanup on next launch.
+          console.error(`[plugins] failed to remove storage for ${pluginId}:`, error)
+        }
+        runPostUninstallCleanup(pluginId, () => disposePluginOverlay(pluginId))
+        runPostUninstallCleanup(pluginId, () => clearPluginOverlayAnchor(store, pluginId))
+        runPostUninstallCleanup(pluginId, () => removePluginHotkey(pluginId))
+        runPostUninstallCleanup(pluginId, () => removePluginOverlayHotkey(pluginId))
+        runPostUninstallCleanup(pluginId, () => removePluginTab(pluginId))
+        runPostUninstallCleanup(pluginId, notifyTabsChanged)
+        runPostUninstallCleanup(pluginId, refreshAppMacros)
+        runPostUninstallCleanup(pluginId, notifyHotkeysChanged)
       }
       return uninstallResult
     })
@@ -425,12 +445,12 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     if (result.ok) {
       // The package is gone, so the pop-out cannot be reloaded: close it and
       // forget its geometry now instead of leaving a stale anchor in the store.
-      disposePluginOverlay(pluginId)
-      clearPluginOverlayAnchor(store, pluginId)
-      removePluginOverlayHotkey(pluginId)
-      refreshAppMacros()
-      notifyHotkeysChanged()
-      notifyRestartRequired()
+      runPostUninstallCleanup(pluginId, () => disposePluginOverlay(pluginId))
+      runPostUninstallCleanup(pluginId, () => clearPluginOverlayAnchor(store, pluginId))
+      runPostUninstallCleanup(pluginId, () => removePluginOverlayHotkey(pluginId))
+      runPostUninstallCleanup(pluginId, refreshAppMacros)
+      runPostUninstallCleanup(pluginId, notifyHotkeysChanged)
+      runPostUninstallCleanup(pluginId, notifyRestartRequired)
       return { ...result, restartRequired: true as const }
     }
     return result

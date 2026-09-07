@@ -304,9 +304,9 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       cancelled: () => boolean = () => false,
     ): Promise<void> => {
       // Production registry mutations intentionally preserve the running graph
-      // until restart. A coincident dev event must not unload that graph just
-      // because list-loadable is empty while restart is pending.
-      if (preferredEntry && (await window.api.pluginRestartRequired?.())) return
+      // until restart. Still reconcile loadable plugins so unrelated dev events
+      // work, but do not unload active entries omitted by a restart-blocked graph.
+      const preserveActiveGraph = preferredEntry && (await window.api.pluginRestartRequired?.())
       const listLoadable = window.api.listLoadablePlugins ?? window.api.listInstalledPlugins
       const listed = (await listLoadable()).filter(
         (entry) => !entry.manifest.poeVersions || entry.manifest.poeVersions.includes(poeVersionRef.current),
@@ -322,7 +322,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       const desiredIds = new Set(plan.entries.map((entry) => entry.manifest.id))
 
       for (const pluginId of [...activePluginIdsRef.current]) {
-        if (!desiredIds.has(pluginId)) {
+        if (!desiredIds.has(pluginId) && !preserveActiveGraph) {
           unloadPlugin(pluginId)
           onPluginUnloadedRef.current?.(pluginId)
         }

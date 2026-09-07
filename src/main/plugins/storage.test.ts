@@ -133,6 +133,29 @@ describe('plugin storage', () => {
     expect(pending).toBe('[]')
   })
 
+  it('does not allow a late renderer write to recreate immediately removed storage', async () => {
+    mockFs.files.set(storagePath, JSON.stringify({ key: 'value' }))
+    const { flushAll, removeStorageNow, setValue } = await import('./storage')
+
+    removeStorageNow('p1')
+
+    expect(() => setValue('p1', 'late', true)).toThrow(/storage has been removed/)
+    vi.advanceTimersByTime(150)
+    flushAll()
+    expect(mockFs.files.has(storagePath)).toBe(false)
+  })
+
+  it('allows storage writes again after the plugin is reinstalled', async () => {
+    const { cancelStorageRemoval, flushAll, removeStorageNow, setValue } = await import('./storage')
+    removeStorageNow('p1')
+
+    cancelStorageRemoval('p1')
+    setValue('p1', 'fresh', true)
+    flushAll()
+
+    expect(mockFs.files.get(storagePath)).toBe(JSON.stringify({ fresh: true }))
+  })
+
   it('migrates legacy storage out of the package directory once', async () => {
     mockFs.files.set(legacyStoragePath, JSON.stringify({ key: 'legacy' }))
     const { getValue, _resetForTests } = await import('./storage')

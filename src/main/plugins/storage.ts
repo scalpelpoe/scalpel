@@ -10,6 +10,7 @@ type PluginData = Record<string, unknown>
 const cache: Map<string, PluginData> = new Map()
 const dirty: Set<string> = new Set()
 const timers: Map<string, ReturnType<typeof setTimeout>> = new Map()
+const removed: Set<string> = new Set()
 
 function readPendingDeletions(): string[] {
   const path = pendingPluginStorageDeletionsPath()
@@ -99,6 +100,7 @@ export function getValue(pluginId: string, key: string): unknown {
 }
 
 export function setValue(pluginId: string, key: string, value: unknown): void {
+  if (removed.has(pluginId)) throw new Error(`plugin "${pluginId}" storage has been removed`)
   const data = load(pluginId)
   const next = { ...data, [key]: value }
   const size = JSON.stringify(next).length
@@ -110,6 +112,7 @@ export function setValue(pluginId: string, key: string, value: unknown): void {
 }
 
 export function deleteValue(pluginId: string, key: string): void {
+  if (removed.has(pluginId)) throw new Error(`plugin "${pluginId}" storage has been removed`)
   const data = load(pluginId)
   if (!(key in data)) return
   delete data[key]
@@ -137,14 +140,16 @@ export function scheduleStorageRemoval(pluginId: string): void {
 
 export function cancelStorageRemoval(pluginId: string): void {
   writePendingDeletions(readPendingDeletions().filter((id) => id !== pluginId))
+  removed.delete(pluginId)
 }
 
 /** Remove storage right away. Used when the plugin's graph is unloaded
  * immediately (side-loaded removal) so a same-session reload starts clean. */
 export function removeStorageNow(pluginId: string): void {
+  removed.add(pluginId)
   clearCache(pluginId)
   rmSync(pluginStorageDir(pluginId), { recursive: true, force: true })
-  cancelStorageRemoval(pluginId)
+  writePendingDeletions(readPendingDeletions().filter((id) => id !== pluginId))
 }
 
 export function finalizePendingStorageRemovals(): void {
@@ -174,4 +179,5 @@ export function _resetForTests(): void {
   cache.clear()
   dirty.clear()
   timers.clear()
+  removed.clear()
 }

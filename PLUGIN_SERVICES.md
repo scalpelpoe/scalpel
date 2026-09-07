@@ -1,24 +1,35 @@
 # Plugin Services
 
+Scalpel plugins can expose one public unary Protobuf service to declared plugin dependencies and can optionally own one supervised native sidecar. This is the practical overview for authors.
+
+**Native RFC1 is an experimental preview.** [`NATIVE_PLUGIN_RFC_1.md`](NATIVE_PLUGIN_RFC_1.md) is the normative reference for native framing, handshake, method paths, limits, response rules, lifecycle, platform support, packaging integrity, security, and non-goals. If this overview and the RFC differ, follow the RFC.
+
 ## Architecture
 
-Scalpel plugins can expose unary Protobuf services to declared plugin dependencies and can optionally own one supervised native sidecar.
-
 - `.proto` files are the authoring source of truth.
-- Protobuf-ES generates TypeScript message types and typed service descriptors.
-- Releases ship self-contained `FileDescriptorSet` artifacts named by `api.contract` or `nativeBackend.contract`.
-- Public JavaScript calls pass generated plain message objects through `structuredClone`.
-- Native calls encode only the service payload to Protobuf bytes.
-- The main process wraps native payloads in a bounded, length-prefixed Protobuf transport envelope.
-- The renderer and main process never parse plugin service descriptors at runtime.
+- Protobuf-ES generates TypeScript messages and typed service descriptors.
+- Releases include root-level binary `FileDescriptorSet` files named by `api.contract` or `nativeBackend.contract`.
+- Public plugin-to-plugin calls pass generated message objects through renderer-local structured cloning.
+- Native calls encode the method input to Protobuf bytes. The main process carries those bytes in RFC1's bounded stdio envelope.
+- Descriptor sets are generation, packaging, and integrity artifacts. The renderer and main process do not parse them for runtime dispatch or validate full schema equality.
 
-API dependencies still use exact `major.minor.patch` matching. Providers activate before consumers, unavailable optional dependencies return `null`, and dependency cycles fail before activation.
+Only unary methods are supported. Public API dependencies use exact `major.minor.patch` matching. Providers activate before consumers, unavailable optional dependencies return `null`, and missing, incompatible, cyclic, or transitively unavailable required dependencies keep a plugin out of the runtime graph.
 
-At runtime, the generated service name must match the provider manifest, the consumer must declare the provider and exact API version, and every method path must belong to that service. Scalpel does not validate full Protobuf schema equality, so providers must change `api.version` whenever methods or message wire compatibility change; otherwise stale same-version bundles cannot be distinguished. Descriptor sets remain authoring, packaging, and integrity artifacts rather than runtime dispatch inputs, not a sandbox.
+## Install The Preview Toolchain
+
+Node 22 or newer is required.
+
+```bash
+npm install --save-dev @scalpelpoe/plugin-sdk@0.11.0
+npm install --save-dev https://github.com/scalpelpoe/scalpel/releases/download/sdk-v0.11.0/scalpelpoe-plugin-tools-0.11.0.tgz
+npm install @bufbuild/protobuf@2.14.0
+```
+
+The SDK runtime is supplied by Scalpel; the npm package provides declarations and a protective out-of-host stub. The tools tarball provides the Node-only `scalpel-plugin` CLI and its pinned Buf, Protobuf-ES, and esbuild dependencies.
 
 ## TypeScript APIs
 
-Protobuf-ES service descriptors provide all method and payload type information. Scalpel maps them to typed clients and implementations without a second code generator.
+Generated Protobuf-ES descriptors provide the method and payload types:
 
 ```ts
 import {
@@ -47,36 +58,37 @@ export const consume: PluginActivate = (ctx) => {
 }
 ```
 
-Only unary methods are supported. The SDK uses canonical method identities such as `/scalpel.examples.greeting.v1.GreetingProvider/GetLastSeenCharacter` internally; normal plugin code does not contain method strings or result casts.
+`getPluginServiceClient` is the nullable form for an optional dependency. The SDK constructs canonical paths such as `/scalpel.examples.greeting.v1.GreetingProvider/GetLastSeenCharacter`; normal plugin code does not write method strings or cast results.
 
-Public calls remain renderer-local. Access from a plugin's separate overlay renderer is not implemented yet.
+The generated service name must match the provider manifest. A consumer must declare the provider and exact API version, and method paths must belong to that service. Providers must bump `api.version` whenever methods or message wire compatibility change because Scalpel cannot distinguish incompatible same-version descriptor bundles.
+
+Public service calls are renderer-local and are not available from a plugin's separate overlay renderer. Native clients are owner-only but are available in both renderer contexts.
 
 ## Native Backends
 
-`createNativeServiceClient(ctx.native, Service)` exposes the same generated client shape but encodes requests and decodes responses with Protobuf-ES.
+Create a typed client from the generated native service:
 
-Scalpel owns native process lifecycle and security controls:
+```ts
+import { createNativeServiceClient, type PluginActivate } from '@scalpelpoe/plugin-sdk'
+import { NativeItemAnalyzer } from './generated/native_item_analyzer_pb'
 
-- One lazy application-wide process per plugin.
-- Executable SHA-256 verification immediately before spawn.
-- No shell, renderer-selected path, arguments, or environment.
-- One MiB maximum frame size.
-- At most 32 in-flight calls.
-- Ten-second call timeout.
-- Four-MiB bounded standard-input write queue with backpressure.
-- Bounded standard-error diagnostics.
-- Graceful standard-input close followed by forced termination.
-- Workers stop before reload, update, uninstall, application quit, or updater exit. Production package mutations keep the affected worker blocked until restart.
+const activate: PluginActivate = (ctx) => {
+  const analyzer = createNativeServiceClient(ctx.native, NativeItemAnalyzer)
+  void analyzer.analyzeItem({ name: 'Example' })
+}
+```
 
-The wire format is a four-byte little-endian frame length followed by a `scalpel.plugin.native.v1.NativeFrame` Protobuf message. Standard output is reserved for frames; diagnostics belong on standard error.
+RFC1 supports one private service and one lazy process per plugin on Windows x64. The backend is a trusted, unsandboxed executable running with Scalpel's user permissions. Checksums and owner routing do not restrict its filesystem, network, process, or system access. Read the [normative RFC](NATIVE_PLUGIN_RFC_1.md) before shipping a native plugin.
 
-Rust workers can use the `scalpel-plugin-native` crate for framing, initialization, and transport errors. Service messages are generated into Cargo `OUT_DIR` by `prost-build`. The service wire contract is independent of Prost, so a worker may move to a borrowed-view implementation later without changing JavaScript clients or `.proto` files.
+Rust workers can use the unpublished [`scalpel-plugin-native`](crates/scalpel-plugin-native) helper. Pin the RFC1 implementation rather than a branch:
 
-Protocol v1 is intentionally a bounded unary control plane. Its fixed frame size, fixed deadline, and sequential first-party Rust dispatcher suit small request/response workloads such as the item-analyzer example. Heavy OCR, image, and dataset workloads require a separate protocol v2 with generic attachments, cancellation, request-targeted progress, bounded concurrency, health supervision, and immutable packaged resources. Those features will not be added by silently changing v1.
+```toml
+scalpel-plugin-native = { git = "https://github.com/scalpelpoe/scalpel.git", rev = "41275dcbc339b8c6af7fcea20325575a49b0ecc6" }
+```
 
 ## Builder
 
-`@scalpelpoe/plugin-tools` ships the `scalpel-plugin` CLI. Keeping authoring tools separate avoids installing Buf and esbuild for plugins that only need SDK types:
+Configuration lives under `scalpelPlugin` in the plugin's `package.json`. See the checked-in examples for complete configurations.
 
 ```text
 scalpel-plugin generate
@@ -85,31 +97,20 @@ scalpel-plugin build
 scalpel-plugin pack
 ```
 
-Configuration lives in the plugin's `package.json` under `scalpelPlugin`. The CLI runs its pinned Buf and Protobuf-ES tools, emits descriptor sets, checks generated files without modifying them, creates a minified `plugin.js`, discovers Cargo executables from JSON artifact messages, hashes native assets, and assembles `dist`.
+- `generate` writes configured descriptor sets and Protobuf-ES TypeScript sources.
+- `check` regenerates in temporary storage and fails if descriptors, generated TypeScript, or the configured `plugin.js` are stale.
+- `build` generates contracts and creates the minified browser ESM `plugin.js`.
+- `pack` also builds the configured Cargo binary in release mode, takes the executable path from Cargo JSON artifact output, writes its SHA-256 into `dist/manifest.json`, and assembles root-level release files under `dist/`. Packing `win32-x64` requires a Windows x64 host.
 
-Generated TypeScript and descriptor sets are committed. Bundled `plugin.js` files are build outputs and are not committed in the examples. Generated Rust stays exclusively in Cargo `OUT_DIR`.
+The CLI treats `.proto` files as sources and generated TypeScript, descriptor sets, and `plugin.js` as generated artifacts. Generated Rust remains exclusively in Cargo `OUT_DIR`. Choose whether to commit browser-side generated artifacts consistently for your repository; `check` can enforce that committed copies are current.
 
 ## Examples
 
-- `plugin-service-examples/greeting-provider` is intentionally headless. It observes English Client.txt death and level-up lines and exposes the last character name seen in one of those events.
-- `plugin-service-examples/greeting-relay` consumes the provider, presents a message-entry tab, and exposes a second service that composes `<character> says <message>`. Its manifest demonstrates that one plugin may declare both `api` and `dependencies`.
-- `plugin-service-examples/greeting-consumer` presents an output tab and consumes the relay, completing a provider -> relay -> consumer chain.
-- `plugin-service-examples/native-item-analyzer` sends Protobuf bytes through the supervised Rust sidecar.
+- `plugin-service-examples/greeting-provider` exposes a public service.
+- `plugin-service-examples/greeting-relay` consumes that service and exposes another.
+- `plugin-service-examples/greeting-consumer` completes the provider-to-relay-to-consumer chain.
+- `plugin-service-examples/native-item-analyzer` sends generated Protobuf payloads through the supervised Rust sidecar.
 
-Run `npm run build:plugin-service-examples` for the public examples and `npm run build:native-plugin-example` for a loadable native package.
+Run `npm run build:plugin-service-examples` for the public service examples and `npm run build:native-plugin-example` on Windows x64 for a loadable native package.
 
-The greeting provider's character result is explicitly a last-seen heuristic, not authoritative current-character identity. Client.txt may report party members, localized clients use different text, and Scalpel starts following new lines at the end of the file. Until a matching line is observed, the relay and consumer show an unavailable result rather than inventing a name.
-
-Plugins with missing, incompatible, cyclic, or transitively unavailable required dependencies remain installed but are excluded from the runtime graph. Settings shows their reason and keeps repair/removal controls available. Loading the missing provider in Developer mode re-evaluates the graph and activates newly satisfied dependents in provider-first order.
-
-## Deferred
-
-- Streaming RPCs
-- JavaScript service calls from secondary overlay renderers
-- Progress, cancellation, and unsolicited events
-- Large binary attachments and immutable native resources
-- Per-call deadlines and concurrent Rust dispatch
-- Native-to-plugin calls
-- Linux native targets
-- Hostile-plugin isolation
-- Automatic provider discovery or dependency installation
+The greeting provider's character result is a last-seen Client.txt heuristic, not authoritative current-character identity. Localized clients and party lines can differ, and no result is available until a matching newly followed line appears.
