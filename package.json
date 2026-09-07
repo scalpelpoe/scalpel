@@ -43,7 +43,7 @@
   },
   "dependencies": {
     "@coooookies/windows-smtc-monitor": "^1.0.12",
-    "electron-overlay-window": "github:scalpelpoe/electron-overlay-window#db989812d62d6e988e915e25d772fc5c34aebdbb",
+    "electron-overlay-window": "github:jborlum/electron-overlay-window#731deb50f9b1a25c8465af7ee272d80dc735be0e",
     "electron-store": "^8.2.0",
     "koffi": "^3.1.6",
     "konva": "^9.3.22",
