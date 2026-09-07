@@ -55,6 +55,13 @@ const noop = (): void => {}
 describe('DeveloperSection unpacked plugins list', () => {
   beforeEach(() => installApi([]))
 
+  it('warns plugin authors that unpacked native executables run without a sandbox', async () => {
+    const { findByRole } = render(<DeveloperSection settings={settings} update={noop} onError={noop} />)
+    const warning = await findByRole('note')
+    expect(warning.textContent).toContain('without a sandbox')
+    expect(warning.textContent).toContain('temporary trust model')
+  })
+
   it('shows "None loaded." when no unpacked plugins are installed', async () => {
     installApi([])
     const { findByText } = render(<DeveloperSection settings={settings} update={noop} onError={noop} />)
@@ -124,8 +131,11 @@ describe('DeveloperSection restart button', () => {
 
   it('does not render the Restart button when dev mode is off', () => {
     const offSettings = { developerMode: false } as unknown as AppSettings
-    const { queryByText } = render(<DeveloperSection settings={offSettings} update={noop} onError={noop} />)
+    const { queryByRole, queryByText } = render(
+      <DeveloperSection settings={offSettings} update={noop} onError={noop} />,
+    )
     expect(queryByText('Restart now')).toBeNull()
+    expect(queryByRole('note')).toBeNull()
   })
 })
 

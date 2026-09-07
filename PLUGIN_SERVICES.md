@@ -78,7 +78,7 @@ const activate: PluginActivate = (ctx) => {
 }
 ```
 
-RFC1 supports one private service and one lazy process per plugin on Windows x64. The backend is a trusted, unsandboxed executable running with Scalpel's user permissions. Checksums and owner routing do not restrict its filesystem, network, process, or system access. Read the [normative RFC](NATIVE_PLUGIN_RFC_1.md) before shipping a native plugin.
+RFC1 supports one private service and one lazy process per plugin on Windows x64. The backend is built and supplied by the plugin author, then run as-is without a sandbox and with Scalpel's user permissions, including elevation. Checksums verify expected bytes and supervision manages lifecycle failures; neither establishes safety or restricts filesystem, network, process, or system access. Authors are responsible for what they distribute, and users run native plugins at their own risk. This temporary trust model remains in effect until a future native-plugin revision explicitly ships enforced containment. Read the [normative RFC](NATIVE_PLUGIN_RFC_1.md) before shipping one.
 
 Rust workers can use the unpublished [`scalpel-plugin-native`](crates/scalpel-plugin-native) helper. Pin the RFC1 implementation rather than a branch:
 

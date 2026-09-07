@@ -26,6 +26,8 @@ Pin `scalpelMinVersion` in your `manifest.json` to whatever Scalpel version firs
 
 The reference plugin lives at [`scalpelpoe/scalpel-plugin-examples`](https://github.com/scalpelpoe/scalpel-plugin-examples).
 
+**Native security notice:** Native backends are executables built and supplied by plugin authors. Scalpel currently runs them as-is, without a sandbox, with its user permissions and any elevation. Checksums verify expected bytes and supervision manages process lifecycle; neither establishes safety or restricts system access. Authors are responsible for all native code, dependencies, build inputs, and artifacts they distribute, and users run them at their own risk. This temporary trust model remains in effect until a future native-plugin revision explicitly ships enforced containment.
+
 ## Plugin entry shape
 
 ```ts
@@ -141,7 +143,7 @@ npx scalpel-plugin pack
 
 It generates standard Protobuf-ES sources and descriptor sets, bundles the renderer, and packages native artifacts. See [`PLUGIN_SERVICES.md`](../../PLUGIN_SERVICES.md) for configuration and examples.
 
-Native backends are an **experimental RFC1 preview** and are trusted, unsandboxed executables. Use `createNativeServiceClient(ctx.native, Service)` instead of the raw byte API. Read [`NATIVE_PLUGIN_RFC_1.md`](../../NATIVE_PLUGIN_RFC_1.md) for the normative wire protocol, fixed limits, lifecycle, Windows x64 support, checksum requirements, and non-goals before shipping one.
+Native backends are an **experimental RFC1 preview** and are author-supplied, unsandboxed executables. Use `createNativeServiceClient(ctx.native, Service)` instead of the raw byte API. Read [`NATIVE_PLUGIN_RFC_1.md`](../../NATIVE_PLUGIN_RFC_1.md) for the normative trust model, wire protocol, fixed limits, lifecycle, Windows x64 support, checksum requirements, and non-goals before shipping one.
 
 For custom build pipelines, externalize the host SDK and React specifiers:
 

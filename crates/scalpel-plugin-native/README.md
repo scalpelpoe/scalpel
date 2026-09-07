@@ -4,6 +4,8 @@ Rust helper for the [Scalpel Native Plugin RFC1](../../NATIVE_PLUGIN_RFC_1.md) s
 
 **Experimental preview:** RFC1 and this crate can be replaced by a later protocol version. The crate is not published to crates.io. Pin the public revision that contains the current RFC1 implementation:
 
+**Security notice:** This crate provides framing and dispatch, not sandboxing, privilege reduction, malware detection, or safe execution. Scalpel runs the plugin author's executable as-is with its user permissions and any elevation. Authors are responsible for their native code, dependencies, build chain, and release artifacts; users run them at their own risk until a future native-plugin revision explicitly ships enforced containment.
+
 ```toml
 [dependencies]
 prost = "0.14"

@@ -3,6 +3,7 @@ import type { PluginManifest } from '../../../../../plugin-sdk/src/types'
 import type { PluginAvailability } from '@shared/plugin-dependencies'
 import type { AppSettings } from '@shared/types'
 import { m } from '@shared/paraglide/messages.js'
+import { NativePluginSecurityNotice } from '@renderer/components/NativePluginSecurityNotice'
 
 interface Props {
   settings: AppSettings
@@ -92,6 +93,7 @@ export function DeveloperSection({ settings, update, onError }: Props): JSX.Elem
       </div>
       {enabled && (
         <div className="flex flex-col gap-2 pt-2 border-t border-border">
+          <NativePluginSecurityNotice />
           <div className="text-xs text-zinc-400">{m.settings_dev_load_unpacked_desc()}</div>
           <button
             onClick={installPlugin}
