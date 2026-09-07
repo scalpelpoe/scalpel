@@ -29,7 +29,7 @@ export interface RegistryEntry {
   /** Additional release assets pinned by the curated registry, keyed by their
    *  safe root-level filename. Native executables must appear here. */
   assets?: Record<string, string>
-  /** Comparator expression a la versionMatches; install is blocked if the
+  /** Version range accepted by versionMatches; install is blocked if the
    *  running Scalpel doesn't satisfy this. */
   scalpelMinVersion: string
   /** Empty/omitted means both. */

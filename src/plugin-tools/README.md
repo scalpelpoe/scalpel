@@ -5,10 +5,10 @@ Build and packaging tools for [Scalpel](https://github.com/scalpelpoe/scalpel) p
 ## Install
 
 ```bash
-npm install --save-dev @scalpelpoe/plugin-tools
+npm install --save-dev https://github.com/scalpelpoe/scalpel/releases/download/sdk-v0.11.0/scalpelpoe-plugin-tools-0.11.0.tgz
 ```
 
-Node 22 or newer is required. Install [`@scalpelpoe/plugin-sdk`](https://www.npmjs.com/package/@scalpelpoe/plugin-sdk) separately for plugin types and renderer APIs. Plugins that use generated Protobuf services also need `@bufbuild/protobuf` as a project dependency.
+Node 22 or newer is required. This RFC preview package is a tarball attached to the `sdk-v0.11.0` GitHub Release; it is not published to npm. Install [`@scalpelpoe/plugin-sdk@0.11.0`](https://www.npmjs.com/package/@scalpelpoe/plugin-sdk/v/0.11.0) separately for plugin types and renderer APIs. Plugins that use generated Protobuf services also need `@bufbuild/protobuf@2.14.0` as a project dependency.
 
 ## Commands
 
@@ -26,4 +26,6 @@ npx scalpel-plugin pack
 
 All commands read `scalpelPlugin` from the target project's `package.json`. Use `--project <path>` to target a directory other than the current working directory.
 
-The CLI externalizes `@scalpelpoe/plugin-sdk`, React, and React DOM because Scalpel provides those renderer modules. Service and native-package configuration is documented in [PLUGIN_SERVICES.md](https://github.com/scalpelpoe/scalpel/blob/main/PLUGIN_SERVICES.md).
+For a configured native backend, `pack` runs Cargo release build, finds the named binary through Cargo's JSON artifact output, computes its lowercase SHA-256, and writes that checksum into `dist/manifest.json`. The current `win32-x64` target must be packed on Windows x64.
+
+The CLI externalizes `@scalpelpoe/plugin-sdk`, React, and React DOM because Scalpel provides those renderer modules. Service configuration is documented in [PLUGIN_SERVICES.md](https://github.com/scalpelpoe/scalpel/blob/main/PLUGIN_SERVICES.md). Native support is an **experimental, trusted, unsandboxed RFC1 preview**; [NATIVE_PLUGIN_RFC_1.md](https://github.com/scalpelpoe/scalpel/blob/main/NATIVE_PLUGIN_RFC_1.md) is normative for its protocol, limits, lifecycle, platform support, integrity checks, and non-goals.

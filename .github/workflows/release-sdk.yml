@@ -1,7 +1,4 @@
-name: Release Plugin Packages
-
-# Publishes @scalpelpoe/plugin-sdk and @scalpelpoe/plugin-tools together when a
-# tag like `sdk-v0.2.0` is pushed.
+name: Release Plugin RFC Packages
 
 on:
   push:
@@ -9,11 +6,11 @@ on:
       - 'sdk-v*'
 
 permissions:
-  contents: read
+  contents: write
   id-token: write # required for npm provenance
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -23,62 +20,68 @@ jobs:
           node-version: 22
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Verify tag matches package.json version
+      - name: Verify tag matches package versions
+        id: version
         shell: bash
         run: |
           SDK_VERSION=$(node -p "require('./src/plugin-sdk/package.json').version")
           TOOLS_VERSION=$(node -p "require('./src/plugin-tools/package.json').version")
           TAG_VERSION="${GITHUB_REF_NAME#sdk-v}"
-          if [ "$SDK_VERSION" != "$TAG_VERSION" ] || [ "$TOOLS_VERSION" != "$TAG_VERSION" ]; then
-            echo "Tag $GITHUB_REF_NAME implies version $TAG_VERSION but packages have SDK $SDK_VERSION and tools $TOOLS_VERSION" >&2
+          if [ "$GITHUB_REF_NAME" != "sdk-v$SDK_VERSION" ] || [ "$TOOLS_VERSION" != "$SDK_VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME, SDK $SDK_VERSION, and tools $TOOLS_VERSION must have the same version" >&2
             exit 1
           fi
-          echo "Publishing plugin packages at $TAG_VERSION"
+          echo "version=$TAG_VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Install SDK dependencies
-        run: npm ci --no-audit --no-fund --prefix src/plugin-sdk
+      - name: Install dependencies
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm ci --no-audit --no-fund --prefix src/plugin-sdk
+          npm ci --no-audit --no-fund --prefix src/plugin-tools
 
-      - name: Install plugin tools dependencies
-        run: npm ci --no-audit --no-fund --prefix src/plugin-tools
+      - name: Test plugin packages
+        run: npm run test -- src/plugin-sdk/src scripts/scalpel-plugin.test.mjs
 
       - name: Build SDK
         run: npm run build --prefix src/plugin-sdk
 
-      - name: Pack and verify published artifacts
+      - name: Pack and verify release assets
         shell: bash
         run: |
-          mkdir -p "$RUNNER_TEMP/plugin-packages" "$RUNNER_TEMP/plugin-tools-smoke"
-          npm pack ./src/plugin-sdk --pack-destination "$RUNNER_TEMP/plugin-packages"
-          TOOLS_TARBALL=$(npm pack ./src/plugin-tools --pack-destination "$RUNNER_TEMP/plugin-packages" | tail -n 1)
-          cd "$RUNNER_TEMP/plugin-tools-smoke"
+          VERSION="${{ steps.version.outputs.version }}"
+          PACKAGE_DIR="$RUNNER_TEMP/plugin-packages"
+          SMOKE_DIR="$RUNNER_TEMP/plugin-tools-smoke"
+          mkdir -p "$PACKAGE_DIR" "$SMOKE_DIR"
+          npm pack ./src/plugin-sdk --pack-destination "$PACKAGE_DIR"
+          npm pack ./src/plugin-tools --pack-destination "$PACKAGE_DIR"
+          test -f "$PACKAGE_DIR/scalpelpoe-plugin-sdk-$VERSION.tgz"
+          test -f "$PACKAGE_DIR/scalpelpoe-plugin-tools-$VERSION.tgz"
+          cd "$SMOKE_DIR"
           npm init -y
-          npm install --no-audit --no-fund "$RUNNER_TEMP/plugin-packages/$TOOLS_TARBALL"
+          npm install --no-audit --no-fund "$PACKAGE_DIR/scalpelpoe-plugin-tools-$VERSION.tgz"
           test -x node_modules/.bin/scalpel-plugin
 
-      - name: Check existing package versions
+      - name: Check whether SDK version is already published
         id: published
         shell: bash
         run: |
-          VERSION=$(node -p "require('./src/plugin-sdk/package.json').version")
-          if npm view "@scalpelpoe/plugin-tools@$VERSION" version >/dev/null 2>&1; then
-            echo "tools=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "tools=false" >> "$GITHUB_OUTPUT"
-          fi
-          if npm view "@scalpelpoe/plugin-sdk@$VERSION" version >/dev/null 2>&1; then
+          if npm view "@scalpelpoe/plugin-sdk@${{ steps.version.outputs.version }}" version >/dev/null 2>&1; then
             echo "sdk=true" >> "$GITHUB_OUTPUT"
           else
             echo "sdk=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Publish plugin tools to npm
-        if: steps.published.outputs.tools != 'true'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance --access public ./src/plugin-tools
-
       - name: Publish SDK to npm
         if: steps.published.outputs.sdk != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance --access public ./src/plugin-sdk
+        run: npm publish --provenance --access public "$RUNNER_TEMP/plugin-packages/scalpelpoe-plugin-sdk-${{ steps.version.outputs.version }}.tgz"
+
+      - name: Create RFC preview release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Plugin RFC packages v${{ steps.version.outputs.version }}
+          prerelease: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: ${{ runner.temp }}/plugin-packages/*.tgz

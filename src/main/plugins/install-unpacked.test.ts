@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { join } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const TEST_USER_DATA = '/test/userData'
@@ -78,7 +78,7 @@ vi.mock('fs', () => ({
     [...mockFs.files.keys()].filter((f) => f.startsWith(`${p}/`)).map((f) => f.slice(p.length + 1)),
 }))
 
-const SRC_PLUGIN = join('/src', 'plugin')
+const SRC_PLUGIN = resolve('/src', 'plugin')
 const DIST_PLUGIN = join(SRC_PLUGIN, 'dist')
 
 beforeEach(() => {
@@ -170,7 +170,7 @@ describe('installUnpacked', () => {
     expect(unpacked).toEqual([{ id: 'hello-world', sourceDir: SRC_PLUGIN }])
   })
 
-  it('prefers dist when both it and the selected directory contain packages', async () => {
+  it('rejects dist when its plugin id does not match the selected project', async () => {
     const distManifest = JSON.stringify({ ...JSON.parse(validManifest), id: 'dist-plugin', name: 'Dist Plugin' })
     mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
     mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// root plugin')
@@ -180,11 +180,51 @@ describe('installUnpacked', () => {
     const { installUnpacked } = await import('./install-unpacked')
     const r = installUnpacked(SRC_PLUGIN)
 
-    expect(r).toEqual({ ok: true, id: 'dist-plugin' })
-    const destDir = join(TEST_USER_DATA, 'plugins', 'dist-plugin')
-    expect(mockFs.files.get(join(destDir, 'plugin.js'))).toBe('// dist plugin')
-    const unpacked = JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'unpacked.json'))!)
-    expect(unpacked).toEqual([{ id: 'dist-plugin', sourceDir: SRC_PLUGIN }])
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('does not match selected plugin id')
+    expect(mockFs.files.has(join(TEST_USER_DATA, 'plugins', 'dist-plugin', 'plugin.js'))).toBe(false)
+  })
+
+  it('validates dist identity against the manifest configured in package.json', async () => {
+    const templateManifest = JSON.stringify({ ...JSON.parse(validManifest), id: 'template-plugin' })
+    mockFs.files.set(
+      join(SRC_PLUGIN, 'package.json'),
+      JSON.stringify({ scalpelPlugin: { manifest: 'manifest.template.json' } }),
+    )
+    mockFs.files.set(join(SRC_PLUGIN, 'manifest.template.json'), templateManifest)
+    mockFs.files.set(join(DIST_PLUGIN, 'manifest.json'), validManifest)
+    mockFs.files.set(join(DIST_PLUGIN, 'plugin.js'), '// built plugin')
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN)
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('does not match selected plugin id')
+  })
+
+  it('rejects a stale dist bundle when the selected project bundle has changed', async () => {
+    mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// rebuilt plugin')
+    mockFs.files.set(join(DIST_PLUGIN, 'manifest.json'), validManifest)
+    mockFs.files.set(join(DIST_PLUGIN, 'plugin.js'), '// stale plugin')
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN)
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('stale')
+  })
+
+  it('rejects a package whose id does not match the plugin being reloaded', async () => {
+    mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN, 'other-plugin')
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('expected "other-plugin"')
+    expect(mockFs.files.has(join(TEST_USER_DATA, 'plugins', 'hello-world', 'plugin.js'))).toBe(false)
   })
 
   it('copies a declared API contract', async () => {
@@ -365,6 +405,18 @@ describe('installUnpacked', () => {
     mockFs.dirs.add(SRC_PLUGIN)
     const { installUnpacked } = await import('./install-unpacked')
     installUnpacked(SRC_PLUGIN)
+    const unpacked = JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'unpacked.json'))!)
+    expect(unpacked).toEqual([{ id: 'hello-world', sourceDir: SRC_PLUGIN }])
+  })
+
+  it('stores an absolute normalized provenance path', async () => {
+    mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')
+    const unnormalized = `${SRC_PLUGIN}${sep}..${sep}plugin${sep}.`
+
+    const { installUnpacked } = await import('./install-unpacked')
+    expect(installUnpacked(unnormalized).ok).toBe(true)
+
     const unpacked = JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'unpacked.json'))!)
     expect(unpacked).toEqual([{ id: 'hello-world', sourceDir: SRC_PLUGIN }])
   })

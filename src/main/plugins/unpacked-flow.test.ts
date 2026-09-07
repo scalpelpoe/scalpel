@@ -95,8 +95,19 @@ describe('reloadUnpackedPlugin', () => {
     const d = deps({ installedIds: () => ['hello-world'] })
     const r = reloadUnpackedPlugin('hello-world', d)
     expect(r).toEqual({ ok: true, id: 'hello-world' })
-    expect(d.install).toHaveBeenCalledWith('/src/hello-world')
+    expect(d.install).toHaveBeenCalledWith('/src/hello-world', 'hello-world')
     expect(d.broadcast).toHaveBeenCalledWith('plugin-dev-updated', expect.anything())
+  })
+
+  it('rejects a source that resolves to a different plugin id', async () => {
+    const { reloadUnpackedPlugin } = await import('./unpacked-flow')
+    const d = deps({ install: vi.fn(() => ({ ok: true as const, id: 'other-plugin' })) })
+
+    const r = reloadUnpackedPlugin('hello-world', d)
+
+    expect(r.ok).toBe(false)
+    expect(d.broadcast).not.toHaveBeenCalled()
+    expect(d.reloadOverlay).not.toHaveBeenCalled()
   })
 
   it('fails when no source dir was recorded for the plugin', async () => {

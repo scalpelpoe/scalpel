@@ -1,4 +1,5 @@
 import type { PluginManifest } from '../../plugin-sdk/src/types'
+import { isValidVersionRange } from '@shared/version-match'
 
 export type ValidationResult = { ok: true; manifest: PluginManifest } | { ok: false; error: string }
 
@@ -36,6 +37,9 @@ export function validateManifest(raw: unknown): ValidationResult {
   }
   if (!PLUGIN_ID_PATTERN.test(m.id as string)) {
     return { ok: false, error: `id "${String(m.id)}" must match ${PLUGIN_ID_PATTERN}` }
+  }
+  if (!isValidVersionRange(m.scalpelMinVersion as string)) {
+    return { ok: false, error: 'scalpelMinVersion must be a valid version range' }
   }
   if (m.poeVersions !== undefined && !isPoeVersionArray(m.poeVersions)) {
     return { ok: false, error: 'poeVersions must be (1 | 2)[] when present' }

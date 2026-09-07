@@ -10,6 +10,8 @@ vi.mock('electron', () => ({
 const mockFs = {
   files: new Map<string, string>(),
   dirsRemoved: [] as string[],
+  failRemovePath: null as string | null,
+  removeCalls: new Map<string, number>(),
 }
 
 vi.mock('fs', () => ({
@@ -40,6 +42,9 @@ vi.mock('fs', () => ({
   },
   rmSync: (p: string, opts: { recursive?: boolean; force?: boolean }) => {
     mockFs.dirsRemoved.push(p)
+    const calls = (mockFs.removeCalls.get(p) ?? 0) + 1
+    mockFs.removeCalls.set(p, calls)
+    if (mockFs.failRemovePath === p && calls > 1) throw new Error('simulated cleanup failure')
     if (opts?.recursive) {
       for (const k of [...mockFs.files.keys()]) {
         if (k === p || k.startsWith(`${p}${sep}`)) mockFs.files.delete(k)
@@ -53,6 +58,8 @@ vi.mock('fs', () => ({
 beforeEach(() => {
   mockFs.files.clear()
   mockFs.dirsRemoved.length = 0
+  mockFs.failRemovePath = null
+  mockFs.removeCalls.clear()
   vi.resetModules()
 })
 
@@ -133,5 +140,21 @@ describe('uninstallPlugin', () => {
 
     finalizePendingStorageRemovals()
     expect(mockFs.files.has(storageFile)).toBe(false)
+  })
+
+  it('reports success when deleting the committed package backup fails', async () => {
+    const pluginDirectory = join(TEST_USER_DATA, 'plugins', 'hello-world')
+    const backup = `${pluginDirectory}.uninstalling`
+    mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'installed.json'), JSON.stringify(['hello-world']))
+    mockFs.files.set(join(pluginDirectory, 'plugin.js'), 'X')
+    mockFs.failRemovePath = backup
+
+    const { uninstallPlugin } = await import('./uninstall')
+    const r = uninstallPlugin('hello-world')
+
+    expect(r).toEqual({ ok: true })
+    expect(mockFs.files.has(join(pluginDirectory, 'plugin.js'))).toBe(false)
+    expect(JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'installed.json'))!)).toEqual([])
+    expect(mockFs.files.has(join(backup, 'plugin.js'))).toBe(true)
   })
 })

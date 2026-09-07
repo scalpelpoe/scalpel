@@ -50,7 +50,7 @@ export function exposePluginService<S extends DescService>(
     if (!method) throw new Error(`unknown plugin API method: ${path}`)
     const handler = implementation[method.localName as keyof PluginServiceImplementation<S>]
     const request = create(method.input, params == null ? {} : (params as MessageInitShape<DescMessage>))
-    const response = await (handler as (value: unknown) => unknown | Promise<unknown>)(request)
+    const response = await (handler as (value: unknown) => unknown | Promise<unknown>).call(implementation, request)
     return create(method.output, response as MessageInitShape<DescMessage>)
   })
 }

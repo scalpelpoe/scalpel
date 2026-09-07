@@ -81,6 +81,28 @@ describe('Protobuf service adapters', () => {
     expect(expose).toHaveBeenCalledWith(GreetingProvider.typeName, expect.any(Function))
   })
 
+  it('preserves the class instance receiver when dispatching service methods', async () => {
+    let handler: PluginApiHandler | null = null
+    const provider: PluginCommunicationApi = {
+      expose: (_serviceTypeName, value) => {
+        handler = value
+      },
+      get: () => null,
+    }
+    class Implementation {
+      constructor(private readonly characterName: string) {}
+
+      getLastSeenCharacter() {
+        return { result: { case: 'character' as const, value: { name: this.characterName } } }
+      }
+    }
+    exposePluginService(provider, GreetingProvider, new Implementation('Stateful Exile'))
+
+    await expect(
+      handler!('/scalpel.examples.greeting.v1.GreetingProvider/GetLastSeenCharacter', undefined),
+    ).resolves.toMatchObject({ result: { case: 'character', value: { name: 'Stateful Exile' } } })
+  })
+
   it('encodes and decodes native service payloads', async () => {
     const native: PluginNativeBackendApi = {
       async call(method, payload) {

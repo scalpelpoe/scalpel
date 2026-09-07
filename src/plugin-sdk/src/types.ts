@@ -8,6 +8,7 @@ export interface PluginManifest {
   name: string
   description: string
   author: string
+  /** Supported Scalpel version range (for example, ">=1.2.0 <2.0.0" or "^1.2.0"). */
   scalpelMinVersion: string
   homepage?: string
   poeVersions?: (1 | 2)[]

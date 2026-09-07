@@ -19,14 +19,14 @@ class FakeChild extends EventEmitter {
   readonly stderr = new PassThrough()
   exitCode: number | null = null
   signalCode: NodeJS.Signals | null = null
-  readonly kill = vi.fn(() => {
+  readonly kill = vi.fn((signal: NodeJS.Signals | number = 'SIGTERM') => {
     if (this.exitCode !== null || this.signalCode !== null) return false
-    this.signalCode = 'SIGTERM'
+    this.signalCode = typeof signal === 'string' ? signal : 'SIGTERM'
     queueMicrotask(() => this.emit('exit', null, this.signalCode))
     return true
   })
 
-  constructor(onRequest: (request: NativeFrame, child: FakeChild) => void) {
+  constructor(onRequest: (request: NativeFrame, child: FakeChild) => void, options: { exitOnStdinEnd?: boolean } = {}) {
     super()
     let buffer: Buffer<ArrayBufferLike> = Buffer.alloc(0)
     this.stdin.on('data', (chunk: Buffer) => {
@@ -41,6 +41,7 @@ class FakeChild extends EventEmitter {
       }
     })
     this.stdin.on('finish', () => {
+      if (options.exitOnStdinEnd === false) return
       if (this.exitCode !== null || this.signalCode !== null) return
       this.exitCode = 0
       queueMicrotask(() => this.emit('exit', 0, null))
@@ -64,12 +65,17 @@ class FakeChild extends EventEmitter {
   }
 
   initialize(request: NativeFrame): void {
+    if (request.body.case !== 'initializeRequest') throw new Error('expected initialize request')
     this.respond(
       create(NativeFrameSchema, {
         requestId: request.requestId,
         body: {
           case: 'initializeResponse',
-          value: { protocolVersion: 1, pluginId: 'native-demo', service: SERVICE },
+          value: {
+            protocolVersion: 1,
+            pluginId: request.body.value.pluginId,
+            service: request.body.value.service,
+          },
         },
       }),
     )
@@ -176,6 +182,45 @@ describe('PluginNativeBackendManager', () => {
     await manager.stop('native-demo')
   })
 
+  it('rejects a call response used as an initialize response', async () => {
+    const child = new FakeChild((request, process) => process.callResult(request, new Uint8Array()))
+    const manager = new PluginNativeBackendManager(
+      () => backendFile(),
+      () => child.asChildProcess(),
+    )
+
+    await expect(manager.call('native-demo', METHOD, new Uint8Array())).rejects.toThrow(
+      /callResponse for a pending initialize request/,
+    )
+    expect(child.kill).toHaveBeenCalledWith('SIGKILL')
+  })
+
+  it('rejects an initialize response used as a call response', async () => {
+    const child = new FakeChild((request, process) => {
+      if (request.body.case === 'initializeRequest') process.initialize(request)
+      else {
+        process.respond(
+          create(NativeFrameSchema, {
+            requestId: request.requestId,
+            body: {
+              case: 'initializeResponse',
+              value: { protocolVersion: 1, pluginId: 'native-demo', service: SERVICE },
+            },
+          }),
+        )
+      }
+    })
+    const manager = new PluginNativeBackendManager(
+      () => backendFile(),
+      () => child.asChildProcess(),
+    )
+
+    await expect(manager.call('native-demo', METHOD, new Uint8Array())).rejects.toThrow(
+      /initializeResponse for a pending call request/,
+    )
+    expect(child.kill).toHaveBeenCalledWith('SIGKILL')
+  })
+
   it('rejects calls when the worker closes stdin without exiting', async () => {
     const requests: NativeFrame[] = []
     const child = new FakeChild((request, process) => {
@@ -192,6 +237,25 @@ describe('PluginNativeBackendManager', () => {
     child.stdin.emit('error', new Error('EPIPE'))
 
     await expect(call).rejects.toThrow(/stdin failed: EPIPE/)
+  })
+
+  it.each(['stdout', 'stderr'] as const)('handles a child %s stream error', async (stream) => {
+    const requests: NativeFrame[] = []
+    const child = new FakeChild((request, process) => {
+      requests.push(request)
+      if (request.body.case === 'initializeRequest') process.initialize(request)
+    })
+    const manager = new PluginNativeBackendManager(
+      () => backendFile(),
+      () => child.asChildProcess(),
+    )
+
+    const call = manager.call('native-demo', METHOD, new Uint8Array())
+    await vi.waitFor(() => expect(requests.some((request) => request.body.case === 'callRequest')).toBe(true))
+    child[stream].emit('error', new Error('stream broke'))
+
+    await expect(call).rejects.toThrow(new RegExp(`${stream} failed: stream broke`))
+    expect(child.kill).toHaveBeenCalledWith('SIGKILL')
   })
 
   it('rejects pending calls with bounded stderr diagnostics when the process crashes', async () => {
@@ -228,7 +292,39 @@ describe('PluginNativeBackendManager', () => {
     await vi.advanceTimersByTimeAsync(10_000)
 
     await rejection
-    expect(child.kill).toHaveBeenCalledOnce()
+    expect(child.kill).toHaveBeenCalledWith('SIGKILL')
+  })
+
+  it('prevents immediate respawn after a worker failure', async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(1_000)
+    const first = new FakeChild((request, process) => {
+      if (request.body.case === 'initializeRequest') process.initialize(request)
+      else {
+        queueMicrotask(() => {
+          process.exitCode = 9
+          process.emit('exit', 9, null)
+        })
+      }
+    })
+    const second = new FakeChild((request, process) => {
+      if (request.body.case === 'initializeRequest') process.initialize(request)
+      else if (request.body.case === 'callRequest') process.callResult(request, request.body.value.payload)
+    })
+    const spawnBackend = vi
+      .fn<() => ChildProcessWithoutNullStreams>()
+      .mockReturnValueOnce(first.asChildProcess())
+      .mockReturnValueOnce(second.asChildProcess())
+    const manager = new PluginNativeBackendManager(() => backendFile(), spawnBackend)
+
+    await expect(manager.call('native-demo', METHOD, new Uint8Array())).rejects.toThrow(/exited \(code 9\)/)
+    await expect(manager.call('native-demo', METHOD, new Uint8Array())).rejects.toThrow(/restart cooldown/)
+    expect(spawnBackend).toHaveBeenCalledOnce()
+
+    await vi.advanceTimersByTimeAsync(5_000)
+    await expect(manager.call('native-demo', METHOD, Uint8Array.of(4))).resolves.toEqual(Uint8Array.of(4))
+    expect(spawnBackend).toHaveBeenCalledTimes(2)
+    await manager.stop('native-demo')
   })
 
   it('verifies executable integrity before spawning', async () => {
@@ -295,7 +391,26 @@ describe('PluginNativeBackendManager', () => {
 
     expect(manager.isRestartRequired()).toBe(true)
     expect([...manager.restartBlockedPluginIds()]).toEqual(['native-demo'])
+    expect([...manager.loadBlockedPluginIds()]).toEqual(['native-demo'])
     await expect(manager.call('native-demo', METHOD, new Uint8Array())).rejects.toThrow(/temporarily unavailable/)
+  })
+
+  it('reports a plugin as load-blocked before and throughout its serialized mutation', async () => {
+    const manager = new PluginNativeBackendManager(() => backendFile(), vi.fn())
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+
+    const mutation = manager.withPluginStopped('native-demo', async () => {
+      expect([...manager.loadBlockedPluginIds()]).toEqual(['native-demo'])
+      await gate
+    })
+
+    expect([...manager.loadBlockedPluginIds()]).toEqual(['native-demo'])
+    release()
+    await mutation
+    expect([...manager.loadBlockedPluginIds()]).toEqual([])
   })
 
   it('preserves the typed native CallError code', async () => {
@@ -350,6 +465,66 @@ describe('PluginNativeBackendManager', () => {
     await Promise.all([first, second])
 
     expect(events).toEqual(['first-start', 'first-end', 'second'])
+  })
+
+  it('waits for confirmed exit and escalates shutdown to SIGKILL', async () => {
+    vi.useFakeTimers()
+    const child = new FakeChild(
+      (request, process) => {
+        if (request.body.case === 'initializeRequest') process.initialize(request)
+        else if (request.body.case === 'callRequest') process.callResult(request, request.body.value.payload)
+      },
+      { exitOnStdinEnd: false },
+    )
+    child.kill.mockImplementation((signal: NodeJS.Signals | number = 'SIGTERM') => {
+      if (signal !== 'SIGKILL') return true
+      child.signalCode = 'SIGKILL'
+      queueMicrotask(() => child.emit('exit', null, 'SIGKILL'))
+      return true
+    })
+    const manager = new PluginNativeBackendManager(
+      () => backendFile(),
+      () => child.asChildProcess(),
+    )
+    await manager.call('native-demo', METHOD, new Uint8Array())
+
+    const stopping = manager.stop('native-demo')
+    let stopped = false
+    void stopping.then(() => {
+      stopped = true
+    })
+    await vi.advanceTimersByTimeAsync(750)
+    expect(child.kill).toHaveBeenCalledWith('SIGTERM')
+    expect(stopped).toBe(false)
+
+    await vi.advanceTimersByTimeAsync(750)
+    await stopping
+    expect(child.kill).toHaveBeenLastCalledWith('SIGKILL')
+    expect(stopped).toBe(true)
+  })
+
+  it('rejects shutdown when forced termination is never confirmed', async () => {
+    vi.useFakeTimers()
+    const child = new FakeChild(
+      (request, process) => {
+        if (request.body.case === 'initializeRequest') process.initialize(request)
+        else if (request.body.case === 'callRequest') process.callResult(request, request.body.value.payload)
+      },
+      { exitOnStdinEnd: false },
+    )
+    child.kill.mockReturnValue(true)
+    const manager = new PluginNativeBackendManager(
+      () => backendFile(),
+      () => child.asChildProcess(),
+    )
+    await manager.call('native-demo', METHOD, new Uint8Array())
+
+    const stopping = manager.stop('native-demo')
+    const rejection = expect(stopping).rejects.toThrow(/did not exit after forced termination/)
+    await vi.advanceTimersByTimeAsync(2_250)
+
+    await rejection
+    expect(child.kill.mock.calls.map(([signal]) => signal)).toEqual(['SIGTERM', 'SIGKILL'])
   })
 
   it('blocks all worker respawns during graceful shutdown', async () => {
