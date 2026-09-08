@@ -34,7 +34,7 @@ export async function launchScalpelE2E(opts?: ScalpelE2EOptions): Promise<Scalpe
       writeFileSync(target, contents)
     }
     const app = await electron.launch({
-      args: [join(process.cwd(), 'out/main/index.js')],
+      args: [process.cwd()],
       env: {
         ...process.env,
         NODE_ENV: 'test',

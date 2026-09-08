@@ -13,37 +13,35 @@ import { launchScalpelE2E } from './helpers/electron'
 const PLUGIN_ID = 'native-item-analyzer'
 const SERVICE = 'scalpel.examples.item_analyzer.v1.NativeItemAnalyzer'
 const METHOD = `/${SERVICE}/AnalyzeItem`
-const nativeDir = join(process.cwd(), 'plugin-service-examples', PLUGIN_ID, 'native')
-const executablePath = join(nativeDir, 'target', 'debug', `${PLUGIN_ID}.exe`)
+const projectDir = join(process.cwd(), 'plugin-service-examples', PLUGIN_ID)
+const distDir = join(projectDir, 'dist')
 
 test('calls an installed Rust backend through Electron IPC', async () => {
-  test.setTimeout(150_000)
+  test.setTimeout(180_000)
   test.skip(process.platform !== 'win32' || process.arch !== 'x64', 'RFC1 native backends support Windows x64 only')
 
-  execFileSync('cargo', ['build', '--quiet', '--manifest-path', join(nativeDir, 'Cargo.toml')], {
-    timeout: 120_000,
-  })
-  const executable = await readFile(executablePath)
-  const manifest = JSON.stringify({
-    manifestVersion: 1,
-    id: PLUGIN_ID,
-    version: '1.0.0',
-    name: 'Native Item Analyzer',
-    description: 'native Electron E2E fixture',
-    author: 'scalpel',
-    scalpelMinVersion: '>=0.0.0',
-    nativeBackend: {
-      protocolVersion: 1,
-      contract: 'backend.binpb',
-      service: SERVICE,
-      targets: {
-        'win32-x64': {
-          file: `${PLUGIN_ID}.exe`,
-          sha256: createHash('sha256').update(executable).digest('hex'),
-        },
-      },
-    },
-  })
+  execFileSync(
+    process.execPath,
+    [join(process.cwd(), 'src', 'plugin-tools', 'cli', 'scalpel-plugin.mjs'), 'pack', '--project', projectDir],
+    { timeout: 150_000 },
+  )
+  const [manifestText, pluginBytes, contractBytes, executable] = await Promise.all([
+    readFile(join(distDir, 'manifest.json'), 'utf8'),
+    readFile(join(distDir, 'plugin.js')),
+    readFile(join(distDir, 'backend.binpb')),
+    readFile(join(distDir, `${PLUGIN_ID}.exe`)),
+  ])
+  const packedManifest = JSON.parse(manifestText) as {
+    scalpelMinVersion: string
+    nativeBackend: { targets: { 'win32-x64': { sha256: string } } }
+  }
+  expect(packedManifest.scalpelMinVersion).toBe('>=1.1.0')
+  expect(packedManifest.nativeBackend.targets['win32-x64'].sha256).toBe(
+    createHash('sha256').update(executable).digest('hex'),
+  )
+  // This branch still identifies as 1.0.4; only relax the host gate in the
+  // throwaway profile while preserving every packed release asset byte-for-byte.
+  const testManifest = JSON.stringify({ ...packedManifest, scalpelMinVersion: '>=0.0.0' })
   const request = toBinary(
     AnalyzeItemRequestSchema,
     create(AnalyzeItemRequestSchema, {
@@ -59,14 +57,61 @@ test('calls an installed Rust backend through Electron IPC', async () => {
     seedConfig: { onboardingCompleted: true, startInTray: false },
     seedFiles: {
       'plugins/installed.json': JSON.stringify([PLUGIN_ID]),
-      [`plugins/${PLUGIN_ID}/manifest.json`]: manifest,
-      [`plugins/${PLUGIN_ID}/plugin.js`]: 'export default function activate() {}',
-      [`plugins/${PLUGIN_ID}/backend.binpb`]: new Uint8Array(),
+      [`plugins/${PLUGIN_ID}/manifest.json`]: testManifest,
+      [`plugins/${PLUGIN_ID}/plugin.js`]: pluginBytes,
+      [`plugins/${PLUGIN_ID}/backend.binpb`]: contractBytes,
       [`plugins/${PLUGIN_ID}/${PLUGIN_ID}.exe`]: executable,
     },
   })
 
   try {
+    const loadable = await scalpel.window.evaluate(async (pluginId) => {
+      const entry = await window.api.getLoadablePlugin(pluginId)
+      return entry ? { id: entry.manifest.id, availability: entry.availability.status } : null
+    }, PLUGIN_ID)
+    expect(loadable).toEqual({ id: PLUGIN_ID, availability: 'available' })
+
+    const hostWindow = scalpel.app.waitForEvent('window')
+    const appPath = await scalpel.app.evaluate(({ app }) => app.getAppPath())
+    await scalpel.app.evaluate(
+      async ({ BrowserWindow }, paths) => {
+        const win = new BrowserWindow({
+          show: false,
+          webPreferences: { preload: paths.preload, sandbox: false, contextIsolation: true },
+        })
+        ;(globalThis as unknown as Record<string, unknown>).__scalpelPluginE2EWindow = win
+        await win.loadFile(paths.html)
+      },
+      {
+        html: join(process.cwd(), 'out', 'renderer', 'index.html'),
+        preload: join(process.cwd(), 'out', 'preload', 'index.js'),
+      },
+    )
+    const hostPage = await hostWindow
+    const hostErrors: string[] = []
+    hostPage.on('pageerror', (error) => hostErrors.push(error.message))
+    hostPage.on('console', (message) => {
+      if (message.type() === 'error') hostErrors.push(message.text())
+    })
+    hostPage.on('response', (response) => {
+      if (response.status() >= 400) hostErrors.push(`${response.status()} ${response.url()}`)
+    })
+    await hostPage.waitForLoadState('domcontentloaded')
+    try {
+      await expect
+        .poll(() =>
+          scalpel.window.evaluate(async (pluginId) => {
+            const tabs = await window.api.pluginListRegisteredTabs()
+            return tabs.some((tab) => tab.pluginId === pluginId)
+          }, PLUGIN_ID),
+        )
+        .toBe(true)
+    } catch {
+      throw new Error(
+        `packed plugin did not activate from ${appPath}: ${hostErrors.join(' | ') || 'no renderer error reported'}`,
+      )
+    }
+
     const responseBytes = await scalpel.window.evaluate(
       async ({ method, payload }) =>
         Array.from(await window.api.pluginNativeCall('native-item-analyzer', method, Uint8Array.from(payload))),
