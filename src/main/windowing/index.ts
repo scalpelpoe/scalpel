@@ -8,6 +8,7 @@ import { prewarmSnapCanvas, type Rect, setSnapGhost } from './snap-canvas'
 import { type FlushEdges, nearestMountTarget } from './snap-mounts'
 import { fireOnLeaveScalpel, type OverlayState, overlays } from './state'
 import { createOverlayWindow } from './window'
+import { toDipRect } from './dip-rect'
 
 export type { OverlayAnchor } from '@shared/types'
 export {
@@ -106,25 +107,24 @@ function anchorTimes(anchor: OverlayAnchor, base: Rect): Rect {
 }
 
 /** Compute the DIP (logical) bounds an overlay window should occupy for the
- *  given anchor. Uses `screen.screenToDipRect(win, physRect)` - the same path
- *  the electron-overlay-window library uses for the main overlay - so behavior
- *  matches across all DPI / multi-monitor configurations.
+ *  given anchor. Uses `toDipRect` so Windows gets native DPI conversion and
+ *  Linux/macOS keep working without screenToDipRect.
  *
  *  Returns null when PoE bounds aren't available yet. */
 function anchorToDipBounds(win: BrowserWindow, anchor: OverlayAnchor): Rect | null {
   const tb = OverlayController.targetBounds
   if (!tb || tb.width <= 0 || tb.height <= 0) return null
   const phys = anchorTimes(anchor, { x: tb.x, y: tb.y, width: tb.width, height: tb.height })
-  return screen.screenToDipRect(win, phys)
+  return toDipRect(win, phys)
 }
 
 /** Compute an anchor from a window's current DIP bounds. Converts PoE's
- *  physical bounds to DIP using the same `screenToDipRect` path so the
- *  numerator and denominator are in the same coordinate space. */
+ *  bounds to DIP with the same path as anchorToDipBounds so the numerator
+ *  and denominator are in the same coordinate space. */
 function boundsToAnchor(win: BrowserWindow): OverlayAnchor | null {
   const tb = OverlayController.targetBounds
   if (!tb || tb.width <= 0 || tb.height <= 0) return null
-  const poeDip = screen.screenToDipRect(win, { x: tb.x, y: tb.y, width: tb.width, height: tb.height })
+  const poeDip = toDipRect(win, { x: tb.x, y: tb.y, width: tb.width, height: tb.height })
   if (poeDip.width <= 0 || poeDip.height <= 0) return null
   const cur = win.getBounds()
   return {
@@ -428,8 +428,7 @@ function makeOverlayApi(state: OverlayState): SecondaryOverlay {
 
 function ensureWin(state: OverlayState): BrowserWindow {
   if (state.win && !state.win.isDestroyed()) return state.win
-  // Window must exist before we can call `screen.screenToDipRect(win, ...)`
-  // (the same path the library uses for the main overlay), so create at a
+  // Window must exist before we can call toDipRect / setBounds, so create at a
   // sensible placeholder - the display PoE is on if known, otherwise primary
   // workArea - then immediately overwrite with the anchor-derived DIP bounds.
   const placeholder = pickPlaceholderBounds()
