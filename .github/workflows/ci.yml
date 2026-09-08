@@ -81,3 +81,6 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Test Electron end-to-end
+        run: npx playwright test -c playwright.electron.config.ts

@@ -13,6 +13,12 @@ export type PluginUnavailableReason =
       message: string
     }
   | {
+      code: 'native-platform-incompatible'
+      supportedTarget: 'win32-x64'
+      currentTarget: string
+      message: string
+    }
+  | {
       code: 'missing-required-dependency'
       dependencyId: string
       requiredApiVersion: string

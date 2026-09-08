@@ -3,6 +3,8 @@ import { join, resolve, sep } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const TEST_USER_DATA = '/test/userData'
+const WINDOWS_X64 = { platform: 'win32', arch: 'x64' }
+const LINUX_X64 = { platform: 'linux', arch: 'x64' }
 
 vi.mock('electron', () => ({
   app: { getPath: vi.fn(() => TEST_USER_DATA) },
@@ -286,7 +288,7 @@ describe('installUnpacked', () => {
     mockFs.dirs.add(SRC_PLUGIN)
 
     const { installUnpacked } = await import('./install-unpacked')
-    const r = installUnpacked(SRC_PLUGIN)
+    const r = installUnpacked(SRC_PLUGIN, undefined, WINDOWS_X64)
 
     expect(r.ok).toBe(true)
     const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
@@ -321,7 +323,7 @@ describe('installUnpacked', () => {
     mockFs.files.set(join(SRC_PLUGIN, 'worker.exe'), 'root worker decoy')
 
     const { installUnpacked } = await import('./install-unpacked')
-    const r = installUnpacked(SRC_PLUGIN)
+    const r = installUnpacked(SRC_PLUGIN, undefined, WINDOWS_X64)
 
     expect(r.ok).toBe(true)
     const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
@@ -372,10 +374,42 @@ describe('installUnpacked', () => {
     mockFs.dirs.add(SRC_PLUGIN)
 
     const { installUnpacked } = await import('./install-unpacked')
-    const r = installUnpacked(SRC_PLUGIN)
+    const r = installUnpacked(SRC_PLUGIN, undefined, WINDOWS_X64)
 
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error).toContain('checksum mismatch')
+  })
+
+  it('rejects a native backend on an unsupported host without copying files', async () => {
+    const nativeBytes = 'native worker bytes'
+    mockFs.files.set(
+      join(SRC_PLUGIN, 'manifest.json'),
+      JSON.stringify({
+        ...JSON.parse(validManifest),
+        nativeBackend: {
+          protocolVersion: 1,
+          contract: 'backend.binpb',
+          service: 'example.items.v1.ItemAnalyzer',
+          targets: {
+            'win32-x64': {
+              file: 'worker.exe',
+              sha256: createHash('sha256').update(nativeBytes).digest('hex'),
+            },
+          },
+        },
+      }),
+    )
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')
+    mockFs.files.set(join(SRC_PLUGIN, 'backend.binpb'), 'descriptor bytes')
+    mockFs.files.set(join(SRC_PLUGIN, 'worker.exe'), nativeBytes)
+    mockFs.dirs.add(SRC_PLUGIN)
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN, undefined, LINUX_X64)
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toBe('native backends require win32-x64 (running linux-x64)')
+    expect(mockFs.copied).toEqual([])
   })
 
   it('appends id to installed.json when new', async () => {

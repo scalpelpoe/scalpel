@@ -12,6 +12,7 @@ import { validateManifest } from './manifest-validator'
 import { installedJsonPath, pendingPluginStorageDeletionsPath, pluginDir, unpackedJsonPath } from './paths'
 import { cancelStorageRemoval, migrateLegacyStorage } from './storage'
 import { removeUnpackedId } from './unpacked-list'
+import { nativeTargetForHost, type NativeHostPlatform, unsupportedNativePlatformMessage } from './native-platform'
 
 function currentScalpelVersion(): string {
   return app.getVersion()
@@ -22,6 +23,7 @@ export async function installFromRegistry(
   options: {
     allowNativeBackend?: boolean
     validateMutation?: (manifest: import('../../plugin-sdk/src/types').PluginManifest) => string | null
+    host?: NativeHostPlatform
   } = {},
 ): Promise<InstallResult> {
   // 1. Version check
@@ -77,6 +79,10 @@ export async function installFromRegistry(
   if (v.manifest.nativeBackend && options.allowNativeBackend !== true) {
     return { ok: false, error: 'native backends are not allowed from a self-hosted registry' }
   }
+  const nativeTargetName = nativeTargetForHost(options.host)
+  if (v.manifest.nativeBackend && !nativeTargetName) {
+    return { ok: false, error: unsupportedNativePlatformMessage(options.host) }
+  }
   const mutationError = options.validateMutation?.(v.manifest)
   if (mutationError) return { ok: false, error: `plugin dependency check failed: ${mutationError}` }
 
@@ -110,8 +116,7 @@ export async function installFromRegistry(
 
   let backendContractBytes: Uint8Array | null = null
   let nativeBytes: Uint8Array | null = null
-  const nativeTarget =
-    process.platform === 'win32' && process.arch === 'x64' ? v.manifest.nativeBackend?.targets['win32-x64'] : undefined
+  const nativeTarget = nativeTargetName ? v.manifest.nativeBackend?.targets[nativeTargetName] : undefined
   if (v.manifest.nativeBackend) {
     const expected = entry.assets?.[v.manifest.nativeBackend.contract]
     if (!expected) return { ok: false, error: `registry does not pin ${v.manifest.nativeBackend.contract}` }

@@ -66,7 +66,7 @@ export default function activate(ctx: ScalpelPluginContext): void {
 
 ### The context object
 
-`ctx` is the only thing Scalpel hands you. Everything plugins can do goes through it.
+`ctx` is the supported plugin API Scalpel hands you. Use it rather than internal renderer globals. Plugins currently share renderer contexts, so `ctx` scopes normal plugin behavior but does not isolate mutually hostile plugin code.
 
 ```ts
 interface ScalpelPluginContext {
@@ -783,7 +783,7 @@ Field notes:
 - `dependencies` explicitly names plugin APIs this plugin consumes. API versions use exact `major.minor.patch` matching in the initial implementation.
 - `nativeBackend` is an **experimental RFC1 preview** declaring one private, supervised unary Protobuf service. RFC1 recognizes only `win32-x64`; all files are root-level release assets. The context routes `ctx.native` to its owning plugin and cannot choose a path, arguments, environment, or working directory.
 - Use Protobuf-ES service descriptors with `exposePluginService`, `createPluginServiceClient`, and `createNativeServiceClient`. These helpers infer every method signature directly from standard generated code.
-- Native backends are author-supplied, unsandboxed executables. They run with Scalpel's user permissions and are not restricted from files, the network, processes, or other operating-system resources. Checksums verify expected bytes, owner routing controls callers, and supervision manages lifecycle failures; none is malware protection or a hostile-code security boundary.
+- Native backends are author-supplied, unsandboxed executables. They run with Scalpel's user permissions and are not restricted from files, the network, processes, or other operating-system resources. Checksums verify expected bytes, the SDK owner binding prevents accidental cross-plugin calls through the supported API, and supervision manages lifecycle failures; none is malware protection or a hostile-code security boundary.
 - Native backends install only from Scalpel's curated registry (or a process-level developer registry override). User-configured self-hosted registries remain JavaScript-only because renderer code can change that setting.
 - Add `@bufbuild/protobuf@2.14.0` as a project dependency when generated service code is part of your plugin. Buf, Protobuf generation, and esbuild come from the tools tarball rather than the runtime SDK. Configure `scalpelPlugin` in `package.json`, then run `scalpel-plugin generate`, `check`, `build`, or `pack` instead of maintaining custom contract scripts.
 - See [`PLUGIN_SERVICES.md`](PLUGIN_SERVICES.md) for the service workflow and the normative [`NATIVE_PLUGIN_RFC_1.md`](NATIVE_PLUGIN_RFC_1.md) for exact native framing, handshake, response rules, limits, lifecycle, checksums, platform support, and non-goals.

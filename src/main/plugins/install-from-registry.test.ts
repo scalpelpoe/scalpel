@@ -15,6 +15,8 @@ const BACKEND_CONTRACT_BYTES = new Uint8Array([13, 14, 15])
 const BACKEND_CONTRACT_SHA = createHash('sha256').update(BACKEND_CONTRACT_BYTES).digest('hex')
 
 const TEST_USER_DATA = '/test/userData'
+const WINDOWS_X64 = { platform: 'win32', arch: 'x64' }
+const LINUX_X64 = { platform: 'linux', arch: 'x64' }
 
 const { mockNetFetchFn } = vi.hoisted(() => ({
   mockNetFetchFn: vi.fn(),
@@ -214,7 +216,7 @@ describe('installFromRegistry', () => {
         ...validEntry,
         assets: { 'backend.binpb': BACKEND_CONTRACT_SHA, 'worker.exe': NATIVE_SHA },
       },
-      { allowNativeBackend: true },
+      { allowNativeBackend: true, host: WINDOWS_X64 },
     )
 
     expect(r.ok).toBe(true)
@@ -238,7 +240,7 @@ describe('installFromRegistry', () => {
     const { installFromRegistry } = await import('./install-from-registry')
     const r = await installFromRegistry(
       { ...validEntry, assets: { 'backend.binpb': BACKEND_CONTRACT_SHA } },
-      { allowNativeBackend: true },
+      { allowNativeBackend: true, host: WINDOWS_X64 },
     )
 
     expect(r.ok).toBe(false)
@@ -259,6 +261,24 @@ describe('installFromRegistry', () => {
 
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error).toContain('self-hosted registry')
+  })
+
+  it('rejects native backends on an unsupported host without installing a partial package', async () => {
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingNativeManifest)),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry(validEntry, { allowNativeBackend: true, host: LINUX_X64 })
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toBe('native backends require win32-x64 (running linux-x64)')
+    expect(mockFs.files.has(join(TEST_USER_DATA, 'plugins', 'installed.json'))).toBe(false)
+    expect(mockFs.bufs.has(join(TEST_USER_DATA, 'plugins', 'hello-world', 'plugin.js'))).toBe(false)
   })
 
   it('appends to installed.json on success', async () => {

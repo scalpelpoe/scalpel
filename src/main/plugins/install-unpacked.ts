@@ -8,10 +8,15 @@ import { validateManifest } from './manifest-validator'
 import { installedJsonPath, pendingPluginStorageDeletionsPath, pluginDir, unpackedJsonPath } from './paths'
 import { cancelStorageRemoval, migrateLegacyStorage } from './storage'
 import { addUnpackedId } from './unpacked-list'
+import { nativeTargetForHost, type NativeHostPlatform, unsupportedNativePlatformMessage } from './native-platform'
 
 export type { InstallResult }
 
-export function installUnpacked(sourceDir: string, expectedPluginId?: string): InstallResult {
+export function installUnpacked(
+  sourceDir: string,
+  expectedPluginId?: string,
+  host: NativeHostPlatform = process,
+): InstallResult {
   const selectedDir = resolve(sourceDir)
   const distDir = join(selectedDir, 'dist')
   const hasPackage = (dir: string): boolean =>
@@ -98,6 +103,10 @@ export function installUnpacked(sourceDir: string, expectedPluginId?: string): I
       error: `source contains plugin "${v.manifest.id}", expected "${expectedPluginId}"`,
     }
   }
+  const nativeTargetName = nativeTargetForHost(host)
+  if (v.manifest.nativeBackend && !nativeTargetName) {
+    return { ok: false, error: unsupportedNativePlatformMessage(host) }
+  }
   const contractPath = v.manifest.api ? join(packageDir, v.manifest.api.contract) : null
   if (contractPath && !existsSync(contractPath)) {
     return { ok: false, error: `source directory does not contain ${v.manifest.api?.contract}` }
@@ -106,8 +115,7 @@ export function installUnpacked(sourceDir: string, expectedPluginId?: string): I
   if (backendContractPath && !existsSync(backendContractPath)) {
     return { ok: false, error: `source directory does not contain ${v.manifest.nativeBackend?.contract}` }
   }
-  const nativeTarget =
-    process.platform === 'win32' && process.arch === 'x64' ? v.manifest.nativeBackend?.targets['win32-x64'] : undefined
+  const nativeTarget = nativeTargetName ? v.manifest.nativeBackend?.targets[nativeTargetName] : undefined
   const nativePath = nativeTarget ? join(packageDir, nativeTarget.file) : null
   if (nativePath && !existsSync(nativePath)) {
     return { ok: false, error: `source directory does not contain ${nativeTarget?.file}` }

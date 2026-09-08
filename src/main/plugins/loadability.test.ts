@@ -96,4 +96,74 @@ describe('resolvePluginLoadability', () => {
     })
     expect(result.loadable).toEqual([])
   })
+
+  it('retains a native plugin as unavailable outside Windows x64', () => {
+    const plugin = entry('native-plugin', {
+      nativeBackend: {
+        protocolVersion: 1,
+        contract: 'backend.binpb',
+        service: 'example.native.v1.Backend',
+        targets: { 'win32-x64': { file: 'worker.exe', sha256: 'a'.repeat(64) } },
+      },
+    })
+
+    const result = resolvePluginLoadability([plugin], '1.0.0', { platform: 'linux', arch: 'x64' })
+
+    expect(result.installed[0].availability).toEqual({
+      status: 'unavailable',
+      reason: {
+        code: 'native-platform-incompatible',
+        supportedTarget: 'win32-x64',
+        currentTarget: 'linux-x64',
+        message: 'native backends require win32-x64 (running linux-x64)',
+      },
+    })
+    expect(result.loadable).toEqual([])
+  })
+
+  it('propagates native platform incompatibility to required consumers', () => {
+    const provider = entry('native-provider', {
+      api: {
+        version: '1.0.0',
+        contract: 'api.binpb',
+        service: 'example.native.v1.Provider',
+      },
+      nativeBackend: {
+        protocolVersion: 1,
+        contract: 'backend.binpb',
+        service: 'example.native.v1.Backend',
+        targets: { 'win32-x64': { file: 'worker.exe', sha256: 'a'.repeat(64) } },
+      },
+    })
+    const consumer = entry('native-consumer', {
+      dependencies: [{ pluginId: 'native-provider', apiVersion: '1.0.0' }],
+    })
+
+    const result = resolvePluginLoadability([consumer, provider], '1.0.0', { platform: 'darwin', arch: 'arm64' })
+
+    expect(result.installed.find((plugin) => plugin.manifest.id === 'native-consumer')?.availability).toMatchObject({
+      status: 'unavailable',
+      reason: {
+        code: 'required-dependency-unavailable',
+        dependencyId: 'native-provider',
+        cause: { code: 'native-platform-incompatible' },
+      },
+    })
+    expect(result.loadable).toEqual([])
+  })
+
+  it('loads a native plugin on Windows x64', () => {
+    const plugin = entry('native-plugin', {
+      nativeBackend: {
+        protocolVersion: 1,
+        contract: 'backend.binpb',
+        service: 'example.native.v1.Backend',
+        targets: { 'win32-x64': { file: 'worker.exe', sha256: 'a'.repeat(64) } },
+      },
+    })
+
+    const result = resolvePluginLoadability([plugin], '1.0.0', { platform: 'win32', arch: 'x64' })
+
+    expect(result.loadable).toEqual([{ ...plugin, availability: { status: 'available' } }])
+  })
 })

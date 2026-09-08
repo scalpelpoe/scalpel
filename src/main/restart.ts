@@ -3,16 +3,58 @@ import { recordMainBreadcrumb, recordMainDiagnostic } from './diagnostics'
 import { pluginNativeBackends } from './plugins/native-backend'
 import { flushAll as flushPluginStorage } from './plugins/storage'
 
-let restarting = false
+const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 3_000
 
-export async function gracefulShutdown(): Promise<void> {
-  flushPluginStorage()
-  try {
-    await pluginNativeBackends.shutdown()
-  } catch (error) {
-    recordMainDiagnostic('native-shutdown', error)
-    pluginNativeBackends.stopAllNow()
-  }
+let restarting = false
+let shutdownPromise: Promise<void> | null = null
+let shutdownComplete = false
+let quitHandlerRegistered = false
+let quitAfterShutdownRequested = false
+
+export function gracefulShutdown(): Promise<void> {
+  if (shutdownPromise) return shutdownPromise
+
+  // shutdown() blocks new calls synchronously before its first await.
+  const nativeShutdown = pluginNativeBackends.shutdown()
+  shutdownPromise = (async () => {
+    let timeout: ReturnType<typeof setTimeout> | undefined
+    try {
+      await Promise.race([
+        nativeShutdown,
+        new Promise<never>((_, reject) => {
+          timeout = setTimeout(() => reject(new Error('native shutdown timed out')), GRACEFUL_SHUTDOWN_TIMEOUT_MS)
+        }),
+      ])
+    } catch (error) {
+      recordMainDiagnostic('native-shutdown', error)
+      pluginNativeBackends.stopAllNow()
+    } finally {
+      if (timeout) clearTimeout(timeout)
+    }
+    try {
+      flushPluginStorage()
+    } catch (error) {
+      recordMainDiagnostic('plugin-storage-flush', error)
+    }
+  })().finally(() => {
+    shutdownComplete = true
+  })
+  return shutdownPromise
+}
+
+/** Delay Electron's normal quit once so native workers can use their bounded,
+ * confirmed stop sequence. Restart and updater paths call gracefulShutdown
+ * themselves, so their later quit is allowed through immediately. */
+export function registerGracefulQuit(): void {
+  if (quitHandlerRegistered) return
+  quitHandlerRegistered = true
+  app.on('before-quit', (event) => {
+    if (shutdownComplete) return
+    event.preventDefault()
+    if (quitAfterShutdownRequested) return
+    quitAfterShutdownRequested = true
+    void gracefulShutdown().finally(() => app.quit())
+  })
 }
 
 /** The one in-process relaunch path: quiesce native workers and flush plugin
@@ -28,15 +70,10 @@ export async function gracefulRestart(
   restarting = true
   recordMainBreadcrumb('graceful-restart')
   try {
-    // Do every fallible filesystem operation before stopping live workers.
+    // Do fallible relaunch setup before permanently stopping live workers.
     flushPluginStorage()
     app.relaunch()
-    try {
-      await pluginNativeBackends.shutdown()
-    } catch (error) {
-      recordMainDiagnostic('native-shutdown', error)
-      pluginNativeBackends.stopAllNow()
-    }
+    await gracefulShutdown()
     if (options.exitImmediately) app.exit(0)
     else app.quit()
     return { ok: true }

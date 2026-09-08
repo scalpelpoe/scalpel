@@ -125,7 +125,7 @@ import { createTray, refreshTrayMenu } from './app/tray'
 import { startLiveServices } from './app/lifecycle'
 import { getOverlayAttachStrategy } from './experimental'
 import { relaunchApp } from './relaunch'
-import { gracefulRestart } from './restart'
+import { gracefulRestart, registerGracefulQuit } from './restart'
 
 // ---- Linux display-server setup --------------------------------------------
 
@@ -322,6 +322,8 @@ registerScalpelInternalSchemePrivileges()
 registerScalpelPluginSchemePrivileges()
 
 // ---- App lifecycle ---------------------------------------------------------
+
+registerGracefulQuit()
 
 const gotLock = IS_E2E || app.requestSingleInstanceLock()
 if (!gotLock) {
@@ -607,11 +609,6 @@ app.whenReady().then(() => {
 app.on('before-quit', () => {
   recordMainBreadcrumb('before-quit')
   try {
-    app.releaseSingleInstanceLock()
-  } catch (err) {
-    recordMainDiagnostic('release-lock', err)
-  }
-  try {
     flushPluginStorage()
   } catch {
     // best-effort
@@ -620,6 +617,11 @@ app.on('before-quit', () => {
 
 app.on('will-quit', () => {
   recordMainBreadcrumb('will-quit')
+  try {
+    app.releaseSingleInstanceLock()
+  } catch (err) {
+    recordMainDiagnostic('release-lock', err)
+  }
   pluginNativeBackends.stopAllNow()
   stopHotkeyListener()
   stopOnlineSync()

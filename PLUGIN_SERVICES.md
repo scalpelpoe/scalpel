@@ -62,7 +62,7 @@ export const consume: PluginActivate = (ctx) => {
 
 The generated service name must match the provider manifest. A consumer must declare the provider and exact API version, and method paths must belong to that service. Providers must bump `api.version` whenever methods or message wire compatibility change because Scalpel cannot distinguish incompatible same-version descriptor bundles.
 
-Public service calls are renderer-local and are not available from a plugin's separate overlay renderer. Native clients are owner-only but are available in both renderer contexts.
+Public service calls are renderer-local and are not available from a plugin's separate overlay renderer. The SDK binds native clients to their owning plugin in both renderer contexts. Plugins currently share renderer contexts, so this binding prevents unsupported or accidental cross-plugin calls through the SDK but is not a security boundary against malicious renderer code.
 
 ## Native Backends
 
