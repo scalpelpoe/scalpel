@@ -10,7 +10,7 @@ This document is normative for RFC1. [`PLUGIN_SERVICES.md`](PLUGIN_SERVICES.md) 
 
 A native backend is an executable built and supplied by the plugin author. Scalpel currently runs it as-is, without a sandbox, with the same user permissions as Scalpel. If Scalpel is elevated, the executable inherits that elevation. It can access files, the network, processes, and other operating-system resources available to that account.
 
-SHA-256 verification confirms only that an artifact matches the bytes declared by the manifest or curated registry. Owner-only routing controls which plugin can call a backend, and process supervision controls startup, protocol limits, failures, and shutdown. Registry review controls official distribution. None of these controls establishes publisher identity, detects malware, restricts what the executable can do, or makes hostile native code safe.
+SHA-256 verification confirms only that an artifact matches the bytes declared by the manifest or curated registry. The SDK binds a plugin's native client to its own backend, and process supervision controls startup, protocol limits, failures, and shutdown. Registry review controls official distribution. None of these controls establishes publisher identity, isolates renderer plugins from one another, detects malware, restricts what the executable can do, or makes hostile plugin code safe.
 
 RFC1 is a temporary trust model shipped for development and early trusted use before enforced isolation is available. Authors are responsible for the native source, dependencies, build chain, DLLs, and release artifacts they distribute. Users assume the risk of installing and running them. This remains true unless and until a future native-plugin revision explicitly ships enforced containment; a higher version number alone is not a security guarantee.
 
@@ -57,9 +57,11 @@ The executable SHA-256 in `manifest.json` must match the packaged bytes. For reg
 
 The descriptor set is a generation, packaging, and review artifact. RFC1 does not parse it at runtime to negotiate or prove schema compatibility.
 
-## Owner Routing
+## Owner Binding
 
-Only the renderer context belonging to a plugin can call that plugin's backend. Plugin code receives no executable path, command-line argument, environment override, working-directory control, or API for calling another plugin's native backend.
+The SDK context binds `ctx.native` to the owning manifest ID, so normal plugin code receives no executable path, command-line argument, environment override, working-directory control, or SDK API for selecting another plugin's native backend.
+
+RFC1 plugins currently execute in shared renderer contexts whose internal preload bridge is not a security boundary between plugins. A malicious renderer plugin may bypass its SDK context and interfere with other renderer plugins or invoke internal host APIs. Owner binding prevents accidental cross-plugin calls through the supported SDK surface; it does not provide adversarial isolation. Strict per-plugin renderer isolation is deferred to a future native-plugin revision.
 
 Use the typed SDK client rather than the raw byte API:
 
@@ -206,7 +208,8 @@ RFC1 does not define:
 - malware detection, antivirus certification, or safety attestation
 - streaming RPC
 - multiple native services or executables per plugin
-- cross-plugin access to native backends
+- supported SDK access to another plugin's native backend
+- adversarial isolation between renderer plugins
 - schema negotiation or dynamic reflection
 - Linux, macOS, Windows ARM64, or 32-bit targets
 - automatic worker concurrency

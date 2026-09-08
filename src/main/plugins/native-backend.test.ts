@@ -527,6 +527,31 @@ describe('PluginNativeBackendManager', () => {
     expect(child.kill.mock.calls.map(([signal]) => signal)).toEqual(['SIGTERM', 'SIGKILL'])
   })
 
+  it('force-kills a worker that is already undergoing graceful stop', async () => {
+    const child = new FakeChild(
+      (request, process) => {
+        if (request.body.case === 'initializeRequest') process.initialize(request)
+        else if (request.body.case === 'callRequest') process.callResult(request, request.body.value.payload)
+      },
+      { exitOnStdinEnd: false },
+    )
+    child.kill.mockImplementation((signal: NodeJS.Signals | number = 'SIGTERM') => {
+      if (signal === 'SIGKILL') queueMicrotask(() => child.emit('exit', null, 'SIGKILL'))
+      return true
+    })
+    const manager = new PluginNativeBackendManager(
+      () => backendFile(),
+      () => child.asChildProcess(),
+    )
+    await manager.call('native-demo', METHOD, new Uint8Array())
+
+    const stopping = manager.stop('native-demo')
+    manager.stopAllNow()
+    await stopping
+
+    expect(child.kill).toHaveBeenCalledWith('SIGKILL')
+  })
+
   it('blocks all worker respawns during graceful shutdown', async () => {
     const manager = new PluginNativeBackendManager(() => backendFile(), vi.fn())
 

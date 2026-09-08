@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { create, fromBinary, toBinary, type MessageInitShape } from '@bufbuild/protobuf'
 import { NativeFrameSchema, type NativeFrame } from './generated/scalpel/plugin/native/v1/transport_pb'
 import { getInstalledPlugins } from './manager'
+import { nativeTargetForHost } from './native-platform'
 import { pluginDir } from './paths'
 
 const MAX_FRAME_BYTES = 1024 * 1024
@@ -314,11 +315,12 @@ class NativeBackendProcess {
   }
 
   stopNow(): void {
-    if (this.stopped) return
-    this.stopped = true
-    this.terminalError = new Error('native backend stopped')
-    this.rejectPending(this.terminalError)
-    this.child.stdin.end()
+    if (!this.stopped) {
+      this.stopped = true
+      this.terminalError = new Error('native backend stopped')
+      this.rejectPending(this.terminalError)
+      this.child.stdin.end()
+    }
     if (!this.exitConfirmed) this.child.kill('SIGKILL')
   }
 
@@ -492,11 +494,12 @@ function resolveInstalledBackend(pluginId: string): NativeBackendDescriptor {
   if (!installed) throw new Error(`plugin "${pluginId}" is not installed`)
   const backend = installed.manifest.nativeBackend
   if (!backend) throw new Error(`plugin "${pluginId}" does not declare a native backend`)
-  if (process.platform !== 'win32' || process.arch !== 'x64') {
+  const targetName = nativeTargetForHost()
+  if (!targetName) {
     throw new Error(`plugin "${pluginId}" has no native backend for ${process.platform}-${process.arch}`)
   }
-  const target = backend.targets['win32-x64']
-  if (!target) throw new Error(`plugin "${pluginId}" has no native backend for win32-x64`)
+  const target = backend.targets[targetName]
+  if (!target) throw new Error(`plugin "${pluginId}" has no native backend for ${targetName}`)
   return { executablePath: join(pluginDir(pluginId), target.file), sha256: target.sha256, service: backend.service }
 }
 

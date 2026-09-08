@@ -37,6 +37,7 @@ export function validateDependencyMutation(
       }
       if (reason.code === 'dependency-cycle') return `plugin dependency cycle includes "${id}"`
       if (reason.code === 'scalpel-version-incompatible') return `plugin "${id}" ${reason.message}`
+      if (reason.code === 'native-platform-incompatible') return `plugin "${id}" ${reason.message}`
       return `plugin "${id}" requires plugin "${reason.dependencyId}", which is unavailable: ${reason.cause.message}`
     }
   }
