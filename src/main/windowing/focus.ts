@@ -1,4 +1,5 @@
 import { BrowserWindow, screen } from 'electron'
+import { hyprlandInputAllowed } from '../hyprland'
 import { getSnapCanvasWindow, setSnapGhost } from './snap-canvas'
 import { firePoeLeaveHooks, getAuxiliaryScalpelWindows, getMainOverlay, overlays } from './state'
 
@@ -69,6 +70,7 @@ function collectScalpelWindows(): BrowserWindow[] {
  *  dialogs are intentionally excluded: callers that authorize keyboard input
  *  must not treat a file picker as an injection target. */
 export function isAnyScalpelBrowserWindowFocused(): boolean {
+  if (!hyprlandInputAllowed()) return false
   const focused = BrowserWindow.getFocusedWindow()
   if (!focused || focused.isDestroyed()) return false
   if (focused === getMainOverlay()) return true

@@ -11,7 +11,7 @@ import {
 // hand the spec and the PoE-leave hook back to the tests without a plain `let`
 // declaration re-initialising them to null afterwards.
 const captured = vi.hoisted(() => ({
-  spec: null as null | { onVisibilityChange?: (visible: boolean) => void },
+  spec: null as null | { interaction?: () => string; onVisibilityChange?: (visible: boolean) => void },
   poeLeave: null as null | (() => void),
 }))
 
@@ -153,6 +153,13 @@ describe('toggleRadialMenu', () => {
     fakeOverlay.isVisible.mockReturnValue(true)
     toggleRadialMenu()
     expect(fakeOverlay.hide).toHaveBeenCalled()
+    expect(fakeOverlay.show).not.toHaveBeenCalled()
+  })
+
+  it('declares a dialog and refuses to open without a screen cursor', () => {
+    registerRadialMenuOverlay(makeDeps({ getScreenCursor: () => null }))
+    expect(captured.spec?.interaction?.()).toBe('dialog')
+    toggleRadialMenu()
     expect(fakeOverlay.show).not.toHaveBeenCalled()
   })
 
@@ -386,7 +393,7 @@ describe('backdrop capture', () => {
 })
 
 describe('fireRadialSlice', () => {
-  it('hides, warps to the captured screen point, refocuses, then fires', () => {
+  it('hides, refocuses the game, restores the captured pointer, then fires', () => {
     const deps = makeDeps()
     registerRadialMenuOverlay(deps)
     toggleRadialMenu()
@@ -394,6 +401,9 @@ describe('fireRadialSlice', () => {
     expect(fakeOverlay.hide).toHaveBeenCalled()
     expect(deps.warpTo).toHaveBeenCalledWith({ x: 1100, y: 1200 })
     expect(deps.focusGame).toHaveBeenCalled()
+    expect(vi.mocked(deps.focusGame).mock.invocationCallOrder[0]).toBeLessThan(
+      vi.mocked(deps.warpTo).mock.invocationCallOrder[0],
+    )
     expect(deps.fired).toEqual(['filter'])
   })
 

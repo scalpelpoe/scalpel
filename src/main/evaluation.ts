@@ -1,3 +1,4 @@
+import { desktop } from './desktop'
 import { clipboard, screen } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
 import type Store from 'electron-store'
@@ -393,7 +394,7 @@ export function createHotkeyHandler(store: Store<AppSettings>, isElevated: () =>
     hotkeyProcessing = true
 
     try {
-      lastCursorX = screen.getCursorScreenPoint().x
+      lastCursorX = desktop.getCursorScreenPoint()?.x ?? lastCursorX
 
       // Flag the next overlay-data as "came from the filter hotkey" so the renderer
       // forces the item view, even when the user was on pricecheck/audit with the
@@ -423,7 +424,7 @@ export function createPriceCheckHandler(store: Store<AppSettings>, isElevated: (
     hotkeyProcessing = true
 
     try {
-      lastCursorX = screen.getCursorScreenPoint().x
+      lastCursorX = desktop.getCursorScreenPoint()?.x ?? lastCursorX
 
       const item = await captureItemFromClipboard(isElevated)
       if (!item) return

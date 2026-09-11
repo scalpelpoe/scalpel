@@ -22,7 +22,7 @@ export interface RadialMenuDeps {
   /** Live cursor in game CSS px; null = cursor outside the game window. */
   getGameCursor: () => { x: number; y: number } | null
   /** Live cursor in screen DIP px, captured at open as the warp-back target. */
-  getScreenCursor: () => { x: number; y: number }
+  getScreenCursor: () => { x: number; y: number } | null
   warpTo: (dip: { x: number; y: number }) => void
   focusGame: () => void
   /** Fire after focus settles (real wiring: setTimeout 50ms; tests: sync). */
@@ -86,6 +86,7 @@ export function registerRadialMenuOverlay(d: RadialMenuDeps): SecondaryOverlay {
   overlay = registerSecondaryOverlay({
     id: 'radial-menu',
     htmlEntry: 'radial-menu.html',
+    interaction: () => 'dialog',
     // Covers the whole game window (like the whiteboard) so the ring can be
     // drawn at any cursor position and any outside click lands on us.
     defaultAnchor: () => ({ fracX: 0, fracY: 0, fracW: 1, fracH: 1 }),
@@ -131,6 +132,7 @@ export function toggleRadialMenu(): void {
   const center = deps.getGameCursor()
   if (!center) return
   warpTarget = deps.getScreenCursor()
+  if (!warpTarget) return
   const getIcon = deps.getPluginIcon
   const nonce = ++openSeq
   // Belt and braces with the close path: the previous menu's answer is game
@@ -237,8 +239,8 @@ export function fireRadialSlice(sliceId: string): void {
   const target = warpTarget
   closeRadialMenu()
   if (!slice) return
-  if (target) deps.warpTo(target)
   deps.focusGame()
+  if (target) deps.warpTo(target)
   const d = deps
   const action = slice.action
   d.defer(() => {

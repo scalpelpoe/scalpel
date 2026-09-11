@@ -2,17 +2,20 @@ import { join } from 'node:path'
 import { BrowserWindow } from 'electron'
 import { OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
 import type { Rect } from './snap-canvas'
+import { desktop, type OverlayInteraction } from '../desktop'
+import { hyprlandOverlayActive, nameHyprlandOverlay } from '../hyprland'
 
 interface CreateOptions {
   htmlEntry: string
   bounds: Rect
+  interaction?: () => OverlayInteraction
 }
 
 /** Create a BrowserWindow shaped like the main overlay (transparent, frameless,
  *  screen-saver level) and install opacity-based hide/show overrides so toggle
  *  cycles never trigger Windows zoom animation. Returns the window with .show
  *  /.hide /.isVisible already overridden. */
-export function createOverlayWindow({ htmlEntry, bounds }: CreateOptions): BrowserWindow {
+export function createOverlayWindow({ htmlEntry, bounds, interaction }: CreateOptions): BrowserWindow {
   const win = new BrowserWindow({
     ...OVERLAY_WINDOW_OPTS,
     width: bounds.width,
@@ -27,12 +30,13 @@ export function createOverlayWindow({ htmlEntry, bounds }: CreateOptions): Brows
       nodeIntegration: false,
     },
   })
+  nameHyprlandOverlay(win)
   // 'screen-saver' is the level the main overlay uses (set by electron-overlay-
   // window on attach). It sits above PoE, the taskbar, and other floating
   // windows, and lets the window's full bounds render including the taskbar
   // region (the default 'floating' level silently clips into the work area).
   win.setAlwaysOnTop(true, 'screen-saver')
-  installOpacityHideShow(win)
+  installOpacityHideShow(win, interaction)
   if (process.env.ELECTRON_RENDERER_URL) {
     void win.loadURL(`${process.env.ELECTRON_RENDERER_URL}/${htmlEntry}`)
   } else {
@@ -47,27 +51,26 @@ export function createOverlayWindow({ htmlEntry, bounds }: CreateOptions): Brows
  *  registered with the OS the whole time - only the very first show triggers
  *  an animation. Mirrors the main overlay's pattern.
  *
- *  Critically, the show path uses showInactive (not show) so we never steal
- *  OS focus from PoE. Stealing focus would put PoE in the background, and
- *  background PoE doesn't reliably receive held mouse-button state - which
- *  breaks hold-to-move. It also caused a flicker loop with the main overlay
- *  whenever PoE refocused (steal -> PoE blurs -> main overlay hides -> user
- *  clicks PoE -> repeat). The user can still click the overlay to focus it
- *  for interaction; we just don't take focus on our own. */
-function installOpacityHideShow(win: BrowserWindow): void {
+ *  Map without taking focus first. The declared interaction policy then claims
+ *  input for dialogs, leaves panels available for normal interaction, or keeps
+ *  annotations click-through. Hyprland focus retries wait for compositor mapping. */
+function installOpacityHideShow(win: BrowserWindow, interaction: () => OverlayInteraction = () => 'panel'): void {
   const origShowInactive = win.showInactive.bind(win)
+  const origHide = win.hide.bind(win)
   const origIsVisible = win.isVisible.bind(win)
   let opacityHidden = false
   win.hide = (): void => {
-    win.setOpacity(0)
+    desktop.releaseOverlay(win)
+    if (hyprlandOverlayActive()) origHide()
+    else win.setOpacity(0)
     win.setIgnoreMouseEvents(true)
     opacityHidden = true
   }
   win.show = (): void => {
     win.setOpacity(1)
-    win.setIgnoreMouseEvents(false)
     opacityHidden = false
     origShowInactive()
+    desktop.applyInteraction(win, interaction())
   }
   // Mirror: showInactive matches show. Some callers (electron-overlay-window
   // native code) call this directly.

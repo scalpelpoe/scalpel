@@ -1,3 +1,4 @@
+import { desktop } from './desktop'
 import { join } from 'node:path'
 import { BrowserWindow, screen } from 'electron'
 import { OverlayController, OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
@@ -386,20 +387,10 @@ function ensurePreviewWindow(): BrowserWindow {
   return previewWin
 }
 
-/** Bound the window to PoE's current rect in DIP. Pass null as the reference
- *  window to screenToDipRect so the conversion uses the display nearest the
- *  RECT (PoE's monitor) rather than the window's current display - otherwise
- *  the first show would use the preview window's default-placement display
- *  (primary) for the conversion, and a PoE on a different-DPI secondary
- *  monitor would land at the wrong scale on first hover. On non-Windows
- *  targetBounds is already logical. */
+/** Share the same game rectangle as every other overlay. */
 function setBoundsToGame(win: BrowserWindow): boolean {
-  const tb = OverlayController.targetBounds
-  if (!tb || !tb.width || !tb.height) return false
-  const dip =
-    process.platform === 'win32'
-      ? screen.screenToDipRect(null, { x: tb.x, y: tb.y, width: tb.width, height: tb.height })
-      : { x: tb.x, y: tb.y, width: tb.width, height: tb.height }
+  const dip = desktop.getGameBounds()
+  if (!dip) return false
   win.setBounds(dip)
   // Windows's first setBounds across displays / on a freshly created window
   // doesn't always stick; the second call lets the OS settle. Matches the

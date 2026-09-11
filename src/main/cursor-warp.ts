@@ -1,41 +1,6 @@
-// Warps the OS cursor back to the radial menu's open point so item-reading
-// actions (price check, filter check, wiki) target the item the menu was
-// opened over. SetCursorPos wants physical px; stored points are DIP.
-// win32-only: koffi stays a static import (regular dep), but user32 only
-// loads on Windows. Elsewhere warping is a no-op and item-read slices fire
-// wherever the cursor is (accepted gap, see spec).
-import { screen } from 'electron'
-import koffi from 'koffi'
+import { desktop } from './desktop'
+export { warpWith } from './desktop/windows-pointer'
 
-type SetCursorPos = (x: number, y: number) => boolean
-
-let setCursorPos: SetCursorPos | null = null
-if (process.platform === 'win32') {
-  try {
-    const user32 = koffi.load('user32.dll')
-    setCursorPos = user32.func('bool SetCursorPos(int x, int y)') as SetCursorPos
-  } catch {
-    setCursorPos = null
-  }
-}
-
-/** Pure composition, exported for tests: DIP point -> physical -> SetCursorPos. */
-export function warpWith(
-  dipPoint: { x: number; y: number },
-  deps: {
-    dipToScreen: (p: { x: number; y: number }) => { x: number; y: number }
-    set: SetCursorPos
-  },
-): void {
-  const phys = deps.dipToScreen(dipPoint)
-  deps.set(Math.round(phys.x), Math.round(phys.y))
-}
-
-export function warpCursorTo(dipPoint: { x: number; y: number }): void {
-  if (!setCursorPos) return
-  try {
-    warpWith(dipPoint, { dipToScreen: (p) => screen.dipToScreenPoint(p), set: setCursorPos })
-  } catch {
-    // Best-effort; a failed warp only degrades item targeting.
-  }
+export function warpCursorTo(point: Electron.Point): void {
+  desktop.warpCursorTo(point)
 }

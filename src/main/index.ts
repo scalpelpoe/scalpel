@@ -106,6 +106,7 @@ import {
 import { captureRadialBackdrop } from './radial-backdrop'
 import { warpCursorTo } from './cursor-warp'
 import { getGameCursorPosition } from './screen-capture/cursor'
+import { desktop } from './desktop'
 import { pluginSliceIcon, RADIAL_MACRO_ACTION, type RadialMenuSettings } from '@shared/contracts/radial'
 import { IPC_CHANNELS } from '@shared/contracts/ipc'
 import type { AppSettings, CheatSheetsSettings, GameVariant, LegacyAppSettings, RegexPreset } from '@shared/types'
@@ -517,7 +518,7 @@ app.whenReady().then(() => {
     getScale: () => (store.get('radialMenu') as RadialMenuSettings | undefined)?.scale,
     isDev: () => store.get('developerMode') === true,
     getGameCursor: getGameCursorPosition,
-    getScreenCursor: () => screen.getCursorScreenPoint(),
+    getScreenCursor: () => desktop.getCursorScreenPoint(),
     // Tab icon, else the manifest's - see pluginSliceIcon. Resolved at open
     // rather than stored, so an install or an in-place update is picked up
     // without anything having to invalidate a cache.
@@ -528,11 +529,7 @@ app.whenReady().then(() => {
       ),
     captureBackdrop: captureRadialBackdrop,
     warpTo: warpCursorTo,
-    focusGame: () => {
-      try {
-        OverlayController.focusTarget()
-      } catch {}
-    },
+    focusGame: () => desktop.focusGame(),
     defer: (fn) => setTimeout(fn, 50),
     fire: {
       filter: () => void onHotkeyFired(),

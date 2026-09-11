@@ -1,6 +1,8 @@
+import { desktop, type OverlayInteraction } from '../desktop'
 import { app, type BrowserWindow, screen } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
 import { uIOhook } from 'uiohook-napi'
+import { gameDipBounds } from './geometry'
 import { guardNativeListener } from '../diagnostics'
 import { hideAllOnPoeBlur, isAnyScalpelWindowFocused } from './focus'
 import { seedUserPinned } from './pin'
@@ -30,6 +32,8 @@ export type { Rect }
 import type { OverlayAnchor } from '@shared/types'
 
 export interface OverlaySpec {
+  /** Dialogs claim input on show; panels receive normal input; annotations pass through. */
+  interaction?: () => OverlayInteraction
   /** Stable id, used for IPC channels and as a lookup key. Kebab-case. */
   id: string
   /** HTML filename in src/renderer/, e.g. 'cheat-sheets-grid.html'. */
@@ -105,27 +109,15 @@ function anchorTimes(anchor: OverlayAnchor, base: Rect): Rect {
   }
 }
 
-/** Compute the DIP (logical) bounds an overlay window should occupy for the
- *  given anchor. Uses `screen.screenToDipRect(win, physRect)` - the same path
- *  the electron-overlay-window library uses for the main overlay - so behavior
- *  matches across all DPI / multi-monitor configurations.
- *
- *  Returns null when PoE bounds aren't available yet. */
+/** Anchors are fractions of the game's logical rectangle on every platform. */
 function anchorToDipBounds(win: BrowserWindow, anchor: OverlayAnchor): Rect | null {
-  const tb = OverlayController.targetBounds
-  if (!tb || tb.width <= 0 || tb.height <= 0) return null
-  const phys = anchorTimes(anchor, { x: tb.x, y: tb.y, width: tb.width, height: tb.height })
-  return screen.screenToDipRect(win, phys)
+  const base = gameDipBounds(win)
+  return base ? anchorTimes(anchor, base) : null
 }
 
-/** Compute an anchor from a window's current DIP bounds. Converts PoE's
- *  physical bounds to DIP using the same `screenToDipRect` path so the
- *  numerator and denominator are in the same coordinate space. */
 function boundsToAnchor(win: BrowserWindow): OverlayAnchor | null {
-  const tb = OverlayController.targetBounds
-  if (!tb || tb.width <= 0 || tb.height <= 0) return null
-  const poeDip = screen.screenToDipRect(win, { x: tb.x, y: tb.y, width: tb.width, height: tb.height })
-  if (poeDip.width <= 0 || poeDip.height <= 0) return null
+  const poeDip = gameDipBounds(win)
+  if (!poeDip || poeDip.width <= 0 || poeDip.height <= 0) return null
   const cur = win.getBounds()
   return {
     fracX: (cur.x - poeDip.x) / poeDip.width,
@@ -428,12 +420,16 @@ function makeOverlayApi(state: OverlayState): SecondaryOverlay {
 
 function ensureWin(state: OverlayState): BrowserWindow {
   if (state.win && !state.win.isDestroyed()) return state.win
-  // Window must exist before we can call `screen.screenToDipRect(win, ...)`
+  // Create the window before resolving its display-dependent bounds.
   // (the same path the library uses for the main overlay), so create at a
   // sensible placeholder - the display PoE is on if known, otherwise primary
   // workArea - then immediately overwrite with the anchor-derived DIP bounds.
   const placeholder = pickPlaceholderBounds()
-  const win = createOverlayWindow({ htmlEntry: state.spec.htmlEntry, bounds: placeholder })
+  const win = createOverlayWindow({
+    htmlEntry: state.spec.htmlEntry,
+    bounds: placeholder,
+    interaction: state.spec.interaction,
+  })
   state.win = win
   applyAnchorBounds(state)
   prewarmSnapCanvas()
@@ -460,7 +456,7 @@ function ensureWin(state: OverlayState): BrowserWindow {
  *  PoE is on (so the placeholder is on the right monitor), falling back to
  *  the primary display's workArea when PoE isn't attached. Always in DIP. */
 function pickPlaceholderBounds(): Rect {
-  const tb = OverlayController.targetBounds
+  const tb = desktop.getGameBounds()
   if (tb && tb.width > 0 && tb.height > 0) {
     const display = screen.getDisplayNearestPoint({
       x: tb.x + Math.round(tb.width / 2),
@@ -474,9 +470,7 @@ function pickPlaceholderBounds(): Rect {
 function showState(state: OverlayState): void {
   const win = ensureWin(state)
   // The did-finish-load handler above takes care of the very first show.
-  // Subsequent shows (window already loaded) just flip opacity. No .focus()
-  // call - we never want to steal focus from PoE (background PoE breaks
-  // hold-to-move and re-triggers PoE-blur which causes overlay flicker).
+  // Subsequent shows apply the same interaction policy as the first show.
   if (win.webContents.isLoading()) return
   if (win.isVisible()) return
   if (state.spec.gateShow && !state.spec.gateShow()) return

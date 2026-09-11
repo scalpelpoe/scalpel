@@ -361,6 +361,14 @@ resolves to a raw RGBA frame. It resolves to `null` when PoE is not the focused
 window - the capture is scoped to the game window and never grabs the rest of the
 desktop, other apps, or other monitors.
 
+On the Hyprland overlay backend, capture requires `grim` on `PATH`. Scalpel
+captures the game's logical rectangle directly, without a screen-sharing picker
+that could take input away from the game. It verifies compositor focus before
+and after the grab and discards the frame if focus changes. Captures retain up
+to 2160 pixels of vertical resolution for OCR; always use the returned `scale`
+when positioning annotations. A missing `grim` or failed capture returns `null`
+and is logged when `SCALPEL_DEBUG_LOG` is enabled.
+
 ```ts
 interface GameRect {
   x: number      // game CSS px from the game window's left edge

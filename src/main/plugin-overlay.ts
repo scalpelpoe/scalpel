@@ -148,21 +148,11 @@ export function registerPluginAnnotationOverlay(pluginId: string): SecondaryOver
   const overlay = registerPluginOverlayInternal(pluginId, {
     id: `plugin-overlay:${pluginId}`,
     htmlEntry: 'plugin-annotation-overlay.html',
+    interaction: () => 'passthrough',
     defaultAnchor: fullGameAnchor,
     onFirstShow: (win) => {
       win.webContents.send('plugin-overlay:init', pluginId)
       sendCurrentZoneTo(win)
-      // The window must be click-through. installOpacityHideShow forces
-      // setIgnoreMouseEvents(false) on every show, so set it now (the first show
-      // already happened) and re-apply on each subsequent show, mirroring the
-      // whiteboard's play-mode hook. forward:true still delivers mouse-move to
-      // any plugin element that re-enables pointer-events.
-      win.setIgnoreMouseEvents(true, { forward: true })
-      win.on('show', () => {
-        setImmediate(() => {
-          if (!win.isDestroyed()) win.setIgnoreMouseEvents(true, { forward: true })
-        })
-      })
     },
   })
   // Click-through surface with no chrome and no close button - if the Esc

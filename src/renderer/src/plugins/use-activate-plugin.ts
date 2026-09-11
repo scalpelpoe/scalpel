@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react'
-import type { PluginActivate, RegisterOverlayOptions, ScalpelPluginContext } from '../../../plugin-sdk/src/types'
+import type {
+  GameRect,
+  PluginActivate,
+  RegisterOverlayOptions,
+  ScalpelPluginContext,
+} from '../../../plugin-sdk/src/types'
 import type { PoeItem, Zone } from '@shared/types'
 import { importPluginModule } from './import-plugin-module'
 import { resolveLeagueOptions } from '@renderer/shared/league-options'
@@ -9,7 +14,10 @@ export interface ActivatedPlugin {
   error: string | null
 }
 
-export function useActivatePlugin(pluginId: string): ActivatedPlugin {
+export function useActivatePlugin(
+  pluginId: string,
+  onInteractiveRegion?: (rect: GameRect | null) => void,
+): ActivatedPlugin {
   const [captured, setCaptured] = useState<ActivatedPlugin['captured']>(null)
   const [error, setError] = useState<string | null>(null)
 
@@ -72,6 +80,10 @@ export function useActivatePlugin(pluginId: string): ActivatedPlugin {
         },
         onOverlayVisibility: (h) => window.api.onPluginOverlayVisibility(h),
         setInteractiveRegion: (rect) => {
+          if (onInteractiveRegion) {
+            onInteractiveRegion(rect)
+            return
+          }
           // Report the rect (in this window's CSS px) as an interactive panel so
           // the main-process uiohook hit-test flips THIS overlay window clickable
           // while the cursor is inside it. Empty array clears (stays click-through).
@@ -137,7 +149,7 @@ export function useActivatePlugin(pluginId: string): ActivatedPlugin {
       unsubItem()
       unsubZone()
     }
-  }, [pluginId])
+  }, [pluginId, onInteractiveRegion])
 
   return { captured, error }
 }
