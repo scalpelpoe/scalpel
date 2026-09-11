@@ -10,6 +10,8 @@ vi.mock('electron', () => ({
 const mockFs = {
   files: new Map<string, string>(),
   dirsRemoved: [] as string[],
+  failRemovePath: null as string | null,
+  removeCalls: new Map<string, number>(),
 }
 
 vi.mock('fs', () => ({
@@ -30,11 +32,22 @@ vi.mock('fs', () => ({
     mockFs.files.set(p, data)
   },
   mkdirSync: () => {},
+  renameSync: (from: string, to: string) => {
+    for (const key of [...mockFs.files.keys()]) {
+      if (key === from || key.startsWith(`${from}${sep}`)) {
+        mockFs.files.set(to + key.slice(from.length), mockFs.files.get(key)!)
+        mockFs.files.delete(key)
+      }
+    }
+  },
   rmSync: (p: string, opts: { recursive?: boolean; force?: boolean }) => {
     mockFs.dirsRemoved.push(p)
+    const calls = (mockFs.removeCalls.get(p) ?? 0) + 1
+    mockFs.removeCalls.set(p, calls)
+    if (mockFs.failRemovePath === p && calls > 1) throw new Error('simulated cleanup failure')
     if (opts?.recursive) {
       for (const k of [...mockFs.files.keys()]) {
-        if (k === p || k.startsWith(`${p}/`)) mockFs.files.delete(k)
+        if (k === p || k.startsWith(`${p}${sep}`)) mockFs.files.delete(k)
       }
     } else {
       mockFs.files.delete(p)
@@ -45,6 +58,8 @@ vi.mock('fs', () => ({
 beforeEach(() => {
   mockFs.files.clear()
   mockFs.dirsRemoved.length = 0
+  mockFs.failRemovePath = null
+  mockFs.removeCalls.clear()
   vi.resetModules()
 })
 
@@ -57,7 +72,7 @@ describe('uninstallPlugin', () => {
     const { uninstallPlugin } = await import('./uninstall')
     const r = uninstallPlugin('hello-world')
     expect(r.ok).toBe(true)
-    expect(mockFs.dirsRemoved).toContain(join(TEST_USER_DATA, 'plugins', 'hello-world'))
+    expect(mockFs.files.has(join(TEST_USER_DATA, 'plugins', 'hello-world', 'plugin.js'))).toBe(false)
     const installed = JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'installed.json'))!)
     expect(installed).toEqual(['other'])
   })
@@ -90,13 +105,27 @@ describe('uninstallPlugin', () => {
     expect(unpacked).toEqual([])
   })
 
-  it('evicts the storage cache so a reinstall does not flush stale data', async () => {
-    const storageFile = join(TEST_USER_DATA, 'plugins', 'hello-world', 'storage.json')
+  it('moves legacy in-package storage aside before removing the package', async () => {
+    const legacyFile = join(TEST_USER_DATA, 'plugins', 'hello-world', 'storage.json')
+    const storageFile = join(TEST_USER_DATA, 'plugin-storage', 'hello-world', 'storage.json')
+    mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'installed.json'), JSON.stringify(['hello-world']))
+    mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'hello-world', 'plugin.js'), 'X')
+    mockFs.files.set(legacyFile, JSON.stringify({ key: 'value' }))
+
+    const { uninstallPlugin } = await import('./uninstall')
+    expect(uninstallPlugin('hello-world')).toEqual({ ok: true })
+
+    expect(mockFs.files.has(legacyFile)).toBe(false)
+    expect(mockFs.files.get(storageFile)).toBe(JSON.stringify({ key: 'value' }))
+  })
+
+  it('keeps storage available until shutdown, then removes it', async () => {
+    const storageFile = join(TEST_USER_DATA, 'plugin-storage', 'hello-world', 'storage.json')
     mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'installed.json'), JSON.stringify(['hello-world']))
     mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'hello-world', 'plugin.js'), 'X')
     mockFs.files.set(storageFile, JSON.stringify({ key: 'value' }))
 
-    const { getValue, setValue } = await import('./storage')
+    const { finalizePendingStorageRemovals, getValue, setValue } = await import('./storage')
     const { uninstallPlugin } = await import('./uninstall')
 
     // Warm the in-memory cache.
@@ -105,13 +134,27 @@ describe('uninstallPlugin', () => {
     // Write a new value to mark the plugin dirty.
     setValue('hello-world', 'key', 'stale')
 
-    // Uninstall should clear the cache and drop the pending flush.
+    // The old renderer graph remains active until restart.
     uninstallPlugin('hello-world')
+    expect(getValue('hello-world', 'key')).toBe('stale')
 
-    // Delete the on-disk file to confirm the dirty flush does not restore it.
-    mockFs.files.delete(storageFile)
+    finalizePendingStorageRemovals()
+    expect(mockFs.files.has(storageFile)).toBe(false)
+  })
 
-    // A fresh getValue should return null (no cache, no disk file).
-    expect(getValue('hello-world', 'key')).toBeNull()
+  it('reports success when deleting the committed package backup fails', async () => {
+    const pluginDirectory = join(TEST_USER_DATA, 'plugins', 'hello-world')
+    const backup = `${pluginDirectory}.uninstalling`
+    mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'installed.json'), JSON.stringify(['hello-world']))
+    mockFs.files.set(join(pluginDirectory, 'plugin.js'), 'X')
+    mockFs.failRemovePath = backup
+
+    const { uninstallPlugin } = await import('./uninstall')
+    const r = uninstallPlugin('hello-world')
+
+    expect(r).toEqual({ ok: true })
+    expect(mockFs.files.has(join(pluginDirectory, 'plugin.js'))).toBe(false)
+    expect(JSON.parse(mockFs.files.get(join(TEST_USER_DATA, 'plugins', 'installed.json'))!)).toEqual([])
+    expect(mockFs.files.has(join(backup, 'plugin.js'))).toBe(true)
   })
 })

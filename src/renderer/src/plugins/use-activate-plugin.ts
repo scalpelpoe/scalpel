@@ -16,6 +16,7 @@ export function useActivatePlugin(pluginId: string): ActivatedPlugin {
   // Import + activate the plugin module once, in THIS window's process.
   useEffect(() => {
     let cancelled = false
+    let activationTeardown: (() => void) | null = null
     let latestItem: PoeItem | null = null
     let latestZone: Zone | null = null
     const unsubItem = window.api.onOverlayData((d) => {
@@ -25,7 +26,8 @@ export function useActivatePlugin(pluginId: string): ActivatedPlugin {
       latestZone = z
     })
     void (async () => {
-      const entry = await window.api.getInstalledPlugin(pluginId)
+      const getLoadable = window.api.getLoadablePlugin ?? window.api.getInstalledPlugin
+      const entry = await getLoadable(pluginId)
       if (cancelled || !entry) return
       const state = await window.api.getOverlayState().catch(() => null)
       const poeVersion: 1 | 2 = (state?.poeVersion as 1 | 2) ?? 1
@@ -39,6 +41,15 @@ export function useActivatePlugin(pluginId: string): ActivatedPlugin {
       const ctx: ScalpelPluginContext = {
         pluginId,
         pluginVersion: entry.manifest.version,
+        plugins: {
+          expose: (_serviceTypeName, _handler) => {
+            throw new Error('plugin APIs are not available in secondary overlay windows yet')
+          },
+          get: (_providerId, _serviceTypeName) => null,
+        },
+        native: {
+          call: (method, payload) => window.api.pluginNativeCall(pluginId, method, payload),
+        },
         getPoeVersion: () => poeVersion,
         getLeague: () => league,
         getLeagues: async (version) =>
@@ -123,7 +134,11 @@ export function useActivatePlugin(pluginId: string): ActivatedPlugin {
       // persistent (hidden, not destroyed, on close), so they correctly survive
       // show/hide. We do not collect them here.
       try {
-        await mod.default(ctx)
+        const teardown = await mod.default(ctx)
+        if (typeof teardown === 'function') {
+          if (cancelled) teardown()
+          else activationTeardown = teardown
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err))
         return
@@ -134,6 +149,11 @@ export function useActivatePlugin(pluginId: string): ActivatedPlugin {
     })()
     return () => {
       cancelled = true
+      try {
+        activationTeardown?.()
+      } catch {
+        // A plugin teardown must not prevent host subscriptions from closing.
+      }
       unsubItem()
       unsubZone()
     }

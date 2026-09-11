@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package scalpel.examples.item_analyzer.v1;
+
+service NativeItemAnalyzer {
+  rpc AnalyzeItem(AnalyzeItemRequest) returns (AnalyzeItemResponse);
+}
+
+message AnalyzeItemRequest {
+  string name = 1;
+  string base_type = 2;
+  string rarity = 3;
+  uint32 item_level = 4;
+  repeated string implicits = 5;
+  repeated string explicits = 6;
+}
+
+message AnalyzeItemResponse {
+  string display_name = 1;
+  string fingerprint = 2;
+  uint32 total_mods = 3;
+  uint32 numeric_tokens = 4;
+}

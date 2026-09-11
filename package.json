@@ -9,14 +9,33 @@
     "type": "git",
     "url": "https://github.com/scalpelpoe/scalpel.git"
   },
+  "scalpelPlugin": {
+    "contracts": [
+      {
+        "source": "crates/scalpel-plugin-native/proto",
+        "descriptor": "crates/scalpel-plugin-native/transport.binpb",
+        "generated": "src/main/plugins/generated"
+      }
+    ]
+  },
   "engines": {
     "node": "^22"
   },
   "main": "out/main/index.js",
   "scripts": {
+    "predev": "npm run prepare:plugins",
     "dev": "npm run build:i18n && npm run build:internal-assets && node scripts/sync-regex-data.js & electron-vite dev",
+    "prebuild": "npm run prepare:plugins",
     "build": "npm run build:i18n && npm run build:internal-assets && electron-vite build",
     "build:internal-assets": "node scripts/build-internal-assets.mjs",
+    "prepare:plugins": "node src/plugin-tools/cli/scalpel-plugin.mjs check --project . && npm run build:plugin-service-examples && node src/plugin-tools/cli/scalpel-plugin.mjs build --project plugin-service-examples/native-item-analyzer",
+    "generate:plugin-services": "node src/plugin-tools/cli/scalpel-plugin.mjs generate --project . && node src/plugin-tools/cli/scalpel-plugin.mjs generate --project plugin-service-examples/greeting-provider && node src/plugin-tools/cli/scalpel-plugin.mjs generate --project plugin-service-examples/greeting-relay && node src/plugin-tools/cli/scalpel-plugin.mjs generate --project plugin-service-examples/greeting-consumer && node src/plugin-tools/cli/scalpel-plugin.mjs generate --project plugin-service-examples/native-item-analyzer",
+    "build:plugin-service-examples": "node src/plugin-tools/cli/scalpel-plugin.mjs build --project plugin-service-examples/greeting-provider && node src/plugin-tools/cli/scalpel-plugin.mjs build --project plugin-service-examples/greeting-relay && node src/plugin-tools/cli/scalpel-plugin.mjs build --project plugin-service-examples/greeting-consumer",
+    "check:plugin-service-examples": "node src/plugin-tools/cli/scalpel-plugin.mjs check --project . && node src/plugin-tools/cli/scalpel-plugin.mjs check --project plugin-service-examples/greeting-provider && node src/plugin-tools/cli/scalpel-plugin.mjs check --project plugin-service-examples/greeting-relay && node src/plugin-tools/cli/scalpel-plugin.mjs check --project plugin-service-examples/greeting-consumer",
+    "build:native-plugin-example": "node src/plugin-tools/cli/scalpel-plugin.mjs pack --project plugin-service-examples/native-item-analyzer",
+    "check:native-plugin-example": "node src/plugin-tools/cli/scalpel-plugin.mjs check --project plugin-service-examples/native-item-analyzer",
+    "test:native-plugin-example": "cargo test --manifest-path crates/scalpel-plugin-native/Cargo.toml && cargo test --manifest-path plugin-service-examples/native-item-analyzer/native/Cargo.toml",
+    "lint:native-plugin-example": "cargo clippy --manifest-path crates/scalpel-plugin-native/Cargo.toml --all-targets -- -D warnings && cargo clippy --manifest-path plugin-service-examples/native-item-analyzer/native/Cargo.toml --all-targets -- -D warnings",
     "build:i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/shared/paraglide",
     "validate:premium-mods": "node scripts/validate-premium-mods.mjs",
     "build-tier-data": "node scripts/build-tier-data.js",
@@ -27,7 +46,7 @@
     "sync-icons": "node scripts/sync-item-icons-poe1.js",
     "dist:win": "npm run build && electron-builder --win --x64",
     "dist:linux": "npm run build && electron-builder --linux AppImage --x64",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json && tsc --noEmit -p tsconfig.plugin-examples.json",
     "postinstall": "node scripts/postinstall.js",
     "lint": "biome lint src && node scripts/check-import-aliases.mjs",
     "format": "biome format --write src",
@@ -43,6 +62,7 @@
   },
   "dependencies": {
     "@coooookies/windows-smtc-monitor": "^1.0.12",
+    "@bufbuild/protobuf": "2.14.0",
     "electron-overlay-window": "github:scalpelpoe/electron-overlay-window#db989812d62d6e988e915e25d772fc5c34aebdbb",
     "electron-store": "^8.2.0",
     "koffi": "^3.1.6",
@@ -55,6 +75,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.15",
+    "@bufbuild/buf": "1.72.0",
+    "@bufbuild/protoc-gen-es": "2.14.0",
     "@electron/asar": "^4.1.1",
     "@icon-park/react": "^1.4.2",
     "@inlang/paraglide-js": "^2.18.2",

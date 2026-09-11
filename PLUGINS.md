@@ -1,6 +1,6 @@
 # Writing Scalpel plugins
 
-Scalpel supports third-party plugins that show up as new tabs in the overlay. A plugin is a single bundled JavaScript file you author against a typed SDK, distributed via your own GitHub repository, and discovered through a curated registry. This document is for plugin authors.
+Scalpel supports third-party plugins that extend the overlay or provide services to other plugins. A plugin normally consists of bundled JavaScript authored against a typed SDK; the experimental Native Plugin RFC1 also permits a package to include one private Windows x64 executable. Plugins are distributed through the author's GitHub repository and discovered through a curated registry. This document is for plugin authors.
 
 A complete reference plugin that exercises every SDK component lives at [`scalpelpoe/scalpel-plugin-examples`](https://github.com/scalpelpoe/scalpel-plugin-examples). Read it alongside this doc.
 
@@ -14,12 +14,15 @@ A plugin can:
 - Persist its own settings to disk
 - Call out to the internet (poe.ninja, your own backend, etc.)
 - Use Scalpel's helpers for item identity, URL building, formatting, and rendering
+- Experimentally call one private unary Protobuf service in a packaged Windows x64 native sidecar
 
-A plugin can NOT:
+The JavaScript host API does NOT let a plugin:
 
 - Read Scalpel's loaded filter, audit data, or settings beyond its own storage
 - Modify or read other plugins' state
 - Affect the built-in tabs
+
+Those API limits are not an operating-system sandbox. In particular, an RFC1 native backend is built and supplied by its plugin author and currently runs as-is with Scalpel's user permissions, including administrator permissions when Scalpel is elevated. It can access resources outside the JavaScript host API. Authors are responsible for the native code and dependencies they distribute, and users run it at their own risk. This temporary trust model remains in effect until a future native-plugin revision explicitly ships enforced containment; a higher version number alone is not a security guarantee.
 
 ## Quickstart
 
@@ -63,7 +66,7 @@ export default function activate(ctx: ScalpelPluginContext): void {
 
 ### The context object
 
-`ctx` is the only thing Scalpel hands you. Everything plugins can do goes through it.
+`ctx` is the supported plugin API Scalpel hands you. Use it rather than internal renderer globals. Plugins currently share renderer contexts, so `ctx` scopes normal plugin behavior but does not isolate mutually hostile plugin code.
 
 ```ts
 interface ScalpelPluginContext {
@@ -141,6 +144,14 @@ interface ScalpelPluginContext {
     set<T = unknown>(key: string, value: T): Promise<void>
     delete(key: string): Promise<void>
     keys(): Promise<string[]>
+  }
+
+  // Owner-only request/response calls to the native backend declared by this
+  // plugin. Scalpel owns the executable path, process, integrity check, and
+  // lifetime. Prefer createNativeServiceClient over calling this raw API.
+  // Calls reject when no compatible backend is declared.
+  native: {
+    call(method: string, payload: Uint8Array): Promise<Uint8Array>
   }
 
   // Read / write / watch the running game's _Config.ini. The host resolves the
@@ -682,10 +693,13 @@ Externalize React and the SDK - Scalpel injects them at runtime via a custom pro
 ### Installing the SDK
 
 ```bash
-npm install --save-dev @scalpelpoe/plugin-sdk
+npm install --save-dev @scalpelpoe/plugin-sdk@0.11.0
+npm install --save-dev https://github.com/scalpelpoe/scalpel/releases/download/sdk-v0.11.0/scalpelpoe-plugin-tools-0.11.0.tgz
 ```
 
-The package is **types only**. At runtime, Scalpel serves the real implementations via its `scalpel-internal://sdk.js` custom protocol; the renderer's importmap reroutes `@scalpelpoe/plugin-sdk` to that URL. The npm package ships:
+The SDK is published to npm. The RFC preview tools are distributed as the `scalpelpoe-plugin-tools-0.11.0.tgz` asset on the `sdk-v0.11.0` GitHub Release, not as an npm package. Node 22 or newer is required by both packages.
+
+The SDK package is **types only**. At runtime, Scalpel serves the real implementations via its `scalpel-internal://sdk.js` custom protocol; the renderer's importmap reroutes `@scalpelpoe/plugin-sdk` to that URL. The npm package ships:
 
 - `dist/index.d.ts` - bundled TypeScript declarations (`PoeItem`, `ScalpelPluginContext`, every component, every helper) plus the `Window.api` ambient that `HotkeyField` / `useCurrentZone` and friends need.
 - `dist/index.js` - a runtime stub. Each export is a Proxy that throws with a helpful message if anything actually calls it. Inside Scalpel the importmap shadows this file; outside Scalpel (test runners, tools that don't honour your bundler's `external` config), the throw tells you to fix your config.
@@ -732,7 +746,29 @@ Every plugin ships a `manifest.json` alongside its `plugin.js`. The schema:
   "homepage": "https://github.com/you/your-plugin",
   "scalpelMinVersion": ">=0.9.8",
   "poeVersions": [1, 2],
-  "tabIcon": "icon.svg"
+  "tabIcon": "icon.svg",
+  "api": {
+    "version": "1.0.0",
+    "contract": "api.binpb",
+    "service": "example.jewels.v1.JewelEconomy"
+  },
+  "dependencies": [
+    {
+      "pluginId": "shared-provider",
+      "apiVersion": "1.0.0"
+    }
+  ],
+  "nativeBackend": {
+    "protocolVersion": 1,
+    "contract": "backend.binpb",
+    "service": "example.jewels.v1.JewelAnalyzer",
+    "targets": {
+      "win32-x64": {
+        "file": "my-plugin-backend.exe",
+        "sha256": "<lowercase SHA-256>"
+      }
+    }
+  }
 }
 ```
 
@@ -740,20 +776,43 @@ Field notes:
 
 - `id` must match `^[a-z][a-z0-9-]{2,49}$` and matches the directory name in `userData/plugins/<id>/`.
 - `version` is your plugin's own version, separate from `manifestVersion` (the manifest schema version, currently 1).
-- `scalpelMinVersion` is a comparator expression (`">=0.9.8"`, `">=0.9.8 <1.0"`). If the running Scalpel doesn't satisfy it, the plugin won't load.
+- `scalpelMinVersion` is a supported version range (`">=0.9.8"`, `">=0.9.8 <1.0"`, `"^1.2.0"`, or `"~1.2.0"`). Whitespace-separated comparators are combined with logical AND. If the running Scalpel doesn't satisfy the range, the plugin remains installed with an unavailable reason but does not activate.
 - `poeVersions` gates which games the plugin appears under. Omit for both.
 - `tabIcon` is optional; you can also pass an inline SVG string via `registerTab({ icon })`.
+- `api` declares one public unary Protobuf service. `contract` is a root-level binary `FileDescriptorSet`; `service` is its fully qualified service name.
+- `dependencies` explicitly names plugin APIs this plugin consumes. API versions use exact `major.minor.patch` matching in the initial implementation.
+- `nativeBackend` is an **experimental RFC1 preview** declaring one private, supervised unary Protobuf service. RFC1 recognizes only `win32-x64`; all files are root-level release assets. The context routes `ctx.native` to its owning plugin and cannot choose a path, arguments, environment, or working directory.
+- Use Protobuf-ES service descriptors with `exposePluginService`, `createPluginServiceClient`, and `createNativeServiceClient`. These helpers infer every method signature directly from standard generated code.
+- Native backends are author-supplied, unsandboxed executables. They run with Scalpel's user permissions and are not restricted from files, the network, processes, or other operating-system resources. Checksums verify expected bytes, the SDK owner binding prevents accidental cross-plugin calls through the supported API, and supervision manages lifecycle failures; none is malware protection or a hostile-code security boundary.
+- Native backends install only from Scalpel's curated registry (or a process-level developer registry override). User-configured self-hosted registries remain JavaScript-only because renderer code can change that setting.
+- Add `@bufbuild/protobuf@2.14.0` as a project dependency when generated service code is part of your plugin. Buf, Protobuf generation, and esbuild come from the tools tarball rather than the runtime SDK. Configure `scalpelPlugin` in `package.json`, then run `scalpel-plugin generate`, `check`, `build`, or `pack` instead of maintaining custom contract scripts.
+- See [`PLUGIN_SERVICES.md`](PLUGIN_SERVICES.md) for the service workflow and the normative [`NATIVE_PLUGIN_RFC_1.md`](NATIVE_PLUGIN_RFC_1.md) for exact native framing, handshake, response rules, limits, lifecycle, checksums, platform support, and non-goals.
+
+### Native RFC1 dependency
+
+The preview Rust transport helper is not on crates.io. Pin the public commit that contains the implementation used by the current host:
+
+```toml
+[dependencies]
+prost = "0.14"
+scalpel-plugin-native = { git = "https://github.com/scalpelpoe/scalpel.git", rev = "41275dcbc339b8c6af7fcea20325575a49b0ecc6" }
+```
+
+The helper's `serve_stdio` dispatcher is sequential. The host can correlate concurrent calls, but RFC1 does not promise concurrent worker execution. See the [crate README](crates/scalpel-plugin-native/README.md) for usage.
 
 ## Local testing
 
 While developing, skip the registry and install your plugin directly.
 
+**Native security notice:** Loading an unpacked native plugin immediately makes its author-supplied executable available to run without a sandbox. Inspect the source, dependencies, build inputs, and packaged binary before loading it. Do not disable antivirus or create broad exclusions to bypass a warning.
+
 **Option 1: "Load unpacked" button** (Scalpel >= 0.9.8)
 
 1. In Scalpel, open Settings → Developer.
 2. Toggle "Developer mode" on.
-3. Click "Load unpacked plugin..." and pick the directory containing your built `plugin.js` and `manifest.json`.
-4. Your tab appears in the title bar immediately.
+3. Click "Load unpacked plugin..." and pick either the package directory containing `plugin.js`, `manifest.json`, declared contracts, and any native executable, or its project root when that package is in the immediate `dist/` directory. A complete immediate `dist/` package takes precedence over root files; Scalpel checks that its identity, version, and bundle match the selected project before loading it. It does not recursively search other descendants.
+4. Unpacked plugins load immediately when their required dependency graph is available. Plugins with missing, incompatible, cyclic, or transitively unavailable required dependencies remain installed but disabled, with the reason shown in Settings. Loading a missing provider re-evaluates the development graph.
+5. Reload is a developer-only best-effort hot swap; restart Scalpel if registrations or native state look stale.
 
 **Option 2: Manual file copy**
 
@@ -761,7 +820,7 @@ While developing, skip the registry and install your plugin directly.
    - Windows: `%APPDATA%\Scalpel`
    - macOS: `~/Library/Application Support/Scalpel`
    - Linux: `~/.config/Scalpel`
-2. Create `userData/plugins/<your-id>/` and copy `dist/plugin.js` + `dist/manifest.json` into it.
+2. Create `userData/plugins/<your-id>/` and copy `dist/plugin.js`, `dist/manifest.json`, and every contract or native file declared by the manifest into it.
 3. Edit `userData/plugins/installed.json` to include your id: `["your-id"]`.
 4. Restart Scalpel to load the manually placed plugin.
 
@@ -769,15 +828,17 @@ While developing, skip the registry and install your plugin directly.
 
 Releases are GitHub-driven. Tag your repo with `v<version>` matching your manifest's `version`, and attach the built artifacts:
 
-1. `npm run build` produces `dist/plugin.js` and copies `dist/manifest.json`.
+1. `npx scalpel-plugin pack` produces `dist/plugin.js`, `dist/manifest.json`, and every declared contract and native asset. For native packages, it computes the executable checksum and writes it to the generated `dist/manifest.json`; publish that file rather than a source template containing a placeholder. You are responsible for all native source, dependencies, build inputs, DLLs, and binaries you distribute.
 2. Tag and release on GitHub:
    ```bash
    git tag v1.0.0
    git push origin v1.0.0
    ```
-3. On the GitHub release page, attach `dist/plugin.js` and `dist/manifest.json` as release assets.
+3. On the GitHub release page, attach `dist/plugin.js`, `dist/manifest.json`, and every root-level contract/native asset declared by the manifest.
 
 Scalpel downloads files from `https://github.com/<your-repo>/releases/download/v<version>/<file>`, so the version tag and asset filenames must match exactly.
+
+Production plugin installs, updates, and removals replace files transactionally but leave the currently running plugin graph unchanged. Scalpel prompts for a restart, blocks affected native workers, and activates the new dependency graph only after a full relaunch. Mutations that would leave required dependents missing or API-incompatible are rejected.
 
 ## Listing in the registry
 
@@ -792,6 +853,11 @@ Once your plugin has a working release, open a pull request against [`scalpelpoe
   "repo": "your-github-username/scalpel-plugin-jewel-economy",
   "latestVersion": "1.0.0",
   "sha256": "3a985da74fe225b2045c172d6bd390bd855f086e3e9d525b46bfe24511431532",
+  "assets": {
+    "api.binpb": "<lowercase SHA-256 of the API descriptor>",
+    "backend.binpb": "<lowercase SHA-256 of the backend descriptor>",
+    "my-plugin-backend.exe": "<lowercase SHA-256 matching nativeBackend.targets>"
+  },
   "scalpelMinVersion": ">=0.9.8",
   "poeVersions": [1, 2],
   "iconUrl": "https://raw.githubusercontent.com/your-user/your-plugin/main/icon.png",
@@ -799,7 +865,7 @@ Once your plugin has a working release, open a pull request against [`scalpelpoe
 }
 ```
 
-The `sha256` field is the lowercase hex SHA-256 of the exact `plugin.js` you attached to the release. Scalpel recomputes it on download and rejects the install if the bytes don't match, so a compromised or swapped release asset can't be silently loaded. Compute it from your built artifact:
+The `sha256` field pins `plugin.js`. Every declared descriptor and native executable must also be pinned under `assets`. Scalpel recomputes each hash on download and rejects replaced release assets. Hash verification proves that the downloaded bytes match the registry; it does not prove publisher identity, detect malware, or establish that those bytes are safe. Compute a hash from a built artifact with:
 
 ```bash
 node -e "console.log(require('crypto').createHash('sha256').update(require('fs').readFileSync('plugin.js')).digest('hex'))"
@@ -826,6 +892,7 @@ Scalpel relaunches the process on PoE version switch, so plugin state doesn't su
 - **Don't reach into Scalpel's DOM.** Render into the `container` you receive from `registerTab`; the rest of the overlay is not yours.
 - **Don't loop on the renderer thread.** Long synchronous work freezes the overlay. Use `requestIdleCallback`, web workers, or main-process IPC if you have heavy CPU work (we don't currently expose an IPC channel for plugins; raise an issue if you need one).
 - **Don't ship secrets in `plugin.js`.** The file is downloaded to the user's disk and runnable by anyone.
+- **Don't ship malicious, deceptive, concealed, or materially misrepresented behavior.** Such plugins or updates will be rejected or removed from official distribution. Authors may be barred from future submissions and reported through applicable hosting or security channels.
 
 ## Getting help
 

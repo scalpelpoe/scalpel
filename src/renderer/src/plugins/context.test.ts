@@ -7,6 +7,11 @@ import type { PoeItem } from '@shared/types'
 const baseDeps = () => ({
   pluginId: 'test',
   pluginVersion: '1.0.0',
+  plugins: {
+    expose: vi.fn(),
+    get: vi.fn(() => null),
+  },
+  nativeCall: vi.fn(async () => new Uint8Array()),
   getPoeVersion: () => 1 as const,
   getLeague: () => 'Mirage',
   getLeagues: vi.fn(async () => ['Standard']),
@@ -57,6 +62,17 @@ describe('createPluginContext', () => {
     const ctx = createPluginContext(baseDeps())
     expect(ctx.pluginId).toBe('test')
     expect(ctx.pluginVersion).toBe('1.0.0')
+  })
+
+  it('binds native backend calls to the owning plugin context', async () => {
+    const deps = baseDeps()
+    const response = Uint8Array.of(42)
+    const nativeCall = vi.fn(async () => response)
+    const ctx = createPluginContext({ ...deps, nativeCall })
+
+    const request = Uint8Array.of(7)
+    await expect(ctx.native.call('/example.v1.Service/Analyze', request)).resolves.toEqual(response)
+    expect(nativeCall).toHaveBeenCalledWith('/example.v1.Service/Analyze', request)
   })
 
   it('forwards getPoeVersion/getLeague/getCurrentItem/getCurrentZone', () => {

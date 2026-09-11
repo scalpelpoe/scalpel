@@ -20,8 +20,9 @@ export interface PluginOverlayOptions {
 
 // One secondary-overlay handle per plugin id. Registered lazily the first time
 // the plugin calls registerOverlay (via IPC). Survives for the process
-// lifetime - Scalpel relaunches on game-version switch so no invalidation.
+// lifetime unless the owning plugin is uninstalled.
 const overlays = new Map<string, SecondaryOverlay>()
+const logForwardDisposers = new Map<string, () => void>()
 let zoneFanoutWired = false
 
 /** Clamp a plugin-supplied fraction into 0..max, falling back when it is absent
@@ -99,7 +100,8 @@ function registerPluginOverlayInternal(pluginId: string, spec: OverlaySpec): Sec
   ensureZoneFanout()
   // Log lines forward through a plain array (no EventEmitter listener limit),
   // so a per-plugin getter is fine. Lazy getter is safe before the window exists.
-  forwardLogLinesTo(() => overlays.get(pluginId)?.getWindow() ?? null)
+  const disposeLogForwarder = forwardLogLinesTo(() => overlays.get(pluginId)?.getWindow() ?? null)
+  if (disposeLogForwarder) logForwardDisposers.set(pluginId, disposeLogForwarder)
   return overlay
 }
 
@@ -124,9 +126,9 @@ export function registerPluginOverlay(pluginId: string, opts: PluginOverlayOptio
       sendEdgeFlush(anchor)
       opts.onAnchorChanged?.(anchor)
     },
-    onFirstShow: (win) => {
-      // did-finish-load already fired, so the renderer's init subscription is
-      // live: tell it which plugin module to import, then push the current zone.
+    onDidFinishLoad: (win) => {
+      // Re-send after reload so the replacement renderer knows which plugin
+      // module to import.
       win.webContents.send('plugin-overlay:init', pluginId)
       win.webContents.send('plugin-overlay:edge-flush', flushEdges(opts.storedAnchor?.() ?? defaultAnchorFor(opts)))
       sendCurrentZoneTo(win)
@@ -149,9 +151,11 @@ export function registerPluginAnnotationOverlay(pluginId: string): SecondaryOver
     id: `plugin-overlay:${pluginId}`,
     htmlEntry: 'plugin-annotation-overlay.html',
     defaultAnchor: fullGameAnchor,
-    onFirstShow: (win) => {
+    onDidFinishLoad: (win) => {
       win.webContents.send('plugin-overlay:init', pluginId)
       sendCurrentZoneTo(win)
+    },
+    onFirstShow: (win) => {
       // The window must be click-through. installOpacityHideShow forces
       // setIgnoreMouseEvents(false) on every show, so set it now (the first show
       // already happened) and re-apply on each subsequent show, mirroring the
@@ -195,21 +199,27 @@ export function isPluginOverlayVisible(pluginId: string): boolean {
 }
 
 /** Reload a plugin's popped-out overlay window if one exists, so it re-imports
- *  the new plugin.js after an update (the pop-out never receives plugin-updated
+ *  the new plugin.js after a dev update (the pop-out does not host PluginHost
  *  and would otherwise run stale code). No-op when there is no pop-out. */
 export function reloadPluginOverlay(pluginId: string): void {
   overlays.get(pluginId)?.getWindow()?.webContents.reload()
 }
 
-/** Tear down on uninstall: hide the window so it does not linger. The handle
- *  stays in the map (registerSecondaryOverlay throws on re-register of the same
- *  id), which is fine - a reinstall in the same session reuses it. */
+/** Tear down on uninstall so the renderer and registration cannot survive into
+ *  a same-session reinstall with stale code or overlay options. */
 export function disposePluginOverlay(pluginId: string): void {
-  overlays.get(pluginId)?.hide()
+  const overlay = overlays.get(pluginId)
+  if (!overlay) return
+  overlay.destroy()
+  overlays.delete(pluginId)
+  logForwardDisposers.get(pluginId)?.()
+  logForwardDisposers.delete(pluginId)
 }
 
 /** Test-only: clear the registry and re-arm the zone fan-out. */
 export function _resetForTests(): void {
+  for (const dispose of logForwardDisposers.values()) dispose()
+  logForwardDisposers.clear()
   overlays.clear()
   zoneFanoutWired = false
 }

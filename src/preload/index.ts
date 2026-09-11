@@ -467,12 +467,9 @@ export const api = {
   respondGameSwitch: (choice: 'restart' | 'cancel'): void => {
     ipcRenderer.send('game-switch-response', choice)
   },
-  /** Full app relaunch. Used by the Developer settings "Restart Scalpel"
-   *  button so plugin authors can pick up freshly-built plugin code without
-   *  closing + reopening the app by hand. No-op in dev builds (see main). */
-  restartApp: (): void => {
-    ipcRenderer.send('app-restart')
-  },
+  /** Graceful full-app relaunch used by restart-required plugin UI and the
+   * Developer control. Dev builds must be restarted manually. */
+  restartApp: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('app-restart'),
   onPriceCheck: (
     cb: (data: {
       item: import('@shared/types').PoeItem
@@ -918,25 +915,24 @@ export const api = {
   radialFire: (sliceId: string): void => ipcRenderer.send(IPC_CHANNELS.RADIAL.FIRE, sliceId),
   radialCancel: (): void => ipcRenderer.send(IPC_CHANNELS.RADIAL.CANCEL),
   // Plugins
-  listInstalledPlugins: (): Promise<
-    Array<{
-      manifest: import('../plugin-sdk/src/types').PluginManifest
-      entryUrl: string
-    }>
-  > => ipcRenderer.invoke('plugins:list-installed'),
+  listInstalledPlugins: (): Promise<Array<import('@shared/plugin-dependencies').InstalledPluginEntry>> =>
+    ipcRenderer.invoke('plugins:list-installed'),
+  listLoadablePlugins: (): Promise<Array<import('@shared/plugin-dependencies').InstalledPluginEntry>> =>
+    ipcRenderer.invoke('plugins:list-loadable'),
   listUnpackedPlugins: (): Promise<
     Array<{
       manifest: import('../plugin-sdk/src/types').PluginManifest
       entryUrl: string
+      availability: import('@shared/plugin-dependencies').PluginAvailability
       /** Absent when the plugin was side-loaded before source dirs were
        *  tracked - Reload needs it, so the button stays disabled without one. */
       sourceDir?: string
     }>
   > => ipcRenderer.invoke('plugins:list-unpacked'),
-  getInstalledPlugin: (
-    pluginId: string,
-  ): Promise<{ manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string } | null> =>
+  getInstalledPlugin: (pluginId: string): Promise<import('@shared/plugin-dependencies').InstalledPluginEntry | null> =>
     ipcRenderer.invoke('plugins:get-installed', pluginId),
+  getLoadablePlugin: (pluginId: string): Promise<import('@shared/plugin-dependencies').InstalledPluginEntry | null> =>
+    ipcRenderer.invoke('plugins:get-loadable', pluginId),
   pluginStorageGet: (pluginId: string, key: string): Promise<unknown> =>
     ipcRenderer.invoke('plugins:storage-get', pluginId, key),
   pluginStorageSet: (pluginId: string, key: string, value: unknown): Promise<void> =>
@@ -944,6 +940,16 @@ export const api = {
   pluginStorageDelete: (pluginId: string, key: string): Promise<void> =>
     ipcRenderer.invoke('plugins:storage-delete', pluginId, key),
   pluginStorageKeys: (pluginId: string): Promise<string[]> => ipcRenderer.invoke('plugins:storage-keys', pluginId),
+  pluginNativeCall: async (pluginId: string, method: string, payload: Uint8Array): Promise<Uint8Array> => {
+    const result = (await ipcRenderer.invoke('plugins:native-call', pluginId, method, payload)) as
+      | { ok: true; payload: Uint8Array }
+      | { ok: false; error: { message: string; code: string } }
+    if (result.ok) return result.payload
+    const error = new Error(result.error.message) as Error & { code: string }
+    error.name = 'NativeCallError'
+    error.code = result.error.code
+    throw error
+  },
   pluginRegisterHotkey: (pluginId: string, label: string): Promise<void> =>
     ipcRenderer.invoke('plugins:register-hotkey', pluginId, label),
   pluginListRegisteredHotkeys: (): Promise<Array<{ action: string; pluginId: string; label: string }>> =>
@@ -959,19 +965,26 @@ export const api = {
    *  hot-swap the running instance. The plugin dev loop, without a restart. */
   pluginReloadUnpacked: (pluginId: string): Promise<{ ok: true; id: string } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:reload-unpacked', pluginId),
+  pluginUninstallUnpacked: (pluginId: string): Promise<{ ok: true } | { ok: false; error: string }> =>
+    ipcRenderer.invoke('plugins:uninstall-unpacked', pluginId),
   pluginFetchRegistry: (): Promise<
     { ok: true; snapshot: import('@shared/plugin-registry-types').RegistrySnapshot } | { ok: false; error: string }
   > => ipcRenderer.invoke('plugins:fetch-registry'),
   pluginInstallFromRegistry: (
     entry: import('@shared/plugin-registry-types').RegistryEntry,
-  ): Promise<{ ok: true; id: string } | { ok: false; error: string }> =>
+  ): Promise<{ ok: true; id: string; restartRequired: true } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:install-from-registry', entry),
   pluginUpdateFromRegistry: (
     entry: import('@shared/plugin-registry-types').RegistryEntry,
-  ): Promise<{ ok: true; id: string } | { ok: false; error: string }> =>
+  ): Promise<{ ok: true; id: string; restartRequired: true } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:update-from-registry', entry),
-  pluginUninstall: (pluginId: string): Promise<{ ok: true } | { ok: false; error: string }> =>
+  pluginUninstall: (pluginId: string): Promise<{ ok: true; restartRequired: true } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:uninstall', pluginId),
+  pluginRestartRequired: (): Promise<boolean> => ipcRenderer.invoke('plugins:restart-required'),
+  onPluginRestartRequired: (handler: () => void): (() => void) => {
+    ipcRenderer.on('plugins:restart-required', handler)
+    return () => ipcRenderer.removeListener('plugins:restart-required', handler)
+  },
   pluginUnregisterHotkey: (pluginId: string): Promise<void> =>
     ipcRenderer.invoke('plugins:unregister-hotkey', pluginId),
   onPluginMacro: (handler: (action: string) => void): (() => void) => {
@@ -979,30 +992,30 @@ export const api = {
     ipcRenderer.on('plugin-macro', listener)
     return () => ipcRenderer.removeListener('plugin-macro', listener)
   },
-  onPluginInstalled: (
+  onPluginDevInstalled: (
     handler: (entry: { manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string }) => void,
   ): (() => void) => {
     const listener = (
       _: Electron.IpcRendererEvent,
       entry: { manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string },
     ): void => handler(entry)
-    ipcRenderer.on('plugin-installed', listener)
-    return () => ipcRenderer.off('plugin-installed', listener)
+    ipcRenderer.on('plugin-dev-installed', listener)
+    return () => ipcRenderer.off('plugin-dev-installed', listener)
   },
-  onPluginUpdated: (
+  onPluginDevUpdated: (
     handler: (entry: { manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string }) => void,
   ): (() => void) => {
     const listener = (
       _: Electron.IpcRendererEvent,
       entry: { manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string },
     ): void => handler(entry)
-    ipcRenderer.on('plugin-updated', listener)
-    return () => ipcRenderer.off('plugin-updated', listener)
+    ipcRenderer.on('plugin-dev-updated', listener)
+    return () => ipcRenderer.off('plugin-dev-updated', listener)
   },
-  onPluginUninstalled: (handler: (pluginId: string) => void): (() => void) => {
+  onPluginDevUninstalled: (handler: (pluginId: string) => void): (() => void) => {
     const listener = (_: Electron.IpcRendererEvent, pluginId: string): void => handler(pluginId)
-    ipcRenderer.on('plugin-uninstalled', listener)
-    return () => ipcRenderer.off('plugin-uninstalled', listener)
+    ipcRenderer.on('plugin-dev-uninstalled', listener)
+    return () => ipcRenderer.off('plugin-dev-uninstalled', listener)
   },
   onPluginHotkeysChanged: (cb: () => void): (() => void) => {
     const handler = (): void => cb()

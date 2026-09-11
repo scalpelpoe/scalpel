@@ -20,6 +20,13 @@ describe('plugin paths', () => {
     expect(pluginDir('jewel-economy')).toBe(join('/test/userData', 'plugins', 'jewel-economy'))
   })
 
+  it('pluginStoragePath returns a path outside the replaceable package directory', async () => {
+    const { pluginStoragePath } = await import('./paths')
+    expect(pluginStoragePath('jewel-economy')).toBe(
+      join('/test/userData', 'plugin-storage', 'jewel-economy', 'storage.json'),
+    )
+  })
+
   it('installedJsonPath returns userData/plugins/installed.json', async () => {
     const { installedJsonPath } = await import('./paths')
     expect(installedJsonPath()).toBe(join('/test/userData', 'plugins', 'installed.json'))

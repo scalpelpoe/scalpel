@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { pluginDir } from './paths'
+import { pendingPluginStorageDeletionsPath, pluginDir, pluginStorageDir, pluginStoragePath } from './paths'
 
 const DEBOUNCE_MS = 100
 const MAX_BYTES = 5 * 1024 * 1024 // 5MB serialized per plugin
@@ -10,9 +10,44 @@ type PluginData = Record<string, unknown>
 const cache: Map<string, PluginData> = new Map()
 const dirty: Set<string> = new Set()
 const timers: Map<string, ReturnType<typeof setTimeout>> = new Map()
+const removed: Set<string> = new Set()
+
+function readPendingDeletions(): string[] {
+  const path = pendingPluginStorageDeletionsPath()
+  if (!existsSync(path)) return []
+  try {
+    const value = JSON.parse(readFileSync(path, 'utf-8'))
+    return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+function writePendingDeletions(ids: string[]): void {
+  const path = pendingPluginStorageDeletionsPath()
+  mkdirSync(dirname(path), { recursive: true })
+  const temporary = `${path}.tmp`
+  try {
+    writeFileSync(temporary, JSON.stringify(ids))
+    renameSync(temporary, path)
+  } finally {
+    rmSync(temporary, { force: true })
+  }
+}
+
+export function migrateLegacyStorage(pluginId: string): void {
+  const current = pluginStoragePath(pluginId)
+  const legacy = join(pluginDir(pluginId), 'storage.json')
+  if (!existsSync(current) && existsSync(legacy)) {
+    mkdirSync(dirname(current), { recursive: true })
+    renameSync(legacy, current)
+  }
+}
 
 function storagePath(pluginId: string): string {
-  return join(pluginDir(pluginId), 'storage.json')
+  migrateLegacyStorage(pluginId)
+  const current = pluginStoragePath(pluginId)
+  return current
 }
 
 function load(pluginId: string): PluginData {
@@ -65,6 +100,7 @@ export function getValue(pluginId: string, key: string): unknown {
 }
 
 export function setValue(pluginId: string, key: string, value: unknown): void {
+  if (removed.has(pluginId)) throw new Error(`plugin "${pluginId}" storage has been removed`)
   const data = load(pluginId)
   const next = { ...data, [key]: value }
   const size = JSON.stringify(next).length
@@ -76,6 +112,7 @@ export function setValue(pluginId: string, key: string, value: unknown): void {
 }
 
 export function deleteValue(pluginId: string, key: string): void {
+  if (removed.has(pluginId)) throw new Error(`plugin "${pluginId}" storage has been removed`)
   const data = load(pluginId)
   if (!(key in data)) return
   delete data[key]
@@ -91,6 +128,37 @@ export function listKeys(pluginId: string): string[] {
 export function flushAll(): void {
   const ids = [...dirty]
   for (const id of ids) flushOne(id)
+}
+
+/** Keep storage available to the currently running graph. It is deleted only
+ * after that graph has quiesced during shutdown. */
+export function scheduleStorageRemoval(pluginId: string): void {
+  const pending = new Set(readPendingDeletions())
+  pending.add(pluginId)
+  writePendingDeletions([...pending])
+}
+
+export function cancelStorageRemoval(pluginId: string): void {
+  writePendingDeletions(readPendingDeletions().filter((id) => id !== pluginId))
+  removed.delete(pluginId)
+}
+
+/** Remove storage right away. Used when the plugin's graph is unloaded
+ * immediately (side-loaded removal) so a same-session reload starts clean. */
+export function removeStorageNow(pluginId: string): void {
+  removed.add(pluginId)
+  clearCache(pluginId)
+  rmSync(pluginStorageDir(pluginId), { recursive: true, force: true })
+  writePendingDeletions(readPendingDeletions().filter((id) => id !== pluginId))
+}
+
+export function finalizePendingStorageRemovals(): void {
+  flushAll()
+  for (const pluginId of readPendingDeletions()) {
+    clearCache(pluginId)
+    rmSync(pluginStorageDir(pluginId), { recursive: true, force: true })
+  }
+  writePendingDeletions([])
 }
 
 /** Drop a single plugin's in-memory state. Called on uninstall so a later
@@ -111,4 +179,5 @@ export function _resetForTests(): void {
   cache.clear()
   dirty.clear()
   timers.clear()
+  removed.clear()
 }

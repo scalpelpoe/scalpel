@@ -68,7 +68,8 @@ import {
 } from './evaluation'
 import { initLearning } from './learning'
 import { initMainLocale } from './locale'
-import { flushAll as flushPluginStorage } from './plugins/storage'
+import { finalizePendingStorageRemovals, flushAll as flushPluginStorage } from './plugins/storage'
+import { pluginNativeBackends } from './plugins/native-backend'
 import { registerCheatSheetProtocol } from './cheat-sheet-protocol'
 import { registerScalpelInternalProtocol, registerScalpelInternalSchemePrivileges } from './plugins/protocol'
 import { registerScalpelPluginProtocol, registerScalpelPluginSchemePrivileges } from './plugins/plugin-protocol'
@@ -124,6 +125,7 @@ import { createTray, refreshTrayMenu } from './app/tray'
 import { startLiveServices } from './app/lifecycle'
 import { getOverlayAttachStrategy } from './experimental'
 import { relaunchApp } from './relaunch'
+import { gracefulRestart, registerGracefulQuit } from './restart'
 
 // ---- Linux display-server setup --------------------------------------------
 
@@ -303,6 +305,15 @@ initAppMacrosRefresh(() => store.get('appMacros') ?? [])
 
 // ---- Register IPC handlers -------------------------------------------------
 
+// Complete deferred uninstall cleanup before any renderer can activate a
+// plugin. Shutdown only flushes the old graph; deleting here avoids late writes
+// recreating storage after its tombstone was cleared.
+try {
+  finalizePendingStorageRemovals()
+} catch (err) {
+  recordMainDiagnostic('plugin-storage-cleanup', err)
+}
+
 registerAllIpc({ store, isElevated, getAppWindow, showAppWindow, hideOverlay })
 
 // ---- Protocol scheme privileges (must run before app ready) ----------------
@@ -311,6 +322,8 @@ registerScalpelInternalSchemePrivileges()
 registerScalpelPluginSchemePrivileges()
 
 // ---- App lifecycle ---------------------------------------------------------
+
+registerGracefulQuit()
 
 const gotLock = IS_E2E || app.requestSingleInstanceLock()
 if (!gotLock) {
@@ -562,19 +575,8 @@ app.whenReady().then(() => {
   ipcMain.on('suspend-hotkeys', () => suspendHotkeys())
   ipcMain.on('resume-hotkeys', () => resumeHotkeys())
 
-  // Plugin dev quality-of-life: a fully-reload requires an app relaunch
-  // (plugin code is loaded once at start). Surface a button in the Developer
-  // settings section so plugin authors don't have to close + reopen by hand.
-  // Dev builds skip the relaunch step since electron-vite dev won't come back
-  // after app.quit() — same caveat as game-switch.ts.
-  ipcMain.on('app-restart', () => {
-    if (!app.isPackaged) {
-      console.warn('[app-restart] dev build — close and `npm run dev` to re-attach')
-      return
-    }
-    relaunchApp()
-    app.quit()
-  })
+  // Shared restart endpoint for plugin changes and the Developer control.
+  ipcMain.handle('app-restart', () => gracefulRestart())
 
   ipcMain.on('overlay-input-focused', (e, focused: boolean) => {
     setWindowInputFocused(e.sender.id, focused)
@@ -594,11 +596,6 @@ app.whenReady().then(() => {
 app.on('before-quit', () => {
   recordMainBreadcrumb('before-quit')
   try {
-    app.releaseSingleInstanceLock()
-  } catch (err) {
-    recordMainDiagnostic('release-lock', err)
-  }
-  try {
     flushPluginStorage()
   } catch {
     // best-effort
@@ -607,6 +604,12 @@ app.on('before-quit', () => {
 
 app.on('will-quit', () => {
   recordMainBreadcrumb('will-quit')
+  try {
+    app.releaseSingleInstanceLock()
+  } catch (err) {
+    recordMainDiagnostic('release-lock', err)
+  }
+  pluginNativeBackends.stopAllNow()
   stopHotkeyListener()
   stopOnlineSync()
   recordMainBreadcrumb('will-quit complete')

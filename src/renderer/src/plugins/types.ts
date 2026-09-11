@@ -1,8 +1,11 @@
 import type { PoeItem, Zone } from '@shared/types'
+import type { PluginCommunicationApi } from '../../../plugin-sdk/src/types'
 
 export type PluginContextFactoryDeps = {
   pluginId: string
   pluginVersion: string
+  plugins: PluginCommunicationApi
+  nativeCall: (method: string, payload: Uint8Array) => Promise<Uint8Array>
   getPoeVersion: () => 1 | 2
   getLeague: () => string
   getLeagues: (version: 1 | 2) => Promise<readonly string[]>
