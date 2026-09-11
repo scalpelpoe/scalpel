@@ -14,23 +14,36 @@ vi.hoisted(() => {
 const HANDLERS = vi.hoisted(() => new Map<string, (...args: unknown[]) => unknown>())
 const SPAWN = vi.hoisted(() => vi.fn(() => ({ unref: vi.fn() })))
 const APP_EXIT = vi.hoisted(() => vi.fn())
+const APP_RELAUNCH = vi.hoisted(() => vi.fn())
+const NATIVE_SHUTDOWN = vi.hoisted(() => vi.fn(async () => {}))
+
+vi.mock('../plugins/native-backend', () => ({
+  pluginNativeBackends: { shutdown: NATIVE_SHUTDOWN, stopAllNow: vi.fn() },
+}))
+vi.mock('../plugins/storage', () => ({ flushAll: vi.fn() }))
 
 vi.mock('node:child_process', () => ({ spawn: SPAWN, execSync: vi.fn() }))
 vi.mock('electron', () => ({
   app: {
+    isPackaged: true,
     getPath: vi.fn(() => MOCK_USER_DATA),
     getVersion: vi.fn(() => '1.0.2-rc4'),
     exit: APP_EXIT,
-    relaunch: vi.fn(),
+    relaunch: APP_RELAUNCH,
   },
   ipcMain: {
     handle: vi.fn((channel: string, fn: (...args: unknown[]) => unknown) => HANDLERS.set(channel, fn)),
     on: vi.fn(),
   },
 }))
-vi.mock('../diagnostics', () => ({ recordMainBreadcrumb: vi.fn(), registerDiagnosticProvider: vi.fn() }))
+vi.mock('../diagnostics', () => ({
+  recordMainBreadcrumb: vi.fn(),
+  recordMainDiagnostic: vi.fn(),
+  registerDiagnosticProvider: vi.fn(),
+}))
 vi.mock('../hotkeys', () => ({ stopHotkeyListener: vi.fn() }))
 
+import { stopHotkeyListener } from '../hotkeys'
 import { initUpdater } from './updater'
 
 afterEach(() => {
@@ -74,6 +87,30 @@ describe('install-update', () => {
     SPAWN.mockClear()
     APP_EXIT.mockClear()
     stage()
+  })
+
+  it.each([false, true])('waits for native shutdown before exit (pending update: %s)', async (pending) => {
+    if (!pending) rmSync(join(STAGING, 'app.asar.new'))
+    let release!: () => void
+    NATIVE_SHUTDOWN.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve
+        }),
+    )
+
+    const install = HANDLERS.get('install-update')!()
+    expect(stopHotkeyListener).toHaveBeenCalledOnce()
+    expect(NATIVE_SHUTDOWN).toHaveBeenCalledOnce()
+    expect(APP_EXIT).not.toHaveBeenCalled()
+    expect(APP_RELAUNCH).toHaveBeenCalledTimes(pending ? 0 : 1)
+    expect(SPAWN).toHaveBeenCalledTimes(pending ? 1 : 0)
+
+    release()
+    await install
+    expect(APP_EXIT).toHaveBeenCalledExactlyOnceWith(0)
+    expect(APP_RELAUNCH).toHaveBeenCalledTimes(pending ? 0 : 1)
+    expect(SPAWN).toHaveBeenCalledTimes(pending ? 1 : 0)
   })
 
   it('spawns the apply batch detached so it outlives app.exit', async () => {

@@ -29,7 +29,6 @@ import {
 import { getOverlayAttachedVersion } from '../overlay'
 import { shouldRelaunchAfterOnboarding } from '../onboarding-relaunch'
 import { getGameSwitchCoordinator } from '../experimental'
-import { relaunchApp } from '../relaunch'
 import { pluginNativeBackends } from '../plugins/native-backend'
 
 export function register(store: Store<AppSettings>): void {
@@ -68,10 +67,6 @@ export function register(store: Store<AppSettings>): void {
       )
       return { ok: true as const, devRestartRequired: true as const }
     }
-    if (action === 'relaunch') {
-      relaunchApp()
-      app.quit()
-      return { ok: true as const, restarting: true as const }
     if (action === 'relaunch' || (pluginRestartRequired && app.isPackaged)) {
       const result = await gracefulRestart()
       if (result.ok) return { ok: true as const, restarting: true as const }

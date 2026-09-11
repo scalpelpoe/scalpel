@@ -2,6 +2,7 @@ import { app } from 'electron'
 import { recordMainBreadcrumb, recordMainDiagnostic } from './diagnostics'
 import { pluginNativeBackends } from './plugins/native-backend'
 import { flushAll as flushPluginStorage } from './plugins/storage'
+import { relaunchApp } from './relaunch'
 
 const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 3_000
 
@@ -72,7 +73,7 @@ export async function gracefulRestart(
   try {
     // Do fallible relaunch setup before permanently stopping live workers.
     flushPluginStorage()
-    app.relaunch()
+    relaunchApp()
     await gracefulShutdown()
     if (options.exitImmediately) app.exit(0)
     else app.quit()
