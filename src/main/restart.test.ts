@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const calls = vi.hoisted(() => [] as string[])
 const app = vi.hoisted(() => ({
@@ -22,6 +22,12 @@ vi.mock('./plugins/native-backend', () => ({ pluginNativeBackends: { shutdown, s
 vi.mock('./plugins/storage', () => ({ flushAll }))
 
 describe('gracefulRestart', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+  })
+
   beforeEach(() => {
     vi.useRealTimers()
     calls.length = 0
@@ -32,11 +38,37 @@ describe('gracefulRestart', () => {
     vi.resetModules()
   })
 
-  it('stops native workers and flushes plugin storage before relaunch', async () => {
+  it('schedules relaunch then stops native workers and flushes storage before quitting', async () => {
     const { gracefulRestart } = await import('./restart')
 
     await expect(gracefulRestart()).resolves.toEqual({ ok: true })
     expect(calls).toEqual(['storage-flush', 'relaunch', 'native-stop', 'storage-flush', 'quit'])
+  })
+
+  it('preserves the outer AppImage and arguments and waits for workers before quitting', async () => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('linux')
+    vi.stubEnv('APPIMAGE', '/opt/Scalpel With Spaces.AppImage')
+    let release!: () => void
+    shutdown.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve
+        }),
+    )
+    const { gracefulRestart } = await import('./restart')
+
+    const restart = gracefulRestart()
+    await gracefulRestart()
+    expect(app.relaunch).toHaveBeenCalledExactlyOnceWith({
+      execPath: '/opt/Scalpel With Spaces.AppImage',
+      args: process.argv.slice(1),
+    })
+    expect(app.quit).not.toHaveBeenCalled()
+    expect(app.exit).not.toHaveBeenCalled()
+
+    release()
+    await expect(restart).resolves.toEqual({ ok: true })
+    expect(app.quit).toHaveBeenCalledOnce()
   })
 
   it('supports updater exit without bypassing graceful shutdown', async () => {

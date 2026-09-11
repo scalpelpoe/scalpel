@@ -19,7 +19,6 @@ import { findBrickedMatch } from '@shared/version-match'
 import { selectListRelease } from './select-release'
 import { recordMainBreadcrumb, registerDiagnosticProvider } from '../diagnostics'
 import { stopHotkeyListener } from '../hotkeys'
-import { relaunchApp } from '../relaunch'
 
 const CHECK_DELAY = 5000
 const CHECK_INTERVAL = 60_000
@@ -512,9 +511,6 @@ ipcMain.handle('install-update', async () => {
     // during env cleanup with events in flight (tsfn-proxy abort risk).
     recordMainBreadcrumb('updater: relaunch (no pending update)')
     stopHotkeyListener()
-    relaunchApp()
-    pluginNativeBackends.stopAllNow()
-    app.exit(0)
     await gracefulRestart({ exitImmediately: true })
     return
   }

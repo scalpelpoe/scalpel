@@ -5,7 +5,6 @@ import { createOverlayWindow, getOverlayAttachedVersion } from '../overlay'
 import { requestGameSwitch } from '../game-switch'
 import { getEffectiveSettings, getProfileById, persistProfileSwitchForRestart } from '../profiles/profile-settings'
 import { applySetting } from '../settings-write'
-import { relaunchApp } from '../relaunch'
 import { gracefulRestart } from '../restart'
 
 export const stableGameSwitchCoordinator: GameSwitchCoordinator = {
@@ -27,8 +26,6 @@ export const stableGameSwitchCoordinator: GameSwitchCoordinator = {
       }
 
       persistProfileSwitchForRestart(store, profile)
-      relaunchApp()
-      app.quit()
       const restart = await gracefulRestart()
       if (!restart.ok) return { ok: false as const, error: restart.error ?? 'Restart failed' }
       return { ok: true as const, restarting: true as const }
