@@ -1,5 +1,7 @@
 import { desktopCapturer, screen } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
+import { hyprlandOverlayActive } from '../hyprland'
+import { captureHyprlandGame } from './hyprland-capture'
 
 /** A captured game-window frame. `data` is BGRA, row-major, (0,0) at the game
  *  window's top-left. `width`/`height` are the frame's px dimensions (downscaled
@@ -55,6 +57,7 @@ export async function captureGameWindow(opts?: CaptureOptions): Promise<CaptureF
 }
 
 export async function captureGameWindowResult(opts?: CaptureOptions): Promise<CaptureResult> {
+  if (hyprlandOverlayActive()) return captureHyprlandGame(opts)
   if (!opts?.skipFocusGate && !OverlayController.targetHasFocus) return fail('focus')
   const tb = OverlayController.targetBounds
   if (!tb?.width || !tb.height) return fail('bounds')
