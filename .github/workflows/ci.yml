@@ -48,6 +48,8 @@ jobs:
 
       - name: Test
         run: npm run test
+        env:
+          SCALPEL_NATIVE_INTEGRATION: '1'
 
       - name: Build SDK package
         run: npm run build --prefix src/plugin-sdk
