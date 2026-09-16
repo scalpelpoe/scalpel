@@ -7,6 +7,8 @@ import type {
 } from '../../../plugin-sdk/src/types'
 import type { PoeItem, Zone } from '@shared/types'
 import { importPluginModule } from './import-plugin-module'
+import { callNativeBackend } from './native-call'
+import { createSecondaryPluginCommunicationApi } from './secondary-plugin-communication'
 import { resolveLeagueOptions } from '@renderer/shared/league-options'
 
 export interface ActivatedPlugin {
@@ -36,7 +38,17 @@ export function useActivatePlugin(
     void (async () => {
       const getLoadable = window.api.getLoadablePlugin ?? window.api.getInstalledPlugin
       const entry = await getLoadable(pluginId)
-      if (cancelled || !entry) return
+      if (cancelled) return
+      if (!entry) {
+        // Restart-blocked (same-session registry update), unavailable, or gone:
+        // say which, instead of rendering empty overlay chrome.
+        const installed = await window.api.getInstalledPlugin(pluginId).catch(() => null)
+        if (cancelled) return
+        if (!installed) setError('plugin is not installed')
+        else if (installed.availability.status === 'unavailable') setError(installed.availability.reason.message)
+        else setError("Restart Scalpel to load this plugin's updated files.")
+        return
+      }
       const state = await window.api.getOverlayState().catch(() => null)
       const poeVersion: 1 | 2 = (state?.poeVersion as 1 | 2) ?? 1
       const settings = await window.api.getSettings().catch(() => null)
@@ -49,14 +61,9 @@ export function useActivatePlugin(
       const ctx: ScalpelPluginContext = {
         pluginId,
         pluginVersion: entry.manifest.version,
-        plugins: {
-          expose: (_serviceTypeName, _handler) => {
-            throw new Error('plugin APIs are not available in secondary overlay windows yet')
-          },
-          get: (_providerId, _serviceTypeName) => null,
-        },
+        plugins: createSecondaryPluginCommunicationApi(entry.manifest),
         native: {
-          call: (method, payload) => window.api.pluginNativeCall(pluginId, method, payload),
+          call: (method, payload) => callNativeBackend(pluginId, method, payload),
         },
         getPoeVersion: () => poeVersion,
         getLeague: () => league,
