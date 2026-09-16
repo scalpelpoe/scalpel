@@ -57,6 +57,7 @@ const BOSS_POOL_TABLET_MODS: Record<string, { suffixName: string; statId: string
   // "of Wisps" roll above 1 would otherwise land on the regular numeric stat.
   'map contains an additional azmeri spirit': { suffixName: 'of Wisps', statId: 'explicit.stat_775597083' },
   'map contains # additional azmeri spirit': { suffixName: 'of Wisps', statId: 'explicit.stat_775597083' },
+  'map contains # additional azmeri spirits': { suffixName: 'of Wisps', statId: 'explicit.stat_775597083' },
 }
 
 /** Number-normalized lookup key. MUST stay in sync with normalizeKey in

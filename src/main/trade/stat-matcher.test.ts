@@ -2810,6 +2810,53 @@ describe('matchItemMods', () => {
       expect(azmeri?.id).toBe('explicit.stat_358129101')
     })
 
+    it('routes the plural of Wisps clipboard roll to the boss-pool stat (issue #625)', async () => {
+      const { parseItemText } = await import('./clipboard')
+      _setStatEntriesForTests([])
+      const item = parseItemText(`Item Class: Tablet
+Rarity: Rare
+Void Terraform
+Overseer Tablet
+--------
+Item Level: 80
+--------
+{ Implicit Modifier }
+Empowers the Map Boss of a Map
+10 uses remaining
+--------
+{ Prefix Modifier "Challenger's" (Tier: 1) }
+Monsters have 12(10-15)% increased Effectiveness
+{ Prefix Modifier "Bountiful" (Tier: 1) }
+31(25-35)% increased Gold found in Map
+{ Suffix Modifier "of the Devoted" (Tier: 1) }
+Map contains an additional Shrine
+{ Suffix Modifier "of Wisps" (Tier: 1) }
+Map contains 2(1-2) additional Azmeri Spirits — Unscalable Value
+--------
+Can be used in a personal Map Device to add modifiers to a Map.
+--------
+Corrupted
+--------
+Note: ~b/o 1 divine`)
+      expect(item).not.toBeNull()
+      const filters = matchItemMods(item!.explicits, item!.implicits, undefined, item!, item!.advancedMods)
+      expect(filters.find((f) => f.text === 'Map contains 2 additional Azmeri Spirits')).toMatchObject({
+        id: 'explicit.stat_775597083',
+        value: 2,
+        modTier: 1,
+        modRange: { min: 1, max: 2 },
+      })
+      expect(filters.some((f) => f.id === 'explicit.stat_358129101')).toBe(false)
+      expect(filters.find((f) => f.text === 'Map contains an additional Shrine')?.id).toBe('explicit.stat_1468737867')
+
+      // Simple copies have no suffix name to distinguish the boss pool.
+      const simpleFilters = matchItemMods(item!.explicits, item!.implicits, undefined, item!)
+      expect(simpleFilters.find((f) => f.text === 'Map contains 2 additional Azmeri Spirits')).toMatchObject({
+        id: 'explicit.stat_358129101',
+        value: 2,
+      })
+    })
+
     // Strongbox singular/numeric split (issue #471): the singular "Map contains an
     // additional Strongbox" text is the regular numeric stat's value-1 display on ALL
     // tablet bases (live-probed: 218 Breach + 168 Overseer listings under
