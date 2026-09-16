@@ -17,6 +17,23 @@ const MAX_STDERR_BYTES = 8 * 1024
 const MAX_QUEUED_STDIN_BYTES = 4 * 1024 * 1024
 const METHOD_PATTERN = /^\/[A-Za-z_][A-Za-z0-9_.]*\/[A-Za-z_][A-Za-z0-9_]*$/
 
+/** Machine-readable codes for every host-side native backend failure. Backend-emitted
+ * `CallError` frames carry the plugin's own code instead. */
+export const NATIVE_ERROR_CODES = {
+  /** The backend is not usable right now: blocked, restarting, stopped, crashed or off-protocol. */
+  UNAVAILABLE: 'UNAVAILABLE',
+  /** A call or the initial handshake ran past its deadline. */
+  DEADLINE_EXCEEDED: 'DEADLINE_EXCEEDED',
+  /** The caller passed a method or payload the transport cannot send. */
+  INVALID_ARGUMENT: 'INVALID_ARGUMENT',
+  /** A transport limit (in-flight calls, frame size, queued stdin bytes) was hit. */
+  RESOURCE_EXHAUSTED: 'RESOURCE_EXHAUSTED',
+  /** The plugin has no usable native backend installed for this host. */
+  FAILED_PRECONDITION: 'FAILED_PRECONDITION',
+} as const
+
+export type NativeErrorCode = (typeof NATIVE_ERROR_CODES)[keyof typeof NATIVE_ERROR_CODES]
+
 interface NativeBackendDescriptor {
   executablePath: string
   sha256: string
@@ -52,28 +69,40 @@ export class PluginNativeBackendManager {
       this.restartBlockedPlugins.has(pluginId) ||
       (this.blockedPlugins.get(pluginId) ?? 0) > 0
     ) {
-      throw new Error(`native backend for plugin "${pluginId}" is temporarily unavailable`)
+      throw nativeError(`native backend for plugin "${pluginId}" is temporarily unavailable`, 'UNAVAILABLE')
     }
     const cooldownUntil = this.restartCooldowns.get(pluginId)
     if (cooldownUntil !== undefined) {
       const remaining = cooldownUntil - Date.now()
       if (remaining > 0) {
-        throw new Error(`native backend for plugin "${pluginId}" is in restart cooldown (${remaining}ms remaining)`)
+        throw nativeError(
+          `native backend for plugin "${pluginId}" is in restart cooldown (${remaining}ms remaining)`,
+          'UNAVAILABLE',
+        )
       }
       this.restartCooldowns.delete(pluginId)
     }
-    if (!METHOD_PATTERN.test(method)) throw new Error('native backend method must be a fully qualified Protobuf method')
-    if (!(payload instanceof Uint8Array)) throw new Error('native backend payload must be a Uint8Array')
+    if (!METHOD_PATTERN.test(method)) {
+      throw nativeError('native backend method must be a fully qualified Protobuf method', 'INVALID_ARGUMENT')
+    }
+    if (!(payload instanceof Uint8Array)) {
+      throw nativeError('native backend payload must be a Uint8Array', 'INVALID_ARGUMENT')
+    }
     let backend = this.processes.get(pluginId)
     if (!backend) {
-      const descriptor = this.resolveBackend(pluginId)
-      verifyExecutable(descriptor)
+      let descriptor: NativeBackendDescriptor
+      try {
+        descriptor = this.resolveBackend(pluginId)
+        verifyExecutable(descriptor)
+      } catch (error) {
+        throw toNativeError(error, 'FAILED_PRECONDITION')
+      }
       let child: ChildProcessWithoutNullStreams
       try {
         child = this.spawnBackend(descriptor.executablePath)
       } catch (error) {
         this.restartCooldowns.set(pluginId, Date.now() + RESTART_COOLDOWN_MS)
-        throw new Error(`native backend failed to start: ${(error as Error).message}`)
+        throw nativeError(`native backend failed to start: ${(error as Error).message}`, 'UNAVAILABLE')
       }
       backend = new NativeBackendProcess(pluginId, descriptor.service, child, {
         failed: () => this.restartCooldowns.set(pluginId, Date.now() + RESTART_COOLDOWN_MS),
@@ -94,14 +123,21 @@ export class PluginNativeBackendManager {
     if (this.processes.get(pluginId) === backend) this.processes.delete(pluginId)
   }
 
+  /** Stops every backend, keeping the ones that refused to die in the map so a later
+   * stop can re-issue the escalation, and reports the plugins that stayed alive. */
   async stopAll(): Promise<void> {
-    const backends = [...this.processes.values()]
-    await Promise.all(backends.map((backend) => backend.stop()))
-    for (const backend of backends) {
-      for (const [pluginId, current] of this.processes) {
-        if (current === backend) this.processes.delete(pluginId)
+    const entries = [...this.processes.entries()]
+    const results = await Promise.allSettled(entries.map(([, backend]) => backend.stop()))
+    const failedIds: string[] = []
+    for (const [index, result] of results.entries()) {
+      const [pluginId, backend] = entries[index]
+      if (result.status === 'rejected') {
+        failedIds.push(pluginId)
+        continue
       }
+      if (this.processes.get(pluginId) === backend) this.processes.delete(pluginId)
     }
+    if (failedIds.length > 0) throw new Error(`native backends failed to stop: ${failedIds.join(', ')}`)
   }
 
   async shutdown(): Promise<void> {
@@ -202,7 +238,7 @@ class NativeBackendProcess {
   private stdoutBuffer: Buffer<ArrayBufferLike> = Buffer.alloc(0)
   private stderr = ''
   private stopped = false
-  private terminalError: Error | null = null
+  private terminalError: NativeCallError | null = null
   private writeBlocked = false
   private queuedWriteBytes = 0
   private readonly queuedWrites: Array<{ id: number; frame: Buffer }> = []
@@ -229,36 +265,39 @@ class NativeBackendProcess {
     child.stderr.setEncoding('utf8')
     child.stdout.on('data', (chunk: Buffer) => this.acceptStdout(chunk))
     child.stdout.on('error', (error) => {
-      if (!this.stopped) this.fail(new Error(`native backend stdout failed: ${error.message}`))
+      if (!this.stopped) this.fail(nativeError(`native backend stdout failed: ${error.message}`, 'UNAVAILABLE'))
     })
     child.stderr.on('data', (chunk: string) => {
       this.stderr = `${this.stderr}${chunk}`.slice(-MAX_STDERR_BYTES)
     })
     child.stderr.on('error', (error) => {
-      if (!this.stopped) this.fail(new Error(`native backend stderr failed: ${error.message}`))
+      if (!this.stopped) this.fail(nativeError(`native backend stderr failed: ${error.message}`, 'UNAVAILABLE'))
     })
     child.stdin.on('drain', () => {
       this.writeBlocked = false
       this.flushWrites()
     })
     child.stdin.on('error', (error) => {
-      if (!this.stopped) this.fail(new Error(`native backend stdin failed: ${error.message}`))
+      if (!this.stopped) this.fail(nativeError(`native backend stdin failed: ${error.message}`, 'UNAVAILABLE'))
     })
-    child.on('error', (error) => this.fail(new Error(`native backend process error: ${error.message}`)))
+    child.on('error', (error) =>
+      this.fail(nativeError(`native backend process error: ${error.message}`, 'UNAVAILABLE')),
+    )
     child.once('exit', (code, signal) => {
       confirmExit()
       if (this.stopped) return this.reportExit()
       const detail = this.stderr.trim()
       this.fail(
-        new Error(
+        nativeError(
           `native backend exited (${signal ? `signal ${signal}` : `code ${String(code)}`})${detail ? `: ${detail}` : ''}`,
+          'UNAVAILABLE',
         ),
       )
       this.reportExit()
     })
     child.once('close', () => {
       confirmExit()
-      if (!this.stopped) this.fail(new Error('native backend closed unexpectedly'))
+      if (!this.stopped) this.fail(nativeError('native backend closed unexpectedly', 'UNAVAILABLE'))
       this.reportExit()
     })
     this.ready = this.request(
@@ -276,25 +315,31 @@ class NativeBackendProcess {
         body.value.pluginId !== pluginId ||
         body.value.service !== service
       ) {
-        throw new Error('native backend returned an invalid protocol handshake')
+        throw nativeError('native backend returned an invalid protocol handshake', 'UNAVAILABLE')
       }
     })
-    this.ready.catch((error) => this.fail(error instanceof Error ? error : new Error(String(error))))
+    this.ready.catch((error) => this.fail(toNativeError(error, 'UNAVAILABLE')))
   }
 
   async call(method: string, payload: Uint8Array): Promise<Uint8Array> {
     if (!method.startsWith(`/${this.service}/`)) {
-      throw new Error(`native backend method must belong to service "${this.service}"`)
+      throw nativeError(`native backend method must belong to service "${this.service}"`, 'INVALID_ARGUMENT')
     }
     const body = await this.request({ case: 'callRequest', value: { method, payload } }, method, 'callResponse')
-    if (body.case !== 'callResponse') throw new Error('native backend returned an invalid call response')
+    if (body.case !== 'callResponse')
+      throw nativeError('native backend returned an invalid call response', 'UNAVAILABLE')
     return Uint8Array.from(body.value.payload)
   }
 
+  /** A rejected stop is forgotten so the next stop re-issues the SIGTERM/SIGKILL escalation. */
   async stop(): Promise<void> {
     if (this.stopPromise) return this.stopPromise
-    this.stopPromise = this.stopConfirmed()
-    return this.stopPromise
+    const attempt: Promise<void> = this.stopConfirmed().catch((error: unknown) => {
+      if (this.stopPromise === attempt) this.stopPromise = null
+      throw error
+    })
+    this.stopPromise = attempt
+    return attempt
   }
 
   private async stopConfirmed(): Promise<void> {
@@ -302,10 +347,12 @@ class NativeBackendProcess {
       this.reportExit()
       return
     }
-    this.stopped = true
-    this.terminalError = new Error('native backend stopped')
-    this.rejectPending(this.terminalError)
-    this.child.stdin.end()
+    if (!this.stopped) {
+      this.stopped = true
+      this.terminalError = nativeError('native backend stopped', 'UNAVAILABLE')
+      this.rejectPending(this.terminalError)
+      this.child.stdin.end()
+    }
     if (await this.waitForExit()) return
     this.child.kill('SIGTERM')
     if (await this.waitForExit()) return
@@ -317,7 +364,7 @@ class NativeBackendProcess {
   stopNow(): void {
     if (!this.stopped) {
       this.stopped = true
-      this.terminalError = new Error('native backend stopped')
+      this.terminalError = nativeError('native backend stopped', 'UNAVAILABLE')
       this.rejectPending(this.terminalError)
       this.child.stdin.end()
     }
@@ -330,13 +377,15 @@ class NativeBackendProcess {
     responseCase: PendingCall['responseCase'],
     requestId?: number,
   ): Promise<NativeFrame['body']> {
-    if (this.stopped) return Promise.reject(this.terminalError ?? new Error('native backend is unavailable'))
+    if (this.stopped) {
+      return Promise.reject(this.terminalError ?? nativeError('native backend is unavailable', 'UNAVAILABLE'))
+    }
     if (this.pending.size >= MAX_IN_FLIGHT)
-      return Promise.reject(new Error('native backend has too many in-flight calls'))
+      return Promise.reject(nativeError('native backend has too many in-flight calls', 'RESOURCE_EXHAUSTED'))
     const id = requestId ?? this.nextId++
     const payload = toBinary(NativeFrameSchema, create(NativeFrameSchema, { requestId: id, body }))
     if (payload.byteLength === 0 || payload.byteLength > MAX_FRAME_BYTES) {
-      return Promise.reject(new Error('native backend request is too large'))
+      return Promise.reject(nativeError('native backend request is too large', 'RESOURCE_EXHAUSTED'))
     }
     const frame = Buffer.allocUnsafe(4 + payload.byteLength)
     frame.writeUInt32LE(payload.byteLength, 0)
@@ -344,7 +393,7 @@ class NativeBackendProcess {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id)
-        const error = new Error(`native backend call "${label}" timed out`)
+        const error = nativeError(`native backend call "${label}" timed out`, 'DEADLINE_EXCEEDED')
         reject(error)
         this.fail(error)
       }, CALL_TIMEOUT_MS)
@@ -353,7 +402,7 @@ class NativeBackendProcess {
         if (this.queuedWriteBytes + frame.byteLength > MAX_QUEUED_STDIN_BYTES) {
           clearTimeout(timer)
           this.pending.delete(id)
-          reject(new Error('native backend stdin queue is full'))
+          reject(nativeError('native backend stdin queue is full', 'RESOURCE_EXHAUSTED'))
           return
         }
         this.queuedWrites.push({ id, frame })
@@ -368,7 +417,7 @@ class NativeBackendProcess {
     this.writeBlocked = !this.child.stdin.write(frame, (error) => {
       if (!error) return
       if (!this.pending.has(id)) return
-      this.fail(new Error(`native backend write failed: ${error.message}`))
+      this.fail(nativeError(`native backend write failed: ${error.message}`, 'UNAVAILABLE'))
     })
   }
 
@@ -389,7 +438,7 @@ class NativeBackendProcess {
       if (this.stdoutBuffer.length < 4) return
       const length = this.stdoutBuffer.readUInt32LE(0)
       if (length === 0 || length > MAX_FRAME_BYTES) {
-        this.fail(new Error('native backend response is too large'))
+        this.fail(nativeError('native backend response is too large', 'UNAVAILABLE'))
         return
       }
       if (this.stdoutBuffer.length < 4 + length) return
@@ -405,12 +454,12 @@ class NativeBackendProcess {
     try {
       response = fromBinary(NativeFrameSchema, payload)
     } catch {
-      this.fail(new Error('native backend emitted a malformed Protobuf frame'))
+      this.fail(nativeError('native backend emitted a malformed Protobuf frame', 'UNAVAILABLE'))
       return
     }
     const pending = this.pending.get(response.requestId)
     if (!pending) {
-      this.fail(new Error(`native backend responded with unknown request id ${response.requestId}`))
+      this.fail(nativeError(`native backend responded with unknown request id ${response.requestId}`, 'UNAVAILABLE'))
       return
     }
     clearTimeout(pending.timer)
@@ -419,8 +468,9 @@ class NativeBackendProcess {
       response.body.case === pending.responseCase ||
       (pending.responseCase === 'callResponse' && response.body.case === 'callError')
     if (!validResponse) {
-      const error = new Error(
+      const error = nativeError(
         `native backend emitted ${response.body.case || 'an empty body'} for a pending ${pending.responseCase === 'initializeResponse' ? 'initialize' : 'call'} request`,
+        'UNAVAILABLE',
       )
       pending.reject(error)
       this.fail(error)
@@ -441,8 +491,8 @@ class NativeBackendProcess {
   private fail(error: Error): void {
     if (this.stopped) return
     this.stopped = true
-    this.terminalError = error
-    this.rejectPending(error)
+    this.terminalError = toNativeError(error, 'UNAVAILABLE')
+    this.rejectPending(this.terminalError)
     if (!this.failureReported) {
       this.failureReported = true
       this.events.failed()
@@ -489,17 +539,29 @@ export class NativeCallError extends Error {
   }
 }
 
+function nativeError(message: string, code: NativeErrorCode): NativeCallError {
+  return new NativeCallError(message, code)
+}
+
+function toNativeError(error: unknown, code: NativeErrorCode): NativeCallError {
+  if (error instanceof NativeCallError) return error
+  return new NativeCallError(error instanceof Error ? error.message : String(error), code)
+}
+
 function resolveInstalledBackend(pluginId: string): NativeBackendDescriptor {
   const installed = getInstalledPlugins().find((entry) => entry.manifest.id === pluginId)
-  if (!installed) throw new Error(`plugin "${pluginId}" is not installed`)
+  if (!installed) throw nativeError(`plugin "${pluginId}" is not installed`, 'FAILED_PRECONDITION')
   const backend = installed.manifest.nativeBackend
-  if (!backend) throw new Error(`plugin "${pluginId}" does not declare a native backend`)
+  if (!backend) throw nativeError(`plugin "${pluginId}" does not declare a native backend`, 'FAILED_PRECONDITION')
   const targetName = nativeTargetForHost()
   if (!targetName) {
-    throw new Error(`plugin "${pluginId}" has no native backend for ${process.platform}-${process.arch}`)
+    throw nativeError(
+      `plugin "${pluginId}" has no native backend for ${process.platform}-${process.arch}`,
+      'FAILED_PRECONDITION',
+    )
   }
   const target = backend.targets[targetName]
-  if (!target) throw new Error(`plugin "${pluginId}" has no native backend for ${targetName}`)
+  if (!target) throw nativeError(`plugin "${pluginId}" has no native backend for ${targetName}`, 'FAILED_PRECONDITION')
   return { executablePath: join(pluginDir(pluginId), target.file), sha256: target.sha256, service: backend.service }
 }
 
@@ -508,11 +570,14 @@ function verifyExecutable(descriptor: NativeBackendDescriptor): void {
   try {
     bytes = readFileSync(descriptor.executablePath)
   } catch (error) {
-    throw new Error(`native backend executable cannot be read: ${(error as Error).message}`)
+    throw nativeError(`native backend executable cannot be read: ${(error as Error).message}`, 'FAILED_PRECONDITION')
   }
   const actual = createHash('sha256').update(bytes).digest('hex')
   if (actual !== descriptor.sha256) {
-    throw new Error(`native backend executable checksum mismatch (expected ${descriptor.sha256}, got ${actual})`)
+    throw nativeError(
+      `native backend executable checksum mismatch (expected ${descriptor.sha256}, got ${actual})`,
+      'FAILED_PRECONDITION',
+    )
   }
 }
 
