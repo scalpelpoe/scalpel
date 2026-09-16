@@ -2,6 +2,7 @@ import { describe, expectTypeOf, it } from 'vitest'
 import type {
   PluginActivate,
   PluginManifest,
+  PluginNativeCallError,
   PluginStorage,
   PluginTeardown,
   RegisterHotkeyOptions,
@@ -85,6 +86,14 @@ describe('ScalpelPluginContext', () => {
     expectTypeOf(ctx.storage.delete).toBeFunction()
     expectTypeOf(ctx.storage.keys).toBeFunction()
     expectTypeOf(ctx.storage.get<number>('x')).resolves.toEqualTypeOf<number | null>()
+  })
+})
+
+describe('PluginNativeCallError', () => {
+  it('is an Error carrying the native call code', () => {
+    expectTypeOf<PluginNativeCallError>().toMatchTypeOf<Error>()
+    expectTypeOf<PluginNativeCallError['code']>().toEqualTypeOf<string>()
+    expectTypeOf<PluginNativeCallError['name']>().toEqualTypeOf<'NativeCallError'>()
   })
 })
 

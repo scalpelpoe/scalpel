@@ -222,6 +222,50 @@ describe('PluginHost', () => {
     expect(consumerActivate).not.toHaveBeenCalled()
   })
 
+  it('unregisters the tab and hotkey with main when a provider fails activation', async () => {
+    const providerManifest: PluginManifest = {
+      ...manifest,
+      id: 'provider',
+      api: {
+        version: '1.0.0',
+        contract: 'api.binpb',
+        service: 'example.v1.Provider',
+      },
+    }
+    const providerActivate = vi.fn((ctx: ScalpelPluginContext) => {
+      ctx.registerTab({ label: 'P', icon: '<svg/>', render: () => {} })
+      ctx.registerHotkey({ label: 'H' }, () => {})
+      // never calls ctx.plugins.expose, so assertActivationComplete throws
+    })
+    installedList.push({ manifest: providerManifest, entryUrl: 'plugin://provider' })
+    ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn(async () => ({
+      default: providerActivate,
+    }))
+    const { PluginHost } = await import('./PluginHost')
+    const onError = vi.fn()
+    render(
+      <PluginHost
+        ready
+        poeVersion={1}
+        league="Mirage"
+        currentItem={null}
+        currentZone={null}
+        onSubscribeCurrentItem={() => () => {}}
+        onSubscribeCurrentZone={() => () => {}}
+        onSubscribeLeagueChange={() => () => {}}
+        onOpenExternal={() => {}}
+        onTabsChange={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
+        onPluginError={onError}
+      />,
+    )
+
+    await waitFor(() => expect(onError).toHaveBeenCalledWith('provider', expect.any(Error)))
+    expect(window.api.pluginUnregisterTab).toHaveBeenCalledWith('provider')
+    expect(window.api.pluginUnregisterHotkey).toHaveBeenCalledWith('provider')
+  })
+
   it('does not label a statically unavailable plugin as crashed', async () => {
     installedList.push({
       manifest: {

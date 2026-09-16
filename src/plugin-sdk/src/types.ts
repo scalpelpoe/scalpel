@@ -70,8 +70,19 @@ export interface PluginCommunicationApi {
   get(pluginId: string, serviceTypeName: string): PluginApiClient | null
 }
 
+/** Rejection type of PluginNativeBackendApi.call. `code` is the worker's CallError code, or one of the host codes
+ *  UNAVAILABLE, DEADLINE_EXCEEDED, INVALID_ARGUMENT, RESOURCE_EXHAUSTED, FAILED_PRECONDITION, INTERNAL. */
+export interface PluginNativeCallError extends Error {
+  readonly name: 'NativeCallError'
+  readonly code: string
+}
+
 export interface PluginNativeBackendApi {
-  /** Call this plugin's declared, author-supplied, unsandboxed native backend with a Protobuf payload. */
+  /**
+   * Call this plugin's declared, author-supplied, unsandboxed native backend with a Protobuf payload.
+   * Rejects with a {@link PluginNativeCallError} - an Error whose `name` is 'NativeCallError' and whose
+   * `code` identifies the failure.
+   */
   call(method: string, payload: Uint8Array): Promise<Uint8Array>
 }
 

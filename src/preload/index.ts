@@ -940,16 +940,15 @@ export const api = {
   pluginStorageDelete: (pluginId: string, key: string): Promise<void> =>
     ipcRenderer.invoke('plugins:storage-delete', pluginId, key),
   pluginStorageKeys: (pluginId: string): Promise<string[]> => ipcRenderer.invoke('plugins:storage-keys', pluginId),
-  pluginNativeCall: async (pluginId: string, method: string, payload: Uint8Array): Promise<Uint8Array> => {
-    const result = (await ipcRenderer.invoke('plugins:native-call', pluginId, method, payload)) as
-      | { ok: true; payload: Uint8Array }
-      | { ok: false; error: { message: string; code: string } }
-    if (result.ok) return result.payload
-    const error = new Error(result.error.message) as Error & { code: string }
-    error.name = 'NativeCallError'
-    error.code = result.error.code
-    throw error
-  },
+  // Resolves the result as-is: an Error thrown here crosses contextBridge as a
+  // message-only copy, dropping `name`/`code`. The renderer rebuilds the
+  // rejection (see renderer/src/plugins/native-call.ts).
+  pluginNativeCall: (
+    pluginId: string,
+    method: string,
+    payload: Uint8Array,
+  ): Promise<{ ok: true; payload: Uint8Array } | { ok: false; error: { message: string; code: string } }> =>
+    ipcRenderer.invoke('plugins:native-call', pluginId, method, payload),
   pluginRegisterHotkey: (pluginId: string, label: string): Promise<void> =>
     ipcRenderer.invoke('plugins:register-hotkey', pluginId, label),
   pluginListRegisteredHotkeys: (): Promise<Array<{ action: string; pluginId: string; label: string }>> =>
@@ -978,7 +977,7 @@ export const api = {
     entry: import('@shared/plugin-registry-types').RegistryEntry,
   ): Promise<{ ok: true; id: string; restartRequired: true } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:update-from-registry', entry),
-  pluginUninstall: (pluginId: string): Promise<{ ok: true; restartRequired: true } | { ok: false; error: string }> =>
+  pluginUninstall: (pluginId: string): Promise<{ ok: true; restartRequired?: true } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:uninstall', pluginId),
   pluginRestartRequired: (): Promise<boolean> => ipcRenderer.invoke('plugins:restart-required'),
   onPluginRestartRequired: (handler: () => void): (() => void) => {

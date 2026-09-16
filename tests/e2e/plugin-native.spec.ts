@@ -113,8 +113,11 @@ test('calls an installed Rust backend through Electron IPC', async () => {
     }
 
     const responseBytes = await scalpel.window.evaluate(
-      async ({ method, payload }) =>
-        Array.from(await window.api.pluginNativeCall('native-item-analyzer', method, Uint8Array.from(payload))),
+      async ({ method, payload }) => {
+        const result = await window.api.pluginNativeCall('native-item-analyzer', method, Uint8Array.from(payload))
+        if (!result.ok) throw new Error(`${result.error.code}: ${result.error.message}`)
+        return Array.from(result.payload)
+      },
       { method: METHOD, payload: Array.from(request) },
     )
     const response = fromBinary(AnalyzeItemResponseSchema, Uint8Array.from(responseBytes))

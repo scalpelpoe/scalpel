@@ -4,6 +4,7 @@ import type { PluginActivate, PluginManifest } from '../../../plugin-sdk/src/typ
 import { createPluginContext } from './context'
 import { resolveLeagueOptions } from '@renderer/shared/league-options'
 import { importPluginModule } from './import-plugin-module'
+import { callNativeBackend } from './native-call'
 import { PluginCommunicationRuntime } from './plugin-communication'
 import { planPluginLoad } from './plugin-dependencies'
 
@@ -85,210 +86,11 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     props.onTabsChange(tabs)
   }, [tabs, props.onTabsChange])
 
-  // Extracted per-plugin load logic used by both the initial-load loop and the
-  // dev hot-install event handler. Wrapped in useCallback([]) so identity is stable
-  // across renders; all prop callbacks are read through refs.
-  const loadPlugin = useCallback(async (entry: { manifest: PluginManifest; entryUrl: string }): Promise<boolean> => {
-    const m = entry.manifest
-    if (m.poeVersions && !m.poeVersions.includes(poeVersionRef.current)) return false
-    const disposers: Array<() => void> = []
-    let activationTeardown: (() => void) | undefined
-    try {
-      communicationRef.current.assertDependenciesAvailable(m)
-      const mod = (await importPluginModule(entry.entryUrl)) as {
-        default: PluginActivate
-      }
-      if (typeof mod.default !== 'function') {
-        throw new Error('plugin module has no default export function')
-      }
-      const ctx = createPluginContext({
-        pluginId: m.id,
-        pluginVersion: m.version,
-        plugins: communicationRef.current.createApi(m),
-        nativeCall: (method, params) => window.api.pluginNativeCall(m.id, method, params),
-        getPoeVersion: () => poeVersionRef.current,
-        getLeague: () => leagueRef.current,
-        // `version` arrives already defaulted to the current game by context.ts,
-        // so it is always concrete here (unlike use-activate-plugin's inline ctx).
-        getLeagues: async (version) => resolveLeagueOptions(await window.api.getSettings().catch(() => null), version),
-        getCurrentItem: () => currentItemRef.current,
-        getCurrentZone: () => currentZoneRef.current,
-        subscribeCurrentItem: (h) => {
-          const u = onSubscribeCurrentItemRef.current(h)
-          disposers.push(u)
-          return u
-        },
-        subscribeCurrentZone: (h) => {
-          const u = onSubscribeCurrentZoneRef.current(h)
-          disposers.push(u)
-          return u
-        },
-        subscribeLeagueChange: (h) => {
-          const u = onSubscribeLeagueChangeRef.current(h)
-          disposers.push(u)
-          return u
-        },
-        onLogLine: (h) => {
-          const u = window.api.onLogLine(h)
-          disposers.push(u)
-          return u
-        },
-        getRecentLogLines: (count) => window.api.getRecentLogLines(count),
-        openExternal: (url) => onOpenExternalRef.current(url),
-        storage: {
-          get: (key) => window.api.pluginStorageGet(m.id, key),
-          set: (key, value) => window.api.pluginStorageSet(m.id, key, value),
-          delete: (key) => window.api.pluginStorageDelete(m.id, key),
-          keys: () => window.api.pluginStorageKeys(m.id),
-        },
-        gameConfig: {
-          read: () => window.api.gameConfigRead(),
-          write: (content) => window.api.gameConfigWrite(content),
-          onChange: (handler) => {
-            const u = window.api.onGameConfigChange(handler)
-            disposers.push(u)
-            return u
-          },
-        },
-        prices: {
-          getPrices: (opts) => window.api.pricesGet(opts),
-          refresh: () => window.api.pricesRefresh(),
-          onChange: (handler) => {
-            const u = window.api.onPricesChange(handler)
-            disposers.push(u)
-            return u
-          },
-        },
-        registerTab: (pluginId, opts) => {
-          setTabs((prev) => {
-            if (prev.find((t) => t.pluginId === pluginId)) return prev
-            return [
-              ...prev,
-              {
-                pluginId,
-                ...opts,
-                overlay: pendingOverlayRef.current.get(pluginId),
-              },
-            ]
-          })
-          // Mirror registerHotkey: report to main so any window (incl. the
-          // standalone app settings) can list this tab for the Show/Hide UI.
-          void window.api.pluginRegisterTab(pluginId, opts.label, opts.icon)
-        },
-        registerHotkey: (pluginId, opts, handler) => {
-          pluginHotkeyHandlersRef.current.set(pluginId, handler)
-          void window.api.pluginRegisterHotkey(pluginId, opts.label)
-        },
-        openTab: (pluginId) => onOpenPluginTabRef.current(pluginId),
-        copyAndEvaluateItem: (opts) => onCopyAndEvaluateItemRef.current(opts),
-        registerOverlay: (pluginId, opts) => {
-          pendingOverlayRef.current.set(pluginId, {
-            title: opts.title,
-            icon: opts.icon,
-            mode: opts.mode,
-          })
-          setTabs((prev) =>
-            prev.map((t) =>
-              t.pluginId === pluginId
-                ? {
-                    ...t,
-                    overlay: {
-                      title: opts.title,
-                      icon: opts.icon,
-                      mode: opts.mode,
-                    },
-                  }
-                : t,
-            ),
-          )
-          void window.api.pluginRegisterOverlay(pluginId, {
-            title: opts.title,
-            hotkeyLabel: opts.hotkeyLabel,
-            defaultSize: opts.defaultSize,
-            defaultPosition: opts.defaultPosition,
-            snapPositions: opts.snapPositions,
-            mode: opts.mode,
-          })
-        },
-        openOverlay: (pluginId) => void window.api.pluginOpenOverlay(pluginId),
-        closeOverlay: (pluginId) => void window.api.pluginCloseOverlay(pluginId),
-        captureGameWindow: (region) => window.api.pluginCaptureGameWindow(region),
-        getCursorPosition: () => window.api.pluginGetCursorPosition(),
-        media: {
-          getSession: () => window.api.pluginMediaGetSession(),
-          onChange: (handler) => {
-            const u = window.api.onMediaChange(handler)
-            disposers.push(u)
-            return u
-          },
-          playPause: () => window.api.pluginMediaCommand('play-pause'),
-          next: () => window.api.pluginMediaCommand('next'),
-          previous: () => window.api.pluginMediaCommand('previous'),
-        },
-      })
-      pluginDisposersRef.current.set(m.id, disposers)
-      // PluginActivate may be async and may return a teardown fn (host runtime
-      // honors it regardless of the SDK's published type; see the SDK task).
-      const teardown = await mod.default(ctx)
-      if (typeof teardown === 'function') activationTeardown = teardown
-      communicationRef.current.assertActivationComplete(m)
-      if (activationTeardown) {
-        pluginTeardownRef.current.set(m.id, activationTeardown)
-      }
-      activePluginIdsRef.current.add(m.id)
-      return true
-    } catch (err) {
-      // activate() may have subscribed before throwing; dispose what it set up
-      // so a failed load does not leak subscriptions.
-      for (const dispose of disposers) {
-        try {
-          dispose()
-        } catch {
-          // ignore: one bad unsubscribe must not block the rest
-        }
-      }
-      try {
-        activationTeardown?.()
-      } catch {
-        // A failed plugin's teardown must not block failure propagation.
-      }
-      pluginDisposersRef.current.delete(m.id)
-      pluginTeardownRef.current.delete(m.id)
-      activePluginIdsRef.current.delete(m.id)
-      communicationRef.current.remove(m.id)
-      setTabs((prev) => prev.filter((tab) => tab.pluginId !== m.id))
-      pluginHotkeyHandlersRef.current.delete(m.id)
-      pendingOverlayRef.current.delete(m.id)
-      onPluginErrorRef.current?.(m.id, err instanceof Error ? err : new Error(String(err)))
-      return false
-    }
-  }, [])
-
-  // Fully tear a plugin down: run its teardown fn, drop all tracked
-  // subscriptions, remove its tab/hotkey/overlay state, and tell main to
-  // unregister. Used by both hot-uninstall and update-reload.
-  const unloadPlugin = useCallback((pluginId: string): void => {
-    const teardown = pluginTeardownRef.current.get(pluginId)
-    if (teardown) {
-      try {
-        teardown()
-      } catch (err) {
-        onPluginErrorRef.current?.(pluginId, err instanceof Error ? err : new Error(String(err)))
-      }
-      pluginTeardownRef.current.delete(pluginId)
-    }
-    const disposers = pluginDisposersRef.current.get(pluginId)
-    if (disposers) {
-      for (const dispose of disposers) {
-        try {
-          dispose()
-        } catch {
-          // A misbehaving unsubscribe must not block the rest of teardown.
-        }
-      }
-      pluginDisposersRef.current.delete(pluginId)
-    }
-    setTabs((prev) => prev.filter((t) => t.pluginId !== pluginId))
+  // Renderer+main cleanup shared by unloadPlugin and a failed loadPlugin: drop
+  // the tab/hotkey/overlay/communication state and tell main to unregister the
+  // tab and hotkey so a crashed activation leaves no ghost registrations behind.
+  const discardPluginRegistrations = useCallback((pluginId: string): void => {
+    setTabs((prev) => prev.filter((tab) => tab.pluginId !== pluginId))
     pluginHotkeyHandlersRef.current.delete(pluginId)
     pendingOverlayRef.current.delete(pluginId)
     activePluginIdsRef.current.delete(pluginId)
@@ -296,6 +98,215 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     void window.api.pluginUnregisterHotkey(pluginId)
     void window.api.pluginUnregisterTab(pluginId)
   }, [])
+
+  // Extracted per-plugin load logic used by both the initial-load loop and the
+  // dev hot-install event handler. Wrapped in useCallback([]) so identity is stable
+  // across renders; all prop callbacks are read through refs.
+  const loadPlugin = useCallback(
+    async (entry: { manifest: PluginManifest; entryUrl: string }): Promise<boolean> => {
+      const m = entry.manifest
+      if (m.poeVersions && !m.poeVersions.includes(poeVersionRef.current)) return false
+      const disposers: Array<() => void> = []
+      let activationTeardown: (() => void) | undefined
+      try {
+        communicationRef.current.assertDependenciesAvailable(m)
+        const mod = (await importPluginModule(entry.entryUrl)) as {
+          default: PluginActivate
+        }
+        if (typeof mod.default !== 'function') {
+          throw new Error('plugin module has no default export function')
+        }
+        const ctx = createPluginContext({
+          pluginId: m.id,
+          pluginVersion: m.version,
+          plugins: communicationRef.current.createApi(m),
+          nativeCall: (method, payload) => callNativeBackend(m.id, method, payload),
+          getPoeVersion: () => poeVersionRef.current,
+          getLeague: () => leagueRef.current,
+          // `version` arrives already defaulted to the current game by context.ts,
+          // so it is always concrete here (unlike use-activate-plugin's inline ctx).
+          getLeagues: async (version) =>
+            resolveLeagueOptions(await window.api.getSettings().catch(() => null), version),
+          getCurrentItem: () => currentItemRef.current,
+          getCurrentZone: () => currentZoneRef.current,
+          subscribeCurrentItem: (h) => {
+            const u = onSubscribeCurrentItemRef.current(h)
+            disposers.push(u)
+            return u
+          },
+          subscribeCurrentZone: (h) => {
+            const u = onSubscribeCurrentZoneRef.current(h)
+            disposers.push(u)
+            return u
+          },
+          subscribeLeagueChange: (h) => {
+            const u = onSubscribeLeagueChangeRef.current(h)
+            disposers.push(u)
+            return u
+          },
+          onLogLine: (h) => {
+            const u = window.api.onLogLine(h)
+            disposers.push(u)
+            return u
+          },
+          getRecentLogLines: (count) => window.api.getRecentLogLines(count),
+          openExternal: (url) => onOpenExternalRef.current(url),
+          storage: {
+            get: (key) => window.api.pluginStorageGet(m.id, key),
+            set: (key, value) => window.api.pluginStorageSet(m.id, key, value),
+            delete: (key) => window.api.pluginStorageDelete(m.id, key),
+            keys: () => window.api.pluginStorageKeys(m.id),
+          },
+          gameConfig: {
+            read: () => window.api.gameConfigRead(),
+            write: (content) => window.api.gameConfigWrite(content),
+            onChange: (handler) => {
+              const u = window.api.onGameConfigChange(handler)
+              disposers.push(u)
+              return u
+            },
+          },
+          prices: {
+            getPrices: (opts) => window.api.pricesGet(opts),
+            refresh: () => window.api.pricesRefresh(),
+            onChange: (handler) => {
+              const u = window.api.onPricesChange(handler)
+              disposers.push(u)
+              return u
+            },
+          },
+          registerTab: (pluginId, opts) => {
+            setTabs((prev) => {
+              if (prev.find((t) => t.pluginId === pluginId)) return prev
+              return [
+                ...prev,
+                {
+                  pluginId,
+                  ...opts,
+                  overlay: pendingOverlayRef.current.get(pluginId),
+                },
+              ]
+            })
+            // Mirror registerHotkey: report to main so any window (incl. the
+            // standalone app settings) can list this tab for the Show/Hide UI.
+            void window.api.pluginRegisterTab(pluginId, opts.label, opts.icon)
+          },
+          registerHotkey: (pluginId, opts, handler) => {
+            pluginHotkeyHandlersRef.current.set(pluginId, handler)
+            void window.api.pluginRegisterHotkey(pluginId, opts.label)
+          },
+          openTab: (pluginId) => onOpenPluginTabRef.current(pluginId),
+          copyAndEvaluateItem: (opts) => onCopyAndEvaluateItemRef.current(opts),
+          registerOverlay: (pluginId, opts) => {
+            pendingOverlayRef.current.set(pluginId, {
+              title: opts.title,
+              icon: opts.icon,
+              mode: opts.mode,
+            })
+            setTabs((prev) =>
+              prev.map((t) =>
+                t.pluginId === pluginId
+                  ? {
+                      ...t,
+                      overlay: {
+                        title: opts.title,
+                        icon: opts.icon,
+                        mode: opts.mode,
+                      },
+                    }
+                  : t,
+              ),
+            )
+            void window.api.pluginRegisterOverlay(pluginId, {
+              title: opts.title,
+              hotkeyLabel: opts.hotkeyLabel,
+              defaultSize: opts.defaultSize,
+              defaultPosition: opts.defaultPosition,
+              snapPositions: opts.snapPositions,
+              mode: opts.mode,
+            })
+          },
+          openOverlay: (pluginId) => void window.api.pluginOpenOverlay(pluginId),
+          closeOverlay: (pluginId) => void window.api.pluginCloseOverlay(pluginId),
+          captureGameWindow: (region) => window.api.pluginCaptureGameWindow(region),
+          getCursorPosition: () => window.api.pluginGetCursorPosition(),
+          media: {
+            getSession: () => window.api.pluginMediaGetSession(),
+            onChange: (handler) => {
+              const u = window.api.onMediaChange(handler)
+              disposers.push(u)
+              return u
+            },
+            playPause: () => window.api.pluginMediaCommand('play-pause'),
+            next: () => window.api.pluginMediaCommand('next'),
+            previous: () => window.api.pluginMediaCommand('previous'),
+          },
+        })
+        pluginDisposersRef.current.set(m.id, disposers)
+        // PluginActivate may be async and may return a teardown fn (host runtime
+        // honors it regardless of the SDK's published type; see the SDK task).
+        const teardown = await mod.default(ctx)
+        if (typeof teardown === 'function') activationTeardown = teardown
+        communicationRef.current.assertActivationComplete(m)
+        if (activationTeardown) {
+          pluginTeardownRef.current.set(m.id, activationTeardown)
+        }
+        activePluginIdsRef.current.add(m.id)
+        return true
+      } catch (err) {
+        // activate() may have subscribed before throwing; dispose what it set up
+        // so a failed load does not leak subscriptions.
+        for (const dispose of disposers) {
+          try {
+            dispose()
+          } catch {
+            // ignore: one bad unsubscribe must not block the rest
+          }
+        }
+        try {
+          activationTeardown?.()
+        } catch {
+          // A failed plugin's teardown must not block failure propagation.
+        }
+        pluginDisposersRef.current.delete(m.id)
+        pluginTeardownRef.current.delete(m.id)
+        discardPluginRegistrations(m.id)
+        onPluginErrorRef.current?.(m.id, err instanceof Error ? err : new Error(String(err)))
+        return false
+      }
+    },
+    [discardPluginRegistrations],
+  )
+
+  // Fully tear a plugin down: run its teardown fn, drop all tracked
+  // subscriptions, remove its tab/hotkey/overlay state, and tell main to
+  // unregister. Used by both hot-uninstall and update-reload.
+  const unloadPlugin = useCallback(
+    (pluginId: string): void => {
+      const teardown = pluginTeardownRef.current.get(pluginId)
+      if (teardown) {
+        try {
+          teardown()
+        } catch (err) {
+          onPluginErrorRef.current?.(pluginId, err instanceof Error ? err : new Error(String(err)))
+        }
+        pluginTeardownRef.current.delete(pluginId)
+      }
+      const disposers = pluginDisposersRef.current.get(pluginId)
+      if (disposers) {
+        for (const dispose of disposers) {
+          try {
+            dispose()
+          } catch {
+            // A misbehaving unsubscribe must not block the rest of teardown.
+          }
+        }
+        pluginDisposersRef.current.delete(pluginId)
+      }
+      discardPluginRegistrations(pluginId)
+    },
+    [discardPluginRegistrations],
+  )
 
   const reconcilePlugins = useCallback(
     async (

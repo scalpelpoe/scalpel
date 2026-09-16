@@ -17,6 +17,7 @@ export type {
   PluginDependency,
   PluginManifest,
   PluginNativeBackendApi,
+  PluginNativeCallError,
   PluginStorage,
   PluginTeardown,
   PriceEntry,
