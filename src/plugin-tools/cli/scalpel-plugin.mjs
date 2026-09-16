@@ -276,6 +276,51 @@ function validateConfig(projectDir, config, command) {
   if (config.native?.cargoManifest) {
     assertProjectPath(projectDir, config.native.cargoManifest, 'scalpelPlugin.native.cargoManifest')
   }
+  assertNoOutputInputOverlap(projectDir, config)
+}
+
+function assertNoOutputInputOverlap(projectDir, config) {
+  const outputPaths = (config.contracts ?? []).map((contract) => ({
+    field: 'contract.generated',
+    path: resolve(projectDir, contract.generated),
+  }))
+  outputPaths.push({ field: 'scalpelPlugin.outDir', path: resolve(projectDir, config.outDir ?? 'dist') })
+
+  const inputPaths = []
+  if (config.manifest) inputPaths.push({ field: 'scalpelPlugin.manifest', path: resolve(projectDir, config.manifest) })
+  if (config.entry) inputPaths.push({ field: 'scalpelPlugin.entry', path: resolve(projectDir, config.entry) })
+  inputPaths.push({ field: 'scalpelPlugin.bundle', path: resolve(projectDir, config.bundle ?? 'plugin.js') })
+  for (const contract of config.contracts ?? []) {
+    if (contract.source) inputPaths.push({ field: 'contract.source', path: resolve(projectDir, contract.source) })
+    if (contract.input) inputPaths.push({ field: 'contract.input', path: resolve(projectDir, contract.input) })
+    if (contract.descriptor) inputPaths.push({ field: 'contract.descriptor', path: resolve(projectDir, contract.descriptor) })
+  }
+  if (config.native?.cargoManifest) {
+    inputPaths.push({ field: 'scalpelPlugin.native.cargoManifest', path: resolve(projectDir, config.native.cargoManifest) })
+  }
+
+  for (const output of outputPaths) {
+    for (const input of inputPaths) {
+      if (isInsideOrEqual(output.path, input.path)) {
+        throw new Error(`${output.field} must not contain ${input.field} (${relative(projectDir, input.path)})`)
+      }
+    }
+  }
+  // pack's rmSync(outDir) and generateContracts' rmSync(contract.generated) both wipe their target
+  // directory, so no output directory may nest inside another one either.
+  for (const [i, outer] of outputPaths.entries()) {
+    for (const [j, inner] of outputPaths.entries()) {
+      if (i === j) continue
+      if (isInsideOrEqual(outer.path, inner.path)) {
+        throw new Error(`${outer.field} must not contain ${inner.field} (${relative(projectDir, inner.path)})`)
+      }
+    }
+  }
+}
+
+function isInsideOrEqual(parent, child) {
+  const fromParent = relative(parent, child)
+  return fromParent === '' || (!fromParent.startsWith('..') && !isAbsolute(fromParent))
 }
 
 function validateDescriptor(path, selectedService) {

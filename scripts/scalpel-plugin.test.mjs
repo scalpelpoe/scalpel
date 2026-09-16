@@ -113,4 +113,55 @@ describe('scalpel-plugin', () => {
 
     await expect(runScalpelPlugin('generate', project)).rejects.toThrow(/non-empty path/)
   })
+
+  it('rejects a generated directory that contains the entry it is regenerated from', async () => {
+    const project = mkdtempSync(join(tmpdir(), 'scalpel-plugin-overlap-'))
+    temporaryDirectories.push(project)
+    writeFileSync(
+      join(project, 'package.json'),
+      JSON.stringify({
+        scalpelPlugin: {
+          manifest: 'manifest.json',
+          entry: 'src/plugin.ts',
+          contracts: [{ source: 'proto', descriptor: 'api.binpb', generated: 'src' }],
+        },
+      }),
+    )
+
+    await expect(runScalpelPlugin('generate', project)).rejects.toThrow(/must not contain/)
+  })
+
+  it('rejects a generated directory that contains its own contract source', async () => {
+    const project = mkdtempSync(join(tmpdir(), 'scalpel-plugin-overlap-'))
+    temporaryDirectories.push(project)
+    writeFileSync(
+      join(project, 'package.json'),
+      JSON.stringify({
+        scalpelPlugin: {
+          contracts: [{ source: 'proto', descriptor: 'api.binpb', generated: 'proto' }],
+        },
+      }),
+    )
+
+    await expect(runScalpelPlugin('generate', project)).rejects.toThrow(/must not contain/)
+  })
+
+  it('rejects an outDir that contains the entry point', async () => {
+    const project = mkdtempSync(join(tmpdir(), 'scalpel-plugin-overlap-'))
+    temporaryDirectories.push(project)
+    writeFileSync(
+      join(project, 'package.json'),
+      JSON.stringify({
+        scalpelPlugin: {
+          manifest: 'manifest.json',
+          entry: 'src/plugin.ts',
+          outDir: 'src',
+        },
+      }),
+    )
+
+    // The overlap check runs inside validateConfig, before manifest/entry existence is verified, so
+    // neither manifest.json nor src/plugin.ts need to exist for this to reject.
+    await expect(runScalpelPlugin('pack', project)).rejects.toThrow(/must not contain/)
+  })
 })
