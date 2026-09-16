@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { compareVersions, versionMatches, findBrickedMatch, isValidVersionRange } from './version-match'
+import {
+  compareVersions,
+  versionMatches,
+  findBrickedMatch,
+  isValidVersionRange,
+  minVersionSatisfied,
+} from './version-match'
 
 describe('compareVersions', () => {
   it('handles numeric segments correctly (10 > 9)', () => {
@@ -76,6 +82,27 @@ describe('versionMatches', () => {
     expect(isValidVersionRange('')).toBe(false)
     expect(isValidVersionRange('>=1.0.0 || <2.0.0')).toBe(false)
     expect(versionMatches('>=1.0.0 nope', '1.5.0')).toBe(false)
+  })
+})
+
+describe('minVersionSatisfied', () => {
+  it('treats a bare version as a minimum', () => {
+    expect(minVersionSatisfied('0.9.13', '1.0.4')).toBe(true)
+    expect(minVersionSatisfied('0.9.13', '0.9.12')).toBe(false)
+  })
+
+  it('keeps exact semantics for an explicit leading =', () => {
+    expect(minVersionSatisfied('=0.9.13', '1.0.4')).toBe(false)
+  })
+
+  it('evaluates an explicit comparator as written', () => {
+    expect(minVersionSatisfied('>=0.9.13', '1.0.4')).toBe(true)
+    expect(minVersionSatisfied('^1.2.3', '2.0.0')).toBe(false)
+  })
+
+  it('evaluates a compound range as written', () => {
+    expect(minVersionSatisfied('>=1.2.0 <2.0.0', '1.5.0')).toBe(true)
+    expect(minVersionSatisfied('>=1.0.0 nope', '1.5.0')).toBe(false)
   })
 })
 

@@ -1,6 +1,6 @@
 import { app } from 'electron'
 import { resolvePluginDependencies, type InstalledPluginEntry, type PluginLoadEntry } from '@shared/plugin-dependencies'
-import { versionMatches } from '@shared/version-match'
+import { minVersionSatisfied } from '@shared/version-match'
 import {
   nativeHostTarget,
   nativeTargetForHost,
@@ -20,7 +20,7 @@ export function resolvePluginLoadability(
   const initialAvailability = new Map<string, InstalledPluginEntry['availability']>()
   for (const entry of entries) {
     const requiredVersion = entry.manifest.scalpelMinVersion
-    if (!versionMatches(requiredVersion, currentVersion)) {
+    if (!minVersionSatisfied(requiredVersion, currentVersion)) {
       initialAvailability.set(entry.manifest.id, {
         status: 'unavailable',
         reason: {

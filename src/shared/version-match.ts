@@ -80,6 +80,17 @@ export function versionMatches(entry: string, current: string): boolean {
   return comparators.every((comparator) => comparator !== null && comparatorMatches(comparator, current))
 }
 
+/** scalpelMinVersion semantics: a bare version ("1.2.3") means ">=1.2.3"; anything with an operator,
+ *  caret/tilde or several comparators is evaluated by versionMatches as written. */
+export function minVersionSatisfied(range: string, current: string): boolean {
+  const trimmed = range.trim()
+  const comparator = !/\s/.test(trimmed) ? parseComparator(trimmed) : null
+  if (comparator && comparator.operator === '=' && !trimmed.startsWith('=')) {
+    return versionMatches(`>=${trimmed}`, current)
+  }
+  return versionMatches(range, current)
+}
+
 /** First matching entry (or null) from a list of bricked-version rules. */
 export function findBrickedMatch(entries: string[] | undefined, current: string): string | null {
   if (!entries) return null
