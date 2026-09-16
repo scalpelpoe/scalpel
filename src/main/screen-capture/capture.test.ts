@@ -32,6 +32,8 @@ vi.mock('electron-overlay-window', () => ({
   },
 }))
 
+vi.mock('../hyprland', () => ({ hyprlandOverlayActive: () => false }))
+
 import { captureGameWindow, captureGameWindowResult } from './capture'
 
 /** A screen source whose thumbnail is `w`x`h` of opaque BGRA. */

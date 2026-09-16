@@ -1,6 +1,7 @@
+import { desktop } from '../desktop'
 import { join } from 'node:path'
 import { BrowserWindow, screen } from 'electron'
-import { OVERLAY_WINDOW_OPTS, OverlayController } from 'electron-overlay-window'
+import { OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
 
 /** Shared transparent click-through window used by the secondary-overlay system
  *  to render the snap-target ghost during drag. Sized to PoE's current display
@@ -38,7 +39,7 @@ function applyCanvasBounds(win: BrowserWindow): void {
   // Prefer the display PoE sits on so the canvas's CSS coordinate space ==
   // that monitor's DIP at the monitor's scale factor. Fall back to the primary
   // display when PoE isn't attached (dev, between attach/detach, etc.).
-  const tb = OverlayController.targetBounds
+  const tb = desktop.getGameBounds()
   const display =
     tb && tb.width > 0 && tb.height > 0
       ? screen.getDisplayNearestPoint({

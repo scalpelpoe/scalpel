@@ -1,7 +1,7 @@
+import { desktop } from './desktop'
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { app, ipcMain } from 'electron'
-import { OverlayController } from 'electron-overlay-window'
 import { type BoardLibrary, emptyBoardLibrary, migrateBoardLibrary } from '@shared/whiteboard-types'
 import { registerSecondaryOverlay, type SecondaryOverlay } from './windowing'
 
@@ -95,6 +95,7 @@ export function registerWhiteboardOverlay(): SecondaryOverlay {
   overlay = registerSecondaryOverlay({
     id: 'whiteboard',
     htmlEntry: 'whiteboard.html',
+    interaction: () => (currentMode === 'play' ? 'passthrough' : 'dialog'),
     defaultAnchor: () => ({ fracX: 0, fracY: 0, fracW: 1, fracH: 1 }),
     onFirstShow: (win) => {
       // The very first show is the user opening the whiteboard via hotkey
@@ -133,40 +134,17 @@ export function toggleWhiteboard(): void {
   }
 }
 
-/** Tracked here so we can re-apply the click-through state after the
- *  secondary-overlay show/hide cycle (PoE blur+refocus). The windowing layer's
- *  installOpacityHideShow forces setIgnoreMouseEvents(false) on every show,
- *  which would otherwise drop us out of Play mode after one in-game action. */
+/** Read by the shared window interaction policy on every show and mode switch. */
 let currentMode: 'edit' | 'play' = 'edit'
-let modeHookInstalled = false
 
 function applyMode(): void {
   const win = overlay?.getWindow()
   if (!win || win.isDestroyed()) return
-  if (currentMode === 'play') {
-    win.setIgnoreMouseEvents(true, { forward: true })
-  } else {
-    win.setIgnoreMouseEvents(false)
-  }
-}
-
-function ensureModeHook(): void {
-  if (modeHookInstalled) return
-  const win = overlay?.getWindow()
-  if (!win) return
-  modeHookInstalled = true
-  // BrowserWindow emits 'show' on every show, including the windowing layer's
-  // opacity-show after a PoE-blur hide. Re-apply current mode to survive that.
-  win.on('show', () => {
-    // Defer to the next tick so the windowing layer's setIgnoreMouseEvents(false)
-    // has already run before we override.
-    setImmediate(applyMode)
-  })
+  desktop.applyInteraction(win, currentMode === 'play' ? 'passthrough' : 'dialog')
 }
 
 ipcMain.on('whiteboard:set-mode', (_event, mode: 'edit' | 'play') => {
   currentMode = mode
-  ensureModeHook()
   applyMode()
   // Persist the whiteboard over other surfaces only while in passthrough; in
   // edit mode it's interactive and must not linger under or over the eval.
@@ -177,7 +155,7 @@ ipcMain.on('whiteboard:set-mode', (_event, mode: 'edit' | 'play') => {
     // key input (e.g. "i" for inventory) until the user clicked through once.
     // Hand focus back to PoE immediately, mirroring hideOverlay()'s handoff.
     try {
-      OverlayController.focusTarget()
+      desktop.focusGame()
     } catch {}
   } else {
     // Edit-reclaim: edit mode reclaims interactivity, so dismiss any open eval

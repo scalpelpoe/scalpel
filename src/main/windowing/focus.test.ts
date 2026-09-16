@@ -13,6 +13,9 @@ vi.mock('./snap-canvas', () => ({
     snapGhostCalls.push(rect)
   },
 }))
+// These cases cover focus bookkeeping off the compositor-driven path, where the
+// Hyprland gate is a no-op. Mocked so the suite never loads the native tracker.
+vi.mock('../hyprland', () => ({ hyprlandInputAllowed: () => true }))
 import {
   aroundNativeDialog,
   closeAllOverlaysOnPoeExit,
