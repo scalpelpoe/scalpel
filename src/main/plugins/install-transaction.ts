@@ -1,5 +1,11 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
-import { dirname } from 'node:path'
+import { dirname, join } from 'node:path'
+
+// Dropped inside the backup directory when a rollback could not put the backup
+// back because the destination was still locked and held a torn package. Its
+// presence tells the next attempt that the backup — not whatever is sitting at
+// the destination — is the authoritative copy of the previous install.
+const RESTORE_MARKER = '.scalpel-restore-pending'
 
 interface FileSnapshot {
   path: string
@@ -40,9 +46,22 @@ export function replacePackageAtomically(
   let metadataStarted = false
 
   try {
-    // A backup left behind by an earlier failed swap is the only copy of the
-    // previous install; put it back before discarding anything.
-    if (existsSync(backupDir) && !existsSync(destDir)) renameSync(backupDir, destDir)
+    // A backup left behind by an earlier failed swap can be the only copy of the
+    // previous install; put it back before discarding anything. It is the only
+    // copy when the destination is missing, or when a torn rollback marked it as
+    // pending restore. An unmarked backup next to an existing destination is
+    // merely stale (a swallowed post-commit cleanup failure) and is dropped
+    // below, before the swap.
+    if (existsSync(backupDir)) {
+      const restoreMarker = join(backupDir, RESTORE_MARKER)
+      if (!existsSync(destDir) || existsSync(restoreMarker)) {
+        // Clear the torn destination first: if it is still locked the attempt
+        // aborts here with that error and the backup survives untouched.
+        if (existsSync(destDir)) rmSync(destDir, { recursive: true, force: true })
+        rmSync(restoreMarker, { force: true })
+        renameSync(backupDir, destDir)
+      }
+    }
     rmSync(incomingDir, { recursive: true, force: true })
     mkdirSync(incomingDir, { recursive: true })
     stage(incomingDir)
@@ -56,17 +75,36 @@ export function replacePackageAtomically(
     metadataStarted = true
     commitMetadata()
   } catch (error) {
+    // Every undo step runs on its own: one failing step must not skip the rest,
+    // least of all the step that puts the previous install back.
     let rollbackError: unknown = null
     if (metadataStarted) {
       try {
         rollbackMetadata()
       } catch (caught) {
-        rollbackError = caught
+        rollbackError ??= caught
+      }
+    }
+    if (swapped) {
+      try {
+        rmSync(destDir, { recursive: true, force: true })
+      } catch (caught) {
+        rollbackError ??= caught
+      }
+    }
+    if (hadPrevious && existsSync(backupDir)) {
+      try {
+        // A destination that is still there could not be cleared above, so it
+        // holds a torn copy of the new package. Mark the backup instead of
+        // deleting it: the next attempt must restore it rather than mistake it
+        // for a stale leftover.
+        if (existsSync(destDir)) writeFileSync(join(backupDir, RESTORE_MARKER), '')
+        else renameSync(backupDir, destDir)
+      } catch (caught) {
+        rollbackError ??= caught
       }
     }
     try {
-      if (swapped) rmSync(destDir, { recursive: true, force: true })
-      if (hadPrevious && !existsSync(destDir)) renameSync(backupDir, destDir)
       rmSync(incomingDir, { recursive: true, force: true })
     } catch (caught) {
       rollbackError ??= caught
@@ -80,7 +118,8 @@ export function replacePackageAtomically(
   try {
     rmSync(backupDir, { recursive: true, force: true })
   } catch {
-    // The new package and metadata are committed; a stale backup is safe and
-    // will be removed before the next replacement attempt.
+    // The new package and metadata are committed; a stale backup is safe. It
+    // carries no restore marker, so the next replacement attempt discards it
+    // instead of putting it back.
   }
 }
