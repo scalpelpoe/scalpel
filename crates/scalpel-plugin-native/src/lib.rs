@@ -114,6 +114,17 @@ where
                 BackendError::new("INVALID_REQUEST", "expected a native call request"),
             ),
         };
+        let response = if response.encoded_len() > MAX_FRAME_BYTES {
+            error_frame(
+                frame.request_id,
+                BackendError::new(
+                    "RESOURCE_EXHAUSTED",
+                    "response exceeds the 1 MiB frame limit",
+                ),
+            )
+        } else {
+            response
+        };
         write_frame(&mut writer, &response)?;
     }
     Ok(())
@@ -232,5 +243,120 @@ mod tests {
         let mut input = length.as_slice();
         let error = read_frame(&mut input).unwrap_err();
         assert_eq!(error.kind(), io::ErrorKind::InvalidData);
+    }
+
+    #[test]
+    fn oversized_reply_becomes_call_error() {
+        let input = encoded_frames(&[
+            NativeFrame {
+                request_id: 0,
+                body: Some(Body::InitializeRequest(InitializeRequest {
+                    protocol_version: PROTOCOL_VERSION,
+                    plugin_id: "example".into(),
+                    service: "example.v1.Service".into(),
+                })),
+            },
+            NativeFrame {
+                request_id: 1,
+                body: Some(Body::CallRequest(CallRequest {
+                    method: "/example.v1.Service/Run".into(),
+                    payload: vec![],
+                })),
+            },
+            NativeFrame {
+                request_id: 2,
+                body: Some(Body::CallRequest(CallRequest {
+                    method: "/example.v1.Service/Run".into(),
+                    payload: vec![],
+                })),
+            },
+        ]);
+        let mut output = Vec::new();
+        let mut calls = 0_u32;
+        serve(
+            BackendIdentity {
+                plugin_id: "example",
+                service: "example.v1.Service",
+            },
+            input.as_slice(),
+            &mut output,
+            |_method, _payload| {
+                calls += 1;
+                if calls == 1 {
+                    Ok(vec![0_u8; MAX_FRAME_BYTES])
+                } else {
+                    Ok(vec![1])
+                }
+            },
+        )
+        .unwrap();
+
+        let mut output = output.as_slice();
+        assert!(matches!(
+            read_frame(&mut output).unwrap().unwrap().body,
+            Some(Body::InitializeResponse(_))
+        ));
+
+        let first = read_frame(&mut output).unwrap().unwrap();
+        assert_eq!(first.request_id, 1);
+        match first.body {
+            Some(Body::CallError(CallError { code, .. })) => assert_eq!(code, "RESOURCE_EXHAUSTED"),
+            _ => panic!("expected a RESOURCE_EXHAUSTED CallError for the oversized reply"),
+        }
+
+        let second = read_frame(&mut output).unwrap().unwrap();
+        assert_eq!(second.request_id, 2);
+        assert!(
+            matches!(second.body, Some(Body::CallResponse(CallResponse { payload })) if payload == [1])
+        );
+
+        assert!(read_frame(&mut output).unwrap().is_none());
+    }
+
+    #[test]
+    fn oversized_error_message_becomes_call_error() {
+        let input = encoded_frames(&[
+            NativeFrame {
+                request_id: 0,
+                body: Some(Body::InitializeRequest(InitializeRequest {
+                    protocol_version: PROTOCOL_VERSION,
+                    plugin_id: "example".into(),
+                    service: "example.v1.Service".into(),
+                })),
+            },
+            NativeFrame {
+                request_id: 3,
+                body: Some(Body::CallRequest(CallRequest {
+                    method: "/example.v1.Service/Run".into(),
+                    payload: vec![],
+                })),
+            },
+        ]);
+        let mut output = Vec::new();
+        serve(
+            BackendIdentity {
+                plugin_id: "example",
+                service: "example.v1.Service",
+            },
+            input.as_slice(),
+            &mut output,
+            |_method, _payload| Err(BackendError::new("X", "m".repeat(MAX_FRAME_BYTES))),
+        )
+        .unwrap();
+
+        let mut output = output.as_slice();
+        assert!(matches!(
+            read_frame(&mut output).unwrap().unwrap().body,
+            Some(Body::InitializeResponse(_))
+        ));
+
+        let response = read_frame(&mut output).unwrap().unwrap();
+        assert_eq!(response.request_id, 3);
+        match response.body {
+            Some(Body::CallError(CallError { code, .. })) => assert_eq!(code, "RESOURCE_EXHAUSTED"),
+            _ => panic!("expected a RESOURCE_EXHAUSTED CallError for the oversized error message"),
+        }
+
+        assert!(read_frame(&mut output).unwrap().is_none());
     }
 }
