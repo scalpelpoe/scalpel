@@ -439,7 +439,7 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
       onError(m.settings_plg_install_failed({ error: r.error }))
       return
     }
-    setRestartRequired(r.restartRequired)
+    if (r.restartRequired) setRestartRequired(true)
     onError(m.settings_plg_install_success({ name: entry.name }), 'warn')
     void refreshAll()
   }
@@ -453,7 +453,7 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
       onError(m.settings_plg_update_failed({ error: r.error }))
       return
     }
-    setRestartRequired(r.restartRequired)
+    if (r.restartRequired) setRestartRequired(true)
     onError(
       m.settings_plg_update_success({
         name: entry.name,
@@ -471,7 +471,7 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
       onError(m.settings_plg_uninstall_failed({ error: r.error }))
       return
     }
-    setRestartRequired(r.restartRequired)
+    if (r.restartRequired) setRestartRequired(true)
     onError(m.settings_plg_uninstall_success({ name }), 'warn')
     void refreshAll()
   }

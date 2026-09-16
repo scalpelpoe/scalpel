@@ -206,6 +206,36 @@ describe('PluginsSection unavailable plugins', () => {
   })
 })
 
+describe('PluginsSection uninstall restart banner', () => {
+  it('does not clear an already-visible restart banner when uninstalling an unpacked plugin', async () => {
+    const pluginUninstall = vi.fn(async () => ({ ok: true as const }))
+    ;(window as unknown as { api: Record<string, unknown> }).api = {
+      listInstalledPlugins: vi.fn(async () => [
+        {
+          manifest: { id: 'demo', name: 'Demo', version: '1.0.0', author: 'me' },
+          entryUrl: '',
+        },
+      ]),
+      pluginListRegisteredHotkeys: vi.fn(async () => []),
+      pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
+      pluginUninstall,
+      pluginRestartRequired: vi.fn(async () => true),
+      onPluginRestartRequired: vi.fn(() => () => {}),
+      onPluginHotkeysChanged: vi.fn(() => () => {}),
+    }
+
+    const { findByText } = render(
+      <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    )
+    expect(await findByText('Restart required')).toBeTruthy()
+
+    const uninstall = await findByText('Uninstall')
+    fireEvent.click(uninstall)
+    await waitFor(() => expect(pluginUninstall).toHaveBeenCalledWith('demo'))
+    expect(await findByText('Restart required')).toBeTruthy()
+  })
+})
+
 describe('PluginsSection icon fallback', () => {
   function installApiWithIcon(iconUrl?: string): void {
     ;(window as unknown as { api: Record<string, unknown> }).api = {
