@@ -26,7 +26,7 @@ import {
 import { getRegisteredPluginTabs, removePluginTab, setPluginTab } from '../plugins/tab-registry'
 import { versionedPluginEntryUrl } from '../plugins/entry-url'
 import { validateDependencyMutation } from '../plugins/dependency-mutation'
-import { installFromRegistry } from '../plugins/install-from-registry'
+import { commitRegistryInstall, prepareRegistryInstall } from '../plugins/install-from-registry'
 import { installUnpacked } from '../plugins/install-unpacked'
 import { resolvePluginLoadability } from '../plugins/loadability'
 import { getInstalledPlugins, getUnpackedPlugins } from '../plugins/manager'
@@ -77,6 +77,21 @@ function runPostUninstallCleanup(pluginId: string, operation: () => void): void 
     operation()
   } catch (error) {
     console.error(`[plugins] post-uninstall cleanup failed for ${pluginId}:`, error)
+  }
+}
+
+/** Mutation handlers are awaited by the renderer without a catch, so a rejected
+ *  invoke shows the user nothing at all. Turn every throw into the same
+ *  `{ ok: false, error }` shape the callers already render. */
+export async function mutationResult<T extends { ok: boolean }>(
+  pluginId: string,
+  run: () => Promise<T> | T,
+): Promise<T | { ok: false; error: string }> {
+  try {
+    return await run()
+  } catch (error) {
+    console.error(`[plugins] mutation failed for ${pluginId}:`, error)
+    return { ok: false as const, error: error instanceof Error ? error.message : String(error) }
   }
 }
 
@@ -205,7 +220,13 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
           error: { message: error.message, code: error.code },
         }
       }
-      throw error
+      // Never reject: a rejected invoke reaches the plugin as Electron's generic
+      // "Error invoking remote method" instead of the documented result shape.
+      console.error(`[plugins] native call ${pluginId}.${method} failed:`, error)
+      return {
+        ok: false as const,
+        error: { message: error instanceof Error ? error.message : String(error), code: 'INTERNAL' },
+      }
     }
   })
 
@@ -260,14 +281,18 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     if (result.canceled || result.filePaths.length === 0) {
       return { ok: false as const, error: 'cancelled' }
     }
-    return pluginNativeBackends.withAllStopped(() => installUnpackedAndNotify(result.filePaths[0], unpackedFlowDeps))
+    return mutationResult(result.filePaths[0] ?? 'unpacked', () =>
+      pluginNativeBackends.withAllStopped(() => installUnpackedAndNotify(result.filePaths[0], unpackedFlowDeps)),
+    )
   })
 
   // Re-copy a side-loaded plugin from the directory it came from and hot-swap
   // it. Rebuild the plugin, hit Reload, run the new code - no app restart.
   ipcMain.handle('plugins:reload-unpacked', async (_evt, pluginId: string) => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
-    return pluginNativeBackends.withPluginStopped(pluginId, () => reloadUnpackedPlugin(pluginId, unpackedFlowDeps))
+    return mutationResult(pluginId, () =>
+      pluginNativeBackends.withPluginStopped(pluginId, () => reloadUnpackedPlugin(pluginId, unpackedFlowDeps)),
+    )
   })
 
   ipcMain.handle('plugins:fetch-registry', async () => {
@@ -287,22 +312,33 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     const config = registryConfig()
     const selection = await resolveRegistrySelection(entry, config.url)
     if (!selection.ok) return selection
+    const pluginId = selection.entry.id
+    const precondition = (installedIds: Set<string>): string | null =>
+      validateRegistryMutationPrecondition(
+        mode,
+        pluginId,
+        installedIds,
+        new Set(getUnpackedPlugins().map((plugin) => plugin.manifest.id)),
+      )
+    // Checked before the download so an "already installed" install spends no
+    // requests; re-checked under the lock because state can move meanwhile.
+    const earlyError = precondition(new Set(getInstalledPlugins().map((plugin) => plugin.manifest.id)))
+    if (earlyError) return { ok: false, error: earlyError }
+    // The download stays OUTSIDE the lifecycle lock: holding it would stop the
+    // live native worker, block this plugin from loading and queue every other
+    // plugin's lifecycle op behind five sequential network round trips.
+    const prepared = await prepareRegistryInstall(selection.entry, { allowNativeBackend: config.allowNativeBackend })
+    if (!prepared.ok) return prepared
     const result = await pluginNativeBackends.withPluginStoppedUntilRestart(
-      selection.entry.id,
+      pluginId,
       () => {
         const installed = getInstalledPlugins()
-        const preconditionError = validateRegistryMutationPrecondition(
-          mode,
-          selection.entry.id,
-          new Set(installed.map((plugin) => plugin.manifest.id)),
-          new Set(getUnpackedPlugins().map((plugin) => plugin.manifest.id)),
-        )
+        const preconditionError = precondition(new Set(installed.map((plugin) => plugin.manifest.id)))
         if (preconditionError) return { ok: false as const, error: preconditionError }
         const manifests = installed.map((plugin) => plugin.manifest)
-        return installFromRegistry(selection.entry, {
-          allowNativeBackend: config.allowNativeBackend,
-          validateMutation: (manifest) => validateDependencyMutation(manifests, selection.entry.id, manifest),
-        })
+        return commitRegistryInstall(prepared.prepared, (manifest) =>
+          validateDependencyMutation(manifests, pluginId, manifest),
+        )
       },
       (mutation) => mutation.ok,
     )
@@ -313,14 +349,20 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     return result
   }
 
+  // The registry entry is untrusted, so only its id is usable for logging here.
+  const requestedIdOf = (entry: unknown): string => {
+    const id = entry && typeof entry === 'object' ? (entry as { id?: unknown }).id : null
+    return typeof id === 'string' ? id : 'registry plugin'
+  }
+
   ipcMain.handle('plugins:install-from-registry', async (_evt, entry: unknown) => {
     // installOrUpdate treats this only as an id selector and re-resolves the
     // trusted entry in main.
-    return installOrUpdate(entry, 'install')
+    return mutationResult(requestedIdOf(entry), () => installOrUpdate(entry, 'install'))
   })
 
   ipcMain.handle('plugins:update-from-registry', async (_evt, entry: unknown) => {
-    return installOrUpdate(entry, 'update')
+    return mutationResult(requestedIdOf(entry), () => installOrUpdate(entry, 'update'))
   })
 
   ipcMain.handle(
@@ -418,42 +460,44 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
 
   ipcMain.handle('plugins:uninstall', async (_evt, pluginId: string) => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) return { ok: false as const, error: 'invalid plugin id' }
-    if (isUnpacked(pluginId)) return uninstallUnpacked(pluginId)
-    const result = await pluginNativeBackends.withPluginStoppedUntilRestart(
-      pluginId,
-      () => {
-        const installed = getInstalledPlugins()
-        // installed.json is the source of truth here: a plugin whose manifest
-        // went missing or no longer validates must still be removable.
-        const preconditionError = validateUninstallPrecondition(pluginId, new Set(readInstalledIds()))
-        if (preconditionError) return { ok: false as const, error: preconditionError }
-        const dependencyError = validateDependencyMutation(
-          installed.map((plugin) => plugin.manifest),
-          pluginId,
-          null,
-        )
-        if (dependencyError) {
-          return {
-            ok: false as const,
-            error: `plugin dependency check failed: ${dependencyError}`,
+    return mutationResult(pluginId, async () => {
+      if (isUnpacked(pluginId)) return uninstallUnpacked(pluginId)
+      const result = await pluginNativeBackends.withPluginStoppedUntilRestart(
+        pluginId,
+        () => {
+          const installed = getInstalledPlugins()
+          // installed.json is the source of truth here: a plugin whose manifest
+          // went missing or no longer validates must still be removable.
+          const preconditionError = validateUninstallPrecondition(pluginId, new Set(readInstalledIds()))
+          if (preconditionError) return { ok: false as const, error: preconditionError }
+          const dependencyError = validateDependencyMutation(
+            installed.map((plugin) => plugin.manifest),
+            pluginId,
+            null,
+          )
+          if (dependencyError) {
+            return {
+              ok: false as const,
+              error: `plugin dependency check failed: ${dependencyError}`,
+            }
           }
-        }
-        return uninstallPlugin(pluginId)
-      },
-      (mutation) => mutation.ok,
-    )
-    if (result.ok) {
-      // The package is gone, so the pop-out cannot be reloaded: close it and
-      // forget its geometry now instead of leaving a stale anchor in the store.
-      runPostUninstallCleanup(pluginId, () => disposePluginOverlay(pluginId))
-      runPostUninstallCleanup(pluginId, () => clearPluginOverlayAnchor(store, pluginId))
-      runPostUninstallCleanup(pluginId, () => removePluginOverlayHotkey(pluginId))
-      runPostUninstallCleanup(pluginId, refreshAppMacros)
-      runPostUninstallCleanup(pluginId, notifyHotkeysChanged)
-      runPostUninstallCleanup(pluginId, notifyRestartRequired)
-      return { ...result, restartRequired: true as const }
-    }
-    return result
+          return uninstallPlugin(pluginId)
+        },
+        (mutation) => mutation.ok,
+      )
+      if (result.ok) {
+        // The package is gone, so the pop-out cannot be reloaded: close it and
+        // forget its geometry now instead of leaving a stale anchor in the store.
+        runPostUninstallCleanup(pluginId, () => disposePluginOverlay(pluginId))
+        runPostUninstallCleanup(pluginId, () => clearPluginOverlayAnchor(store, pluginId))
+        runPostUninstallCleanup(pluginId, () => removePluginOverlayHotkey(pluginId))
+        runPostUninstallCleanup(pluginId, refreshAppMacros)
+        runPostUninstallCleanup(pluginId, notifyHotkeysChanged)
+        runPostUninstallCleanup(pluginId, notifyRestartRequired)
+        return { ...result, restartRequired: true as const }
+      }
+      return result
+    })
   })
 
   ipcMain.handle('plugins:uninstall-unpacked', async (_evt, pluginId: string) => {
@@ -464,7 +508,7 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
         error: `plugin "${pluginId}" is not installed unpacked`,
       }
     }
-    return uninstallUnpacked(pluginId)
+    return mutationResult(pluginId, () => uninstallUnpacked(pluginId))
   })
 
   ipcMain.handle('plugins:unregister-hotkey', (_evt, pluginId: string) => {

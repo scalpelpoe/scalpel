@@ -15,12 +15,16 @@ const mockFs = {
   dirs: new Set<string>(),
   copied: [] as Array<{ from: string; to: string }>,
   failCopyTo: null as string | null,
+  failReadPath: null as string | null,
   failWritePath: null as string | null,
   failWrites: 0,
 }
 
 vi.mock('fs', () => ({
   readFileSync: (p: string) => {
+    if (mockFs.failReadPath === p) {
+      throw Object.assign(new Error('EBUSY: resource busy or locked'), { code: 'EBUSY' })
+    }
     const v = mockFs.files.get(p)
     if (v == null) throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
     return v
@@ -88,6 +92,7 @@ beforeEach(() => {
   mockFs.dirs.clear()
   mockFs.copied.length = 0
   mockFs.failCopyTo = null
+  mockFs.failReadPath = null
   mockFs.failWritePath = null
   mockFs.failWrites = 0
   vi.resetModules()
@@ -215,6 +220,59 @@ describe('installUnpacked', () => {
 
     expect(r.ok).toBe(false)
     if (!r.ok) expect(r.error).toContain('stale')
+  })
+
+  it('reports a locked dist bundle instead of throwing', async () => {
+    mockFs.files.set(join(SRC_PLUGIN, 'manifest.json'), validManifest)
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// rebuilt plugin')
+    mockFs.files.set(join(DIST_PLUGIN, 'manifest.json'), validManifest)
+    mockFs.files.set(join(DIST_PLUGIN, 'plugin.js'), '// built plugin')
+    mockFs.failReadPath = join(DIST_PLUGIN, 'plugin.js')
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN)
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) {
+      expect(r.error).toMatch(/failed to read/)
+      expect(r.error).toContain('plugin.js')
+      expect(r.error).toContain('EBUSY')
+    }
+    expect(mockFs.copied).toEqual([])
+  })
+
+  it('reports a locked native executable instead of throwing', async () => {
+    const nativeBytes = 'native worker bytes'
+    mockFs.files.set(
+      join(SRC_PLUGIN, 'manifest.json'),
+      JSON.stringify({
+        ...JSON.parse(validManifest),
+        nativeBackend: {
+          protocolVersion: 1,
+          contract: 'backend.binpb',
+          service: 'example.items.v1.ItemAnalyzer',
+          targets: {
+            'win32-x64': { file: 'worker.exe', sha256: createHash('sha256').update(nativeBytes).digest('hex') },
+          },
+        },
+      }),
+    )
+    mockFs.files.set(join(SRC_PLUGIN, 'plugin.js'), '// stub')
+    mockFs.files.set(join(SRC_PLUGIN, 'backend.binpb'), 'descriptor bytes')
+    mockFs.files.set(join(SRC_PLUGIN, 'worker.exe'), nativeBytes)
+    mockFs.dirs.add(SRC_PLUGIN)
+    mockFs.failReadPath = join(SRC_PLUGIN, 'worker.exe')
+
+    const { installUnpacked } = await import('./install-unpacked')
+    const r = installUnpacked(SRC_PLUGIN, undefined, WINDOWS_X64)
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) {
+      expect(r.error).toMatch(/failed to read/)
+      expect(r.error).toContain('worker.exe')
+      expect(r.error).toContain('EBUSY')
+    }
+    expect(mockFs.copied).toEqual([])
   })
 
   it('rejects a package whose id does not match the plugin being reloaded', async () => {

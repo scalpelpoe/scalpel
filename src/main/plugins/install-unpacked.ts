@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { copyFileSync, existsSync, readFileSync } from 'node:fs'
-import { isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import type { InstallResult } from './install-types'
 import { replacePackageAtomically, restoreFiles, snapshotFiles } from './install-transaction'
 import { addInstalledId } from './installed-list'
@@ -11,6 +11,20 @@ import { addUnpackedId } from './unpacked-list'
 import { nativeTargetForHost, type NativeHostPlatform, unsupportedNativePlatformMessage } from './native-platform'
 
 export type { InstallResult }
+
+/** Hashing a source file is the one place a locked or vanished file (EBUSY from
+ *  a running build, ENOENT from a mid-flight rebuild) would otherwise throw out
+ *  of an install that reports every other failure as a result. */
+function hashFile(path: string, selectedDir: string): { ok: true; hash: string } | { ok: false; error: string } {
+  try {
+    return { ok: true, hash: createHash('sha256').update(readFileSync(path)).digest('hex') }
+  } catch (e) {
+    return {
+      ok: false,
+      error: `failed to read ${relative(selectedDir, path) || basename(path)}: ${(e as Error).message}`,
+    }
+  }
+}
 
 export function installUnpacked(
   sourceDir: string,
@@ -90,9 +104,11 @@ export function installUnpacked(
     }
     const selectedEntryPath = join(selectedDir, 'plugin.js')
     if (existsSync(selectedEntryPath)) {
-      const selectedHash = createHash('sha256').update(readFileSync(selectedEntryPath)).digest('hex')
-      const distHash = createHash('sha256').update(readFileSync(entryPath)).digest('hex')
-      if (selectedHash !== distHash) {
+      const selectedHash = hashFile(selectedEntryPath, selectedDir)
+      if (!selectedHash.ok) return selectedHash
+      const distHash = hashFile(entryPath, selectedDir)
+      if (!distHash.ok) return distHash
+      if (selectedHash.hash !== distHash.hash) {
         return { ok: false, error: 'dist/plugin.js is stale; rebuild the package before loading it' }
       }
     }
@@ -121,11 +137,12 @@ export function installUnpacked(
     return { ok: false, error: `source directory does not contain ${nativeTarget?.file}` }
   }
   if (nativePath && nativeTarget) {
-    const actual = createHash('sha256').update(readFileSync(nativePath)).digest('hex')
-    if (actual !== nativeTarget.sha256) {
+    const actual = hashFile(nativePath, selectedDir)
+    if (!actual.ok) return actual
+    if (actual.hash !== nativeTarget.sha256) {
       return {
         ok: false,
-        error: `${nativeTarget.file} checksum mismatch (expected ${nativeTarget.sha256}, got ${actual})`,
+        error: `${nativeTarget.file} checksum mismatch (expected ${nativeTarget.sha256}, got ${actual.hash})`,
       }
     }
   }
