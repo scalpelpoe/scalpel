@@ -146,6 +146,38 @@ describe('scalpel-plugin', () => {
     await expect(runScalpelPlugin('generate', project)).rejects.toThrow(/must not contain/)
   })
 
+  it('rejects a generated directory that contains an entry under a directory literally named "..gen"', async () => {
+    const project = mkdtempSync(join(tmpdir(), 'scalpel-plugin-overlap-'))
+    temporaryDirectories.push(project)
+    writeFileSync(
+      join(project, 'package.json'),
+      JSON.stringify({
+        scalpelPlugin: {
+          entry: 'src/..gen/plugin.ts',
+          contracts: [{ source: 'proto', descriptor: 'api.binpb', generated: 'src' }],
+        },
+      }),
+    )
+
+    await expect(runScalpelPlugin('generate', project)).rejects.toThrow(/must not contain/)
+  })
+
+  it('does not treat a sibling generated directory as overlapping the entry', async () => {
+    const project = mkdtempSync(join(tmpdir(), 'scalpel-plugin-overlap-'))
+    temporaryDirectories.push(project)
+    writeFileSync(
+      join(project, 'package.json'),
+      JSON.stringify({
+        scalpelPlugin: {
+          entry: 'src/plugin.ts',
+          contracts: [{ source: 'proto', descriptor: 'api.binpb', generated: 'src2' }],
+        },
+      }),
+    )
+
+    await expect(runScalpelPlugin('generate', project)).rejects.toThrow(/Protobuf input does not exist/)
+  })
+
   it('rejects an outDir that contains the entry point', async () => {
     const project = mkdtempSync(join(tmpdir(), 'scalpel-plugin-overlap-'))
     temporaryDirectories.push(project)
