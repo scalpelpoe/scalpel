@@ -468,6 +468,86 @@ describe('installFromRegistry', () => {
     expect(readMockJson(unpackedPath)).toEqual([])
   })
 
+  it('installs when a bare scalpelMinVersion is at or below the running version', async () => {
+    const bare = '0.9.13'
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify({ ...matchingManifest, scalpelMinVersion: bare })),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry({ ...validEntry, scalpelMinVersion: bare })
+
+    expect(r).toEqual({ ok: true, id: 'hello-world' })
+  })
+
+  it('downloads and verifies all three declared assets', async () => {
+    const manifest = { ...matchingApiManifest, nativeBackend: matchingNativeManifest.nativeBackend }
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(manifest)),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/api.binpb': new Response(
+        API_CONTRACT_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/backend.binpb':
+        new Response(BACKEND_CONTRACT_BYTES),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/worker.exe': new Response(
+        NATIVE_BYTES,
+      ),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry(
+      {
+        ...validEntry,
+        assets: {
+          'api.binpb': API_CONTRACT_SHA,
+          'backend.binpb': BACKEND_CONTRACT_SHA,
+          'worker.exe': NATIVE_SHA,
+        },
+      },
+      { allowNativeBackend: true, host: WINDOWS_X64 },
+    )
+
+    expect(r.ok).toBe(true)
+    const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
+    expect(mockFs.bufs.get(join(destDir, 'api.binpb'))).toEqual(API_CONTRACT_BYTES)
+    expect(mockFs.bufs.get(join(destDir, 'backend.binpb'))).toEqual(BACKEND_CONTRACT_BYTES)
+    expect(mockFs.bufs.get(join(destDir, 'worker.exe'))).toEqual(NATIVE_BYTES)
+  })
+
+  it('rejects a tampered native executable even though the contract downloaded cleanly', async () => {
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingNativeManifest)),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/backend.binpb':
+        new Response(BACKEND_CONTRACT_BYTES),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/worker.exe': new Response(
+        new Uint8Array([0, 0, 0]),
+      ),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry(
+      { ...validEntry, assets: { 'backend.binpb': BACKEND_CONTRACT_SHA, 'worker.exe': NATIVE_SHA } },
+      { allowNativeBackend: true, host: WINDOWS_X64 },
+    )
+
+    expect(r.ok).toBe(false)
+    if (!r.ok) expect(r.error).toContain('worker.exe checksum mismatch')
+    expect(mockFs.bufs.has(join(TEST_USER_DATA, 'plugins', 'hello-world', 'worker.exe'))).toBe(false)
+    expect(mockFs.bufs.has(join(TEST_USER_DATA, 'plugins', 'hello-world', 'backend.binpb'))).toBe(false)
+  })
+
   it('restores the old package and metadata when provenance cleanup fails', async () => {
     const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
     const installedPath = join(TEST_USER_DATA, 'plugins', 'installed.json')
@@ -495,5 +575,57 @@ describe('installFromRegistry', () => {
     expect(readMockJson(join(destDir, 'manifest.json'))).toMatchObject({ version: '0.9.0' })
     expect(mockFs.files.get(installedPath)).toBe(JSON.stringify(['hello-world']))
     expect(mockFs.files.get(unpackedPath)).toBe(oldUnpacked)
+  })
+})
+
+describe('prepareRegistryInstall / commitRegistryInstall', () => {
+  const seedValidDownload = (): void => {
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/plugin.js': new Response(
+        PLUGIN_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v1.0.0/manifest.json':
+        new Response(JSON.stringify(matchingManifest)),
+    })
+  }
+
+  it('downloads and verifies without touching the disk', async () => {
+    seedValidDownload()
+    const { prepareRegistryInstall } = await import('./install-from-registry')
+
+    const r = await prepareRegistryInstall(validEntry)
+
+    expect(r.ok).toBe(true)
+    expect([...mockFs.files.keys()]).toEqual([])
+    expect([...mockFs.bufs.keys()]).toEqual([])
+  })
+
+  it('writes the package and installed.json only once committed', async () => {
+    seedValidDownload()
+    const { commitRegistryInstall, prepareRegistryInstall } = await import('./install-from-registry')
+    const prepared = await prepareRegistryInstall(validEntry)
+    if (!prepared.ok) throw new Error(prepared.error)
+
+    const committed = commitRegistryInstall(prepared.prepared)
+
+    expect(committed).toEqual({ ok: true, id: 'hello-world' })
+    expect(mockFs.bufs.get(join(TEST_USER_DATA, 'plugins', 'hello-world', 'plugin.js'))).toEqual(PLUGIN_BYTES)
+    expect(readMockJson(join(TEST_USER_DATA, 'plugins', 'hello-world', 'manifest.json'))).toMatchObject({
+      id: 'hello-world',
+    })
+    expect(readMockJson(join(TEST_USER_DATA, 'plugins', 'installed.json'))).toEqual(['hello-world'])
+  })
+
+  it('refuses to commit when the dependency check fails, leaving the disk untouched', async () => {
+    seedValidDownload()
+    const { commitRegistryInstall, prepareRegistryInstall } = await import('./install-from-registry')
+    const prepared = await prepareRegistryInstall(validEntry)
+    if (!prepared.ok) throw new Error(prepared.error)
+
+    const committed = commitRegistryInstall(prepared.prepared, () => 'a dependent plugin needs it')
+
+    expect(committed).toEqual({ ok: false, error: 'plugin dependency check failed: a dependent plugin needs it' })
+    expect([...mockFs.bufs.keys()]).toEqual([])
+    expect(mockFs.files.has(join(TEST_USER_DATA, 'plugins', 'installed.json'))).toBe(false)
   })
 })
