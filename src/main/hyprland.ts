@@ -79,10 +79,13 @@ export function hyprlandInputAllowed(): boolean {
 
 export function nameHyprlandOverlay(win: BrowserWindow): void {
   if (!hyprlandOverlayActive()) return
-  win.setTitle('Scalpel Overlay')
+  // Several plugin windows load the same HTML title. Keep the BrowserWindow
+  // identity in every title so compositor focus lookup selects this window.
+  const titlePrefix = `Scalpel Overlay ${win.id}`
+  win.setTitle(titlePrefix)
   win.on('page-title-updated', (event, title) => {
     event.preventDefault()
-    win.setTitle(`Scalpel Overlay: ${title}`)
+    win.setTitle(`${titlePrefix}: ${title}`)
   })
 }
 
