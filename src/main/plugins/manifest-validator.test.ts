@@ -180,4 +180,31 @@ describe('validateManifest', () => {
       }).ok,
     ).toBe(false)
   })
+
+  it('requires the win32-x64 target file to be a .exe', () => {
+    const backend = {
+      protocolVersion: 1,
+      contract: 'backend.binpb',
+      service: 'example.items.v1.ItemAnalyzer',
+      targets: { 'win32-x64': { file: 'item-analyzer.exe', sha256: 'a'.repeat(64) } },
+    }
+    const result = validateManifest({
+      ...valid,
+      nativeBackend: { ...backend, targets: { 'win32-x64': { file: 'worker', sha256: 'a'.repeat(64) } } },
+    })
+    expect(result.ok).toBe(false)
+    expect(!result.ok && result.error).toMatch(/\.exe/)
+    expect(
+      validateManifest({
+        ...valid,
+        nativeBackend: { ...backend, targets: { 'win32-x64': { file: 'worker.exe', sha256: 'a'.repeat(64) } } },
+      }).ok,
+    ).toBe(true)
+    expect(
+      validateManifest({
+        ...valid,
+        nativeBackend: { ...backend, targets: { 'win32-x64': { file: 'Worker.EXE', sha256: 'a'.repeat(64) } } },
+      }).ok,
+    ).toBe(true)
+  })
 })

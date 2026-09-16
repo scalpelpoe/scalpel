@@ -151,6 +151,9 @@ export function validateManifest(raw: unknown): ValidationResult {
       if (!isString(target.sha256) || !SHA256_PATTERN.test(target.sha256)) {
         return { ok: false, error: `nativeBackend target "${targetName}" must declare a lowercase SHA-256` }
       }
+      if (targetName === 'win32-x64' && !/\.exe$/i.test(target.file)) {
+        return { ok: false, error: `nativeBackend target "${targetName}" file must be a root-level .exe filename` }
+      }
     }
   }
   return { ok: true, manifest: m as unknown as PluginManifest }
