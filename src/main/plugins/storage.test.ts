@@ -10,6 +10,7 @@ vi.mock('electron', () => ({
 const mockFs = {
   files: new Map<string, string>(),
   writes: [] as Array<{ path: string; data: string }>,
+  rmCalls: [] as string[],
 }
 
 vi.mock('fs', () => ({
@@ -31,6 +32,7 @@ vi.mock('fs', () => ({
     mockFs.files.delete(from)
   },
   rmSync: (p: string, options?: { recursive?: boolean }) => {
+    mockFs.rmCalls.push(p)
     if (options?.recursive) {
       for (const key of [...mockFs.files.keys()]) {
         if (key === p || key.startsWith(`${p}\\`) || key.startsWith(`${p}/`)) mockFs.files.delete(key)
@@ -44,6 +46,7 @@ vi.mock('fs', () => ({
 beforeEach(() => {
   mockFs.files.clear()
   mockFs.writes.length = 0
+  mockFs.rmCalls.length = 0
   vi.useFakeTimers()
   vi.resetModules()
 })
@@ -154,6 +157,19 @@ describe('plugin storage', () => {
     flushAll()
 
     expect(mockFs.files.get(storagePath)).toBe(JSON.stringify({ fresh: true }))
+  })
+
+  it('finalizePendingStorageRemovals ignores tombstone entries that are not valid plugin ids', async () => {
+    const pendingPath = join(TEST_USER_DATA, 'plugin-storage', 'pending-deletions.json')
+    mockFs.files.set(pendingPath, JSON.stringify(['..', '.', '', 'valid-id', 42]))
+    const { finalizePendingStorageRemovals } = await import('./storage')
+
+    finalizePendingStorageRemovals()
+
+    expect(mockFs.rmCalls).toContain(join(TEST_USER_DATA, 'plugin-storage', 'valid-id'))
+    expect(mockFs.rmCalls).not.toContain(TEST_USER_DATA)
+    expect(mockFs.rmCalls).not.toContain(join(TEST_USER_DATA, 'plugin-storage'))
+    expect(mockFs.files.get(pendingPath)).toBe('[]')
   })
 
   it('migrates legacy storage out of the package directory once', async () => {

@@ -305,15 +305,6 @@ initAppMacrosRefresh(() => store.get('appMacros') ?? [])
 
 // ---- Register IPC handlers -------------------------------------------------
 
-// Complete deferred uninstall cleanup before any renderer can activate a
-// plugin. Shutdown only flushes the old graph; deleting here avoids late writes
-// recreating storage after its tombstone was cleared.
-try {
-  finalizePendingStorageRemovals()
-} catch (err) {
-  recordMainDiagnostic('plugin-storage-cleanup', err)
-}
-
 registerAllIpc({ store, isElevated, getAppWindow, showAppWindow, hideOverlay })
 
 // ---- Protocol scheme privileges (must run before app ready) ----------------
@@ -330,6 +321,18 @@ if (!gotLock) {
   app.quit()
 } else {
   app.on('second-instance', () => showAppWindow())
+
+  // Complete deferred uninstall cleanup before any renderer can activate a
+  // plugin. Shutdown only flushes the old graph; deleting here avoids late writes
+  // recreating storage after its tombstone was cleared. Must run only in the
+  // instance that holds the single-instance lock: app.quit() above does not
+  // stop synchronous execution, so a losing second instance would otherwise
+  // race this deletion against the still-running first instance.
+  try {
+    finalizePendingStorageRemovals()
+  } catch (err) {
+    recordMainDiagnostic('plugin-storage-cleanup', err)
+  }
 }
 
 const installDir = IS_E2E ? process.cwd() : applyPendingUpdate()
