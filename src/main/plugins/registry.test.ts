@@ -240,6 +240,22 @@ describe('scalpelMinVersion gate', () => {
   }
   const mixedRegistry = { schemaVersion: 1, plugins: [validRegistry.plugins[0], futureEntry] }
 
+  it('keeps a bare scalpelMinVersion when the running version is newer', async () => {
+    const bareEntry = {
+      ...validRegistry.plugins[0],
+      id: 'loot-tracker',
+      scalpelMinVersion: '0.9.13',
+    }
+    const registry = { schemaVersion: 1, plugins: [bareEntry] }
+    mockNetFetch(async () => new Response(JSON.stringify(registry), { status: 200 }))
+    const { fetchRegistry } = await import('./registry')
+    const result = await fetchRegistry()
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.snapshot.plugins.map((p) => p.id)).toEqual(['loot-tracker'])
+    }
+  })
+
   it('hides entries this build cannot run', async () => {
     mockNetFetch(async () => new Response(JSON.stringify(mixedRegistry), { status: 200 }))
     const { fetchRegistry } = await import('./registry')

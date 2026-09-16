@@ -3,7 +3,7 @@ import { dirname, join } from 'node:path'
 import { app, net } from 'electron'
 import { PLUGIN_REGISTRY_URL } from '@shared/endpoints'
 import type { RegistryEntry, RegistrySnapshot } from '@shared/plugin-registry-types'
-import { versionMatches } from '@shared/version-match'
+import { minVersionSatisfied } from '@shared/version-match'
 import { PLUGIN_ID_PATTERN } from './manifest-validator'
 import { pluginsDir } from './paths'
 
@@ -102,7 +102,7 @@ function validateSnapshot(raw: unknown): RegistrySnapshot | null {
 function withoutUnrunnable(snapshot: RegistrySnapshot): RegistrySnapshot {
   return {
     ...snapshot,
-    plugins: snapshot.plugins.filter((e) => versionMatches(e.scalpelMinVersion, app.getVersion())),
+    plugins: snapshot.plugins.filter((e) => minVersionSatisfied(e.scalpelMinVersion, app.getVersion())),
   }
 }
 

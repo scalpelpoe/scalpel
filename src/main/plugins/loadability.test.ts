@@ -71,6 +71,27 @@ describe('resolvePluginLoadability', () => {
     expect(result.loadable).toEqual([])
   })
 
+  it('treats a bare scalpelMinVersion as a minimum, not an exact match', () => {
+    const plugin = entry('loot-tracker', { scalpelMinVersion: '0.9.13' })
+
+    const result = resolvePluginLoadability([plugin], '1.0.4')
+
+    expect(result.installed[0].availability).toEqual({ status: 'available' })
+    expect(result.loadable.map((p) => p.manifest.id)).toEqual(['loot-tracker'])
+  })
+
+  it('still rejects a bare scalpelMinVersion newer than the current version', () => {
+    const plugin = entry('loot-tracker', { scalpelMinVersion: '0.9.13' })
+
+    const result = resolvePluginLoadability([plugin], '0.9.12')
+
+    expect(result.installed[0].availability).toMatchObject({
+      status: 'unavailable',
+      reason: { code: 'scalpel-version-incompatible' },
+    })
+    expect(result.loadable).toEqual([])
+  })
+
   it('propagates host incompatibility through required plugin dependencies', () => {
     const provider = entry('provider', {
       scalpelMinVersion: '^2.0.0',
