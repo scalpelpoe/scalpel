@@ -273,6 +273,35 @@ describe('PluginNativeBackendManager', () => {
     child.emit('exit', 7, null)
 
     await expect(call).rejects.toThrow(/worker panic/)
+    await expect(call).rejects.toMatchObject({ name: 'NativeCallError', code: 'UNAVAILABLE' })
+  })
+
+  it('tags invalid call arguments with INVALID_ARGUMENT', async () => {
+    const child = new FakeChild((request, process) => {
+      if (request.body.case === 'initializeRequest') process.initialize(request)
+    })
+    const manager = new PluginNativeBackendManager(
+      () => backendFile(),
+      () => child.asChildProcess(),
+    )
+
+    await expect(manager.call('native-demo', 'AnalyzeItem', new Uint8Array())).rejects.toMatchObject({
+      name: 'NativeCallError',
+      code: 'INVALID_ARGUMENT',
+      message: expect.stringContaining('fully qualified Protobuf method'),
+    })
+    await expect(manager.call('native-demo', METHOD, [1, 2] as unknown as Uint8Array)).rejects.toMatchObject({
+      name: 'NativeCallError',
+      code: 'INVALID_ARGUMENT',
+      message: expect.stringContaining('must be a Uint8Array'),
+    })
+    await expect(manager.call('native-demo', '/other.v1.Other/Ping', new Uint8Array())).rejects.toMatchObject({
+      name: 'NativeCallError',
+      code: 'INVALID_ARGUMENT',
+      message: expect.stringContaining(`must belong to service "${SERVICE}"`),
+    })
+
+    await manager.stop('native-demo')
   })
 
   it('kills and evicts a worker when a call times out', async () => {
@@ -292,6 +321,7 @@ describe('PluginNativeBackendManager', () => {
     await vi.advanceTimersByTimeAsync(10_000)
 
     await rejection
+    await expect(call).rejects.toMatchObject({ name: 'NativeCallError', code: 'DEADLINE_EXCEEDED' })
     expect(child.kill).toHaveBeenCalledWith('SIGKILL')
   })
 
@@ -318,7 +348,9 @@ describe('PluginNativeBackendManager', () => {
     const manager = new PluginNativeBackendManager(() => backendFile(), spawnBackend)
 
     await expect(manager.call('native-demo', METHOD, new Uint8Array())).rejects.toThrow(/exited \(code 9\)/)
-    await expect(manager.call('native-demo', METHOD, new Uint8Array())).rejects.toThrow(/restart cooldown/)
+    const cooling = manager.call('native-demo', METHOD, new Uint8Array())
+    await expect(cooling).rejects.toThrow(/restart cooldown/)
+    await expect(cooling).rejects.toMatchObject({ name: 'NativeCallError', code: 'UNAVAILABLE' })
     expect(spawnBackend).toHaveBeenCalledOnce()
 
     await vi.advanceTimersByTimeAsync(5_000)
@@ -333,7 +365,9 @@ describe('PluginNativeBackendManager', () => {
     const spawnBackend = vi.fn()
     const manager = new PluginNativeBackendManager(() => descriptor, spawnBackend)
 
-    await expect(manager.call('native-demo', METHOD, new Uint8Array())).rejects.toThrow(/checksum mismatch/)
+    const call = manager.call('native-demo', METHOD, new Uint8Array())
+    await expect(call).rejects.toThrow(/checksum mismatch/)
+    await expect(call).rejects.toMatchObject({ name: 'NativeCallError', code: 'FAILED_PRECONDITION' })
     expect(spawnBackend).not.toHaveBeenCalled()
   })
 
@@ -361,7 +395,9 @@ describe('PluginNativeBackendManager', () => {
     await manager.call('native-demo', METHOD, new Uint8Array())
 
     await manager.withPluginStopped('native-demo', async () => {
-      await expect(manager.call('native-demo', METHOD, new Uint8Array())).rejects.toThrow(/temporarily unavailable/)
+      const blocked = manager.call('native-demo', METHOD, new Uint8Array())
+      await expect(blocked).rejects.toThrow(/temporarily unavailable/)
+      await expect(blocked).rejects.toMatchObject({ name: 'NativeCallError', code: 'UNAVAILABLE' })
     })
 
     expect(spawnBackend).toHaveBeenCalledOnce()
@@ -440,7 +476,9 @@ describe('PluginNativeBackendManager', () => {
     )
 
     const calls = Array.from({ length: 7 }, () => manager.call('native-demo', METHOD, new Uint8Array(700_000)))
-    await expect(Promise.all(calls)).rejects.toThrow(/stdin queue is full/)
+    const settled = Promise.all(calls)
+    await expect(settled).rejects.toThrow(/stdin queue is full/)
+    await expect(settled).rejects.toMatchObject({ name: 'NativeCallError', code: 'RESOURCE_EXHAUSTED' })
     await manager.stop('native-demo')
   })
 
@@ -525,6 +563,70 @@ describe('PluginNativeBackendManager', () => {
 
     await rejection
     expect(child.kill.mock.calls.map(([signal]) => signal)).toEqual(['SIGTERM', 'SIGKILL'])
+  })
+
+  it('retries forced termination on the next stop after a failed stop', async () => {
+    vi.useFakeTimers()
+    const child = new FakeChild(
+      (request, process) => {
+        if (request.body.case === 'initializeRequest') process.initialize(request)
+        else if (request.body.case === 'callRequest') process.callResult(request, request.body.value.payload)
+      },
+      { exitOnStdinEnd: false },
+    )
+    child.kill.mockReturnValue(true)
+    const manager = new PluginNativeBackendManager(
+      () => backendFile(),
+      () => child.asChildProcess(),
+    )
+    await manager.call('native-demo', METHOD, new Uint8Array())
+
+    const firstStop = manager.stop('native-demo')
+    const rejection = expect(firstStop).rejects.toThrow(/did not exit after forced termination/)
+    await vi.advanceTimersByTimeAsync(2_250)
+    await rejection
+
+    child.kill.mockImplementation((signal: NodeJS.Signals | number = 'SIGTERM') => {
+      if (signal === 'SIGKILL') queueMicrotask(() => child.emit('exit', null, 'SIGKILL'))
+      return true
+    })
+    const secondStop = manager.stop('native-demo')
+    await vi.advanceTimersByTimeAsync(2_250)
+
+    await expect(secondStop).resolves.toBeUndefined()
+    expect(child.kill.mock.calls.filter(([signal]) => signal === 'SIGKILL')).toHaveLength(2)
+
+    const operation = vi.fn()
+    await manager.withPluginStopped('native-demo', operation)
+    expect(operation).toHaveBeenCalledOnce()
+  })
+
+  it('stopAll removes the backends that did stop when one fails', async () => {
+    vi.useFakeTimers()
+    const respond = (request: NativeFrame, process: FakeChild): void => {
+      if (request.body.case === 'initializeRequest') process.initialize(request)
+      else if (request.body.case === 'callRequest') process.callResult(request, request.body.value.payload)
+    }
+    const healthy = new FakeChild(respond)
+    const stuck = new FakeChild(respond, { exitOnStdinEnd: false })
+    stuck.kill.mockReturnValue(true)
+    const replacement = new FakeChild(respond)
+    const spawnBackend = vi
+      .fn<() => ChildProcessWithoutNullStreams>()
+      .mockReturnValueOnce(healthy.asChildProcess())
+      .mockReturnValueOnce(stuck.asChildProcess())
+      .mockReturnValueOnce(replacement.asChildProcess())
+    const manager = new PluginNativeBackendManager(() => backendFile(), spawnBackend)
+    await manager.call('healthy-demo', METHOD, new Uint8Array())
+    await manager.call('stuck-demo', METHOD, new Uint8Array())
+
+    const stopping = manager.stopAll()
+    const rejection = expect(stopping).rejects.toThrow(/native backends failed to stop: stuck-demo/)
+    await vi.advanceTimersByTimeAsync(2_250)
+    await rejection
+
+    await expect(manager.call('healthy-demo', METHOD, Uint8Array.of(9))).resolves.toEqual(Uint8Array.of(9))
+    expect(spawnBackend).toHaveBeenCalledTimes(3)
   })
 
   it('force-kills a worker that is already undergoing graceful stop', async () => {
