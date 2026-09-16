@@ -325,6 +325,40 @@ describe('PluginNativeBackendManager', () => {
     expect(child.kill).toHaveBeenCalledWith('SIGKILL')
   })
 
+  it('does not relabel bystander calls as DEADLINE_EXCEEDED when another call times out', async () => {
+    vi.useFakeTimers()
+    const child = new FakeChild((request, process) => {
+      if (request.body.case === 'initializeRequest') process.initialize(request)
+    })
+    const manager = new PluginNativeBackendManager(
+      () => backendFile(),
+      () => child.asChildProcess(),
+    )
+
+    const first = manager.call('native-demo', METHOD, new Uint8Array())
+    const second = manager.call('native-demo', METHOD, new Uint8Array())
+    const firstRejection = expect(first).rejects.toThrow(/timed out/)
+    const secondRejection = expect(second).rejects.toThrow(/timed out/)
+    await Promise.resolve()
+    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(10_000)
+    const third = manager.call('native-demo', METHOD, new Uint8Array())
+    const thirdRejection = expect(third).rejects.toMatchObject({ name: 'NativeCallError', code: 'UNAVAILABLE' })
+
+    await firstRejection
+    await secondRejection
+    await thirdRejection
+    let firstCode: unknown
+    let secondCode: unknown
+    await first.catch((error) => {
+      firstCode = (error as { code: string }).code
+    })
+    await second.catch((error) => {
+      secondCode = (error as { code: string }).code
+    })
+    expect([firstCode, secondCode].sort()).toEqual(['DEADLINE_EXCEEDED', 'UNAVAILABLE'])
+  })
+
   it('prevents immediate respawn after a worker failure', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(1_000)

@@ -393,9 +393,8 @@ class NativeBackendProcess {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(id)
-        const error = nativeError(`native backend call "${label}" timed out`, 'DEADLINE_EXCEEDED')
-        reject(error)
-        this.fail(error)
+        reject(nativeError(`native backend call "${label}" timed out`, 'DEADLINE_EXCEEDED'))
+        this.fail(nativeError(`native backend call "${label}" timed out`, 'UNAVAILABLE'))
       }, CALL_TIMEOUT_MS)
       this.pending.set(id, { resolve, reject, timer, responseCase })
       if (this.writeBlocked) {

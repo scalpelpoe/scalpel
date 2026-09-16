@@ -320,7 +320,7 @@ function assertNoOutputInputOverlap(projectDir, config) {
 
 function isInsideOrEqual(parent, child) {
   const fromParent = relative(parent, child)
-  return fromParent === '' || (!fromParent.startsWith('..') && !isAbsolute(fromParent))
+  return fromParent === '' || !(fromParent === '..' || fromParent.startsWith(`..${sep}`) || isAbsolute(fromParent))
 }
 
 function validateDescriptor(path, selectedService) {
