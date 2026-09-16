@@ -14,9 +14,11 @@ const SERVICE = 'scalpel.examples.item_analyzer.v1.NativeItemAnalyzer'
 const METHOD = `/${SERVICE}/AnalyzeItem`
 const nativeDir = join(process.cwd(), 'plugin-service-examples', 'native-item-analyzer', 'native')
 const executablePath = join(nativeDir, 'target', 'debug', 'native-item-analyzer.exe')
-const windowsDescribe = process.platform === 'win32' ? describe : describe.skip
+// Opt-in: requires a Rust toolchain and builds the example crate. CI sets SCALPEL_NATIVE_INTEGRATION=1.
+const nativeDescribe =
+  process.platform === 'win32' && process.env.SCALPEL_NATIVE_INTEGRATION === '1' ? describe : describe.skip
 
-windowsDescribe('PluginNativeBackendManager Rust process integration', () => {
+nativeDescribe('PluginNativeBackendManager Rust process integration', () => {
   it('calls and cleanly stops the checked-in native item analyzer', { timeout: 180_000 }, async () => {
     execFileSync('cargo', ['build', '--quiet', '--manifest-path', join(nativeDir, 'Cargo.toml')], {
       timeout: 120_000,
