@@ -1,5 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import { PLUGIN_ID_PATTERN } from './manifest-validator'
 import { pendingPluginStorageDeletionsPath, pluginDir, pluginStorageDir, pluginStoragePath } from './paths'
 
 const DEBOUNCE_MS = 100
@@ -17,7 +18,9 @@ function readPendingDeletions(): string[] {
   if (!existsSync(path)) return []
   try {
     const value = JSON.parse(readFileSync(path, 'utf-8'))
-    return Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : []
+    return Array.isArray(value)
+      ? value.filter((id): id is string => typeof id === 'string' && PLUGIN_ID_PATTERN.test(id))
+      : []
   } catch {
     return []
   }
