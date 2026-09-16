@@ -776,12 +776,12 @@ Field notes:
 
 - `id` must match `^[a-z][a-z0-9-]{2,49}$` and matches the directory name in `userData/plugins/<id>/`.
 - `version` is your plugin's own version, separate from `manifestVersion` (the manifest schema version, currently 1).
-- `scalpelMinVersion` is a supported version range (`">=0.9.8"`, `">=0.9.8 <1.0"`, `"^1.2.0"`, or `"~1.2.0"`). Whitespace-separated comparators are combined with logical AND. If the running Scalpel doesn't satisfy the range, the plugin remains installed with an unavailable reason but does not activate.
+- `scalpelMinVersion` is a supported version range (`">=0.9.8"`, `">=0.9.8 <1.0"`, `"^1.2.0"`, or `"~1.2.0"`). Whitespace-separated comparators are combined with logical AND. A bare version (`"0.9.13"`) means `>=0.9.13`. If the running Scalpel doesn't satisfy the range, the plugin remains installed with an unavailable reason but does not activate.
 - `poeVersions` gates which games the plugin appears under. Omit for both.
 - `tabIcon` is optional; you can also pass an inline SVG string via `registerTab({ icon })`.
 - `api` declares one public unary Protobuf service. `contract` is a root-level binary `FileDescriptorSet`; `service` is its fully qualified service name.
 - `dependencies` explicitly names plugin APIs this plugin consumes. API versions use exact `major.minor.patch` matching in the initial implementation.
-- `nativeBackend` is an **experimental RFC1 preview** declaring one private, supervised unary Protobuf service. RFC1 recognizes only `win32-x64`; all files are root-level release assets. The context routes `ctx.native` to its owning plugin and cannot choose a path, arguments, environment, or working directory.
+- `nativeBackend` is an **experimental RFC1 preview** declaring one private, supervised unary Protobuf service. RFC1 recognizes only `win32-x64` and its executable must end in `.exe`; all files are root-level release assets. The context routes `ctx.native` to its owning plugin and cannot choose a path, arguments, environment, or working directory.
 - Use Protobuf-ES service descriptors with `exposePluginService`, `createPluginServiceClient`, and `createNativeServiceClient`. These helpers infer every method signature directly from standard generated code.
 - Native backends are author-supplied, unsandboxed executables. They run with Scalpel's user permissions and are not restricted from files, the network, processes, or other operating-system resources. Checksums verify expected bytes, the SDK owner binding prevents accidental cross-plugin calls through the supported API, and supervision manages lifecycle failures; none is malware protection or a hostile-code security boundary.
 - Native backends install only from Scalpel's curated registry (or a process-level developer registry override). User-configured self-hosted registries remain JavaScript-only because renderer code can change that setting.
@@ -790,12 +790,12 @@ Field notes:
 
 ### Native RFC1 dependency
 
-The preview Rust transport helper is not on crates.io. Pin the public commit that contains the implementation used by the current host:
+The preview Rust transport helper is not on crates.io. Pin the SDK release tag that shipped the implementation used by the current host (the same tag publishes the tools tarball):
 
 ```toml
 [dependencies]
 prost = "0.14"
-scalpel-plugin-native = { git = "https://github.com/scalpelpoe/scalpel.git", rev = "41275dcbc339b8c6af7fcea20325575a49b0ecc6" }
+scalpel-plugin-native = { git = "https://github.com/scalpelpoe/scalpel.git", tag = "sdk-v0.11.0" }
 ```
 
 The helper's `serve_stdio` dispatcher is sequential. The host can correlate concurrent calls, but RFC1 does not promise concurrent worker execution. See the [crate README](crates/scalpel-plugin-native/README.md) for usage.

@@ -62,7 +62,7 @@ export const consume: PluginActivate = (ctx) => {
 
 The generated service name must match the provider manifest. A consumer must declare the provider and exact API version, and method paths must belong to that service. Providers must bump `api.version` whenever methods or message wire compatibility change because Scalpel cannot distinguish incompatible same-version descriptor bundles.
 
-Public service calls are renderer-local and are not available from a plugin's separate overlay renderer. The SDK binds native clients to their owning plugin in both renderer contexts. Plugins currently share renderer contexts, so this binding prevents unsupported or accidental cross-plugin calls through the SDK but is not a security boundary against malicious renderer code.
+Public service calls are renderer-local. In a plugin's separate overlay renderer, `exposePluginService` is accepted as a no-op, optional dependency clients are `null`, and required dependency clients reject every call, so activation still succeeds there. The SDK binds native clients to their owning plugin in both renderer contexts. Plugins currently share renderer contexts, so this binding prevents unsupported or accidental cross-plugin calls through the SDK but is not a security boundary against malicious renderer code.
 
 ## Native Backends
 
@@ -80,10 +80,10 @@ const activate: PluginActivate = (ctx) => {
 
 RFC1 supports one private service and one lazy process per plugin on Windows x64. The backend is built and supplied by the plugin author, then run as-is without a sandbox and with Scalpel's user permissions, including elevation. Checksums verify expected bytes and supervision manages lifecycle failures; neither establishes safety or restricts filesystem, network, process, or system access. Authors are responsible for what they distribute, and users run native plugins at their own risk. This temporary trust model remains in effect until a future native-plugin revision explicitly ships enforced containment. Read the [normative RFC](NATIVE_PLUGIN_RFC_1.md) before shipping one.
 
-Rust workers can use the unpublished [`scalpel-plugin-native`](crates/scalpel-plugin-native) helper. Pin the RFC1 implementation rather than a branch:
+Rust workers can use the unpublished [`scalpel-plugin-native`](crates/scalpel-plugin-native) helper. Pin the SDK release tag rather than a branch:
 
 ```toml
-scalpel-plugin-native = { git = "https://github.com/scalpelpoe/scalpel.git", rev = "41275dcbc339b8c6af7fcea20325575a49b0ecc6" }
+scalpel-plugin-native = { git = "https://github.com/scalpelpoe/scalpel.git", tag = "sdk-v0.11.0" }
 ```
 
 ## Builder

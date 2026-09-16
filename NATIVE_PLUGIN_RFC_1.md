@@ -51,7 +51,7 @@ The plugin's root-level `manifest.json` declares the backend:
 }
 ```
 
-The contract and executable filenames must be safe, unique, root-level package filenames. `contract` is a binary Protobuf `FileDescriptorSet`. `service` is the fully qualified service name generated from that contract. `protocolVersion` must be `1`.
+The contract and executable filenames must be safe, unique, root-level package filenames. The `win32-x64` executable must end in `.exe`. `contract` is a binary Protobuf `FileDescriptorSet`. `service` is the fully qualified service name generated from that contract. `protocolVersion` must be `1`.
 
 The executable SHA-256 in `manifest.json` must match the packaged bytes. For registry installs, the curated registry must also pin the contract and executable hashes in its `assets` map. Scalpel verifies downloaded assets during installation and verifies the installed executable again before every process spawn. A matching hash proves only that the expected bytes were received; expected bytes can still be malicious.
 
@@ -135,7 +135,7 @@ The worker must return exactly one frame with the same request ID:
 - `CallResponse` containing the encoded output message, or
 - `CallError` containing an application-defined code and a human-readable message
 
-`CallError` rejects only that call and does not terminate a healthy worker. Empty codes are allowed by the wire schema, though stable machine-readable codes are recommended.
+`CallError` rejects only that call and does not terminate a healthy worker. Empty codes are allowed by the wire schema, though stable machine-readable codes are recommended. On the renderer side, `ctx.native.call` rejects with a `PluginNativeCallError` whose `code` is the worker's code; host-side failures use `UNAVAILABLE`, `DEADLINE_EXCEEDED`, `INVALID_ARGUMENT`, `RESOURCE_EXHAUSTED`, `FAILED_PRECONDITION` or `INTERNAL`.
 
 Response kinds are correlated with request kinds. An initialize request accepts only `InitializeResponse`; a call accepts only `CallResponse` or `CallError`. A valid body of the wrong kind is still a protocol failure.
 
@@ -147,7 +147,7 @@ RFC1 host limits are:
 
 | Limit | Value | Behavior |
 | --- | ---: | --- |
-| Encoded frame payload | 1 MiB | Reject or terminate on an oversized frame |
+| Encoded frame payload | 1 MiB | Host rejects an oversized request; the Rust helper answers an oversized reply with `RESOURCE_EXHAUSTED`; a malformed or oversized inbound frame terminates the worker |
 | In-flight requests per process | 32 | Reject an additional call |
 | Call and handshake timeout | 10 seconds | Reject the request and terminate the worker |
 | Queued framed stdin while backpressured | 4 MiB | Reject the call that would exceed the queue |
@@ -171,7 +171,7 @@ Intentional stop uses a bounded, confirmed sequence:
 
 File replacement does not proceed when a worker's termination cannot be confirmed.
 
-Development reload/uninstall temporarily blocks new calls while stopping the worker and changing files. Production registry install, update, or removal stops the affected worker before mutation; after a successful mutation, that plugin remains blocked for the rest of the process and Scalpel requests a full restart. A failed mutation restores normal spawning. Loadability queries exclude packages both while mutation is in progress and while restart is required.
+Development reload/uninstall temporarily blocks new calls while stopping the worker and changing files. Production registry install or update downloads and verifies every asset first, then stops the affected worker only for the file swap; removal stops it before deleting the package; after a successful mutation, that plugin remains blocked for the rest of the process and Scalpel requests a full restart. A failed mutation restores normal spawning. Loadability queries exclude packages both while mutation is in progress and while restart is required.
 
 Application shutdown blocks all new native calls before stopping workers. Emergency process teardown sends forced termination without waiting for confirmation.
 
@@ -189,12 +189,12 @@ npm install @bufbuild/protobuf@2.14.0
 
 Attach every file under `dist/` as a loose root-level GitHub Release asset. Do not publish a manifest template containing a checksum placeholder.
 
-The Rust helper is not published to crates.io. Pin the public RFC1 implementation:
+The Rust helper is not published to crates.io. Pin the SDK release tag that shipped the RFC1 implementation:
 
 ```toml
 [dependencies]
 prost = "0.14"
-scalpel-plugin-native = { git = "https://github.com/scalpelpoe/scalpel.git", rev = "41275dcbc339b8c6af7fcea20325575a49b0ecc6" }
+scalpel-plugin-native = { git = "https://github.com/scalpelpoe/scalpel.git", tag = "sdk-v0.11.0" }
 ```
 
 See [`crates/scalpel-plugin-native/README.md`](crates/scalpel-plugin-native/README.md) and [`plugin-service-examples/native-item-analyzer`](plugin-service-examples/native-item-analyzer).

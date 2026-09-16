@@ -143,7 +143,7 @@ npx scalpel-plugin pack
 
 It generates standard Protobuf-ES sources and descriptor sets, bundles the renderer, and packages native artifacts. See [`PLUGIN_SERVICES.md`](../../PLUGIN_SERVICES.md) for configuration and examples.
 
-Native backends are an **experimental RFC1 preview** and are author-supplied, unsandboxed executables. Use `createNativeServiceClient(ctx.native, Service)` instead of the raw byte API. Read [`NATIVE_PLUGIN_RFC_1.md`](../../NATIVE_PLUGIN_RFC_1.md) for the normative trust model, wire protocol, fixed limits, lifecycle, Windows x64 support, checksum requirements, and non-goals before shipping one.
+Native backends are an **experimental RFC1 preview** and are author-supplied, unsandboxed executables. Use `createNativeServiceClient(ctx.native, Service)` instead of the raw byte API. Calls reject with a `PluginNativeCallError` carrying a machine-readable `code`. Read [`NATIVE_PLUGIN_RFC_1.md`](../../NATIVE_PLUGIN_RFC_1.md) for the normative trust model, wire protocol, fixed limits, lifecycle, Windows x64 support, checksum requirements, and non-goals before shipping one.
 
 For custom build pipelines, externalize the host SDK and React specifiers:
 
