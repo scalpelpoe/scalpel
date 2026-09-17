@@ -19,7 +19,7 @@ describe('validateManifest', () => {
   })
 
   it('accepts supported scalpelMinVersion ranges', () => {
-    for (const scalpelMinVersion of ['1.2.3', '^1.2.3', '~1.2.3', '>=1.2.0 <2.0.0']) {
+    for (const scalpelMinVersion of ['1.2.3', '^1.2.3', '~1.2.3', '>=1.2.0 <2.0.0', '>= 0.9.0']) {
       expect(validateManifest({ ...valid, scalpelMinVersion }).ok, scalpelMinVersion).toBe(true)
     }
   })

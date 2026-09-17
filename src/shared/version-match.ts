@@ -28,6 +28,13 @@ interface VersionComparator {
 
 const VERSION_PATTERN = /^(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:-[0-9A-Za-z][0-9A-Za-z.-]*)?$/
 
+/** Strip whitespace between a leading operator and the version that follows it, e.g. `">= 1.0.0"` -> `">=1.0.0"`.
+ *  Manifest authors sometimes write ranges with a space after the operator; the range syntax otherwise splits
+ *  entries on whitespace, so an un-normalized entry would parse as two malformed comparators. */
+function normalizeRange(entry: string): string {
+  return entry.trim().replace(/(<=|>=|<|>|=|\^|~)\s+/g, '$1')
+}
+
 function parseComparator(entry: string): VersionComparator | null {
   const match = entry.match(/^(<=|>=|<|>|=|\^|~)?(.+)$/)
   if (!match || !VERSION_PATTERN.test(match[2])) return null
@@ -64,8 +71,9 @@ function comparatorMatches(comparator: VersionComparator, current: string): bool
 
 /** Whether an expression uses the version range syntax supported by versionMatches. */
 export function isValidVersionRange(entry: string): boolean {
-  const comparators = entry.trim().split(/\s+/)
-  return entry.trim().length > 0 && comparators.every((comparator) => parseComparator(comparator) !== null)
+  const normalized = normalizeRange(entry)
+  const comparators = normalized.split(/\s+/)
+  return normalized.length > 0 && comparators.every((comparator) => parseComparator(comparator) !== null)
 }
 
 /**
@@ -76,17 +84,17 @@ export function isValidVersionRange(entry: string): boolean {
  * - caret or tilde ranges: `"^1.2.3"`, `"~1.2.3"`
  */
 export function versionMatches(entry: string, current: string): boolean {
-  const comparators = entry.trim().split(/\s+/).map(parseComparator)
+  const comparators = normalizeRange(entry).split(/\s+/).map(parseComparator)
   return comparators.every((comparator) => comparator !== null && comparatorMatches(comparator, current))
 }
 
 /** scalpelMinVersion semantics: a bare version ("1.2.3") means ">=1.2.3"; anything with an operator,
  *  caret/tilde or several comparators is evaluated by versionMatches as written. */
 export function minVersionSatisfied(range: string, current: string): boolean {
-  const trimmed = range.trim()
-  const comparator = !/\s/.test(trimmed) ? parseComparator(trimmed) : null
-  if (comparator && comparator.operator === '=' && !trimmed.startsWith('=')) {
-    return versionMatches(`>=${trimmed}`, current)
+  const normalized = normalizeRange(range)
+  const comparator = !/\s/.test(normalized) ? parseComparator(normalized) : null
+  if (comparator && comparator.operator === '=' && !normalized.startsWith('=')) {
+    return versionMatches(`>=${normalized}`, current)
   }
   return versionMatches(range, current)
 }
