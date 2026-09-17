@@ -35,10 +35,10 @@ export function DeveloperSection({ settings, update, onError }: Props): JSX.Elem
 
   useEffect(() => {
     void refresh()
-    const unsubInstalled = window.api.onPluginDevInstalled(() => void refresh())
+    const unsubInstalled = window.api.onPluginInstalled(() => void refresh())
     // A reload re-installs over the running plugin, which reports as an update.
-    const unsubUpdated = window.api.onPluginDevUpdated(() => void refresh())
-    const unsubUninstalled = window.api.onPluginDevUninstalled(() => void refresh())
+    const unsubUpdated = window.api.onPluginUpdated(() => void refresh())
+    const unsubUninstalled = window.api.onPluginUninstalled(() => void refresh())
     return () => {
       unsubInstalled()
       unsubUpdated()

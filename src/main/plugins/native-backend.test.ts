@@ -437,32 +437,27 @@ describe('PluginNativeBackendManager', () => {
     expect(spawnBackend).toHaveBeenCalledOnce()
   })
 
-  it('keeps a successfully mutated plugin blocked until restart and unblocks failure', async () => {
-    const child = new FakeChild((request, process) => {
+  it('unblocks a successfully mutated plugin and respawns its worker on the next call', async () => {
+    const echo = (request: NativeFrame, process: FakeChild): void => {
       if (request.body.case === 'initializeRequest') process.initialize(request)
       else if (request.body.case === 'callRequest') process.callResult(request, request.body.value.payload)
-    })
-    const manager = new PluginNativeBackendManager(
-      () => backendFile(),
-      () => child.asChildProcess(),
-    )
+    }
+    const first = new FakeChild(echo)
+    const second = new FakeChild(echo)
+    const spawnBackend = vi
+      .fn<() => ChildProcessWithoutNullStreams>()
+      .mockReturnValueOnce(first.asChildProcess())
+      .mockReturnValueOnce(second.asChildProcess())
+    const manager = new PluginNativeBackendManager(() => backendFile(), spawnBackend)
+    await expect(manager.call('native-demo', METHOD, Uint8Array.of(1))).resolves.toEqual(Uint8Array.of(1))
 
-    await manager.withPluginStoppedUntilRestart(
-      'native-demo',
-      () => ({ ok: false }),
-      (result) => result.ok,
-    )
-    await expect(manager.call('native-demo', METHOD, new Uint8Array())).resolves.toEqual(new Uint8Array())
-    await manager.withPluginStoppedUntilRestart(
-      'native-demo',
-      () => ({ ok: true }),
-      (result) => result.ok,
-    )
+    await expect(manager.withPluginStopped('native-demo', () => ({ ok: true }))).resolves.toEqual({ ok: true })
 
-    expect(manager.isRestartRequired()).toBe(true)
-    expect([...manager.restartBlockedPluginIds()]).toEqual(['native-demo'])
-    expect([...manager.loadBlockedPluginIds()]).toEqual(['native-demo'])
-    await expect(manager.call('native-demo', METHOD, new Uint8Array())).rejects.toThrow(/temporarily unavailable/)
+    expect(first.exitCode).toBe(0)
+    expect([...manager.loadBlockedPluginIds()]).toEqual([])
+    await expect(manager.call('native-demo', METHOD, Uint8Array.of(2))).resolves.toEqual(Uint8Array.of(2))
+    expect(spawnBackend).toHaveBeenCalledTimes(2)
+    await manager.stop('native-demo')
   })
 
   it('reports a plugin as load-blocked before and throughout its serialized mutation', async () => {

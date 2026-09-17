@@ -379,7 +379,6 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
   const [registryError, setRegistryError] = useState<string | null>(null)
   const [installed, setInstalled] = useState<InstalledEntry[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
-  const [restartRequired, setRestartRequired] = useState(false)
   const [expandedId, setExpandedId] = useState<string | null>(null)
   const [activeShot, setActiveShot] = useState(0)
   const [registeredHotkeys, setRegisteredHotkeys] = useState<
@@ -409,24 +408,18 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
   useEffect(() => {
     void refreshAll()
     void refreshRegistry()
-    void window.api.pluginRestartRequired().then(setRestartRequired)
   }, [refreshAll])
 
   useEffect(() => {
-    const offRestart = window.api.onPluginRestartRequired(() => {
-      setRestartRequired(true)
-      void refreshAll()
-    })
+    const offInstalled = window.api.onPluginInstalled(() => void refreshAll())
+    const offUpdated = window.api.onPluginUpdated(() => void refreshAll())
+    const offUninstalled = window.api.onPluginUninstalled(() => void refreshAll())
     const offHotkeys = window.api.onPluginHotkeysChanged(() => void refreshAll())
-    const offInstalled = window.api.onPluginDevInstalled?.(() => void refreshAll())
-    const offUpdated = window.api.onPluginDevUpdated?.(() => void refreshAll())
-    const offUninstalled = window.api.onPluginDevUninstalled?.(() => void refreshAll())
     return () => {
-      offRestart()
+      offInstalled()
+      offUpdated()
+      offUninstalled()
       offHotkeys()
-      offInstalled?.()
-      offUpdated?.()
-      offUninstalled?.()
     }
   }, [refreshAll])
 
@@ -439,7 +432,6 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
       onError(m.settings_plg_install_failed({ error: r.error }))
       return
     }
-    if (r.restartRequired) setRestartRequired(true)
     onError(m.settings_plg_install_success({ name: entry.name }), 'warn')
     void refreshAll()
   }
@@ -453,7 +445,6 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
       onError(m.settings_plg_update_failed({ error: r.error }))
       return
     }
-    if (r.restartRequired) setRestartRequired(true)
     onError(
       m.settings_plg_update_success({
         name: entry.name,
@@ -471,7 +462,6 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
       onError(m.settings_plg_uninstall_failed({ error: r.error }))
       return
     }
-    if (r.restartRequired) setRestartRequired(true)
     onError(m.settings_plg_uninstall_success({ name }), 'warn')
     void refreshAll()
   }
@@ -486,27 +476,6 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
   return (
     <div className="flex flex-col gap-4">
       <NativePluginSecurityNotice />
-      {restartRequired && (
-        <div className="flex items-center justify-between gap-3 rounded-[10px] border border-amber-500/35 bg-amber-500/10 px-3 py-2.5">
-          <div className="min-w-0">
-            <div className="text-xs font-semibold text-amber-200">Restart required</div>
-            <div className="text-[11px] text-amber-100/70">
-              Plugin files changed. The previous plugin graph remains active until Scalpel restarts.
-            </div>
-          </div>
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() =>
-              void window.api.restartApp().then((result) => {
-                if (!result.ok) onError(result.error ?? 'Restart failed')
-              })
-            }
-          >
-            Restart now
-          </Button>
-        </div>
-      )}
       <section className="flex flex-col gap-2">
         <div className="settings-section-title mt-3">{m.settings_plg_installed_heading()}</div>
         <SettingToggleBox

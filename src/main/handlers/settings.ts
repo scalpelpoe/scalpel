@@ -29,7 +29,6 @@ import {
 import { getOverlayAttachedVersion } from '../overlay'
 import { shouldRelaunchAfterOnboarding } from '../onboarding-relaunch'
 import { getGameSwitchCoordinator } from '../experimental'
-import { pluginNativeBackends } from '../plugins/native-backend'
 
 export function register(store: Store<AppSettings>): void {
   ipcMain.handle('get-settings', () => getEffectiveSettings(store))
@@ -59,7 +58,6 @@ export function register(store: Store<AppSettings>): void {
     applySetting(store, 'onboardingStep', '', event.sender)
 
     const active = store.get('poeVersion') === 2 ? 2 : 1
-    const pluginRestartRequired = pluginNativeBackends.isRestartRequired()
     const action = shouldRelaunchAfterOnboarding(active, getOverlayAttachedVersion(), app.isPackaged)
     if (action === 'dev-warn') {
       console.warn(
@@ -67,13 +65,10 @@ export function register(store: Store<AppSettings>): void {
       )
       return { ok: true as const, devRestartRequired: true as const }
     }
-    if (action === 'relaunch' || (pluginRestartRequired && app.isPackaged)) {
+    if (action === 'relaunch') {
       const result = await gracefulRestart()
       if (result.ok) return { ok: true as const, restarting: true as const }
       console.error(`[onboarding] restart failed: ${result.error ?? 'unknown error'}`)
-      return { ok: true as const, devRestartRequired: true as const }
-    }
-    if (pluginRestartRequired) {
       return { ok: true as const, devRestartRequired: true as const }
     }
     return { ok: true as const }

@@ -70,10 +70,9 @@ describe('SettingsPanel tab routing', () => {
       setProfileSettingForGame: vi.fn(),
       listInstalledPlugins: vi.fn(async () => []),
       pluginFetchRegistry: vi.fn(async () => ({ ok: false as const, error: 'x' })),
-      onPluginRestartRequired: vi.fn(() => () => {}),
-      onPluginDevInstalled: vi.fn(() => () => {}),
-      onPluginDevUpdated: vi.fn(() => () => {}),
-      onPluginDevUninstalled: vi.fn(() => () => {}),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
     }
   })
 

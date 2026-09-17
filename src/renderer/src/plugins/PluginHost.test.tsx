@@ -41,9 +41,9 @@ beforeEach(() => {
       }
     }),
     onLogLine: vi.fn(() => () => {}),
-    onPluginDevInstalled: vi.fn(() => () => {}),
-    onPluginDevUninstalled: vi.fn(() => () => {}),
-    onPluginDevUpdated: vi.fn(() => () => {}),
+    onPluginInstalled: vi.fn(() => () => {}),
+    onPluginUninstalled: vi.fn(() => () => {}),
+    onPluginUpdated: vi.fn(() => () => {}),
   }
   // mock the dynamic import that the host will perform
   ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn()
@@ -302,7 +302,7 @@ describe('PluginHost', () => {
     expect(onError).not.toHaveBeenCalled()
   })
 
-  it('reconciles the graph after dev install and activates a formerly dangling consumer', async () => {
+  it('reconciles the graph after install and activates a formerly dangling consumer', async () => {
     const providerManifest: PluginManifest = {
       ...manifest,
       id: 'provider',
@@ -329,7 +329,7 @@ describe('PluginHost', () => {
     ;(window as unknown as { api: unknown }).api = {
       ...currentApi,
       listLoadablePlugins: vi.fn(async () => loadable),
-      onPluginDevInstalled: vi.fn((listener: (entry: { manifest: PluginManifest; entryUrl: string }) => void) => {
+      onPluginInstalled: vi.fn((listener: (entry: { manifest: PluginManifest; entryUrl: string }) => void) => {
         installedListener = listener
         return () => {
           installedListener = null
@@ -483,14 +483,14 @@ describe('PluginHost', () => {
       pluginRegisterTab: vi.fn(async () => undefined),
       pluginUnregisterTab: vi.fn(async () => undefined),
       onPluginMacro: vi.fn(() => () => {}),
-      onPluginDevInstalled: vi.fn((h: (entry: unknown) => void) => {
+      onPluginInstalled: vi.fn((h: (entry: unknown) => void) => {
         installedListener = h
         return () => {
           installedListener = null
         }
       }),
-      onPluginDevUninstalled: vi.fn(() => () => {}),
-      onPluginDevUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
       pluginTriggerMainHotkey: vi.fn(async () => null),
       pluginShowOverlay: vi.fn(async () => undefined),
     }
@@ -559,9 +559,9 @@ describe('PluginHost', () => {
       pluginUnregisterTab: vi.fn(async () => undefined),
       pluginRegisterOverlay,
       onPluginMacro: vi.fn(() => () => {}),
-      onPluginDevInstalled: vi.fn(() => () => {}),
-      onPluginDevUninstalled: vi.fn(() => () => {}),
-      onPluginDevUpdated: vi.fn(() => () => {}),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
       pluginTriggerMainHotkey: vi.fn(async () => null),
     }
     ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn(async () => ({
@@ -613,9 +613,9 @@ describe('PluginHost', () => {
       pluginUnregisterTab: vi.fn(async () => undefined),
       pluginRegisterOverlay,
       onPluginMacro: vi.fn(() => () => {}),
-      onPluginDevInstalled: vi.fn(() => () => {}),
-      onPluginDevUninstalled: vi.fn(() => () => {}),
-      onPluginDevUpdated: vi.fn(() => () => {}),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
       pluginTriggerMainHotkey: vi.fn(async () => null),
     }
     ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn(async () => ({
@@ -654,9 +654,10 @@ describe('PluginHost', () => {
     const activate = vi.fn((ctx: ScalpelPluginContext) => {
       ctx.registerTab({ label: 'Hello', icon: '<svg/>', render: () => {} })
     })
+    let installed = [{ manifest, entryUrl: 'file:///fake/plugin.js' }]
     let uninstalledListener: ((pluginId: string) => void) | null = null
     ;(window as unknown as { api: unknown }).api = {
-      listInstalledPlugins: vi.fn(async () => [{ manifest, entryUrl: 'file:///fake/plugin.js' }]),
+      listInstalledPlugins: vi.fn(async () => installed),
       pluginStorageGet: vi.fn(async () => null),
       pluginStorageSet: vi.fn(async () => undefined),
       pluginStorageDelete: vi.fn(async () => undefined),
@@ -666,14 +667,14 @@ describe('PluginHost', () => {
       pluginRegisterTab: vi.fn(async () => undefined),
       pluginUnregisterTab: vi.fn(async () => undefined),
       onPluginMacro: vi.fn(() => () => {}),
-      onPluginDevInstalled: vi.fn(() => () => {}),
-      onPluginDevUninstalled: vi.fn((h: (pluginId: string) => void) => {
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn((h: (pluginId: string) => void) => {
         uninstalledListener = h
         return () => {
           uninstalledListener = null
         }
       }),
-      onPluginDevUpdated: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
       pluginTriggerMainHotkey: vi.fn(async () => null),
       pluginShowOverlay: vi.fn(async () => undefined),
     }
@@ -710,7 +711,9 @@ describe('PluginHost', () => {
       expect(last[0].pluginId).toBe('hello')
     })
 
-    // Fire the uninstall event.
+    // Fire the uninstall event. Main drops the plugin from the list before it
+    // broadcasts the event.
+    installed = []
     ;(uninstalledListener as ((pluginId: string) => void) | null)?.('hello')
 
     await waitFor(() => {
@@ -721,7 +724,7 @@ describe('PluginHost', () => {
     expect(window.api.pluginUnregisterHotkey).toHaveBeenCalledWith('hello')
   })
 
-  it('reloads an unpacked plugin on plugin-dev-updated with no duplicate tabs', async () => {
+  it('reloads a plugin on plugin-updated with no duplicate tabs', async () => {
     const activate = vi.fn((ctx: ScalpelPluginContext) => {
       ctx.registerTab({ label: 'Hello', icon: '<svg/>', render: () => {} })
     })
@@ -738,9 +741,9 @@ describe('PluginHost', () => {
       pluginUnregisterTab: vi.fn(async () => undefined),
       onLogLine: vi.fn(() => () => {}),
       onPluginMacro: vi.fn(() => () => {}),
-      onPluginDevInstalled: vi.fn(() => () => {}),
-      onPluginDevUninstalled: vi.fn(() => () => {}),
-      onPluginDevUpdated: vi.fn((h: (entry: { manifest: PluginManifest; entryUrl: string }) => void) => {
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn((h: (entry: { manifest: PluginManifest; entryUrl: string }) => void) => {
         updatedListener = h
         return () => {
           updatedListener = null
@@ -785,7 +788,7 @@ describe('PluginHost', () => {
     })
   })
 
-  it('reloads required dependents after a provider dev update', async () => {
+  it('reloads required dependents after a provider update', async () => {
     const providerManifest: PluginManifest = {
       ...manifest,
       id: 'provider',
@@ -816,8 +819,7 @@ describe('PluginHost', () => {
     ;(window as unknown as { api: unknown }).api = {
       ...currentApi,
       listLoadablePlugins: vi.fn(async () => entries),
-      pluginRestartRequired: vi.fn(async () => false),
-      onPluginDevUpdated: vi.fn((listener: (entry: { manifest: PluginManifest; entryUrl: string }) => void) => {
+      onPluginUpdated: vi.fn((listener: (entry: { manifest: PluginManifest; entryUrl: string }) => void) => {
         updatedListener = listener
         return () => {
           updatedListener = null
@@ -858,32 +860,45 @@ describe('PluginHost', () => {
     expect(providerTeardown).toHaveBeenCalledOnce()
   })
 
-  it('reloads an unrelated plugin while preserving a restart-blocked active graph', async () => {
-    const blockedManifest = { ...manifest, id: 'blocked' }
-    const unrelatedManifest = { ...manifest, id: 'unrelated' }
-    let loadable = [
-      { manifest: blockedManifest, entryUrl: 'plugin://blocked' },
-      { manifest: unrelatedManifest, entryUrl: 'plugin://unrelated' },
-    ]
-    let updatedListener: ((entry: { manifest: PluginManifest; entryUrl: string }) => void) | null = null
-    const blockedTeardown = vi.fn()
-    const unrelatedTeardown = vi.fn()
-    const blockedActivate = vi.fn(() => blockedTeardown)
-    const unrelatedActivate = vi.fn(() => unrelatedTeardown)
+  it('hot-loads an installed provider and re-activates its optional consumer', async () => {
+    const providerManifest: PluginManifest = {
+      ...manifest,
+      id: 'provider',
+      api: {
+        version: '1.0.0',
+        contract: 'api.binpb',
+        service: 'example.v1.Provider',
+      },
+    }
+    const consumerManifest: PluginManifest = {
+      ...manifest,
+      id: 'consumer',
+      dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0', optional: true }],
+    }
+    let loadable = [{ manifest: consumerManifest, entryUrl: 'plugin://consumer' }]
+    let installedListener: ((entry: { manifest: PluginManifest; entryUrl: string }) => void) | null = null
+    const providerActivate = vi.fn((ctx: ScalpelPluginContext) => {
+      ctx.plugins.expose('example.v1.Provider', () => null)
+    })
+    const consumerTeardown = vi.fn()
+    const clients: unknown[] = []
+    const consumerActivate = vi.fn((ctx: ScalpelPluginContext) => {
+      clients.push(ctx.plugins.get('provider', 'example.v1.Provider'))
+      return consumerTeardown
+    })
     const currentApi = window.api
     ;(window as unknown as { api: unknown }).api = {
       ...currentApi,
       listLoadablePlugins: vi.fn(async () => loadable),
-      pluginRestartRequired: vi.fn(async () => true),
-      onPluginDevUpdated: vi.fn((listener: (entry: { manifest: PluginManifest; entryUrl: string }) => void) => {
-        updatedListener = listener
+      onPluginInstalled: vi.fn((listener: (entry: { manifest: PluginManifest; entryUrl: string }) => void) => {
+        installedListener = listener
         return () => {
-          updatedListener = null
+          installedListener = null
         }
       }),
     }
     ;(window as unknown as { __pluginImport: (url: string) => Promise<unknown> }).__pluginImport = vi.fn(
-      async (url: string) => ({ default: url.includes('blocked') ? blockedActivate : unrelatedActivate }),
+      async (url: string) => ({ default: url.includes('provider') ? providerActivate : consumerActivate }),
     )
 
     const { PluginHost } = await import('./PluginHost')
@@ -904,18 +919,94 @@ describe('PluginHost', () => {
       />,
     )
 
-    await waitFor(() => expect(unrelatedActivate).toHaveBeenCalledOnce())
-    await waitFor(() => expect(blockedActivate).toHaveBeenCalledOnce())
-    loadable = [{ manifest: unrelatedManifest, entryUrl: 'plugin://unrelated' }]
-    ;(updatedListener as ((entry: { manifest: PluginManifest; entryUrl: string }) => void) | null)?.({
-      manifest: { ...unrelatedManifest, version: '2.0.0' },
-      entryUrl: 'plugin://unrelated?v=2',
-    })
+    await waitFor(() => expect(consumerActivate).toHaveBeenCalledOnce())
+    expect(clients[0]).toBeNull()
 
-    await waitFor(() => expect(unrelatedActivate).toHaveBeenCalledTimes(2))
-    expect(unrelatedTeardown).toHaveBeenCalledOnce()
-    expect(blockedActivate).toHaveBeenCalledOnce()
-    expect(blockedTeardown).not.toHaveBeenCalled()
+    const providerEntry = { manifest: providerManifest, entryUrl: 'plugin://provider?v=1' }
+    loadable = [{ manifest: consumerManifest, entryUrl: 'plugin://consumer' }, providerEntry]
+    ;(installedListener as ((entry: { manifest: PluginManifest; entryUrl: string }) => void) | null)?.(providerEntry)
+
+    await waitFor(() => expect(consumerActivate).toHaveBeenCalledTimes(2))
+    expect(providerActivate).toHaveBeenCalledOnce()
+    expect(consumerTeardown).toHaveBeenCalledOnce()
+    expect(clients[1]).not.toBeNull()
+  })
+
+  it('re-activates an optional consumer after its provider is uninstalled', async () => {
+    const providerManifest: PluginManifest = {
+      ...manifest,
+      id: 'provider',
+      api: {
+        version: '1.0.0',
+        contract: 'api.binpb',
+        service: 'example.v1.Provider',
+      },
+    }
+    const consumerManifest: PluginManifest = {
+      ...manifest,
+      id: 'consumer',
+      dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0', optional: true }],
+    }
+    let loadable = [
+      { manifest: consumerManifest, entryUrl: 'plugin://consumer' },
+      { manifest: providerManifest, entryUrl: 'plugin://provider' },
+    ]
+    let uninstalledListener: ((pluginId: string) => void) | null = null
+    const providerTeardown = vi.fn()
+    const providerActivate = vi.fn((ctx: ScalpelPluginContext) => {
+      ctx.plugins.expose('example.v1.Provider', () => null)
+      return providerTeardown
+    })
+    const clients: unknown[] = []
+    const consumerActivate = vi.fn((ctx: ScalpelPluginContext) => {
+      clients.push(ctx.plugins.get('provider', 'example.v1.Provider'))
+    })
+    const currentApi = window.api
+    ;(window as unknown as { api: unknown }).api = {
+      ...currentApi,
+      listLoadablePlugins: vi.fn(async () => loadable),
+      onPluginUninstalled: vi.fn((listener: (pluginId: string) => void) => {
+        uninstalledListener = listener
+        return () => {
+          uninstalledListener = null
+        }
+      }),
+    }
+    ;(window as unknown as { __pluginImport: (url: string) => Promise<unknown> }).__pluginImport = vi.fn(
+      async (url: string) => ({ default: url.includes('provider') ? providerActivate : consumerActivate }),
+    )
+
+    const { PluginHost } = await import('./PluginHost')
+    const onPluginUnloaded = vi.fn()
+    render(
+      <PluginHost
+        ready
+        poeVersion={1}
+        league="Mirage"
+        currentItem={null}
+        currentZone={null}
+        onSubscribeCurrentItem={() => () => {}}
+        onSubscribeCurrentZone={() => () => {}}
+        onSubscribeLeagueChange={() => () => {}}
+        onOpenExternal={() => {}}
+        onTabsChange={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
+        onPluginUnloaded={onPluginUnloaded}
+      />,
+    )
+
+    await waitFor(() => expect(consumerActivate).toHaveBeenCalledOnce())
+    expect(providerActivate).toHaveBeenCalledOnce()
+    expect(clients[0]).not.toBeNull()
+
+    loadable = [{ manifest: consumerManifest, entryUrl: 'plugin://consumer' }]
+    ;(uninstalledListener as ((pluginId: string) => void) | null)?.('provider')
+
+    await waitFor(() => expect(consumerActivate).toHaveBeenCalledTimes(2))
+    expect(providerTeardown).toHaveBeenCalledOnce()
+    expect(onPluginUnloaded).toHaveBeenCalledWith('provider')
+    expect(clients[1]).toBeNull()
   })
 
   it('disposes subscriptions made before activate throws', async () => {
@@ -959,9 +1050,10 @@ describe('PluginHost', () => {
       ctx.registerTab({ label: 'Hello', icon: '<svg/>', render: () => {} })
       return teardown
     })
+    let installed = [{ manifest, entryUrl: 'file:///fake/plugin.js' }]
     let uninstalledListener: ((pluginId: string) => void) | null = null
     ;(window as unknown as { api: unknown }).api = {
-      listInstalledPlugins: vi.fn(async () => [{ manifest, entryUrl: 'file:///fake/plugin.js' }]),
+      listInstalledPlugins: vi.fn(async () => installed),
       pluginStorageGet: vi.fn(async () => null),
       pluginStorageSet: vi.fn(async () => undefined),
       pluginStorageDelete: vi.fn(async () => undefined),
@@ -972,9 +1064,9 @@ describe('PluginHost', () => {
       pluginUnregisterTab: vi.fn(async () => undefined),
       onLogLine: vi.fn(() => () => {}),
       onPluginMacro: vi.fn(() => () => {}),
-      onPluginDevInstalled: vi.fn(() => () => {}),
-      onPluginDevUpdated: vi.fn(() => () => {}),
-      onPluginDevUninstalled: vi.fn((h: (pluginId: string) => void) => {
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn((h: (pluginId: string) => void) => {
         uninstalledListener = h
         return () => {
           uninstalledListener = null
@@ -1011,6 +1103,8 @@ describe('PluginHost', () => {
       expect(last).toHaveLength(1)
     })
 
+    // Main drops the plugin from the list before it broadcasts the event.
+    installed = []
     ;(uninstalledListener as ((pluginId: string) => void) | null)?.('hello')
 
     await waitFor(() => {

@@ -27,9 +27,9 @@ function installApi(
     })),
     pluginReloadUnpacked: vi.fn(async () => ({ ok: true, id: 'test-plugin' })),
     pluginUninstallUnpacked: vi.fn(async () => ({ ok: true })),
-    onPluginDevInstalled: vi.fn(() => () => {}),
-    onPluginDevUpdated: vi.fn(() => () => {}),
-    onPluginDevUninstalled: vi.fn(() => () => {}),
+    onPluginInstalled: vi.fn(() => () => {}),
+    onPluginUpdated: vi.fn(() => () => {}),
+    onPluginUninstalled: vi.fn(() => () => {}),
     restartApp: vi.fn(),
     ...overrides,
   }
@@ -174,7 +174,7 @@ describe('DeveloperSection reload button', () => {
   it('refreshes the list when a plugin is hot-updated', async () => {
     let fire: (() => void) | undefined
     installApi(loaded('/src/test-plugin'), {
-      onPluginDevUpdated: vi.fn((cb: () => void) => {
+      onPluginUpdated: vi.fn((cb: () => void) => {
         fire = cb
         return () => {}
       }),

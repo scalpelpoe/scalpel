@@ -99,9 +99,9 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     void window.api.pluginUnregisterTab(pluginId)
   }, [])
 
-  // Extracted per-plugin load logic used by both the initial-load loop and the
-  // dev hot-install event handler. Wrapped in useCallback([]) so identity is stable
-  // across renders; all prop callbacks are read through refs.
+  // Extracted per-plugin load logic used by graph reconciliation (initial load
+  // and every install/update/uninstall event). Wrapped in useCallback so
+  // identity is stable across renders; all prop callbacks are read through refs.
   const loadPlugin = useCallback(
     async (entry: { manifest: PluginManifest; entryUrl: string }): Promise<boolean> => {
       const m = entry.manifest
@@ -314,10 +314,6 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       reloadPluginId?: string,
       cancelled: () => boolean = () => false,
     ): Promise<void> => {
-      // Production registry mutations intentionally preserve the running graph
-      // until restart. Still reconcile loadable plugins so unrelated dev events
-      // work, but do not unload active entries omitted by a restart-blocked graph.
-      const preserveActiveGraph = preferredEntry && (await window.api.pluginRestartRequired?.())
       const listLoadable = window.api.listLoadablePlugins ?? window.api.listInstalledPlugins
       const listed = (await listLoadable()).filter(
         (entry) => !entry.manifest.poeVersions || entry.manifest.poeVersions.includes(poeVersionRef.current),
@@ -325,7 +321,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       if (cancelled()) return
 
       // Keep main's graph decision authoritative. The event payload only
-      // replaces a loadable entry's URL so a dev update bypasses import caches.
+      // replaces a loadable entry's URL so an update bypasses import caches.
       const entries = listed.map((entry) =>
         preferredEntry?.manifest.id === entry.manifest.id ? preferredEntry : entry,
       )
@@ -333,12 +329,16 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       const desiredIds = new Set(plan.entries.map((entry) => entry.manifest.id))
 
       for (const pluginId of [...activePluginIdsRef.current]) {
-        if (!desiredIds.has(pluginId) && !preserveActiveGraph) {
+        if (!desiredIds.has(pluginId)) {
           unloadPlugin(pluginId)
           onPluginUnloadedRef.current?.(pluginId)
         }
       }
-      if (reloadPluginId && desiredIds.has(reloadPluginId)) {
+      if (reloadPluginId) {
+        // Every active consumer of the changed plugin, optional or required and
+        // transitively, restarts so the hot-applied graph matches a fresh start:
+        // an optional consumer that got null from ctx.plugins.get gets a real
+        // client once its provider exists, and null again once it is removed.
         const reloadIds = new Set([reloadPluginId])
         let changed = true
         while (changed) {
@@ -346,9 +346,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
           for (const entry of plan.entries) {
             if (
               !reloadIds.has(entry.manifest.id) &&
-              entry.manifest.dependencies?.some(
-                (dependency) => !dependency.optional && reloadIds.has(dependency.pluginId),
-              )
+              entry.manifest.dependencies?.some((dependency) => reloadIds.has(dependency.pluginId))
             ) {
               reloadIds.add(entry.manifest.id)
               changed = true
@@ -404,32 +402,40 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     }
   }, [enqueueReconciliation, props.ready])
 
-  // Unpacked development reload is intentionally separate from registry
-  // mutations. Production changes preserve this graph until app restart.
+  // Registry and unpacked mutations share these events and hot-apply through
+  // the same reconciliation. Main sends them after the plugin's files are in
+  // place and its native lifecycle lock is released, so the loadable list
+  // already reflects the change.
+  //
+  // Hot-install: activate the plugin, then restart its consumers so optional
+  // dependents pick up the new provider.
   useEffect(() => {
-    return window.api.onPluginDevInstalled((entry) => {
-      if (!loadedRef.current) return
-      void enqueueReconciliation(entry).catch(() => undefined)
-    })
-  }, [enqueueReconciliation])
-
-  // Dev hot-update: unload the running instance, then reload the new code. The
-  // cache-busted entryUrl (?v=<newVersion>) makes importPluginModule fetch fresh.
-  useEffect(() => {
-    return window.api.onPluginDevUpdated((entry) => {
+    return window.api.onPluginInstalled((entry) => {
       if (!loadedRef.current) return
       void enqueueReconciliation(entry, entry.manifest.id).catch(() => undefined)
     })
   }, [enqueueReconciliation])
 
-  // Dev hot-uninstall: fully unload the plugin (this also disposes subscriptions the
-  // old inline handler leaked).
+  // Hot-update: unload the running instance and its consumers, then reload the
+  // new code. The cache-busted entryUrl (?v=<newVersion>) makes
+  // importPluginModule fetch fresh.
   useEffect(() => {
-    return window.api.onPluginDevUninstalled((pluginId) => {
+    return window.api.onPluginUpdated((entry) => {
+      if (!loadedRef.current) return
+      void enqueueReconciliation(entry, entry.manifest.id).catch(() => undefined)
+    })
+  }, [enqueueReconciliation])
+
+  // Hot-uninstall: fully unload the plugin right away (this also disposes its
+  // tracked subscriptions), then reconcile so its consumers restart without it.
+  useEffect(() => {
+    return window.api.onPluginUninstalled((pluginId) => {
       unloadPlugin(pluginId)
       onPluginUnloadedRef.current?.(pluginId)
+      if (!loadedRef.current) return
+      void enqueueReconciliation(undefined, pluginId).catch(() => undefined)
     })
-  }, [unloadPlugin])
+  }, [enqueueReconciliation, unloadPlugin])
 
   useEffect(() => {
     return window.api.onPluginMacro((action: string) => {

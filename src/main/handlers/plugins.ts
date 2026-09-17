@@ -39,13 +39,12 @@ import { fetchRegistry } from '../plugins/registry'
 import { resolveRegistrySelection } from '../plugins/registry-selection'
 import { deleteValue, getValue, listKeys, removeStorageNow, setValue } from '../plugins/storage'
 import { readInstalledIds } from '../plugins/installed-list'
+import type { InstallResult } from '../plugins/install-types'
 import { type UninstallResult, uninstallPlugin } from '../plugins/uninstall'
 import { getUnpackedSourceDir } from '../plugins/unpacked-list'
 import { type UnpackedFlowDeps, installUnpackedAndNotify, reloadUnpackedPlugin } from '../plugins/unpacked-flow'
 
 export type InstalledPluginIpc = InstalledPluginEntry
-
-type PluginDevEntryIpc = PluginLoadEntry
 
 export interface UnpackedPluginIpc extends InstalledPluginIpc {
   /** Absent for plugins side-loaded before Scalpel started tracking source
@@ -53,7 +52,8 @@ export interface UnpackedPluginIpc extends InstalledPluginIpc {
   sourceDir?: string
 }
 
-function resolveInstalledEntries(restartBlocked: ReadonlySet<string> = new Set()): {
+/** `mutating` holds the ids whose files are mid-mutation right now. */
+function resolveInstalledEntries(mutating: ReadonlySet<string> = new Set()): {
   installed: InstalledPluginIpc[]
   loadable: InstalledPluginIpc[]
 } {
@@ -62,13 +62,13 @@ function resolveInstalledEntries(restartBlocked: ReadonlySet<string> = new Set()
     entryUrl: pluginEntryUrl(plugin.manifest.id),
   }))
   const resolved = resolvePluginLoadability(entries)
-  if (restartBlocked.size === 0) return resolved
-  // A plugin mutated this session stays out of the loadable graph until
-  // restart. Resolving without it also marks its dependents unavailable
-  // instead of loading them against a provider that is not running.
+  if (mutating.size === 0) return resolved
+  // A plugin whose files are being swapped stays out of the loadable graph
+  // until the swap settles. Resolving without it also marks its dependents
+  // unavailable instead of loading them against a half-written provider.
   return {
     installed: resolved.installed,
-    loadable: resolvePluginLoadability(entries.filter((entry) => !restartBlocked.has(entry.manifest.id))).loadable,
+    loadable: resolvePluginLoadability(entries.filter((entry) => !mutating.has(entry.manifest.id))).loadable,
   }
 }
 
@@ -124,18 +124,9 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
   // notifyTabsChanged does, so the standalone app-window Plugins tab refreshes
   // its update badge + installed list too. Only the overlay has a PluginHost,
   // so only it hot-swaps; other windows just refresh their plugin UI.
-  const broadcastDevPlugin = (
-    channel: 'plugin-dev-installed' | 'plugin-dev-updated',
-    payload: PluginDevEntryIpc,
-  ): void => {
+  const broadcastPlugin = (channel: 'plugin-installed' | 'plugin-updated', payload: PluginLoadEntry): void => {
     for (const win of BrowserWindow.getAllWindows()) {
       win.webContents.send(channel, payload)
-    }
-  }
-
-  const notifyRestartRequired = (): void => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      win.webContents.send('plugins:restart-required')
     }
   }
 
@@ -144,10 +135,29 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     install: installUnpacked,
     manifestOf: (id) => getInstalledPlugins().find((p) => p.manifest.id === id)?.manifest,
     entryUrl: versionedPluginEntryUrl,
-    broadcast: broadcastDevPlugin,
+    broadcast: broadcastPlugin,
     reloadOverlay: reloadPluginOverlay,
     sourceDirOf: getUnpackedSourceDir,
     dirExists: existsSync,
+  }
+
+  // The unpacked flow notifies from inside the lifecycle lock. Queue those
+  // notifications and flush them once the lock is released, so a renderer that
+  // reacts by listing loadable plugins never sees this plugin still blocked.
+  const runUnpackedFlow = async (
+    withLock: (operation: () => InstallResult) => Promise<InstallResult>,
+    flow: (deps: UnpackedFlowDeps) => InstallResult,
+  ): Promise<InstallResult> => {
+    const notifications: Array<() => void> = []
+    const result = await withLock(() =>
+      flow({
+        ...unpackedFlowDeps,
+        broadcast: (channel, payload) => notifications.push(() => broadcastPlugin(channel, payload)),
+        reloadOverlay: (id) => notifications.push(() => reloadPluginOverlay(id)),
+      }),
+    )
+    for (const notify of notifications) notify()
+    return result
   }
 
   ipcMain.handle('plugins:list-installed', (): InstalledPluginIpc[] => {
@@ -170,8 +180,6 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
         }
       })
   })
-
-  ipcMain.handle('plugins:restart-required', (): boolean => pluginNativeBackends.isRestartRequired())
 
   ipcMain.handle('plugins:get-installed', (_evt, pluginId: string): InstalledPluginIpc | null => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
@@ -282,7 +290,10 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
       return { ok: false as const, error: 'cancelled' }
     }
     return mutationResult(result.filePaths[0] ?? 'unpacked', () =>
-      pluginNativeBackends.withAllStopped(() => installUnpackedAndNotify(result.filePaths[0], unpackedFlowDeps)),
+      runUnpackedFlow(
+        (operation) => pluginNativeBackends.withAllStopped(operation),
+        (deps) => installUnpackedAndNotify(result.filePaths[0], deps),
+      ),
     )
   })
 
@@ -291,7 +302,10 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
   ipcMain.handle('plugins:reload-unpacked', async (_evt, pluginId: string) => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
     return mutationResult(pluginId, () =>
-      pluginNativeBackends.withPluginStopped(pluginId, () => reloadUnpackedPlugin(pluginId, unpackedFlowDeps)),
+      runUnpackedFlow(
+        (operation) => pluginNativeBackends.withPluginStopped(pluginId, operation),
+        (deps) => reloadUnpackedPlugin(pluginId, deps),
+      ),
     )
   })
 
@@ -301,12 +315,14 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     return fetchRegistry(registryConfig().url)
   })
 
-  // Registry mutations replace files on disk but deliberately leave the running
-  // renderer graph intact. The new graph is activated by a full app restart.
+  // Registry mutations hot-apply: the package is swapped with this plugin's
+  // native worker stopped, then every window is told to load (install) or
+  // unload-then-reload (update) it. The renderer reconciles the dependency graph
+  // and the next native call respawns the worker from the new files.
   const installOrUpdate = async (
     entry: unknown,
     mode: 'install' | 'update',
-  ): Promise<{ ok: true; id: string; restartRequired: true } | { ok: false; error: string }> => {
+  ): Promise<{ ok: true; id: string } | { ok: false; error: string }> => {
     // Only the id crosses the trust boundary. Main resolves repository
     // coordinates and hashes from its configured registry.
     const config = registryConfig()
@@ -329,22 +345,30 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     // plugin's lifecycle op behind five sequential network round trips.
     const prepared = await prepareRegistryInstall(selection.entry, { allowNativeBackend: config.allowNativeBackend })
     if (!prepared.ok) return prepared
-    const result = await pluginNativeBackends.withPluginStoppedUntilRestart(
-      pluginId,
-      () => {
-        const installed = getInstalledPlugins()
-        const preconditionError = precondition(new Set(installed.map((plugin) => plugin.manifest.id)))
-        if (preconditionError) return { ok: false as const, error: preconditionError }
-        const manifests = installed.map((plugin) => plugin.manifest)
-        return commitRegistryInstall(prepared.prepared, (manifest) =>
-          validateDependencyMutation(manifests, pluginId, manifest),
-        )
-      },
-      (mutation) => mutation.ok,
-    )
-    if (result.ok) {
-      notifyRestartRequired()
-      return { ...result, restartRequired: true }
+    const result = await pluginNativeBackends.withPluginStopped(pluginId, () => {
+      const installed = getInstalledPlugins()
+      const preconditionError = precondition(new Set(installed.map((plugin) => plugin.manifest.id)))
+      if (preconditionError) return { ok: false as const, error: preconditionError }
+      const manifests = installed.map((plugin) => plugin.manifest)
+      return commitRegistryInstall(prepared.prepared, (manifest) =>
+        validateDependencyMutation(manifests, pluginId, manifest),
+      )
+    })
+    if (!result.ok) return result
+    // Notify only after the lock is released, so a renderer that reacts by
+    // listing loadable plugins sees this one as loadable rather than blocked.
+    const installed = getInstalledPlugins().find((plugin) => plugin.manifest.id === result.id)
+    if (installed) {
+      // Distinct events: an update must take the unload-then-reload path, not
+      // the fresh-load path (which no-ops when the plugin is already loaded).
+      // The versioned entry URL cache-busts the module import.
+      broadcastPlugin(mode === 'install' ? 'plugin-installed' : 'plugin-updated', {
+        manifest: installed.manifest,
+        entryUrl: versionedPluginEntryUrl(installed.manifest.id, installed.manifest.version),
+      })
+      // The popped-out window does not listen for plugin-updated; reload it so
+      // it re-imports the new code instead of running stale.
+      if (mode === 'update') reloadPluginOverlay(installed.manifest.id)
     }
     return result
   }
@@ -412,10 +436,16 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
     return isPluginOverlayVisible(pluginId)
   })
 
-  // Side-loaded plugins are hot-unloaded immediately rather than deferred to
-  // restart, so both uninstall entry points route them through this path.
-  const uninstallUnpacked = (pluginId: string): Promise<UninstallResult> =>
-    pluginNativeBackends.withPluginStopped(pluginId, () => {
+  // Registry and side-loaded plugins uninstall the same way: remove the package
+  // with the native worker stopped, then hot-unload it from every window.
+  const uninstall = async (pluginId: string, route: 'registry' | 'unpacked'): Promise<UninstallResult> => {
+    const result = await pluginNativeBackends.withPluginStopped(pluginId, (): UninstallResult => {
+      if (route === 'registry') {
+        // installed.json is the source of truth here: a plugin whose manifest
+        // went missing or no longer validates must still be removable.
+        const preconditionError = validateUninstallPrecondition(pluginId, new Set(readInstalledIds()))
+        if (preconditionError) return { ok: false, error: preconditionError }
+      }
       const dependencyError = validateDependencyMutation(
         getInstalledPlugins().map((plugin) => plugin.manifest),
         pluginId,
@@ -423,19 +453,15 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
       )
       if (dependencyError) {
         return {
-          ok: false as const,
+          ok: false,
           error: `plugin dependency check failed: ${dependencyError}`,
         }
       }
-      const uninstallResult = uninstallPlugin(pluginId)
-      if (uninstallResult.ok) {
-        for (const win of BrowserWindow.getAllWindows()) {
-          try {
-            win.webContents.send('plugin-dev-uninstalled', pluginId)
-          } catch (error) {
-            console.error(`[plugins] failed to notify a window that ${pluginId} was uninstalled:`, error)
-          }
-        }
+      const removal = uninstallPlugin(pluginId)
+      if (removal.ok) {
+        // Storage is removed under the lock with the package. Removed after the
+        // lock, it could wipe (and mark removed) the storage of a same-id
+        // install queued right behind this uninstall.
         try {
           removeStorageNow(pluginId)
         } catch (error) {
@@ -443,61 +469,39 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
           // result; the pending deletion retries storage cleanup on next launch.
           console.error(`[plugins] failed to remove storage for ${pluginId}:`, error)
         }
-        runPostUninstallCleanup(pluginId, () => disposePluginOverlay(pluginId))
-        runPostUninstallCleanup(pluginId, () => clearPluginOverlayAnchor(store, pluginId))
-        runPostUninstallCleanup(pluginId, () => removePluginHotkey(pluginId))
-        runPostUninstallCleanup(pluginId, () => removePluginOverlayHotkey(pluginId))
-        runPostUninstallCleanup(pluginId, () => removePluginTab(pluginId))
-        runPostUninstallCleanup(pluginId, notifyTabsChanged)
-        runPostUninstallCleanup(pluginId, refreshAppMacros)
-        runPostUninstallCleanup(pluginId, notifyHotkeysChanged)
       }
-      return uninstallResult
+      return removal
     })
+    if (!result.ok) return result
+    // Notify and clean up once the lock is released, so a renderer reacting to
+    // plugin-uninstalled sees a settled graph. The package is already gone, so
+    // each step is isolated and none undoes success.
+    for (const win of BrowserWindow.getAllWindows()) {
+      try {
+        win.webContents.send('plugin-uninstalled', pluginId)
+      } catch (error) {
+        console.error(`[plugins] failed to notify a window that ${pluginId} was uninstalled:`, error)
+      }
+    }
+    // The package is gone, so the pop-out cannot be reloaded: close it and
+    // forget its geometry instead of leaving a stale anchor in the store.
+    runPostUninstallCleanup(pluginId, () => disposePluginOverlay(pluginId))
+    runPostUninstallCleanup(pluginId, () => clearPluginOverlayAnchor(store, pluginId))
+    runPostUninstallCleanup(pluginId, () => removePluginHotkey(pluginId))
+    runPostUninstallCleanup(pluginId, () => removePluginOverlayHotkey(pluginId))
+    runPostUninstallCleanup(pluginId, () => removePluginTab(pluginId))
+    runPostUninstallCleanup(pluginId, notifyTabsChanged)
+    runPostUninstallCleanup(pluginId, refreshAppMacros)
+    runPostUninstallCleanup(pluginId, notifyHotkeysChanged)
+    return result
+  }
 
   const isUnpacked = (pluginId: string): boolean =>
     getUnpackedPlugins().some((plugin) => plugin.manifest.id === pluginId)
 
   ipcMain.handle('plugins:uninstall', async (_evt, pluginId: string) => {
     if (!PLUGIN_ID_PATTERN.test(pluginId)) return { ok: false as const, error: 'invalid plugin id' }
-    return mutationResult(pluginId, async () => {
-      if (isUnpacked(pluginId)) return uninstallUnpacked(pluginId)
-      const result = await pluginNativeBackends.withPluginStoppedUntilRestart(
-        pluginId,
-        () => {
-          const installed = getInstalledPlugins()
-          // installed.json is the source of truth here: a plugin whose manifest
-          // went missing or no longer validates must still be removable.
-          const preconditionError = validateUninstallPrecondition(pluginId, new Set(readInstalledIds()))
-          if (preconditionError) return { ok: false as const, error: preconditionError }
-          const dependencyError = validateDependencyMutation(
-            installed.map((plugin) => plugin.manifest),
-            pluginId,
-            null,
-          )
-          if (dependencyError) {
-            return {
-              ok: false as const,
-              error: `plugin dependency check failed: ${dependencyError}`,
-            }
-          }
-          return uninstallPlugin(pluginId)
-        },
-        (mutation) => mutation.ok,
-      )
-      if (result.ok) {
-        // The package is gone, so the pop-out cannot be reloaded: close it and
-        // forget its geometry now instead of leaving a stale anchor in the store.
-        runPostUninstallCleanup(pluginId, () => disposePluginOverlay(pluginId))
-        runPostUninstallCleanup(pluginId, () => clearPluginOverlayAnchor(store, pluginId))
-        runPostUninstallCleanup(pluginId, () => removePluginOverlayHotkey(pluginId))
-        runPostUninstallCleanup(pluginId, refreshAppMacros)
-        runPostUninstallCleanup(pluginId, notifyHotkeysChanged)
-        runPostUninstallCleanup(pluginId, notifyRestartRequired)
-        return { ...result, restartRequired: true as const }
-      }
-      return result
-    })
+    return mutationResult(pluginId, () => uninstall(pluginId, isUnpacked(pluginId) ? 'unpacked' : 'registry'))
   })
 
   ipcMain.handle('plugins:uninstall-unpacked', async (_evt, pluginId: string) => {
@@ -508,7 +512,7 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
         error: `plugin "${pluginId}" is not installed unpacked`,
       }
     }
-    return mutationResult(pluginId, () => uninstallUnpacked(pluginId))
+    return mutationResult(pluginId, () => uninstall(pluginId, 'unpacked'))
   })
 
   ipcMain.handle('plugins:unregister-hotkey', (_evt, pluginId: string) => {

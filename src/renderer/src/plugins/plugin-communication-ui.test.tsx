@@ -69,9 +69,9 @@ beforeEach(() => {
     pluginUnregisterTab: vi.fn(async () => undefined),
     onLogLine: vi.fn(() => () => {}),
     onPluginMacro: vi.fn(() => () => {}),
-    onPluginDevInstalled: vi.fn(() => () => {}),
-    onPluginDevUninstalled: vi.fn(() => () => {}),
-    onPluginDevUpdated: vi.fn(() => () => {}),
+    onPluginInstalled: vi.fn(() => () => {}),
+    onPluginUninstalled: vi.fn(() => () => {}),
+    onPluginUpdated: vi.fn(() => () => {}),
   }
 })
 

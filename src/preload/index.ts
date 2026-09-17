@@ -467,8 +467,8 @@ export const api = {
   respondGameSwitch: (choice: 'restart' | 'cancel'): void => {
     ipcRenderer.send('game-switch-response', choice)
   },
-  /** Graceful full-app relaunch used by restart-required plugin UI and the
-   * Developer control. Dev builds must be restarted manually. */
+  /** Graceful full-app relaunch used by the Developer control. Dev builds must
+   * be restarted manually. */
   restartApp: (): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('app-restart'),
   onPriceCheck: (
     cb: (data: {
@@ -971,19 +971,14 @@ export const api = {
   > => ipcRenderer.invoke('plugins:fetch-registry'),
   pluginInstallFromRegistry: (
     entry: import('@shared/plugin-registry-types').RegistryEntry,
-  ): Promise<{ ok: true; id: string; restartRequired: true } | { ok: false; error: string }> =>
+  ): Promise<{ ok: true; id: string } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:install-from-registry', entry),
   pluginUpdateFromRegistry: (
     entry: import('@shared/plugin-registry-types').RegistryEntry,
-  ): Promise<{ ok: true; id: string; restartRequired: true } | { ok: false; error: string }> =>
+  ): Promise<{ ok: true; id: string } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:update-from-registry', entry),
-  pluginUninstall: (pluginId: string): Promise<{ ok: true; restartRequired?: true } | { ok: false; error: string }> =>
+  pluginUninstall: (pluginId: string): Promise<{ ok: true } | { ok: false; error: string }> =>
     ipcRenderer.invoke('plugins:uninstall', pluginId),
-  pluginRestartRequired: (): Promise<boolean> => ipcRenderer.invoke('plugins:restart-required'),
-  onPluginRestartRequired: (handler: () => void): (() => void) => {
-    ipcRenderer.on('plugins:restart-required', handler)
-    return () => ipcRenderer.removeListener('plugins:restart-required', handler)
-  },
   pluginUnregisterHotkey: (pluginId: string): Promise<void> =>
     ipcRenderer.invoke('plugins:unregister-hotkey', pluginId),
   onPluginMacro: (handler: (action: string) => void): (() => void) => {
@@ -991,30 +986,30 @@ export const api = {
     ipcRenderer.on('plugin-macro', listener)
     return () => ipcRenderer.removeListener('plugin-macro', listener)
   },
-  onPluginDevInstalled: (
+  onPluginInstalled: (
     handler: (entry: { manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string }) => void,
   ): (() => void) => {
     const listener = (
       _: Electron.IpcRendererEvent,
       entry: { manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string },
     ): void => handler(entry)
-    ipcRenderer.on('plugin-dev-installed', listener)
-    return () => ipcRenderer.off('plugin-dev-installed', listener)
+    ipcRenderer.on('plugin-installed', listener)
+    return () => ipcRenderer.off('plugin-installed', listener)
   },
-  onPluginDevUpdated: (
+  onPluginUpdated: (
     handler: (entry: { manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string }) => void,
   ): (() => void) => {
     const listener = (
       _: Electron.IpcRendererEvent,
       entry: { manifest: import('../plugin-sdk/src/types').PluginManifest; entryUrl: string },
     ): void => handler(entry)
-    ipcRenderer.on('plugin-dev-updated', listener)
-    return () => ipcRenderer.off('plugin-dev-updated', listener)
+    ipcRenderer.on('plugin-updated', listener)
+    return () => ipcRenderer.off('plugin-updated', listener)
   },
-  onPluginDevUninstalled: (handler: (pluginId: string) => void): (() => void) => {
+  onPluginUninstalled: (handler: (pluginId: string) => void): (() => void) => {
     const listener = (_: Electron.IpcRendererEvent, pluginId: string): void => handler(pluginId)
-    ipcRenderer.on('plugin-dev-uninstalled', listener)
-    return () => ipcRenderer.off('plugin-dev-uninstalled', listener)
+    ipcRenderer.on('plugin-uninstalled', listener)
+    return () => ipcRenderer.off('plugin-uninstalled', listener)
   },
   onPluginHotkeysChanged: (cb: () => void): (() => void) => {
     const handler = (): void => cb()
