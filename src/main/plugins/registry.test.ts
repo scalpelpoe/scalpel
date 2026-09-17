@@ -145,6 +145,44 @@ describe('fetchRegistry', () => {
     expect(result.ok).toBe(false)
   })
 
+  it('falls back to a url-less cache (pre-upgrade format) for the default URL when the fetch fails', async () => {
+    const cachePath = join(TEST_USER_DATA, 'plugins', 'registry-cache.json')
+    mockFs.files.set(cachePath, JSON.stringify({ etag: '"abc123"', snapshot: validRegistry }))
+    mockNetFetch(async () => {
+      throw new Error('network down')
+    })
+    const { fetchRegistry } = await import('./registry')
+    const result = await fetchRegistry()
+    expect(result.ok).toBe(true)
+    if (result.ok) expect(result.snapshot.plugins[0].id).toBe('hello-world')
+  })
+
+  it('sends no if-none-match header and rewrites the cache with a url when revalidating a url-less cache', async () => {
+    const cachePath = join(TEST_USER_DATA, 'plugins', 'registry-cache.json')
+    mockFs.files.set(cachePath, JSON.stringify({ etag: '"abc123"', snapshot: validRegistry }))
+    const captured: (RequestInit | undefined)[] = []
+    mockNetFetch(async (_url, init) => {
+      captured.push(init)
+      return new Response(JSON.stringify(validRegistry), { status: 200 })
+    })
+    const { fetchRegistry } = await import('./registry')
+    await fetchRegistry()
+    expect(captured[0]?.headers).not.toHaveProperty('if-none-match')
+    const cached = JSON.parse(mockFs.files.get(cachePath)!)
+    expect(cached.url).toBe('https://raw.githubusercontent.com/scalpelpoe/scalpel-plugins-registry/main/registry.json')
+  })
+
+  it('never reuses a url-less cache for a custom override URL', async () => {
+    const cachePath = join(TEST_USER_DATA, 'plugins', 'registry-cache.json')
+    mockFs.files.set(cachePath, JSON.stringify({ etag: '"abc123"', snapshot: validRegistry }))
+    mockNetFetch(async () => {
+      throw new Error('network down')
+    })
+    const { fetchRegistry } = await import('./registry')
+    const result = await fetchRegistry('file:///some/local/registry.json')
+    expect(result.ok).toBe(false)
+  })
+
   it('rejects a registry with the wrong schemaVersion', async () => {
     mockNetFetch(async () => new Response(JSON.stringify({ schemaVersion: 99, plugins: [] }), { status: 200 }))
     const { fetchRegistry } = await import('./registry')

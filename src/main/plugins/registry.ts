@@ -24,8 +24,16 @@ function readCache(url: string): CachedRegistry | null {
   if (!existsSync(p)) return null
   try {
     const parsed = JSON.parse(readFileSync(p, 'utf-8'))
-    if (parsed && typeof parsed === 'object' && parsed.url === url && parsed.snapshot) {
-      return parsed as CachedRegistry
+    if (!parsed || typeof parsed !== 'object' || !parsed.snapshot) return null
+    if (parsed.url === url) return parsed as CachedRegistry
+    // A cache written before `url` was recorded has no `url` field. Reuse it
+    // only for the curated registry, which is what almost every such cache
+    // holds, and never for a custom one. It cannot enable a native install:
+    // the old build's validation dropped `assets`. Drop the etag too, so the
+    // next online fetch is a full 200 that restores those fields instead of a
+    // 304 that would keep the stripped snapshot.
+    if (parsed.url === undefined && url === PLUGIN_REGISTRY_URL) {
+      return { url, etag: null, snapshot: parsed.snapshot }
     }
   } catch {
     return null
