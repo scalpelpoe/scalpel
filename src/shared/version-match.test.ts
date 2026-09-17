@@ -60,6 +60,15 @@ describe('versionMatches', () => {
     expect(versionMatches('>=1.2.0 <2.0.0', '2.0.0')).toBe(false)
   })
 
+  it('tolerates whitespace between an operator and its version', () => {
+    expect(versionMatches('>= 1.0.0', '1.0.4')).toBe(true)
+    expect(versionMatches('< 1.0.0', '1.0.4')).toBe(false)
+    expect(isValidVersionRange('>= 1.0.0')).toBe(true)
+    expect(isValidVersionRange('>=  1.0.0   <2.0.0')).toBe(true)
+    expect(versionMatches('>= 1.0.0 < 2.0.0', '1.5.0')).toBe(true)
+    expect(versionMatches('>= 1.0.0 < 2.0.0', '2.0.0')).toBe(false)
+  })
+
   it('preserves caret boundaries, including pre-1.0 versions', () => {
     expect(versionMatches('^1.2.3', '1.2.3')).toBe(true)
     expect(versionMatches('^1.2.3', '1.9.9')).toBe(true)
@@ -81,6 +90,7 @@ describe('versionMatches', () => {
     expect(isValidVersionRange('^1.2.3')).toBe(true)
     expect(isValidVersionRange('')).toBe(false)
     expect(isValidVersionRange('>=1.0.0 || <2.0.0')).toBe(false)
+    expect(isValidVersionRange('>=')).toBe(false)
     expect(versionMatches('>=1.0.0 nope', '1.5.0')).toBe(false)
   })
 })
@@ -103,6 +113,11 @@ describe('minVersionSatisfied', () => {
   it('evaluates a compound range as written', () => {
     expect(minVersionSatisfied('>=1.2.0 <2.0.0', '1.5.0')).toBe(true)
     expect(minVersionSatisfied('>=1.0.0 nope', '1.5.0')).toBe(false)
+  })
+
+  it('tolerates whitespace between an operator and its version', () => {
+    expect(minVersionSatisfied('>= 1.1.0', '1.0.4')).toBe(false)
+    expect(minVersionSatisfied('>= 1.0.0', '1.0.4')).toBe(true)
   })
 })
 
