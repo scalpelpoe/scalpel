@@ -11,7 +11,7 @@ import { replacePackageAtomically, restoreFiles, snapshotFiles } from './install
 import { addInstalledId } from './installed-list'
 import { validateManifest } from './manifest-validator'
 import { installedJsonPath, pendingPluginStorageDeletionsPath, pluginDir, unpackedJsonPath } from './paths'
-import { cancelStorageRemoval, migrateLegacyStorage } from './storage'
+import { cancelStorageRemoval, carryLegacyStorage, migrateLegacyStorage } from './storage'
 import { removeUnpackedId } from './unpacked-list'
 import { nativeTargetForHost, type NativeHostPlatform, unsupportedNativePlatformMessage } from './native-platform'
 
@@ -194,6 +194,7 @@ export function commitRegistryInstall(
     replacePackageAtomically(
       destDir,
       (incomingDir) => {
+        carryLegacyStorage(entry.id, incomingDir)
         writeFileSync(join(incomingDir, 'plugin.js'), pluginBytes)
         writeFileSync(join(incomingDir, 'manifest.json'), manifestText)
         if (manifest.api && contractBytes !== null) {

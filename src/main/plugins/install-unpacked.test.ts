@@ -540,7 +540,7 @@ describe('installUnpacked', () => {
     expect(mockFs.files.has(join(destDir, 'obsolete.bin'))).toBe(false)
   })
 
-  it('migrates legacy storage before replacing the package', async () => {
+  it('migrates legacy storage before replacing the package, and carries it into the new package', async () => {
     const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
     const legacyStorage = join(destDir, 'storage.json')
     const currentStorage = join(TEST_USER_DATA, 'plugin-storage', 'hello-world', 'storage.json')
@@ -552,7 +552,9 @@ describe('installUnpacked', () => {
     const { installUnpacked } = await import('./install-unpacked')
     expect(installUnpacked(SRC_PLUGIN).ok).toBe(true)
     expect(mockFs.files.get(currentStorage)).toBe(JSON.stringify({ retained: true }))
-    expect(mockFs.files.has(legacyStorage)).toBe(false)
+    // The legacy file is carried into the replacement package rather than
+    // deleted, so an older Scalpel build still finds it after a rollback.
+    expect(mockFs.files.get(legacyStorage)).toBe(JSON.stringify({ retained: true }))
   })
 
   it('restores the old package and metadata when metadata commit fails', async () => {
