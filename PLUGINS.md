@@ -819,8 +819,8 @@ While developing, skip the registry and install your plugin directly.
 1. In Scalpel, open Settings → Developer.
 2. Toggle "Developer mode" on.
 3. Click "Load unpacked plugin..." and pick either the package directory containing `plugin.js`, `manifest.json`, declared contracts, and any native executable, or its project root when that package is in the immediate `dist/` directory. A complete immediate `dist/` package takes precedence over root files; Scalpel checks that its identity, version, and bundle match the selected project before loading it. It does not recursively search other descendants.
-4. Unpacked plugins load immediately when their required dependency graph is available. Plugins with missing, incompatible, cyclic, or transitively unavailable required dependencies remain installed but disabled, with the reason shown in Settings. Loading a missing provider re-evaluates the development graph.
-5. Reload is a developer-only best-effort hot swap; restart Scalpel if registrations or native state look stale.
+4. Unpacked plugins load immediately when their required dependency graph is available. Plugins with missing, incompatible, cyclic, or transitively unavailable required dependencies remain installed but disabled, with the reason shown in Settings. Loading a missing provider re-evaluates the plugin graph.
+5. Reload is a best-effort hot swap; restart Scalpel if registrations or native state look stale.
 
 **Option 2: Manual file copy**
 
@@ -846,7 +846,7 @@ Releases are GitHub-driven. Tag your repo with `v<version>` matching your manife
 
 Scalpel downloads files from `https://github.com/<your-repo>/releases/download/v<version>/<file>`, so the version tag and asset filenames must match exactly.
 
-Production plugin installs, updates, and removals replace files transactionally but leave the currently running plugin graph unchanged. Scalpel prompts for a restart, blocks affected native workers, and activates the new dependency graph only after a full relaunch. Mutations that would leave required dependents missing or API-incompatible are rejected.
+Registry installs, updates, and removals replace files transactionally and apply without a restart. Scalpel stops the plugin's native worker for the file swap, then reloads the plugin together with every plugin that depends on it, so the running graph matches what a fresh launch would load. Mutations that would leave required dependents missing or API-incompatible are rejected.
 
 ## Listing in the registry
 
