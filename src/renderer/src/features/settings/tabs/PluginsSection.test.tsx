@@ -26,10 +26,44 @@ const settings = { appMacros: [] } as unknown as RuntimeSettings
 const noop = (): void => {}
 const tryHotkey = (): boolean => true
 
-describe('PluginsSection hotkey rows', () => {
-  beforeEach(() => installApi([]))
+describe('PluginsSection native plugin notice', () => {
+  it('shows no notice and no auto-update native warning with a JS-only installed list and JS-only registry', async () => {
+    installApi([])
+    const { queryByRole, queryByText, findByText } = render(
+      <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    )
+    await findByText('Demo')
+    expect(queryByRole('note')).toBeNull()
+    expect(queryByText(/Auto-update may replace executable code/)).toBeNull()
+  })
 
-  it('warns that native plugins run unsandboxed and that auto-update can replace their executables', async () => {
+  it('warns that native plugins run unsandboxed and that auto-update can replace their executables when an installed manifest has a native backend', async () => {
+    ;(window as unknown as { api: Record<string, unknown> }).api = {
+      listInstalledPlugins: vi.fn(async () => [
+        {
+          manifest: {
+            id: 'native-demo',
+            name: 'Native Demo',
+            version: '1.0.0',
+            author: 'me',
+            nativeBackend: {
+              protocolVersion: 1,
+              contract: 'backend.binpb',
+              service: 'example.v1.Backend',
+              targets: { 'win32-x64': { file: 'backend.exe', sha256: '0'.repeat(64) } },
+            },
+          },
+          entryUrl: '',
+        },
+      ]),
+      pluginListRegisteredHotkeys: vi.fn(async () => []),
+      pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
+      pluginUninstall: vi.fn(async () => ({ ok: true })),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
+      onPluginHotkeysChanged: vi.fn(() => () => {}),
+    }
     const { findByRole, findByText } = render(
       <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
     )
@@ -39,6 +73,47 @@ describe('PluginsSection hotkey rows', () => {
     expect(warning.textContent).toContain('temporary trust model')
     expect(await findByText(/Auto-update may replace executable code/)).toBeTruthy()
   })
+
+  it('shows the notice and the browse badge when a registry entry pins a native executable', async () => {
+    ;(window as unknown as { api: Record<string, unknown> }).api = {
+      listInstalledPlugins: vi.fn(async () => []),
+      pluginListRegisteredHotkeys: vi.fn(async () => []),
+      pluginFetchRegistry: vi.fn(async () => ({
+        ok: true,
+        snapshot: {
+          schemaVersion: 1,
+          plugins: [
+            {
+              id: 'native-fresh',
+              name: 'Native Fresh',
+              author: 'me',
+              description: 'd',
+              repo: 'me/native-fresh',
+              latestVersion: '1.0.0',
+              scalpelMinVersion: '>=0.0.0',
+              sha256: '0'.repeat(64),
+              assets: { 'backend.exe': '0'.repeat(64) },
+            },
+          ],
+        },
+      })),
+      pluginUninstall: vi.fn(async () => ({ ok: true })),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
+      onPluginHotkeysChanged: vi.fn(() => () => {}),
+    }
+    const { findByRole, findAllByText } = render(
+      <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    )
+
+    await findByRole('note')
+    expect(await findAllByText('Native executable')).toHaveLength(1)
+  })
+})
+
+describe('PluginsSection hotkey rows', () => {
+  beforeEach(() => installApi([]))
 
   it('shows a bind row labeled by the hotkey for a plugin with one registered hotkey', async () => {
     installApi([

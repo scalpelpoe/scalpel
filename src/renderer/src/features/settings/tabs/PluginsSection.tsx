@@ -11,6 +11,7 @@ import { NativePluginSecurityNotice } from '@renderer/components/NativePluginSec
 import { pluginHotkeyBinding } from './plugin-hotkey-binding'
 import { m } from '@shared/paraglide/messages.js'
 import { latestVersionFor } from '@renderer/plugins/plugin-update-check'
+import { isNativeRegistryEntry } from '@renderer/plugins/native-plugins'
 
 interface Props {
   onError: (msg: string, tone?: 'error' | 'warn') => void
@@ -39,6 +40,15 @@ function versionBadge(poeVersions?: (1 | 2)[]): string | null {
 /** 40px round plugin mark: real icon when the registry/manifest supplies one and it
  *  loads, otherwise a tinted initial so rows never look broken - covers both no
  *  iconUrl and a supplied iconUrl that fails to load. */
+/** Marks a plugin that ships a native executable, on both installed and browse rows. */
+function NativeBadge(): JSX.Element {
+  return (
+    <span className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 font-mono text-[9.5px] uppercase tracking-wide text-amber-200">
+      {m.settings_plg_native_badge()}
+    </span>
+  )
+}
+
 function PluginIcon({ iconUrl, name }: { iconUrl?: string; name: string }): JSX.Element {
   // Track the url that failed rather than a boolean: the component instance is
   // reused across re-renders, so a boolean would keep suppressing a later,
@@ -145,11 +155,7 @@ function InstalledRow({
           <div className="flex items-center gap-x-2.5 flex-wrap leading-tight">
             <span className="text-[13.5px] font-semibold text-text truncate">{manifest.name}</span>
             <span className="font-mono text-[10.5px] text-zinc-500">v{manifest.version}</span>
-            {manifest.nativeBackend && (
-              <span className="rounded border border-amber-500/40 bg-amber-500/10 px-1.5 py-0.5 font-mono text-[9.5px] uppercase tracking-wide text-amber-200">
-                {m.settings_plg_native_badge()}
-              </span>
-            )}
+            {manifest.nativeBackend && <NativeBadge />}
           </div>
           <div className="text-[11.5px] text-text-dim mt-0.5 truncate">
             {m.settings_plg_by({ author: manifest.author })}
@@ -263,6 +269,7 @@ function BrowseRow({
             <div className="flex items-center gap-x-2.5 gap-y-0.5 flex-wrap leading-tight">
               <span className="text-[13.5px] font-semibold text-text">{entry.name}</span>
               <span className="font-mono text-[10.5px] text-zinc-500">v{entry.latestVersion}</span>
+              {isNativeRegistryEntry(entry) && <NativeBadge />}
               {shots.length > 0 && (
                 <span
                   className="inline-flex items-center gap-1 font-mono text-[10.5px] text-zinc-500"
@@ -468,6 +475,12 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
 
   const browseEntries = (registry?.plugins ?? []).filter((e) => !isInstalled(e.id))
 
+  // The notice and the auto-update warning line only apply to users who have,
+  // or could install, a native plugin -- most users have none, and an
+  // unconditional warning about unsandboxed executables is just noise for them.
+  const showNativeNotice =
+    installed.some((p) => p.manifest.nativeBackend) || (registry?.plugins ?? []).some(isNativeRegistryEntry)
+
   const toggleExpand = (id: string): void => {
     setExpandedId((cur) => (cur === id ? null : id))
     setActiveShot(0)
@@ -475,7 +488,7 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
 
   return (
     <div className="flex flex-col gap-4">
-      <NativePluginSecurityNotice />
+      {showNativeNotice && <NativePluginSecurityNotice />}
       <section className="flex flex-col gap-2">
         <div className="settings-section-title mt-3">{m.settings_plg_installed_heading()}</div>
         <SettingToggleBox
@@ -484,7 +497,11 @@ export function PluginsSection({ onError, settings, update, tryHotkey }: Props):
           checked={settings.pluginAutoUpdate}
           onChange={(val) => update('pluginAutoUpdate', val)}
         />
-        <div className="text-[10.5px] leading-relaxed text-zinc-500">{m.settings_plg_auto_update_native_warning()}</div>
+        {showNativeNotice && (
+          <div className="text-[10.5px] leading-relaxed text-zinc-500">
+            {m.settings_plg_auto_update_native_warning()}
+          </div>
+        )}
         {installed.length === 0 ? (
           <div className="text-xs text-zinc-500">{m.settings_plg_none_installed()}</div>
         ) : (
