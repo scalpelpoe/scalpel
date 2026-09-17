@@ -32,6 +32,7 @@ const baseDeps = () => ({
   registerOverlay: vi.fn(),
   openOverlay: vi.fn(),
   closeOverlay: vi.fn(),
+  isOverlayVisible: vi.fn().mockResolvedValue(false),
   storage: {
     get: vi.fn(async () => null),
     set: vi.fn(async () => undefined),
@@ -44,6 +45,7 @@ const baseDeps = () => ({
     onChange: vi.fn(() => () => {}),
   },
   prices: {
+    getSkillPrice: vi.fn(async () => null),
     getPrices: vi.fn(async () => ({ prices: [], updatedAt: null })),
     refresh: vi.fn(async () => undefined),
     onChange: vi.fn(() => () => {}),
@@ -233,6 +235,16 @@ describe('createPluginContext registerOverlay', () => {
     const ctx = createPluginContext(baseDeps())
     ctx.registerOverlay({ title: 'T' }, () => {})
     expect(() => ctx.registerOverlay({ title: 'U' }, () => {})).toThrow(/already/i)
+  })
+
+  it('forwards temporary annotation dismissal options to the host', () => {
+    const deps = baseDeps()
+    const ctx = createPluginContext(deps)
+    ctx.registerOverlay({ title: 'OCR', mode: 'annotation', dismissOnEscape: true, dismissOnGameClick: true }, () => {})
+    expect(deps.registerOverlay).toHaveBeenCalledWith(
+      'test',
+      expect.objectContaining({ dismissOnEscape: true, dismissOnGameClick: true }),
+    )
   })
 
   it('routes openOverlay/closeOverlay through deps with the plugin id', () => {

@@ -167,6 +167,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
             },
           },
           prices: {
+            getSkillPrice: (name, level) => window.api.pricesGetSkill(name, level),
             getPrices: (opts) => window.api.pricesGet(opts),
             refresh: () => window.api.pricesRefresh(),
             onChange: (handler) => {
@@ -224,10 +225,13 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
               defaultPosition: opts.defaultPosition,
               snapPositions: opts.snapPositions,
               mode: opts.mode,
+              dismissOnEscape: opts.dismissOnEscape,
+              dismissOnGameClick: opts.dismissOnGameClick,
             })
           },
           openOverlay: (pluginId) => void window.api.pluginOpenOverlay(pluginId),
           closeOverlay: (pluginId) => void window.api.pluginCloseOverlay(pluginId),
+          isOverlayVisible: (pluginId) => window.api.pluginOverlayVisible(pluginId),
           captureGameWindow: (region) => window.api.pluginCaptureGameWindow(region),
           getCursorPosition: () => window.api.pluginGetCursorPosition(),
           media: {

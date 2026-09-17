@@ -1,6 +1,61 @@
 import { describe, expect, it } from 'vitest'
 import type { PriceEntry, PriceInfo } from '@shared/types'
-import { applyProxyResponse, applyResponse, fetchPoe2PricesFromProxy } from './prices.poe2'
+import { applyProxyResponse, applyResponse, fetchAndBuildPoe2PriceMap, fetchPoe2PricesFromProxy } from './prices.poe2'
+
+it('uses one Currency snapshot for Chaos Orb despite conflicting category core rates', async () => {
+  const result = await fetchAndBuildPoe2PriceMap(
+    'Forbidden Rites',
+    async (url) => {
+      const currency = new URL(url).searchParams.get('type') === 'Currency'
+      return resp({
+        rates: { divine: 1, exalted: 100, chaos: currency ? 10 : 20 },
+        coreItems: [{ id: 'chaos', name: 'Chaos Orb' }],
+        items: currency ? [{ id: 'chaos', name: 'Chaos Orb' }] : [],
+        lines: currency ? [{ id: 'chaos', primaryValue: 0.12 }] : [],
+      })
+    },
+    {},
+    {},
+  )
+  expect(result.entries.filter((entry) => entry.name === 'Chaos Orb')).toEqual([
+    expect.objectContaining({ name: 'Chaos Orb', chaosValue: 12, category: 'currency' }),
+  ])
+  expect(result.priceMap.get('chaos orb')?.chaosValue).toBe(12)
+})
+
+it('fetches alloy prices from Verisium and exposes them to plugin lookups with an older manifest', async () => {
+  const requested: string[] = []
+  const result = await fetchAndBuildPoe2PriceMap(
+    'Forbidden Rites',
+    async (url) => {
+      const type = new URL(url).searchParams.get('type')!
+      requested.push(type)
+      return type === 'Verisium'
+        ? resp({
+            rates: { exalted: 200 },
+            items: [
+              { id: 'cyclonic-alloy', name: 'Cyclonic Alloy' },
+              { id: 'expansive-alloy', name: 'Expansive Alloy' },
+            ],
+            lines: [
+              { id: 'cyclonic-alloy', primaryValue: 0.01 },
+              { id: 'expansive-alloy', primaryValue: 0.005 },
+            ],
+          })
+        : resp({})
+    },
+    { Currency: 'currency' },
+    {},
+  )
+  expect(requested).toContain('Verisium')
+  expect(result.entries).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ name: 'Cyclonic Alloy', chaosValue: 2, category: 'verisium', ninjaType: 'Verisium' }),
+      expect.objectContaining({ name: 'Expansive Alloy', chaosValue: 1, category: 'verisium', ninjaType: 'Verisium' }),
+    ]),
+  )
+  expect(result.priceMap.get('cyclonic alloy')?.chaosValue).toBe(2)
+})
 
 // Helper: minimal valid Poe2ExchangeResponse shape for the parts applyResponse
 // reads. The real ninja payload has more fields but they're ignored.

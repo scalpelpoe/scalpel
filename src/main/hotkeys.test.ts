@@ -55,7 +55,7 @@ const focusMockState: { scalpelBrowserWindowFocused: boolean } = {
 
 // Whether the compositor-driven overlay path is in charge. Mocked rather than
 // derived from the environment so no test shells out to hyprctl.
-const hyprlandMockState = { overlayActive: false }
+const hyprlandMockState = { overlayActive: false, allowed: true }
 
 vi.mock('electron', () => ({
   globalShortcut: globalShortcutMock,
@@ -102,7 +102,7 @@ vi.mock('./windowing', () => ({
 
 vi.mock('./hyprland', () => ({
   hyprlandOverlayActive: () => hyprlandMockState.overlayActive,
-  hyprlandInputAllowed: () => true,
+  hyprlandInputAllowed: () => hyprlandMockState.allowed,
 }))
 
 vi.mock('./diagnostics', () => ({
@@ -137,6 +137,7 @@ async function loadHotkeys(onEscape: () => void) {
   windowingMockState.hideFocusedOrAnyVisibleSecondaryOverlay.mockReturnValue(false)
   focusMockState.scalpelBrowserWindowFocused = false
   hyprlandMockState.overlayActive = false
+  hyprlandMockState.allowed = true
 
   const hotkeys = await import('./hotkeys')
   hotkeys.startHotkeyListener(() => {})
@@ -153,6 +154,18 @@ function lastEscapeCallback(): () => void {
 }
 
 describe('Hyprland dialog shortcut dismissal', () => {
+  it.each([
+    true,
+    false,
+  ])('uses live compositor focus (%s) for Escape when only an annotation is open', async (allowed) => {
+    const onEscape = vi.fn()
+    await loadHotkeys(onEscape)
+    hyprlandMockState.overlayActive = true
+    hyprlandMockState.allowed = allowed
+    overlayControllerState.targetHasFocus = false
+    emitKeydown(ESCAPE_KEYDOWN)
+    expect(onEscape).toHaveBeenCalledTimes(allowed ? 1 : 0)
+  })
   it('uses the close handler instead of starting another filter lookup', async () => {
     const close = vi.fn()
     const hotkeys = await loadHotkeys(close)

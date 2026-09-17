@@ -9,7 +9,12 @@ import { getPoeVersion, setPoeVersion } from './game-state'
 import { loadTierData, refreshTierData } from './tier-data'
 import { loadPremiumMods, refreshPremiumMods } from './premium-mods'
 import { loadEndgameFilterSupport, refreshEndgameFilterSupport } from './trade/endgame-filter-support'
-import { closeAllOverlaysOnPoeExit, isAnyScalpelWindowFocused, isInsideAnySecondaryOverlay } from './windowing'
+import {
+  closeAllOverlaysOnPoeExit,
+  hideOverlaysOnGameClick,
+  isAnyScalpelWindowFocused,
+  isInsideAnySecondaryOverlay,
+} from './windowing'
 import { getWhiteboardOverlay } from './whiteboard'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 import { GAME_TITLES } from '@shared/contracts/game-variant'
@@ -315,6 +320,15 @@ uIOhook.on(
 uIOhook.on(
   'mousedown',
   guardNativeListener('mousedown-overlay', (e) => {
+    if (!overlayVisible && !desktop.hasInteractiveDialog() && hyprlandInputAllowed()) {
+      const point = hyprlandOverlayActive() ? getHyprlandPointerPhysical() : e
+      if (point && !windowAtPoint(point.x, point.y) && (OverlayController.targetHasFocus || hyprlandOverlayActive())) {
+        if (hideOverlaysOnGameClick()) {
+          setInteractiveWindow(null)
+          desktop.focusGame()
+        }
+      }
+    }
     if (!overlayVisible) return
     if (!hyprlandInputAllowed()) return
     // Only process clicks if the overlay window is actually visible on screen

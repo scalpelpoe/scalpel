@@ -401,11 +401,13 @@ export function register(store: Store<AppSettings>, isElevated: () => boolean = 
         defaultPosition?: { fracX: number; fracY: number }
         snapPositions?: { fracX: number; fracY: number }[]
         mode?: 'window' | 'annotation'
+        dismissOnEscape?: boolean
+        dismissOnGameClick?: boolean
       },
     ) => {
       if (!PLUGIN_ID_PATTERN.test(pluginId)) throw new Error('invalid plugin id')
       if (opts.mode === 'annotation') {
-        registerPluginAnnotationOverlay(pluginId)
+        registerPluginAnnotationOverlay(pluginId, opts.dismissOnEscape === true, opts.dismissOnGameClick === true)
       } else {
         registerPluginOverlay(pluginId, {
           title: opts.title,

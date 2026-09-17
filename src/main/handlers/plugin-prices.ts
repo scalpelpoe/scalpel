@@ -4,6 +4,7 @@ import type Store from 'electron-store'
 import type { AppSettings } from '@shared/types'
 import { getProfileBackedSetting } from '../profiles/profile-settings'
 import { getPriceEntries, invalidatePriceCache, refreshPrices, subscribePriceUpdates } from '../trade/prices'
+import { getSkillPrice } from '../trade/skill-prices'
 
 const subscribers = new Set<WebContents>()
 let unsub: (() => void) | null = null
@@ -20,6 +21,9 @@ function removeSubscriber(wc: WebContents): void {
  *  main-process price cache (the same one Price Check uses); plugins never fetch
  *  ninja directly (renderer fetch is CORS-blocked). */
 export function registerPluginPriceHandlers(store: Store<AppSettings>): void {
+  ipcMain.handle('plugins:skill-price', async (_evt, name: string, level: number) =>
+    getSkillPrice(getProfileBackedSetting(store, 'league'), name, level),
+  )
   ipcMain.handle('plugins:prices-get', async (_evt, opts?: { category?: string }) => {
     await refreshPrices(getProfileBackedSetting(store, 'league'))
     return getPriceEntries(opts?.category)

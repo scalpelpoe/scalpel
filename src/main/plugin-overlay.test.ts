@@ -137,6 +137,11 @@ describe('plugin-overlay registry', () => {
     expect(fakeOverlay.setPersistOverOthers).toHaveBeenCalledWith(true)
   })
 
+  it('transient annotations opt into the Escape sweep', () => {
+    registerPluginAnnotationOverlay('anno-transient', true)
+    expect(fakeOverlay.setPersistOverOthers).toHaveBeenCalledWith(false)
+  })
+
   it('window-mode overlays are not persist-flagged (the user pins them via chrome)', () => {
     registerPluginOverlay('win-demo', { title: 'Win' })
     expect(fakeOverlay.setPersistOverOthers).not.toHaveBeenCalled()

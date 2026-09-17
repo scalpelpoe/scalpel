@@ -434,9 +434,7 @@ function escapeContextIsActive(): boolean {
   return (
     hyprlandInputAllowed() &&
     !hotkeysAreSuspended() &&
-    (OverlayController.targetHasFocus ||
-      isAnyScalpelBrowserWindowFocused() ||
-      (hyprlandOverlayActive() && overlayVisibleForEscape))
+    (OverlayController.targetHasFocus || isAnyScalpelBrowserWindowFocused() || hyprlandOverlayActive())
   )
 }
 

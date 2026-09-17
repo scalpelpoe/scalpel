@@ -430,6 +430,11 @@ export const api = {
   }): Promise<{ prices: import('@shared/types').PriceEntry[]; updatedAt: number | null }> =>
     ipcRenderer.invoke('plugins:prices-get', opts),
   pricesRefresh: (): Promise<void> => ipcRenderer.invoke('plugins:prices-refresh'),
+  pricesGetSkill: (
+    name: string,
+    level: number,
+  ): Promise<(import('@shared/types').PriceEntry & { sampleSize: number; updatedAt: number }) | null> =>
+    ipcRenderer.invoke('plugins:skill-price', name, level),
   onPricesChange: (cb: () => void): (() => void) => {
     const handler = (): void => cb()
     ipcRenderer.send('plugins:prices-watch')
@@ -1055,6 +1060,8 @@ export const api = {
       defaultPosition?: { fracX: number; fracY: number }
       snapPositions?: { fracX: number; fracY: number }[]
       mode?: 'window' | 'annotation'
+      dismissOnEscape?: boolean
+      dismissOnGameClick?: boolean
     },
   ): Promise<void> => ipcRenderer.invoke('plugins:register-overlay', pluginId, opts),
   pluginOpenOverlay: (pluginId: string): Promise<void> => ipcRenderer.invoke('plugins:open-overlay', pluginId),

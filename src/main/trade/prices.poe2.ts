@@ -61,6 +61,7 @@ const POE2_EXCHANGE_TYPES = [
   'SoulCores',
   'Idols',
   'Runes',
+  'Verisium',
   'Ritual',
   'Expedition',
   'Delirium',
@@ -353,7 +354,27 @@ export async function fetchAndBuildPoe2PriceMap(
   const entries: PriceEntry[] = []
   for (let i = 0; i < responses.length; i++) {
     const type = POE2_EXCHANGE_TYPES[i]
-    applyResponse(responses[i], priceMap, categoryByType[type], entries, type)
+    applyResponse(responses[i], priceMap, categoryByType[type] ?? categorySlug(type), entries, type)
+  }
+  // Each category repeats core currency rates from its own snapshot. Use the
+  // Currency response as the single authority, including its actual line price,
+  // rather than exposing conflicting Chaos/Divine/Exalted duplicates to plugins.
+  const currencyEntries: PriceEntry[] = []
+  applyResponse(responses[0], new Map(), 'currency', currencyEntries, 'Currency')
+  const coreNames = new Set((responses[0].core.items ?? []).map((item) => item.name))
+  const canonical = new Map(
+    currencyEntries.filter((entry) => coreNames.has(entry.name)).map((entry) => [entry.name, entry]),
+  )
+  for (let i = entries.length - 1; i >= 0; i--) {
+    if (canonical.has(entries[i].name)) entries.splice(i, 1)
+  }
+  for (const entry of canonical.values()) {
+    entries.push(entry)
+    priceMap.set(entry.name.toLowerCase(), {
+      chaosValue: entry.chaosValue,
+      divineValue: entry.divineValue,
+      ninjaCategory: 'currency',
+    })
   }
   // The direct-ninja exchange endpoint never returns uniques, so there is
   // no variant data and the base map stays the static catalogue. Empty

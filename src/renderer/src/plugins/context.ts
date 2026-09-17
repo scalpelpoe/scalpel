@@ -54,10 +54,13 @@ export function createPluginContext(deps: PluginContextFactoryDeps): ScalpelPlug
         defaultPosition: opts.defaultPosition,
         snapPositions: opts.snapPositions,
         mode: opts.mode,
+        dismissOnEscape: opts.dismissOnEscape,
+        dismissOnGameClick: opts.dismissOnGameClick,
       })
     },
     openOverlay: () => deps.openOverlay(deps.pluginId),
     closeOverlay: () => deps.closeOverlay(deps.pluginId),
+    isOverlayVisible: () => deps.isOverlayVisible(deps.pluginId),
     // Inert here for the same reason as setInteractiveRegion below: the overlay
     // render only ever runs in the pop-out window's process, so only that copy
     // of the plugin has anything to reset when the window is reopened.

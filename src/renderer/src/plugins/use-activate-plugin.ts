@@ -98,6 +98,7 @@ export function useActivatePlugin(
           void window.api.pluginCloseOverlay(pluginId)
         },
         onOverlayVisibility: (h) => window.api.onPluginOverlayVisibility(h),
+        isOverlayVisible: () => window.api.pluginOverlayVisible(pluginId),
         setInteractiveRegion: (rect) => {
           if (onInteractiveRegion) {
             onInteractiveRegion(rect)
@@ -130,6 +131,7 @@ export function useActivatePlugin(
           onChange: (handler: () => void) => window.api.onGameConfigChange(handler),
         },
         prices: {
+          getSkillPrice: (name, level) => window.api.pricesGetSkill(name, level),
           getPrices: (opts) => window.api.pricesGet(opts),
           refresh: () => window.api.pricesRefresh(),
           onChange: (handler) => window.api.onPricesChange(handler),

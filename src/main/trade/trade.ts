@@ -1656,9 +1656,10 @@ export function parseFetchedListings(fetchedEntries: FetchEntry[]): TradeListing
             desecratedMods: desecrated,
             ilvl: r.item.ilvl,
             sockets: r.item.sockets,
-            gemLevel: r.item.properties?.find((p) => p.name === 'Level')?.values?.[0]?.[0]
-              ? parseInt(r.item.properties.find((p) => p.name === 'Level')!.values[0][0], 10)
-              : undefined,
+            gemLevel: (() => {
+              const value = r.item.properties?.find((p) => stripTradeTokens(p.name) === 'Level')?.values?.[0]?.[0]
+              return value ? parseInt(value, 10) : undefined
+            })(),
             quality: (() => {
               // PoE1 names the property "Quality"; PoE2 wraps it in a localization
               // tag ("[Quality]"). Both carry GGG's quality property type code 6,

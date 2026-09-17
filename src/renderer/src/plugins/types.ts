@@ -29,6 +29,10 @@ export type PluginContextFactoryDeps = {
     onChange: (handler: () => void) => () => void
   }
   prices: {
+    getSkillPrice: (
+      name: string,
+      level: number,
+    ) => Promise<(import('@shared/types').PriceEntry & { sampleSize: number; updatedAt: number }) | null>
     getPrices: (opts?: {
       category?: string
     }) => Promise<{ prices: import('@shared/types').PriceEntry[]; updatedAt: number | null }>
@@ -63,4 +67,5 @@ export type PluginContextFactoryDeps = {
   registerOverlay: (pluginId: string, opts: import('../../../plugin-sdk/src/types').RegisterOverlayOptions) => void
   openOverlay: (pluginId: string) => void
   closeOverlay: (pluginId: string) => void
+  isOverlayVisible: (pluginId: string) => Promise<boolean>
 }

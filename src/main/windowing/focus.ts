@@ -192,6 +192,17 @@ function hideOverlayState(state: import('./state').OverlayState): void {
   if (wasVisible) state.spec.onVisibilityChange?.(false)
 }
 
+/** Called only after the input layer verifies gameplay context and excludes UI panels. */
+export function hideOverlaysOnGameClick(): boolean {
+  let hidden = false
+  for (const state of overlays.values()) {
+    if (!state.spec.dismissOnGameClick || !state.win || state.win.isDestroyed() || !state.win.isVisible()) continue
+    hideOverlayState(state)
+    hidden = true
+  }
+  return hidden
+}
+
 /** Hide every secondary overlay because PoE itself exited. Used by the
  *  OverlayController 'detach' handler in overlay.ts. Delegates to
  *  hideOverlayState so a future change to the per-overlay hide path

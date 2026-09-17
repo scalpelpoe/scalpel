@@ -112,6 +112,10 @@ export interface RegisterTabOptions {
 }
 
 export interface RegisterOverlayOptions {
+  /** Allow transient annotation results to be dismissed by the game's Escape key. Default false. */
+  dismissOnEscape?: boolean
+  /** Dismiss transient annotation results when clicking the game outside Scalpel controls. */
+  dismissOnGameClick?: boolean
   /** Shown in the overlay window's chrome title bar. */
   title: string
   /**
@@ -213,6 +217,8 @@ export interface GameCapture {
 }
 
 export interface PricesApi {
+  /** Cached PoE2 asking-price estimate for a zero-quality, uncorrupted skill at an exact level. */
+  getSkillPrice(name: string, level: number): Promise<(PriceEntry & { sampleSize: number; updatedAt: number }) | null>
   /**
    * Read the current poe.ninja price snapshot for the detected game + league.
    * Pass `category` to scope the result (e.g. `'currency'`); omit it for every
@@ -340,6 +346,8 @@ export interface ScalpelPluginContext {
 
   /** Close (hide) this plugin's overlay window. No-op if not open / none registered. */
   closeOverlay(): void
+  /** Whether this plugin's overlay is currently visible. */
+  isOverlayVisible(): Promise<boolean>
 
   /**
    * Subscribe to this plugin's overlay window being opened or closed. Returns

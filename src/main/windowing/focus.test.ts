@@ -20,6 +20,7 @@ import {
   aroundNativeDialog,
   closeAllOverlaysOnPoeExit,
   hideAllOnPoeBlur,
+  hideOverlaysOnGameClick,
   hideFocusedOrAnyVisibleSecondaryOverlay,
   isAnyScalpelBrowserWindowFocused,
   isAnyScalpelWindowFocused,
@@ -87,6 +88,24 @@ describe('snap-ghost teardown', () => {
     overlays.clear()
     snapGhostCalls.length = 0
     focusHolder.current = null
+  })
+
+  it('game clicks dismiss only opted-in visible overlays and clear restore state', () => {
+    const notify = vi.fn()
+    const result = fakeState({ visible: true, wasVisible: true, onVisibilityChange: notify })
+    result.spec.dismissOnGameClick = true
+    const normal = fakeState({ visible: true })
+    const hidden = fakeState({ visible: false })
+    hidden.spec.dismissOnGameClick = true
+    overlays.set('result', result)
+    overlays.set('normal', normal)
+    overlays.set('hidden', hidden)
+    expect(hideOverlaysOnGameClick()).toBe(true)
+    expect(result.win!.hide).toHaveBeenCalledOnce()
+    expect(result.wasVisibleBeforeFocusLoss).toBe(false)
+    expect(notify).toHaveBeenCalledWith(false)
+    expect(normal.win!.hide).not.toHaveBeenCalled()
+    expect(hidden.win!.hide).not.toHaveBeenCalled()
   })
 
   it('hideAllOnPoeBlur clears the ghost flag on every overlay and the canvas', () => {

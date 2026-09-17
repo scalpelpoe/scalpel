@@ -17,6 +17,7 @@ export {
   closeAllOverlaysOnPoeExit,
   hideAllOnPoeBlur,
   hideFocusedOrAnyVisibleSecondaryOverlay,
+  hideOverlaysOnGameClick,
   isAnyScalpelBrowserWindowFocused,
   isAnyScalpelWindowFocused,
   isInsideAnySecondaryOverlay,
@@ -80,6 +81,8 @@ export interface OverlaySpec {
    *  them also clears the alt-tab restore memory - the card silently never
    *  comes back. An explicit user unpin persists and beats this default. */
   defaultUserPinned?: boolean
+  /** Transient annotations can dismiss when a click is delivered to the game. */
+  dismissOnGameClick?: boolean
   /** Optional predicate consulted before showing an already-created window
    *  (regular show, the first show after did-finish-load, and the PoE-refocus
    *  restore). Return false to suppress the show. Window creation itself is

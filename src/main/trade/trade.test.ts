@@ -286,6 +286,16 @@ describe('modEntryText', () => {
 // data (extended.mods.explicit no longer exists). The fixtures below are real
 // shapes captured from /api/trade2/fetch.
 describe('parseFetchedListings', () => {
+  it('reads tokenized PoE2 gem levels for exact-level price comparisons', () => {
+    const [listing] = parseFetchedListings([
+      {
+        id: 'skill',
+        listing: { account: { name: 'seller' } },
+        item: { baseType: 'Hollow Shell', properties: [{ name: '[Level]', values: [['20', 0]] }] },
+      } as FetchEntry,
+    ])
+    expect(listing.itemData?.gemLevel).toBe(20)
+  })
   const baseListing: FetchEntry['listing'] = {
     price: { amount: 5, currency: 'exalted' },
     account: { name: 'Tester', lastCharacterName: 'Hero', online: { status: 'online' } },

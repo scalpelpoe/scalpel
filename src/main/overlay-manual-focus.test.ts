@@ -11,6 +11,7 @@ const mock = vi.hoisted(() => ({
   panelFocus: vi.fn(),
   pointer: { x: 150, y: 150 },
   secondary: null as any,
+  dismiss: vi.fn(() => true),
 }))
 vi.mock('electron', () => ({
   BrowserWindow: class {
@@ -77,6 +78,7 @@ vi.mock('./trade/endgame-filter-support', () => ({
   refreshEndgameFilterSupport: async () => {},
 }))
 vi.mock('./windowing', () => ({
+  hideOverlaysOnGameClick: mock.dismiss,
   closeAllOverlaysOnPoeExit: vi.fn(),
   isAnyScalpelWindowFocused: () => false,
   isInsideAnySecondaryOverlay: () => false,
@@ -105,6 +107,17 @@ describe('Hyprland manual dialog focus', () => {
   it('explicitly requests focus on open without waiting for mouse movement', () => {
     expect(mock.activate).toHaveBeenCalledOnce()
     expect(mock.ignore).toHaveBeenLastCalledWith(false)
+  })
+
+  it('dismisses temporary annotations on a game click, but not outside the game context', () => {
+    hideOverlay()
+    mock.pointer = { x: 900, y: 700 }
+    mock.mouse.mousedown(mock.pointer)
+    expect(mock.dismiss).toHaveBeenCalledOnce()
+    mock.allowed = false
+    mock.mouse.mousedown(mock.pointer)
+    expect(mock.dismiss).toHaveBeenCalledOnce()
+    mock.pointer = { x: 150, y: 150 }
   })
   it('does not release focus when moving outside or dragging past stale panel bounds', async () => {
     mock.mouse.mousemove({ x: 150, y: 150 })

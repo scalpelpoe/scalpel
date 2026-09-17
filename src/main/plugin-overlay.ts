@@ -146,21 +146,25 @@ function fullGameAnchor(): OverlayAnchor {
  *  spanning the full game window. The plugin draws absolutely-positioned
  *  elements (e.g. value labels next to a menu). Reuses the same overlays-map key
  *  as registerPluginOverlay, so open/close/dispose work unchanged. */
-export function registerPluginAnnotationOverlay(pluginId: string): SecondaryOverlay {
+export function registerPluginAnnotationOverlay(
+  pluginId: string,
+  dismissOnEscape = false,
+  dismissOnGameClick = false,
+): SecondaryOverlay {
   const overlay = registerPluginOverlayInternal(pluginId, {
     id: `plugin-overlay:${pluginId}`,
     htmlEntry: 'plugin-annotation-overlay.html',
     interaction: () => 'passthrough',
+    dismissOnGameClick,
     defaultAnchor: fullGameAnchor,
     onDidFinishLoad: (win) => {
       win.webContents.send('plugin-overlay:init', pluginId)
       sendCurrentZoneTo(win)
     },
   })
-  // Click-through surface with no chrome and no close button - if the Esc
-  // sweep hid it, the user would have no visible way to bring it back. Same
-  // reasoning as the whiteboard's passthrough mode. Idempotent on re-register.
-  overlay.setPersistOverOthers(true)
+  // Persistent annotations stay out of the Escape sweep by default. Temporary
+  // results can opt in when their plugin provides a way to reopen them.
+  overlay.setPersistOverOthers(!dismissOnEscape)
   return overlay
 }
 

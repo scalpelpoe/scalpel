@@ -21,8 +21,16 @@ const subscribePriceUpdates = vi.fn(() => unsubSpy)
 
 vi.mock('../trade/prices', () => ({ refreshPrices, invalidatePriceCache, getPriceEntries, subscribePriceUpdates }))
 vi.mock('../profiles/profile-settings', () => ({ getProfileBackedSetting: () => 'Standard' }))
+vi.mock('../trade/skill-prices', () => ({ getSkillPrice: vi.fn(async () => null) }))
 
 describe('plugin price handlers', () => {
+  it('routes skill lookups through the active profile league', async () => {
+    const { getSkillPrice } = await import('../trade/skill-prices')
+    const { registerPluginPriceHandlers } = await import('./plugin-prices')
+    registerPluginPriceHandlers({} as never)
+    await handlers.get('plugins:skill-price')!({}, 'Hollow Shell', 20)
+    expect(getSkillPrice).toHaveBeenCalledWith('Standard', 'Hollow Shell', 20)
+  })
   beforeEach(() => {
     handlers.clear()
     listeners.clear()
