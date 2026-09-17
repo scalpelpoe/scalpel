@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -13,24 +13,36 @@ vi.hoisted(() => {
 const HANDLERS = vi.hoisted(() => new Map<string, (...args: unknown[]) => unknown>())
 const SPAWN = vi.hoisted(() => vi.fn(() => ({ unref: vi.fn() })))
 const APP_EXIT = vi.hoisted(() => vi.fn())
+const APP_RELAUNCH = vi.hoisted(() => vi.fn())
+const NATIVE_SHUTDOWN = vi.hoisted(() => vi.fn(async () => {}))
+
+vi.mock('../plugins/native-backend', () => ({
+  pluginNativeBackends: { shutdown: NATIVE_SHUTDOWN, stopAllNow: vi.fn() },
+}))
+vi.mock('../plugins/storage', () => ({ flushAll: vi.fn() }))
 
 vi.mock('node:child_process', () => ({ spawn: SPAWN, execSync: vi.fn() }))
 vi.mock('electron', () => ({
   app: {
+    isPackaged: true,
     getPath: vi.fn(() => MOCK_USER_DATA),
     getVersion: vi.fn(() => '1.0.2-rc4'),
     exit: APP_EXIT,
-    relaunch: vi.fn(),
+    relaunch: APP_RELAUNCH,
   },
   ipcMain: {
     handle: vi.fn((channel: string, fn: (...args: unknown[]) => unknown) => HANDLERS.set(channel, fn)),
     on: vi.fn(),
   },
 }))
-vi.mock('../diagnostics', () => ({ recordMainBreadcrumb: vi.fn(), registerDiagnosticProvider: vi.fn() }))
+vi.mock('../diagnostics', () => ({
+  recordMainBreadcrumb: vi.fn(),
+  recordMainDiagnostic: vi.fn(),
+  registerDiagnosticProvider: vi.fn(),
+}))
 vi.mock('../hotkeys', () => ({ stopHotkeyListener: vi.fn() }))
 
-import './updater'
+import { stopHotkeyListener } from '../hotkeys'
 
 const STAGING = join(MOCK_USER_DATA, 'update-staging')
 const RESOURCES = join(MOCK_USER_DATA, 'resources')
@@ -62,14 +74,39 @@ function stage({ installedNative = NATIVE }: { installedNative?: Record<string, 
 }
 
 describe('install-update', () => {
-  beforeEach(() => {
-    SPAWN.mockClear()
-    APP_EXIT.mockClear()
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    vi.resetModules()
+    await import('./updater')
     stage()
   })
 
-  it('spawns the apply batch detached so it outlives app.exit', () => {
-    HANDLERS.get('install-update')?.()
+  it.each([false, true])('waits for native shutdown before exit (pending update: %s)', async (pending) => {
+    if (!pending) rmSync(join(STAGING, 'app.asar.new'))
+    let release!: () => void
+    NATIVE_SHUTDOWN.mockImplementationOnce(
+      () =>
+        new Promise<void>((resolve) => {
+          release = resolve
+        }),
+    )
+
+    const install = HANDLERS.get('install-update')!()
+    expect(stopHotkeyListener).toHaveBeenCalledOnce()
+    expect(NATIVE_SHUTDOWN).toHaveBeenCalledOnce()
+    expect(APP_EXIT).not.toHaveBeenCalled()
+    expect(APP_RELAUNCH).toHaveBeenCalledTimes(pending ? 0 : 1)
+    expect(SPAWN).toHaveBeenCalledTimes(pending ? 1 : 0)
+
+    release()
+    await install
+    expect(APP_EXIT).toHaveBeenCalledExactlyOnceWith(0)
+    expect(APP_RELAUNCH).toHaveBeenCalledTimes(pending ? 0 : 1)
+    expect(SPAWN).toHaveBeenCalledTimes(pending ? 1 : 0)
+  })
+
+  it('spawns the apply batch detached so it outlives app.exit', async () => {
+    await HANDLERS.get('install-update')?.()
 
     // Regression guard for the rc4/rc5 dead-update bug: libuv puts every non-detached
     // child into a job object with JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE, so dropping
@@ -84,8 +121,8 @@ describe('install-update', () => {
     expect(options.windowsHide).toBe(true)
   })
 
-  it('uses only cmd built-ins, so nothing flashes a console', () => {
-    HANDLERS.get('install-update')?.()
+  it('uses only cmd built-ins, so nothing flashes a console', async () => {
+    await HANDLERS.get('install-update')?.()
 
     // The batch runs detached and so has no console of its own; any external executable
     // it launches gets a fresh visible one (#543). Restoring `detached` made that the
@@ -94,8 +131,8 @@ describe('install-update', () => {
     expect(offenders).toEqual([])
   })
 
-  it('retries the asar copy instead of sleeping, since the old process still holds it', () => {
-    HANDLERS.get('install-update')?.()
+  it('retries the asar copy instead of sleeping, since the old process still holds it', async () => {
+    await HANDLERS.get('install-update')?.()
 
     const bat = readFileSync(BAT_PATH, 'utf8')
     expect(bat).toContain(join(STAGING, 'app.asar.new'))
@@ -105,21 +142,21 @@ describe('install-update', () => {
     expect(APP_EXIT).toHaveBeenCalledWith(0)
   })
 
-  it('skips the native-module copy when nothing about them changed', () => {
-    HANDLERS.get('install-update')?.()
+  it('skips the native-module copy when nothing about them changed', async () => {
+    await HANDLERS.get('install-update')?.()
 
     expect(readFileSync(BAT_PATH, 'utf8')).not.toContain('xcopy')
   })
 
-  it('copies native modules when a version moved', () => {
+  it('copies native modules when a version moved', async () => {
     stage({ installedNative: { 'electron-overlay-window': '4.0.0', 'uiohook-napi': '1.5.4' } })
-    HANDLERS.get('install-update')?.()
+    await HANDLERS.get('install-update')?.()
 
     expect(readFileSync(BAT_PATH, 'utf8')).toContain('xcopy')
   })
 
-  it('records the pending version so the post-update banner can name it', () => {
-    HANDLERS.get('install-update')?.()
+  it('records the pending version so the post-update banner can name it', async () => {
+    await HANDLERS.get('install-update')?.()
 
     const justUpdated = JSON.parse(readFileSync(join(MOCK_USER_DATA, 'just-updated.json'), 'utf8'))
     expect(justUpdated.version).toBe('1.0.2-rc5')
