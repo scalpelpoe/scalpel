@@ -171,7 +171,7 @@ Intentional stop uses a bounded, confirmed sequence:
 
 File replacement does not proceed when a worker's termination cannot be confirmed.
 
-Development reload/uninstall temporarily blocks new calls while stopping the worker and changing files. Production registry install or update downloads and verifies every asset first, then stops the affected worker only for the file swap; removal stops it before deleting the package; after a successful mutation, that plugin remains blocked for the rest of the process and Scalpel requests a full restart. A failed mutation restores normal spawning. Loadability queries exclude packages both while mutation is in progress and while restart is required.
+Every install, update, reload, and uninstall blocks new calls for the affected plugin while stopping its worker and changing files. Registry install or update downloads and verifies every asset first, then stops the worker only for the file swap; removal stops it before deleting the package. When the mutation finishes, successful or not, normal spawning resumes: the next call starts the new executable, and the host reloads the plugin's renderer code and its dependents without an app restart. Loadability queries exclude a package while its mutation is in progress.
 
 Application shutdown blocks all new native calls before stopping workers. Emergency process teardown sends forced termination without waiting for confirmation.
 
