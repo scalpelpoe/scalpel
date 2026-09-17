@@ -72,6 +72,15 @@ vi.mock('fs', () => ({
     move(mockFs.files)
   },
   mkdirSync: () => {},
+  copyFileSync: (from: string, to: string) => {
+    if (mockFs.files.has(from)) {
+      mockFs.files.set(to, mockFs.files.get(from) as string)
+    } else if (mockFs.bufs.has(from)) {
+      mockFs.bufs.set(to, mockFs.bufs.get(from) as Uint8Array)
+    } else {
+      throw new Error('source missing')
+    }
+  },
   rmSync: (p: string, options?: { recursive?: boolean }) => {
     const remove = <T>(map: Map<string, T>): void => {
       for (const key of [...map.keys()]) {
@@ -450,6 +459,34 @@ describe('installFromRegistry', () => {
       version: '2.0.0',
     })
     expect(readMockJson(join(TEST_USER_DATA, 'plugins', 'installed.json'))).toEqual(['hello-world'])
+  })
+
+  it('carries a legacy in-package storage.json into the replacement package on update', async () => {
+    const destDir = join(TEST_USER_DATA, 'plugins', 'hello-world')
+    const legacyStorage = join(destDir, 'storage.json')
+    const currentStorage = join(TEST_USER_DATA, 'plugin-storage', 'hello-world', 'storage.json')
+    mockFs.bufs.set(join(destDir, 'plugin.js'), PLUGIN_BYTES)
+    mockFs.files.set(join(TEST_USER_DATA, 'plugins', 'installed.json'), JSON.stringify(['hello-world']))
+    mockFs.files.set(legacyStorage, JSON.stringify({ retained: true }))
+
+    const newManifest = { ...matchingManifest, version: '2.0.0' }
+    const newEntry = { ...validEntry, latestVersion: '2.0.0', sha256: NEW_SHA }
+    fetchResponses({
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v2.0.0/plugin.js': new Response(
+        NEW_BYTES,
+      ),
+      'https://github.com/filterscalpel/scalpel-plugin-hello-world/releases/download/v2.0.0/manifest.json':
+        new Response(JSON.stringify(newManifest)),
+    })
+
+    const { installFromRegistry } = await import('./install-from-registry')
+    const r = await installFromRegistry(newEntry)
+
+    expect(r.ok).toBe(true)
+    expect(mockFs.files.get(currentStorage)).toBe(JSON.stringify({ retained: true }))
+    // The legacy file is carried into the replacement package rather than
+    // dropped, so an older Scalpel build still finds it after a rollback.
+    expect(mockFs.files.get(legacyStorage)).toBe(JSON.stringify({ retained: true }))
   })
 
   it('clears unpacked provenance when a registry package replaces it', async () => {

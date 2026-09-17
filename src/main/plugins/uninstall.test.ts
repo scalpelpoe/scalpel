@@ -40,6 +40,11 @@ vi.mock('fs', () => ({
       }
     }
   },
+  copyFileSync: (from: string, to: string) => {
+    const value = mockFs.files.get(from)
+    if (value == null) throw new Error('source missing')
+    mockFs.files.set(to, value)
+  },
   rmSync: (p: string, opts: { recursive?: boolean; force?: boolean }) => {
     mockFs.dirsRemoved.push(p)
     const calls = (mockFs.removeCalls.get(p) ?? 0) + 1

@@ -6,7 +6,7 @@ import { replacePackageAtomically, restoreFiles, snapshotFiles } from './install
 import { addInstalledId } from './installed-list'
 import { validateManifest } from './manifest-validator'
 import { installedJsonPath, pendingPluginStorageDeletionsPath, pluginDir, unpackedJsonPath } from './paths'
-import { cancelStorageRemoval, migrateLegacyStorage } from './storage'
+import { cancelStorageRemoval, carryLegacyStorage, migrateLegacyStorage } from './storage'
 import { addUnpackedId } from './unpacked-list'
 import { nativeTargetForHost, type NativeHostPlatform, unsupportedNativePlatformMessage } from './native-platform'
 
@@ -155,6 +155,7 @@ export function installUnpacked(
     replacePackageAtomically(
       destDir,
       (incomingDir) => {
+        carryLegacyStorage(id, incomingDir)
         copyFileSync(manifestPath, join(incomingDir, 'manifest.json'))
         copyFileSync(entryPath, join(incomingDir, 'plugin.js'))
         if (contractPath && v.manifest.api) {

@@ -31,6 +31,11 @@ vi.mock('fs', () => ({
     mockFs.files.set(to, value)
     mockFs.files.delete(from)
   },
+  copyFileSync: (from: string, to: string) => {
+    const value = mockFs.files.get(from)
+    if (value == null) throw new Error('source missing')
+    mockFs.files.set(to, value)
+  },
   rmSync: (p: string, options?: { recursive?: boolean }) => {
     mockFs.rmCalls.push(p)
     if (options?.recursive) {
@@ -174,15 +179,24 @@ describe('plugin storage', () => {
 
   it('migrates legacy storage out of the package directory once', async () => {
     mockFs.files.set(legacyStoragePath, JSON.stringify({ key: 'legacy' }))
-    const { getValue, _resetForTests } = await import('./storage')
+    const { getValue, setValue, flushAll, _resetForTests } = await import('./storage')
 
     expect(getValue('p1', 'key')).toBe('legacy')
     expect(mockFs.files.get(storagePath)).toBe(JSON.stringify({ key: 'legacy' }))
-    expect(mockFs.files.has(legacyStoragePath)).toBe(false)
+    expect(mockFs.files.get(legacyStoragePath)).toBe(JSON.stringify({ key: 'legacy' }))
 
+    // A later write only touches the current-location file; the legacy
+    // snapshot is never written again.
+    setValue('p1', 'key', 'updated')
+    flushAll()
+    expect(mockFs.files.get(storagePath)).toBe(JSON.stringify({ key: 'updated' }))
+    expect(mockFs.files.get(legacyStoragePath)).toBe(JSON.stringify({ key: 'legacy' }))
+
+    // Migration only happens once: once the current file exists, a later
+    // change to the legacy file is never picked up again.
     _resetForTests()
     mockFs.files.set(legacyStoragePath, JSON.stringify({ key: 'stale' }))
-    expect(getValue('p1', 'key')).toBe('legacy')
-    expect(mockFs.files.has(legacyStoragePath)).toBe(true)
+    expect(getValue('p1', 'key')).toBe('updated')
+    expect(mockFs.files.get(legacyStoragePath)).toBe(JSON.stringify({ key: 'stale' }))
   })
 })

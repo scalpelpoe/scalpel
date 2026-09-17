@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { PLUGIN_ID_PATTERN } from './manifest-validator'
 import { pendingPluginStorageDeletionsPath, pluginDir, pluginStorageDir, pluginStoragePath } from './paths'
@@ -38,12 +38,29 @@ function writePendingDeletions(ids: string[]): void {
   }
 }
 
+/** Copy (not move) a legacy in-package storage.json to the current storage
+ *  location the first time it's seen. The legacy file is left in place so a
+ *  rollback to a Scalpel build without this migration still finds the
+ *  settings from before the upgrade; it is a one-time snapshot and is never
+ *  written again. */
 export function migrateLegacyStorage(pluginId: string): void {
   const current = pluginStoragePath(pluginId)
   const legacy = join(pluginDir(pluginId), 'storage.json')
   if (!existsSync(current) && existsSync(legacy)) {
     mkdirSync(dirname(current), { recursive: true })
-    renameSync(legacy, current)
+    copyFileSync(legacy, current)
+  }
+}
+
+/** Carry a legacy in-package storage.json forward into a package swap's
+ *  incoming directory. Registry updates and unpacked reloads replace the
+ *  whole package folder (replacePackageAtomically), so without this the
+ *  rollback snapshot left by migrateLegacyStorage would be dropped by the
+ *  next install instead of carried along with the package. */
+export function carryLegacyStorage(pluginId: string, incomingDir: string): void {
+  const legacy = join(pluginDir(pluginId), 'storage.json')
+  if (existsSync(legacy)) {
+    copyFileSync(legacy, join(incomingDir, 'storage.json'))
   }
 }
 
