@@ -4,7 +4,6 @@ import type { AppSettings } from '@shared/types'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { register } from './settings'
 import { getOverlayAttachedVersion } from '../overlay'
-import { pluginNativeBackends } from '../plugins/native-backend'
 import { gracefulRestart } from '../restart'
 import { applySetting } from '../settings-write'
 
@@ -20,7 +19,6 @@ vi.mock('electron', () => ({
 }))
 vi.mock('../restart', () => ({ gracefulRestart: vi.fn() }))
 vi.mock('../overlay', () => ({ getOverlayAttachedVersion: vi.fn() }))
-vi.mock('../plugins/native-backend', () => ({ pluginNativeBackends: { isRestartRequired: vi.fn() } }))
 vi.mock('../settings-write', () => ({ applySetting: vi.fn() }))
 vi.mock('../window-broadcast', () => ({}))
 vi.mock('../filter-state', () => ({}))
@@ -38,7 +36,6 @@ describe('finish-onboarding restart wiring', () => {
     vi.resetAllMocks()
     vi.spyOn(app, 'isPackaged', 'get').mockReturnValue(true)
     vi.mocked(getOverlayAttachedVersion).mockReturnValue(1)
-    vi.mocked(pluginNativeBackends.isRestartRequired).mockReturnValue(false)
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const data: Record<string, unknown> = {
@@ -68,16 +65,8 @@ describe('finish-onboarding restart wiring', () => {
     vi.restoreAllMocks()
   })
 
-  it.each([
-    { reason: 'overlay mismatch', active: 2, pluginRestart: false },
-    { reason: 'plugin restart latch alone', active: 1, pluginRestart: true },
-    { reason: 'both restart triggers', active: 2, pluginRestart: true },
-  ] as const)('persists onboarding before exactly one graceful restart for $reason', async ({
-    active,
-    pluginRestart,
-  }) => {
-    store.set('poeVersion', active)
-    vi.mocked(pluginNativeBackends.isRestartRequired).mockReturnValue(pluginRestart)
+  it('persists onboarding before exactly one graceful restart on an overlay mismatch', async () => {
+    store.set('poeVersion', 2)
 
     await expect(finish(event)).resolves.toEqual({ ok: true, restarting: true })
 
@@ -87,9 +76,8 @@ describe('finish-onboarding restart wiring', () => {
     expect(gracefulRestart).toHaveBeenCalledExactlyOnceWith()
   })
 
-  it.each([false, true])('signals manual restart on failure (plugin latch: %s)', async (pluginRestart) => {
-    store.set('poeVersion', pluginRestart ? 1 : 2)
-    vi.mocked(pluginNativeBackends.isRestartRequired).mockReturnValue(pluginRestart)
+  it('signals manual restart when the graceful restart fails', async () => {
+    store.set('poeVersion', 2)
     vi.mocked(gracefulRestart).mockImplementation(async () => {
       expect(store.get('onboardingCompleted')).toBe(true)
       expect(store.get('onboardingStep')).toBe('')
@@ -103,19 +91,12 @@ describe('finish-onboarding restart wiring', () => {
   })
 
   it.each([
-    { packaged: true, active: 1, pluginRestart: false, result: { ok: true } },
-    { packaged: false, active: 2, pluginRestart: false, result: { ok: true, devRestartRequired: true } },
-    { packaged: false, active: 1, pluginRestart: true, result: { ok: true, devRestartRequired: true } },
-    { packaged: false, active: 2, pluginRestart: true, result: { ok: true, devRestartRequired: true } },
-  ] as const)('does not restart for packaged=$packaged active=$active pluginLatch=$pluginRestart', async ({
-    packaged,
-    active,
-    pluginRestart,
-    result,
-  }) => {
+    { packaged: true, active: 1, result: { ok: true } },
+    { packaged: false, active: 1, result: { ok: true } },
+    { packaged: false, active: 2, result: { ok: true, devRestartRequired: true } },
+  ] as const)('does not restart for packaged=$packaged active=$active', async ({ packaged, active, result }) => {
     vi.spyOn(app, 'isPackaged', 'get').mockReturnValue(packaged)
     store.set('poeVersion', active)
-    vi.mocked(pluginNativeBackends.isRestartRequired).mockReturnValue(pluginRestart)
 
     await expect(finish(event)).resolves.toEqual(result)
     expect(gracefulRestart).not.toHaveBeenCalled()

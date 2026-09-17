@@ -25,15 +25,12 @@ function installApi({
 }: {
   registry: { ok: true; snapshot: { schemaVersion: 1; plugins: RegistryEntry[] } } | { ok: false; error: string }
   installed?: Array<{ manifest: { id: string; name: string; version: string; author: string }; entryUrl: string }>
-  install?: (
-    entry: RegistryEntry,
-  ) => Promise<{ ok: true; id: string; restartRequired: true } | { ok: false; error: string }>
+  install?: (entry: RegistryEntry) => Promise<{ ok: true; id: string } | { ok: false; error: string }>
 }): void {
   ;(window as unknown as { api: Record<string, unknown> }).api = {
     pluginFetchRegistry: vi.fn(async () => registry),
     listInstalledPlugins: vi.fn(async () => installed),
-    pluginInstallFromRegistry:
-      install ?? vi.fn(async () => ({ ok: true as const, id: 'demo', restartRequired: true as const })),
+    pluginInstallFromRegistry: install ?? vi.fn(async () => ({ ok: true as const, id: 'demo' })),
   }
 }
 
@@ -106,23 +103,19 @@ describe('PluginsStep listing', () => {
   })
 
   it('installs a plugin on click and switches the row to the installed state', async () => {
-    const pluginInstallFromRegistry = vi.fn(async () => ({
-      ok: true as const,
-      id: 'demo',
-      restartRequired: true as const,
-    }))
+    const pluginInstallFromRegistry = vi.fn(async () => ({ ok: true as const, id: 'demo' }))
     installApi({
       registry: { ok: true, snapshot: { schemaVersion: 1, plugins: [entry()] } },
       install: pluginInstallFromRegistry,
     })
-    const { findByText } = renderStep()
+    const { findByText, queryByText } = renderStep()
 
     const installBtn = await findByText('Install')
     fireEvent.click(installBtn)
 
     expect(pluginInstallFromRegistry).toHaveBeenCalledWith(entry())
     await findByText('Installed')
-    await findByText(/Restart Scalpel after setup/)
+    expect(queryByText(/Restart Scalpel after setup/)).toBeNull()
   })
 
   it('shows an inline error and leaves the row installable when install fails', async () => {

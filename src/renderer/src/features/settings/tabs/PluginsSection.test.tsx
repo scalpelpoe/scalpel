@@ -15,8 +15,9 @@ function installApi(hotkeys: Array<{ action: string; pluginId: string; label: st
     pluginListRegisteredHotkeys: vi.fn(async () => hotkeys),
     pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
     pluginUninstall: vi.fn(async () => ({ ok: true })),
-    pluginRestartRequired: vi.fn(async () => false),
-    onPluginRestartRequired: vi.fn(() => () => {}),
+    onPluginInstalled: vi.fn(() => () => {}),
+    onPluginUpdated: vi.fn(() => () => {}),
+    onPluginUninstalled: vi.fn(() => () => {}),
     onPluginHotkeysChanged: vi.fn(() => () => {}),
   }
 }
@@ -107,8 +108,9 @@ describe('PluginsSection installed icon', () => {
         },
       })),
       pluginUninstall: vi.fn(async () => ({ ok: true })),
-      pluginRestartRequired: vi.fn(async () => false),
-      onPluginRestartRequired: vi.fn(() => () => {}),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
       onPluginHotkeysChanged: vi.fn(() => () => {}),
     }
     const { container, findByText } = render(
@@ -144,8 +146,9 @@ describe('PluginsSection native plugin badge', () => {
       pluginListRegisteredHotkeys: vi.fn(async () => []),
       pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
       pluginUninstall: vi.fn(async () => ({ ok: true })),
-      pluginRestartRequired: vi.fn(async () => false),
-      onPluginRestartRequired: vi.fn(() => () => {}),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
       onPluginHotkeysChanged: vi.fn(() => () => {}),
     }
 
@@ -158,10 +161,7 @@ describe('PluginsSection native plugin badge', () => {
 
 describe('PluginsSection unavailable plugins', () => {
   it('grays the row, shows the reason, and keeps uninstall available', async () => {
-    const pluginUninstall = vi.fn(async () => ({
-      ok: true as const,
-      restartRequired: true as const,
-    }))
+    const pluginUninstall = vi.fn(async () => ({ ok: true as const }))
     ;(window as unknown as { api: Record<string, unknown> }).api = {
       listInstalledPlugins: vi.fn(async () => [
         {
@@ -186,8 +186,9 @@ describe('PluginsSection unavailable plugins', () => {
       pluginListRegisteredHotkeys: vi.fn(async () => [{ action: 'plugin:demo', pluginId: 'demo', label: 'Analyze' }]),
       pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
       pluginUninstall,
-      pluginRestartRequired: vi.fn(async () => false),
-      onPluginRestartRequired: vi.fn(() => () => {}),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
       onPluginHotkeysChanged: vi.fn(() => () => {}),
     }
 
@@ -203,36 +204,6 @@ describe('PluginsSection unavailable plugins', () => {
     expect((uninstall as HTMLButtonElement).disabled).toBe(false)
     fireEvent.click(uninstall)
     await waitFor(() => expect(pluginUninstall).toHaveBeenCalledWith('demo'))
-  })
-})
-
-describe('PluginsSection uninstall restart banner', () => {
-  it('does not clear an already-visible restart banner when uninstalling an unpacked plugin', async () => {
-    const pluginUninstall = vi.fn(async () => ({ ok: true as const }))
-    ;(window as unknown as { api: Record<string, unknown> }).api = {
-      listInstalledPlugins: vi.fn(async () => [
-        {
-          manifest: { id: 'demo', name: 'Demo', version: '1.0.0', author: 'me' },
-          entryUrl: '',
-        },
-      ]),
-      pluginListRegisteredHotkeys: vi.fn(async () => []),
-      pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
-      pluginUninstall,
-      pluginRestartRequired: vi.fn(async () => true),
-      onPluginRestartRequired: vi.fn(() => () => {}),
-      onPluginHotkeysChanged: vi.fn(() => () => {}),
-    }
-
-    const { findByText } = render(
-      <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
-    )
-    expect(await findByText('Restart required')).toBeTruthy()
-
-    const uninstall = await findByText('Uninstall')
-    fireEvent.click(uninstall)
-    await waitFor(() => expect(pluginUninstall).toHaveBeenCalledWith('demo'))
-    expect(await findByText('Restart required')).toBeTruthy()
   })
 })
 
@@ -254,8 +225,9 @@ describe('PluginsSection icon fallback', () => {
       pluginListRegisteredHotkeys: vi.fn(async () => []),
       pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
       pluginUninstall: vi.fn(async () => ({ ok: true })),
-      pluginRestartRequired: vi.fn(async () => false),
-      onPluginRestartRequired: vi.fn(() => () => {}),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
       onPluginHotkeysChanged: vi.fn(() => () => {}),
     }
   }
@@ -314,11 +286,7 @@ it('renders the auto-update toggle and flips pluginAutoUpdate', async () => {
 
 describe('PluginsSection update button', () => {
   it('shows an Update button when the registry has a newer version and calls update', async () => {
-    const pluginUpdateFromRegistry = vi.fn(async () => ({
-      ok: true as const,
-      id: 'demo',
-      restartRequired: true as const,
-    }))
+    const pluginUpdateFromRegistry = vi.fn(async () => ({ ok: true as const, id: 'demo' }))
     ;(window as unknown as { api: Record<string, unknown> }).api = {
       listInstalledPlugins: vi.fn(async () => [
         {
@@ -355,16 +323,77 @@ describe('PluginsSection update button', () => {
       })),
       pluginUninstall: vi.fn(async () => ({ ok: true })),
       pluginUpdateFromRegistry,
-      pluginRestartRequired: vi.fn(async () => false),
-      onPluginRestartRequired: vi.fn(() => () => {}),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
       onPluginHotkeysChanged: vi.fn(() => () => {}),
     }
-    const { findByText } = render(
-      <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    const onError = vi.fn()
+    const { findByText, queryByText } = render(
+      <PluginsSection onError={onError} settings={settings} update={noop} tryHotkey={tryHotkey} />,
     )
     const btn = await findByText('Update to v2.0.0')
     fireEvent.click(btn)
     await waitFor(() => expect(pluginUpdateFromRegistry).toHaveBeenCalled())
-    expect(await findByText('Restart required')).toBeTruthy()
+    await waitFor(() => expect(onError).toHaveBeenCalledWith('Updated "Demo" to v2.0.0.', 'warn'))
+    expect(queryByText('Restart required')).toBeNull()
+  })
+})
+
+describe('PluginsSection registry install', () => {
+  function registryEntry(): Record<string, unknown> {
+    return {
+      id: 'fresh',
+      name: 'Fresh',
+      author: 'me',
+      description: 'd',
+      repo: 'me/fresh',
+      latestVersion: '1.0.0',
+      scalpelMinVersion: '>=0.0.0',
+      sha256: '0'.repeat(64),
+    }
+  }
+
+  it('installs from the registry and applies it without a restart banner', async () => {
+    const pluginInstallFromRegistry = vi.fn(async () => ({ ok: true as const, id: 'fresh' }))
+    ;(window as unknown as { api: Record<string, unknown> }).api = {
+      listInstalledPlugins: vi.fn(async () => []),
+      pluginListRegisteredHotkeys: vi.fn(async () => []),
+      pluginFetchRegistry: vi.fn(async () => ({
+        ok: true,
+        snapshot: { schemaVersion: 1, plugins: [registryEntry()] },
+      })),
+      pluginInstallFromRegistry,
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
+      onPluginHotkeysChanged: vi.fn(() => () => {}),
+    }
+    const onError = vi.fn()
+    const { findByText, queryByText } = render(
+      <PluginsSection onError={onError} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    )
+    fireEvent.click(await findByText('Install'))
+    await waitFor(() => expect(pluginInstallFromRegistry).toHaveBeenCalledWith(registryEntry()))
+    await waitFor(() => expect(onError).toHaveBeenCalledWith('Installed "Fresh".', 'warn'))
+    expect(queryByText('Restart required')).toBeNull()
+  })
+
+  it.each([
+    'onPluginInstalled',
+    'onPluginUpdated',
+    'onPluginUninstalled',
+  ])('refreshes the installed list on %s', async (event) => {
+    let fire: (() => void) | undefined
+    installApi([])
+    const api = (window as unknown as { api: Record<string, unknown> }).api
+    api[event] = vi.fn((cb: () => void) => {
+      fire = cb
+      return () => {}
+    })
+    render(<PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />)
+    await waitFor(() => expect(api.listInstalledPlugins).toHaveBeenCalledTimes(1))
+    fire?.()
+    await waitFor(() => expect(api.listInstalledPlugins).toHaveBeenCalledTimes(2))
   })
 })

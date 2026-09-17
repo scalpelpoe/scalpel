@@ -53,7 +53,6 @@ type ResolveBackend = (pluginId: string) => NativeBackendDescriptor
 export class PluginNativeBackendManager {
   private readonly processes = new Map<string, NativeBackendProcess>()
   private readonly blockedPlugins = new Map<string, number>()
-  private readonly restartBlockedPlugins = new Set<string>()
   private readonly restartCooldowns = new Map<string, number>()
   private blockAllCount = 0
   private lifecycleTail: Promise<void> = Promise.resolve()
@@ -64,11 +63,7 @@ export class PluginNativeBackendManager {
   ) {}
 
   async call(pluginId: string, method: string, payload: Uint8Array): Promise<Uint8Array> {
-    if (
-      this.blockAllCount > 0 ||
-      this.restartBlockedPlugins.has(pluginId) ||
-      (this.blockedPlugins.get(pluginId) ?? 0) > 0
-    ) {
+    if (this.blockAllCount > 0 || (this.blockedPlugins.get(pluginId) ?? 0) > 0) {
       throw nativeError(`native backend for plugin "${pluginId}" is temporarily unavailable`, 'UNAVAILABLE')
     }
     const cooldownUntil = this.restartCooldowns.get(pluginId)
@@ -161,42 +156,11 @@ export class PluginNativeBackendManager {
     })
   }
 
-  /** Stop before mutating files. A successful mutation stays blocked for the
-   * rest of this process; a failed mutation restores normal worker spawning. */
-  async withPluginStoppedUntilRestart<TResult>(
-    pluginId: string,
-    operation: () => TResult | Promise<TResult>,
-    succeeded: (result: TResult) => boolean,
-  ): Promise<TResult> {
-    this.blockedPlugins.set(pluginId, (this.blockedPlugins.get(pluginId) ?? 0) + 1)
-    return this.serializeLifecycle(async () => {
-      try {
-        await this.stop(pluginId)
-        const result = await operation()
-        if (succeeded(result)) this.restartBlockedPlugins.add(pluginId)
-        return result
-      } finally {
-        const remaining = (this.blockedPlugins.get(pluginId) ?? 1) - 1
-        if (remaining > 0) this.blockedPlugins.set(pluginId, remaining)
-        else this.blockedPlugins.delete(pluginId)
-      }
-    })
-  }
-
-  isRestartRequired(): boolean {
-    return this.restartBlockedPlugins.size > 0
-  }
-
-  /** Plugins whose on-disk package changed this session. They are excluded from
-   * the loadable graph until restart; everything else keeps loading normally. */
-  restartBlockedPluginIds(): ReadonlySet<string> {
-    return new Set(this.restartBlockedPlugins)
-  }
-
   /** Snapshot used by loadability queries to exclude packages while their files
-   * are changing as well as packages whose changes require a restart. */
+   * are changing. A plugin leaves it as soon as its mutation settles; the next
+   * native call spawns the worker from the new files. */
   loadBlockedPluginIds(): ReadonlySet<string> {
-    return new Set([...this.restartBlockedPlugins, ...this.blockedPlugins.keys()])
+    return new Set(this.blockedPlugins.keys())
   }
 
   async withAllStopped<TResult>(operation: () => TResult | Promise<TResult>): Promise<TResult> {

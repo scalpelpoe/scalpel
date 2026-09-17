@@ -40,13 +40,14 @@ export function useActivatePlugin(
       const entry = await getLoadable(pluginId)
       if (cancelled) return
       if (!entry) {
-        // Restart-blocked (same-session registry update), unavailable, or gone:
-        // say which, instead of rendering empty overlay chrome.
+        // Mid-update (main blocks the plugin while its files change and reloads
+        // this pop-out afterwards), unavailable, or gone: say which, instead of
+        // rendering empty overlay chrome.
         const installed = await window.api.getInstalledPlugin(pluginId).catch(() => null)
         if (cancelled) return
         if (!installed) setError('plugin is not installed')
         else if (installed.availability.status === 'unavailable') setError(installed.availability.reason.message)
-        else setError("Restart Scalpel to load this plugin's updated files.")
+        else setError('This plugin is being updated. Reopen this window in a moment.')
         return
       }
       const state = await window.api.getOverlayState().catch(() => null)
