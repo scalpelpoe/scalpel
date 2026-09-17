@@ -64,8 +64,24 @@ describe('PluginsStep failure handling', () => {
 })
 
 describe('PluginsStep listing', () => {
-  it('discloses the temporary unsandboxed native-plugin trust model before installation', async () => {
+  it('hides the native-plugin trust notice when every entry is JS-only', async () => {
     installApi({ registry: { ok: true, snapshot: { schemaVersion: 1, plugins: [entry()] } } })
+    const { queryByRole, findByText } = renderStep()
+
+    await findByText('Demo')
+    expect(queryByRole('note')).toBeNull()
+  })
+
+  it('discloses the temporary unsandboxed native-plugin trust model before installation when an entry pins a native executable', async () => {
+    installApi({
+      registry: {
+        ok: true,
+        snapshot: {
+          schemaVersion: 1,
+          plugins: [entry({ assets: { 'backend.exe': '0'.repeat(64) } })],
+        },
+      },
+    })
     const { findByRole } = renderStep()
 
     const warning = await findByRole('note')
