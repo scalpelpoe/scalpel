@@ -120,3 +120,12 @@ it('refuses cursor restoration outside the game context', () => {
   backend.warpHyprlandCursor({ x: -1440, y: 540 })
   expect(evals()).toEqual([])
 })
+it('uses an idempotent float request when an overlay is observed tiled', async () => {
+  mock.clients.push({ ...panel, floating: false })
+  await vi.advanceTimersByTimeAsync(250)
+  expect(mock.exec).toHaveBeenCalledWith(
+    'hyprctl',
+    ['dispatch', 'hl.dsp.window.float({ window = "address:0x2", action = "on" })'],
+    { timeout: 1000 },
+  )
+})
