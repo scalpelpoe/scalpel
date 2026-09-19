@@ -13,6 +13,7 @@ import {
   isHyprlandGameContext,
 } from './hyprland-policy'
 import { hyprlandFocusScript } from './hyprland-focus'
+import { hyprlandGeometryScript } from './hyprland-geometry'
 
 const isHyprland = process.platform === 'linux' && !!process.env.HYPRLAND_INSTANCE_SIGNATURE
 const exec = promisify(execFile)
@@ -144,6 +145,8 @@ export function attachHyprlandOverlay(win: BrowserWindow, initialTitles: string[
   let focusRequestedUntil = 0
   let focusConfirmedSince = 0
   let lastGeometry = ''
+  let compositorGeometry = ''
+  let geometryAttempts = 0
   let lastFocused = false
   let lastContextActive = false
   let stopped = false
@@ -213,6 +216,8 @@ export function attachHyprlandOverlay(win: BrowserWindow, initialTitles: string[
         if (lastAddress) OverlayController.events.emit('detach')
         lastAddress = ''
         lastGeometry = ''
+        compositorGeometry = ''
+        geometryAttempts = 0
       } else {
         const monitors: Array<{ id: number; name: string; x: number; y: number; scale: number }> = JSON.parse(
           monitorResult.stdout,
@@ -245,7 +250,34 @@ export function attachHyprlandOverlay(win: BrowserWindow, initialTitles: string[
             )
           }
         }
-        if (!win.isDestroyed() && geometry !== lastGeometry) win.setBounds(bounds)
+        const mainOverlay = clients.find((c) => c.pid === process.pid && c.title === win.getTitle())
+        if (!mainOverlay) {
+          // Seed the hidden window before its first map. Once mapped, Chromium
+          // would shrink an exact monitor-sized SetBounds request by one pixel.
+          if (!win.isDestroyed() && geometry !== lastGeometry) win.setBounds(bounds)
+          compositorGeometry = ''
+          geometryAttempts = 0
+        } else if (mainOverlay.floating && mainOverlay.workspace.id === game.workspace.id) {
+          const desired = JSON.stringify([mainOverlay.address, game.address, game.at, game.size, game.workspace.id])
+          if (desired !== compositorGeometry) {
+            compositorGeometry = desired
+            geometryAttempts = 0
+          }
+          const matches =
+            mainOverlay.at.every((value, i) => value === game!.at[i]) &&
+            mainOverlay.size.every((value, i) => value === game!.size[i])
+          if (matches) geometryAttempts = 0
+          else if (geometryAttempts < 4) {
+            // Fractional XWayland scaling can require more than one configure.
+            // Recheck actual compositor bounds, but cap retries if user rules
+            // or size constraints prevent this window from matching the game.
+            geometryAttempts++
+            await exec('hyprctl', ['eval', hyprlandGeometryScript(mainOverlay.address, game.address, process.pid)], {
+              timeout: 1000,
+            })
+            dirty = true
+          }
+        }
         lastGeometry = geometry
       }
       const contextActive = isHyprlandGameContext(active, game, process.pid)
