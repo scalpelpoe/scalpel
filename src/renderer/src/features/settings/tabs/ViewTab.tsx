@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import type { AppSettings, HideableTabKey } from '@shared/types'
+import type { AppSettings, HideableTabKey, RuntimeSettings } from '@shared/types'
 import { ScrubInput } from '@renderer/components/primitives/ScrubInput'
 import { SettingToggleBox } from '@renderer/components/primitives/SettingToggleBox'
 import { ThemeSettings } from './ThemeSettings'
@@ -12,7 +12,7 @@ import poereIcon from '@renderer/assets/other/poere-logo.svg'
 import { m } from '@shared/paraglide/messages.js'
 
 interface Props {
-  settings: AppSettings
+  settings: RuntimeSettings
   update: <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => void
   updateMany: (patch: Partial<AppSettings>) => void
 }
@@ -216,11 +216,13 @@ export function ViewTab({ settings, update, updateMany }: Props): JSX.Element {
       </section>
 
       {/* Close on click outside */}
-      <SettingToggleBox
-        label={m.settings_close_on_click_outside()}
-        checked={settings.closeOnClickOutside}
-        onChange={(val) => update('closeOnClickOutside', val)}
-      />
+      {settings.platform !== 'linux' && (
+        <SettingToggleBox
+          label={m.settings_close_on_click_outside()}
+          checked={settings.closeOnClickOutside}
+          onChange={(val) => update('closeOnClickOutside', val)}
+        />
+      )}
       <SettingToggleBox
         label={m.settings_currency_names()}
         checked={settings.currencyLabelsAsText}
