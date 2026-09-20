@@ -1,3 +1,4 @@
+import { app } from 'electron'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -179,5 +180,57 @@ describe('Linux manual updates', () => {
     await HANDLERS.get('download-update')?.()
     expect(fetchMock).toHaveBeenCalledTimes(2)
     expect(SPAWN).not.toHaveBeenCalled()
+  })
+})
+
+describe.each(['stable', 'beta', 'experimental'])('%s update version ordering', (channel) => {
+  it.each([
+    ['1.0.5-rc2', '1.0.4', false],
+    ['1.0.5-rc2', '1.0.5-rc1', false],
+    ['1.0.5-rc2', '1.0.5-rc2', false],
+    ['1.0.5-rc2', '1.0.5-rc3', true],
+    ['1.0.5-rc2', '1.0.5-rc10', true],
+    ['1.0.5-rc10', '1.0.5-rc2', false],
+    ['1.0.5-rc2', '1.0.5', true],
+    ['1.0.5', '1.0.5-rc2', false],
+    ['1.0.5-rc2', '1.0.6-rc1', true],
+  ])('running %s, remote %s: notify=%s', async (running, remoteVersion, notify) => {
+    vi.useFakeTimers()
+    stage()
+    vi.mocked(app.getVersion).mockReturnValue(running)
+    const release = {
+      tag_name: `v${remoteVersion}`,
+      assets: [{ name: 'manifest.json', browser_download_url: 'https://example.com/manifest.json' }],
+    }
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce({ ok: true, json: async () => (channel === 'stable' ? release : [release]) })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => ({
+            version: remoteVersion,
+            electronVersion: process.versions.electron,
+            nativeModules: NATIVE,
+          }),
+        }),
+    )
+    // Each case represents a fresh app launch, with no pending update from another case.
+    vi.resetModules()
+    const { initUpdater: init } = await import('./updater')
+    const send = vi.fn()
+    const win = { isDestroyed: () => false, webContents: { send } }
+    init([() => win as unknown as Electron.BrowserWindow], MOCK_USER_DATA, channel)
+    await vi.advanceTimersByTimeAsync(5000)
+    if (notify) {
+      expect(send).toHaveBeenCalledWith('update-available', remoteVersion)
+    } else {
+      expect(send).not.toHaveBeenCalledWith('update-available', expect.anything())
+    }
+    expect(HANDLERS.get('get-update-state')?.()).toMatchObject({
+      updateVersion: notify ? remoteVersion : null,
+      updateReady: false,
+    })
   })
 })

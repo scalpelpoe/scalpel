@@ -2,7 +2,7 @@
  * Compare two versions in our format: `N.N.N` or `N.N.N-rcN`.
  * Positive when a > b, negative when a < b, zero when equal.
  * Segments compared numerically (so 0.10.0 > 0.9.9). A release beats any pre-release of
- * the same numeric version (0.9.5 > 0.9.5-rc1). Pre-release labels are string-compared.
+ * the same numeric version (0.9.5 > 0.9.5-rc1). Pre-release labels compare with numeric ordering (rc10 > rc2).
  */
 export function compareVersions(a: string, b: string): number {
   const [aMain, aPre = ''] = a.split('-')
@@ -15,7 +15,7 @@ export function compareVersions(a: string, b: string): number {
   }
   if (!aPre && bPre) return 1
   if (aPre && !bPre) return -1
-  return aPre.localeCompare(bPre)
+  return aPre.localeCompare(bPre, 'en', { numeric: true })
 }
 
 /**
