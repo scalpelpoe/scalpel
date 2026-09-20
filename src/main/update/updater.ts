@@ -445,7 +445,8 @@ ipcMain.handle('get-update-state', () => ({
 }))
 
 ipcMain.handle('download-update', async () => {
-  if (IS_DEV) return
+  // Linux keeps release notifications, but updates through AppImage replacement or a package manager.
+  if (IS_DEV || process.platform === 'linux') return
   if (!pendingRemote) return
 
   const local = readLocalManifest()
@@ -488,7 +489,7 @@ function unpackedNeedsReplacing(destDir: string, pendingManifestPath: string): b
 }
 
 ipcMain.handle('install-update', () => {
-  if (IS_DEV) return
+  if (IS_DEV || process.platform === 'linux') return
   const stagingDir = getStagingDir()
   const asarNew = join(stagingDir, 'app.asar.new')
   const electronZip = join(stagingDir, 'electron.zip')

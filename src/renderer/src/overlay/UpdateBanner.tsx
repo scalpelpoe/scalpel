@@ -1,8 +1,10 @@
+import type { NodePlatform } from '@shared/contracts/settings'
 import type { OverlayData } from '@shared/types'
 import { UpdateAvailableBanner, JustUpdatedBanner, BrickedReleaseBanner } from '../shared/update-banners'
 import { m } from '@shared/paraglide/messages.js'
 
 interface UpdateBannerProps {
+  platform: NodePlatform | undefined
   updateVersion: string | null
   updateProgress: number | null
   updateReady: boolean
@@ -17,6 +19,7 @@ interface UpdateBannerProps {
 }
 
 export function UpdateBanner({
+  platform,
   updateVersion,
   updateProgress,
   updateReady,
@@ -35,6 +38,7 @@ export function UpdateBanner({
           auto-update is the mechanism we're telling the user can't work for them. */}
       {updateVersion && !brickedRelease && (
         <UpdateAvailableBanner
+          platform={platform}
           version={updateVersion}
           progress={updateProgress}
           ready={updateReady}

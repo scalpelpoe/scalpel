@@ -233,7 +233,7 @@ export function AppWindow(): JSX.Element {
           }}
         />
       )}
-      <AppUpdateBanner />
+      {settings && <AppUpdateBanner platform={settings.platform} />}
       <LinuxDisclaimerBanner platform={settings?.platform} />
       <div
         ref={scrollRef}

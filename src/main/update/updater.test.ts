@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const MOCK_USER_DATA = vi.hoisted(() =>
   require('node:path').join(require('node:os').tmpdir(), `scalpel-updater-${Date.now()}`),
@@ -30,7 +30,13 @@ vi.mock('electron', () => ({
 vi.mock('../diagnostics', () => ({ recordMainBreadcrumb: vi.fn(), registerDiagnosticProvider: vi.fn() }))
 vi.mock('../hotkeys', () => ({ stopHotkeyListener: vi.fn() }))
 
-import './updater'
+import { initUpdater } from './updater'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
+  vi.useRealTimers()
+})
 
 const STAGING = join(MOCK_USER_DATA, 'update-staging')
 const RESOURCES = join(MOCK_USER_DATA, 'resources')
@@ -63,6 +69,7 @@ function stage({ installedNative = NATIVE }: { installedNative?: Record<string, 
 
 describe('install-update', () => {
   beforeEach(() => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
     SPAWN.mockClear()
     APP_EXIT.mockClear()
     stage()
@@ -123,5 +130,54 @@ describe('install-update', () => {
 
     const justUpdated = JSON.parse(readFileSync(join(MOCK_USER_DATA, 'just-updated.json'), 'utf8'))
     expect(justUpdated.version).toBe('1.0.2-rc5')
+  })
+})
+
+describe('Linux manual updates', () => {
+  beforeEach(() => {
+    vi.spyOn(process, 'platform', 'get').mockReturnValue('linux')
+    SPAWN.mockClear()
+    APP_EXIT.mockClear()
+    stage()
+  })
+
+  it('does not apply staged updates or exit the app', () => {
+    HANDLERS.get('install-update')?.()
+    expect(SPAWN).not.toHaveBeenCalled()
+    expect(APP_EXIT).not.toHaveBeenCalled()
+    expect(existsSync(BAT_PATH)).toBe(false)
+    expect(existsSync(join(STAGING, 'app.asar.new'))).toBe(true)
+  })
+
+  it('still announces releases but refuses the in-app download', async () => {
+    vi.useFakeTimers()
+    const remote = {
+      version: '1.0.2-rc5',
+      electronVersion: process.versions.electron,
+      nativeModules: NATIVE,
+    }
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          tag_name: 'v1.0.2-rc5',
+          assets: [
+            { name: 'manifest.json', browser_download_url: 'https://example.com/manifest.json' },
+            { name: 'app.asar', browser_download_url: 'https://example.com/app.asar' },
+          ],
+        }),
+      })
+      .mockResolvedValueOnce({ ok: true, json: async () => remote })
+    vi.stubGlobal('fetch', fetchMock)
+    const send = vi.fn()
+    const win = { isDestroyed: () => false, webContents: { send } }
+    initUpdater([() => win as unknown as Electron.BrowserWindow], MOCK_USER_DATA, 'stable')
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(send).toHaveBeenCalledWith('update-available', remote.version)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    await HANDLERS.get('download-update')?.()
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(SPAWN).not.toHaveBeenCalled()
   })
 })
