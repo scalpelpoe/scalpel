@@ -3,7 +3,7 @@ import { iconMap, divCardArtMap } from '../../shared/constants'
 // PoE1 sheet rather than through iconMap (which isn't populated until
 // initIconMap fires at runtime). PoE2 has a Mirror of Kalandra too and
 // reuses art close enough that the PoE1 asset is fine for both games.
-import itemIcons from '@shared/data/items/item-icons-poe1.json'
+import itemIcons from '@scalpel/item-data/poe1.json'
 import { formatDust, formatPrice } from '../../shared/utils'
 import dustValues from '@shared/data/economy/dust-values.json'
 import baseToUniques from '@shared/data/items/unique-info.json'

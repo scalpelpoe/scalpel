@@ -1,6 +1,6 @@
 import divCardsData from '@shared/data/economy/div-cards.json'
-import itemIconsPoe1 from '@shared/data/items/item-icons-poe1.json'
-import itemIconsPoe2 from '@shared/data/items/item-icons-poe2.json'
+import itemIconsPoe1 from '@scalpel/item-data/poe1.json'
+import itemIconsPoe2 from '@scalpel/item-data/poe2.json'
 import uniqueInfoPoe1 from '@shared/data/items/unique-info.json'
 import uniqueInfoPoe2 from '@shared/data/items/unique-info-poe2.json'
 import { getItemClasses } from '@shared/data/items/item-classes'

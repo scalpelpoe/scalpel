@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Fill gaps in src/shared/data/items/item-icons-poe1.json.
+ * Fill gaps in poe1.json.
  *
  * Two sources, in priority order:
  *
@@ -32,7 +32,7 @@
 const fs = require('node:fs')
 const path = require('node:path')
 
-const OUT = path.join(__dirname, '..', 'src', 'shared', 'data', 'items', 'item-icons-poe1.json')
+const OUT = path.join(__dirname, '..', 'poe1.json')
 const STATIC_URL = 'https://www.pathofexile.com/api/trade/data/static'
 const ITEMS_URL = 'https://www.pathofexile.com/api/trade/data/items'
 const REPOE_URL = 'https://repoe-fork.github.io/base_items.json'
@@ -194,7 +194,9 @@ async function main() {
   console.log(`\nwrote ${Object.keys(sorted).length} icons to ${path.relative(process.cwd(), OUT)}`)
 }
 
-main().catch((e) => {
+module.exports = { collectCandidates, buildArtIndex }
+
+if (require.main === module) main().catch((e) => {
   console.error(e)
-  process.exit(1)
+  process.exitCode = 1
 })
