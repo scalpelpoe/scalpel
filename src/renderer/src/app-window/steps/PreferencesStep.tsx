@@ -121,15 +121,17 @@ export function PreferencesStep({
           <OpenSideSelector value={settings.openSide} onChange={(v) => onUpdate('openSide', v)} />
         </section>
 
-        <section>
-          <div
-            onClick={() => onUpdate('closeOnClickOutside', !settings.closeOnClickOutside)}
-            className="flex items-center gap-[10px] cursor-pointer select-none"
-          >
-            <Toggle checked={settings.closeOnClickOutside} onChange={(val) => onUpdate('closeOnClickOutside', val)} />
-            <span className="text-xs text-text">{m.settings_close_on_click_outside()}</span>
-          </div>
-        </section>
+        {settings.platform !== 'linux' && (
+          <section>
+            <div
+              onClick={() => onUpdate('closeOnClickOutside', !settings.closeOnClickOutside)}
+              className="flex items-center gap-[10px] cursor-pointer select-none"
+            >
+              <Toggle checked={settings.closeOnClickOutside} onChange={(val) => onUpdate('closeOnClickOutside', val)} />
+              <span className="text-xs text-text">{m.settings_close_on_click_outside()}</span>
+            </div>
+          </section>
+        )}
 
         <section>
           <div
