@@ -33,6 +33,7 @@
     "format": "biome format --write src",
     "format:check": "biome format src",
     "test": "vitest run",
+    "test:linux-shutdown": "node scripts/test-linux-shutdown.mjs",
     "test:watch": "vitest",
     "test:update": "node scripts/update-smoke.mjs",
     "test:e2e": "npm run build && playwright test -c playwright.electron.config.ts",
