@@ -1,5 +1,18 @@
 export const CHANGELOG: { version: string; notes: string[] }[] = [
   {
+    version: '1.0.5',
+    notes: [
+      'Updated plugin sdk with some new features.',
+      'Refreshed the item tier data.',
+      'Fixed non-Voidborn Reliquary Keys pricing on the bulk exchange instead of trade search.',
+      'Fixed Overseer Tablets with 2 Azmeri Spirits matching the wrong mod.',
+      'Fixed The Whispering Ice price checks missing its "Inflict Elemental Exposure on Hit" mod.',
+      'Fixed PoE2 gem trade listings not showing their level.',
+      'Fixed private leagues resetting to the main league after restarting Scalpel.',
+      'Fixed too many plugins pushing the close button off the overlay navbar.',
+    ],
+  },
+  {
     version: '1.0.4',
     notes: [
       'Added a radial menu, turn it on in the settings macro page.',

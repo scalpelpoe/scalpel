@@ -169,3 +169,13 @@ it('retries a new game geometry after a previous correction exhausted its budget
   await vi.advanceTimersByTimeAsync(1000)
   expect(geometryCalls()).toHaveLength(8)
 })
+
+it('uses an idempotent float request when an overlay is observed tiled', async () => {
+  mock.clients.push({ ...panel, floating: false })
+  await vi.advanceTimersByTimeAsync(250)
+  expect(mock.exec).toHaveBeenCalledWith(
+    'hyprctl',
+    ['dispatch', 'hl.dsp.window.float({ window = "address:0x2", action = "on" })'],
+    { timeout: 1000 },
+  )
+})
