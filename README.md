@@ -96,14 +96,6 @@ npm install
 npm run dev
 ```
 
-### Linux shutdown regression test
-
-Run `npm run test:linux-shutdown` after installation to exercise the patched
-native X11 tracker under AddressSanitizer and UndefinedBehaviorSanitizer. This
-requires a C compiler, XCB and libuv development libraries, and `DISPLAY` pointing
-to X11/XWayland or Xvfb. It covers shutdown during startup, an idle or busy event
-queue, repeated cleanup, and connection failure.
-
 ## License
 
 This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).

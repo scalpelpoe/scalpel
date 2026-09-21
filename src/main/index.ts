@@ -27,9 +27,7 @@ installEarlyDiagnostics()
 // Capture native aborts (the tsfn proxy calling napi_fatal_error, etc.) as local
 // minidumps under userData/Crashpad. A C-level abort never reaches the JS
 // uncaughtException handler, so this is the only trace it leaves on Windows.
-// Linux AppImage mounts can disappear while Crashpad is still running. Once
-// started it cannot be stopped through Electron's API, so don't launch it there.
-if (process.platform !== 'linux') crashReporter.start({ uploadToServer: false })
+crashReporter.start({ uploadToServer: false })
 
 import { execSync } from 'node:child_process'
 import Store from 'electron-store'
