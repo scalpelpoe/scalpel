@@ -14,7 +14,7 @@ Path of Exile's first ever fourth-party tool. An overlay to edit your filter, pr
 - **Cheat Sheets** - Use prefabs (PoE1 Leagues, PoE2 Leveling Guide) or add your own. Or just add pictures of Greg.
 - **View in Wiki/PoEDB/Ninja** - Don't like what Scalpel has to say about an item? Try the other sites.
 - **Art Mode** - Bind an app hotkey in settings to launch an artboard on top of the game - draw, add shapes, text and images. I don't know who would want this besides content creators but it's really fucking cool.
-- **Plugins (beta)** - Browse and install from Settings → Plugins, or build your own.
+- **Plugins (beta)** - Browse and install from Settings → Plugins, or build your own. Experimental native plugins can include unsandboxed executables supplied by their authors; read the [native security model](NATIVE_PLUGIN_RFC_1.md#security-model) before installing one.
 - **And more** - Scrollable stash tabs, filter checkpoints, cool themes etc.
 
 **PoE1 Only:**

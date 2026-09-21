@@ -8,18 +8,20 @@ export function HotkeyRecorder({
   className = 'w-[200px] shrink-0',
   placeholder = '(none set)',
   clearable = false,
+  disabled = false,
 }: {
   value: string
   onChange: (v: string) => void
   className?: string
   placeholder?: string
   clearable?: boolean
+  disabled?: boolean
 }): JSX.Element {
   const [listening, setListening] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    if (!listening) return
+    if (!listening || disabled) return
     window.api.suspendHotkeys()
     const onKey = (e: KeyboardEvent): void => {
       e.preventDefault()
@@ -39,19 +41,28 @@ export function HotkeyRecorder({
       window.removeEventListener('mousedown', onClick)
       window.api.resumeHotkeys()
     }
-  }, [listening, onChange])
+  }, [disabled, listening, onChange])
+
+  useEffect(() => {
+    if (disabled) setListening(false)
+  }, [disabled])
 
   const showingPlaceholder = !listening && !value
   return (
     <div
       ref={ref}
-      className={`setting-box group ${className} cursor-pointer h-[34px] box-border`}
-      onClick={() => setListening(true)}
+      aria-disabled={disabled}
+      className={`setting-box group ${className} h-[34px] box-border ${
+        disabled ? 'cursor-not-allowed opacity-45' : 'cursor-pointer'
+      }`}
+      onClick={() => {
+        if (!disabled) setListening(true)
+      }}
     >
       <span className={`value ${listening ? 'recording' : ''} ${showingPlaceholder ? 'placeholder' : ''}`}>
         {listening ? 'Press your key combo...' : prettyHotkey(value) || placeholder}
       </span>
-      {clearable && value && !listening && (
+      {clearable && value && !listening && !disabled && (
         <button
           onClick={(e) => {
             e.stopPropagation()

@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { compareVersions, versionMatches, findBrickedMatch } from './version-match'
+import {
+  compareVersions,
+  versionMatches,
+  findBrickedMatch,
+  isValidVersionRange,
+  minVersionSatisfied,
+} from './version-match'
 
 describe('compareVersions', () => {
   it('handles numeric segments correctly (10 > 9)', () => {
@@ -45,6 +51,73 @@ describe('versionMatches', () => {
     expect(versionMatches('<0.9.5', '0.9.5-rc7')).toBe(true)
     expect(versionMatches('<=0.9.5-rc3', '0.9.5-rc2')).toBe(true)
     expect(versionMatches('<=0.9.5-rc3', '0.9.5-rc4')).toBe(false)
+  })
+
+  it('requires every comparator in a compound range to match', () => {
+    expect(versionMatches('>=1.2.0 <2.0.0', '1.2.0')).toBe(true)
+    expect(versionMatches('>=1.2.0 <2.0.0', '1.99.0')).toBe(true)
+    expect(versionMatches('>=1.2.0 <2.0.0', '1.1.9')).toBe(false)
+    expect(versionMatches('>=1.2.0 <2.0.0', '2.0.0')).toBe(false)
+  })
+
+  it('tolerates whitespace between an operator and its version', () => {
+    expect(versionMatches('>= 1.0.0', '1.0.4')).toBe(true)
+    expect(versionMatches('< 1.0.0', '1.0.4')).toBe(false)
+    expect(isValidVersionRange('>= 1.0.0')).toBe(true)
+    expect(isValidVersionRange('>=  1.0.0   <2.0.0')).toBe(true)
+    expect(versionMatches('>= 1.0.0 < 2.0.0', '1.5.0')).toBe(true)
+    expect(versionMatches('>= 1.0.0 < 2.0.0', '2.0.0')).toBe(false)
+  })
+
+  it('preserves caret boundaries, including pre-1.0 versions', () => {
+    expect(versionMatches('^1.2.3', '1.2.3')).toBe(true)
+    expect(versionMatches('^1.2.3', '1.9.9')).toBe(true)
+    expect(versionMatches('^1.2.3', '2.0.0')).toBe(false)
+    expect(versionMatches('^0.2.3', '0.2.99')).toBe(true)
+    expect(versionMatches('^0.2.3', '0.3.0')).toBe(false)
+    expect(versionMatches('^0.0.3', '0.0.4')).toBe(false)
+  })
+
+  it('preserves tilde boundaries', () => {
+    expect(versionMatches('~1.2.3', '1.2.99')).toBe(true)
+    expect(versionMatches('~1.2.3', '1.3.0')).toBe(false)
+    expect(versionMatches('~1', '1.99.0')).toBe(true)
+    expect(versionMatches('~1', '2.0.0')).toBe(false)
+  })
+
+  it('rejects malformed or unsupported ranges', () => {
+    expect(isValidVersionRange('>=1.0.0 <2.0.0')).toBe(true)
+    expect(isValidVersionRange('^1.2.3')).toBe(true)
+    expect(isValidVersionRange('')).toBe(false)
+    expect(isValidVersionRange('>=1.0.0 || <2.0.0')).toBe(false)
+    expect(isValidVersionRange('>=')).toBe(false)
+    expect(versionMatches('>=1.0.0 nope', '1.5.0')).toBe(false)
+  })
+})
+
+describe('minVersionSatisfied', () => {
+  it('treats a bare version as a minimum', () => {
+    expect(minVersionSatisfied('0.9.13', '1.0.4')).toBe(true)
+    expect(minVersionSatisfied('0.9.13', '0.9.12')).toBe(false)
+  })
+
+  it('keeps exact semantics for an explicit leading =', () => {
+    expect(minVersionSatisfied('=0.9.13', '1.0.4')).toBe(false)
+  })
+
+  it('evaluates an explicit comparator as written', () => {
+    expect(minVersionSatisfied('>=0.9.13', '1.0.4')).toBe(true)
+    expect(minVersionSatisfied('^1.2.3', '2.0.0')).toBe(false)
+  })
+
+  it('evaluates a compound range as written', () => {
+    expect(minVersionSatisfied('>=1.2.0 <2.0.0', '1.5.0')).toBe(true)
+    expect(minVersionSatisfied('>=1.0.0 nope', '1.5.0')).toBe(false)
+  })
+
+  it('tolerates whitespace between an operator and its version', () => {
+    expect(minVersionSatisfied('>= 1.1.0', '1.0.4')).toBe(false)
+    expect(minVersionSatisfied('>= 1.0.0', '1.0.4')).toBe(true)
   })
 })
 

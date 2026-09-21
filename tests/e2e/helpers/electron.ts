@@ -8,6 +8,7 @@ export interface ScalpelE2EApp {
   app: ElectronApplication
   window: Page
   userDataDir: string
+  close: () => Promise<void>
   cleanup: () => Promise<void>
 }
 
@@ -16,7 +17,7 @@ export interface ScalpelE2EOptions {
   seedConfig?: Record<string, unknown>
   /** Extra files written under userData before launch, keyed by relative path
    *  (e.g. `plugins/installed.json`). Parent directories are created. */
-  seedFiles?: Record<string, string>
+  seedFiles?: Record<string, string | Uint8Array>
 }
 
 const CONFIG_FILE = 'config.json'
@@ -33,7 +34,7 @@ export async function launchScalpelE2E(opts?: ScalpelE2EOptions): Promise<Scalpe
       writeFileSync(target, contents)
     }
     const app = await electron.launch({
-      args: [join(process.cwd(), 'out/main/index.js')],
+      args: [process.cwd()],
       env: {
         ...process.env,
         NODE_ENV: 'test',
@@ -43,13 +44,20 @@ export async function launchScalpelE2E(opts?: ScalpelE2EOptions): Promise<Scalpe
     })
     const window = await app.firstWindow()
     await window.waitForLoadState('domcontentloaded')
+    let closed = false
+    const close = async (): Promise<void> => {
+      if (closed) return
+      await app.close()
+      closed = true
+    }
 
     return {
       app,
       window,
       userDataDir,
+      close,
       cleanup: async () => {
-        await app.close().catch(() => undefined)
+        await close().catch(() => undefined)
         await rm(userDataDir, { recursive: true, force: true })
       },
     }
