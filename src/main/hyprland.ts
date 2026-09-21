@@ -237,7 +237,7 @@ export function attachHyprlandOverlay(win: BrowserWindow, initialTitles: string[
         for (const overlay of clients.filter((c) => c.pid === process.pid && c.title.startsWith('Scalpel Overlay'))) {
           if (!/^0x[0-9a-f]+$/i.test(overlay.address)) continue
           if (!overlay.floating)
-            await dispatch(`hl.dsp.window.float({ window = "address:${overlay.address}", action = "set" })`)
+            await dispatch(`hl.dsp.window.float({ window = "address:${overlay.address}", action = "on" })`)
           if (overlay.workspace.id !== game.workspace.id) {
             if (!Number.isInteger(game.workspace.id)) continue
             await dispatch(
