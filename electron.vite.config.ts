@@ -11,7 +11,7 @@ const resolveAlias = {
 
 export default defineConfig({
   main: {
-    plugins: [externalizeDepsPlugin()],
+    plugins: [externalizeDepsPlugin({ exclude: ['@scalpel/item-data'] })],
     resolve: { alias: resolveAlias },
     build: {
       rollupOptions: {

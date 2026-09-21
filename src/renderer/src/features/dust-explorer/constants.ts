@@ -3,7 +3,7 @@ import baseToUniques from '@shared/data/items/unique-info.json'
 // Dust explorer is PoE1-only (gated via features.dustExplorer). Both mirrorIconUrl
 // and cachedBaseEntries below are module-load-time, so import the PoE1 sheet
 // directly rather than going through the shared iconMap.
-import itemIcons from '@shared/data/items/item-icons-poe1.json'
+import itemIcons from '@scalpel/item-data/poe1.json'
 import { getItemClasses } from '@shared/data/items/item-classes'
 import type { FilterType } from './types'
 

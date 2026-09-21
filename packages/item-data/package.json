@@ -1,0 +1,34 @@
+{
+  "name": "@scalpel/item-data",
+  "version": "0.1.0",
+  "description": "Bundled Path of Exile 1 and 2 item-name to artwork URL indexes",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scalpelpoe/scalpel.git",
+    "directory": "packages/item-data"
+  },
+  "exports": {
+    "./poe1.json": "./poe1.json",
+    "./poe2.json": "./poe2.json"
+  },
+  "files": [
+    "poe1.json",
+    "poe2.json",
+    "schema.json",
+    "integrity.json",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "validate": "node scripts/validate.js",
+    "snapshot": "node scripts/validate.js --write-snapshot",
+    "sync:poe1": "node scripts/sync-item-icons-poe1.js",
+    "sync:poe2": "node scripts/sync-item-icons-poe2.js",
+    "prepack": "npm run validate && npm test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
