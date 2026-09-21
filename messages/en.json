@@ -254,6 +254,8 @@
   "titlebar_price_checker_empty": "Price Checker (no item checked yet)",
   "banner_update_ready": "Scalpel Update Ready (v{version}) - restart to apply",
   "banner_downloading": "Downloading v{version}... {progress}%",
+  "banner_update_linux_manual": "Replace your AppImage manually, or update through your package manager.",
+  "banner_view_release": "View release",
   "banner_update_available": "Scalpel Update Available (v{version})",
   "banner_updated_to": "Updated to v{version}",
   "banner_bricked": "This version (v{version}) can't auto-update. Download the latest installer to continue.",

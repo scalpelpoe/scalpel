@@ -12,9 +12,11 @@ describe('compareVersions', () => {
     expect(compareVersions('0.9.5-rc7', '0.9.5')).toBeLessThan(0)
   })
 
-  it('compares pre-release labels lexically', () => {
+  it('compares pre-release labels with numeric ordering', () => {
     expect(compareVersions('0.9.5-rc2', '0.9.5-rc1')).toBeGreaterThan(0)
     expect(compareVersions('0.9.5-rc1', '0.9.5-rc7')).toBeLessThan(0)
+    expect(compareVersions('0.9.5-rc10', '0.9.5-rc2')).toBeGreaterThan(0)
+    expect(compareVersions('0.9.5-rc2', '0.9.5-rc10')).toBeLessThan(0)
   })
 
   it('returns zero for equal versions', () => {
