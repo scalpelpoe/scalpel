@@ -254,6 +254,8 @@
   "titlebar_price_checker_empty": "Preisprüfer (noch kein Gegenstand geprüft)",
   "banner_update_ready": "Scalpel-Update bereit (v{version}) – zum Anwenden neu starten",
   "banner_downloading": "v{version} wird heruntergeladen... {progress}%",
+  "banner_update_linux_manual": "Ersetze dein AppImage manuell oder aktualisiere über deine Paketverwaltung.",
+  "banner_view_release": "Release ansehen",
   "banner_update_available": "Scalpel-Update verfügbar (v{version})",
   "banner_updated_to": "Aktualisiert auf v{version}",
   "banner_bricked": "Diese Version (v{version}) kann sich nicht automatisch aktualisieren. Lade den neuesten Installer herunter, um fortzufahren.",

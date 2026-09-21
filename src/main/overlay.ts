@@ -397,6 +397,9 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
   setInterval(() => refreshEndgameFilterSupport().catch(() => {}), 24 * 60 * 60 * 1000)
   overlayWindow = new BrowserWindow({
     ...OVERLAY_WINDOW_OPTS,
+    // XWayland utility windows float on their first map. Floating a normal
+    // window later is too late to prevent Hyprland disrupting game fullscreen.
+    ...(hyprlandOverlayActive() ? { type: 'utility' as const, title: 'Scalpel Overlay' } : {}),
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),

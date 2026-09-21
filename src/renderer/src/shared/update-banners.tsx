@@ -1,20 +1,39 @@
-import { GITHUB_RELEASES_PAGE } from '@shared/endpoints'
+import type { NodePlatform } from '@shared/contracts/settings'
+import { GITHUB_RELEASES_PAGE, GITHUB_REPO_URL } from '@shared/endpoints'
 import { m } from '@shared/paraglide/messages.js'
 
 /** Yellow "update available / downloading / ready" banner with inline progress fill. */
 export function UpdateAvailableBanner({
   version,
+  platform,
   progress,
   ready,
   onDownload,
   onRestart,
 }: {
   version: string
+  platform?: NodePlatform
   progress: number | null
   ready: boolean
   onDownload: () => void
   onRestart: () => void
 }): JSX.Element {
+  if (platform === 'linux') {
+    return (
+      <div className="flex items-center justify-between gap-3 px-3.5 py-2 text-[11px] shrink-0 bg-[rgba(255,183,77,0.24)]">
+        <div className="text-text">
+          <div className="font-semibold">{m.banner_update_available({ version })}</div>
+          <div>{m.banner_update_linux_manual()}</div>
+        </div>
+        <button
+          onClick={() => window.api.openExternal(`${GITHUB_REPO_URL}/releases/tag/v${encodeURIComponent(version)}`)}
+          className="px-3 py-1 text-[11px] font-semibold bg-accent text-bg-solid border-none rounded cursor-pointer shrink-0"
+        >
+          {m.banner_view_release()}
+        </button>
+      </div>
+    )
+  }
   return (
     <div className="relative flex items-center justify-between px-3.5 py-2 text-[11px] overflow-hidden shrink-0 bg-[rgba(255,183,77,0.24)]">
       {(progress !== null || ready) && (

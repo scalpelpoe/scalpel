@@ -254,6 +254,8 @@
   "titlebar_price_checker_empty": "Verificador de precios (ningún objeto verificado aún)",
   "banner_update_ready": "Actualización de Scalpel lista (v{version}): reinicia para aplicar",
   "banner_downloading": "Descargando v{version}... {progress}%",
+  "banner_update_linux_manual": "Reemplaza tu AppImage manualmente o actualiza mediante tu gestor de paquetes.",
+  "banner_view_release": "Ver versión",
   "banner_update_available": "Actualización de Scalpel disponible (v{version})",
   "banner_updated_to": "Actualizado a v{version}",
   "banner_bricked": "Esta versión (v{version}) no puede actualizarse automáticamente. Descarga el instalador más reciente para continuar.",
