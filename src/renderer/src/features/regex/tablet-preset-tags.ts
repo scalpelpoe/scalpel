@@ -13,6 +13,7 @@ export interface TabletTagState {
     abyss: boolean
     temple: boolean
     overseer: boolean
+    expedition: boolean
   }
   uses: { enabled: boolean; value: number }
 }
@@ -25,6 +26,7 @@ export const TYPE_LABELS: Array<[keyof TabletTagState['type'], string]> = [
   ['abyss', 'Abyss'],
   ['temple', 'Temple'],
   ['overseer', 'Overseer'],
+  ['expedition', 'Expedition'],
 ]
 
 /** Auto-tags for a tablet selection: one per selected affix (display text) plus

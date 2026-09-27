@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Build src/shared/data/regex/vendor/tablets/Tablet.Gen.ts from poe2.re's
- * Generated.Tablet.min.json (veiset/poe2.re). Mirrors the waystone data pipeline.
+ * Generated.Tablet.min.json (poe2/ in veiset/poe-vendor-string, where poe2.re now lives). Mirrors the waystone data pipeline.
  * Used with attribution. Re-run when upstream tablet data changes:
  *   node scripts/build-tablet-regex.js
  */
@@ -9,7 +9,7 @@ const https = require('node:https')
 const fs = require('node:fs')
 const path = require('node:path')
 
-const URL = 'https://raw.githubusercontent.com/veiset/poe2.re/main/public/generated/Generated.Tablet.min.json'
+const URL = 'https://raw.githubusercontent.com/veiset/poe-vendor-string/master/poe2/public/generated/tablet/Generated.Tablet.min.json'
 const OUT = path.join(__dirname, '..', 'src', 'shared', 'data', 'regex', 'vendor', 'tablets', 'Tablet.Gen.ts')
 
 function fetch(url) {

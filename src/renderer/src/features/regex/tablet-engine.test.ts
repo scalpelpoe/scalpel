@@ -18,6 +18,7 @@ function emptyArgs(): TabletBuildArgs {
       abyss: false,
       temple: false,
       overseer: false,
+      expedition: false,
     },
     uses: { enabled: false, value: 1 },
     selections: { want: new Set<number>(), wantMode: 'any', wantValues: {} },
@@ -123,6 +124,13 @@ describe('buildTabletRegex parity', () => {
       },
     },
     {
+      name: 'type expedition + overseer',
+      mutate: (a) => {
+        a.type.expedition = true
+        a.type.overseer = true
+      },
+    },
+    {
       name: 'type all (drop)',
       mutate: (a) => {
         a.type.irradiated =
@@ -132,6 +140,7 @@ describe('buildTabletRegex parity', () => {
           a.type.abyss =
           a.type.temple =
           a.type.overseer =
+          a.type.expedition =
             true
       },
     },
@@ -313,6 +322,21 @@ describe('buildTabletRegex golden (live poe2.re/tablet captures)', () => {
       expected: '"(tual|eac|eer)"',
     },
     {
+      name: 'type expedition',
+      mutate: (a) => {
+        a.type.expedition = true
+      },
+      expected: '"(xped)"',
+    },
+    {
+      name: 'type overseer + expedition',
+      mutate: (a) => {
+        a.type.overseer = true
+        a.type.expedition = true
+      },
+      expected: '"(eer|xped)"',
+    },
+    {
       name: 'uses 1',
       mutate: (a) => {
         a.uses.enabled = true
@@ -351,7 +375,7 @@ describe('buildTabletRegex golden (live poe2.re/tablet captures)', () => {
         if (!mod) throw new Error('expected Abyss Pits affix in TABLET_MODS')
         a.selections.want = new Set([mod.id])
       },
-      expected: '"tw"',
+      expected: '"ew"',
     },
   ]
 

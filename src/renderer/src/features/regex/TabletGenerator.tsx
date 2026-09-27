@@ -96,6 +96,7 @@ export const TabletGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
     abyss: !!typeFlags.abyss,
     temple: !!typeFlags.temple,
     overseer: !!typeFlags.overseer,
+    expedition: !!typeFlags.expedition,
   }
 
   const regex = buildTabletRegex({
@@ -149,6 +150,7 @@ export const TabletGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
           abyss: type.abyss ? 1 : 0,
           temple: type.temple ? 1 : 0,
           overseer: type.overseer ? 1 : 0,
+          expedition: type.expedition ? 1 : 0,
           usesEnabled: usesEnabled ? 1 : 0,
           usesValue,
           round10: round10 ? 1 : 0,
@@ -170,6 +172,7 @@ export const TabletGenerator = forwardRef<GeneratorHandle, GeneratorProps>(funct
           abyss: !!q.abyss,
           temple: !!q.temple,
           overseer: !!q.overseer,
+          expedition: !!q.expedition,
         })
         setUsesEnabled(!!q.usesEnabled)
         setUsesValue(q.usesValue && q.usesValue > 0 ? q.usesValue : 1)

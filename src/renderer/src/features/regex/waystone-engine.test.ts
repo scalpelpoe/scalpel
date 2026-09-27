@@ -172,6 +172,7 @@ function makeSettings(overrides: {
         abyss: false,
         temple: false,
         overseer: false,
+        expedition: false,
       },
       modifier: { usesRemaining: false, numUsesRemaining: 1, affixes: [], affixSelectType: 'any', round10: false },
     },

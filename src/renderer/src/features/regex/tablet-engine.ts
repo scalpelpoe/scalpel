@@ -15,6 +15,7 @@ export interface TabletType {
   abyss: boolean
   temple: boolean
   overseer: boolean
+  expedition: boolean
 }
 export interface TabletUses {
   enabled: boolean
@@ -70,9 +71,23 @@ function modifierRegex(mods: TabletMod[], selections: TabletSelections, round10:
 
 function typeRegex(type: TabletType): string | null {
   const all =
-    type.irradiated && type.ritual && type.delirium && type.breach && type.abyss && type.temple && type.overseer
+    type.irradiated &&
+    type.ritual &&
+    type.delirium &&
+    type.breach &&
+    type.abyss &&
+    type.temple &&
+    type.overseer &&
+    type.expedition
   const none =
-    !type.irradiated && !type.ritual && !type.delirium && !type.breach && !type.abyss && !type.temple && !type.overseer
+    !type.irradiated &&
+    !type.ritual &&
+    !type.delirium &&
+    !type.breach &&
+    !type.abyss &&
+    !type.temple &&
+    !type.overseer &&
+    !type.expedition
   if (all || none) return null
   const result = [
     type.irradiated ? 'rra' : '',
@@ -82,6 +97,7 @@ function typeRegex(type: TabletType): string | null {
     type.abyss ? 'byss' : '',
     type.temple ? 'empl' : '',
     type.overseer ? 'eer' : '',
+    type.expedition ? 'xped' : '',
   ]
     .filter((e) => e.length > 0)
     .join('|')

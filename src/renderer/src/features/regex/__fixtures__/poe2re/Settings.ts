@@ -108,6 +108,7 @@ export interface Settings {
       abyss: boolean
       temple: boolean
       overseer: boolean
+      expedition: boolean
     }
     modifier: {
       usesRemaining: boolean
