@@ -2,6 +2,8 @@ export const CHANGELOG: { version: string; notes: string[] }[] = [
   {
     version: '1.0.5',
     notes: [
+      'Added Expedition Tablets to the PoE2 Tablets regex tab.',
+      'Regex Remote presets can now be reordered by dragging.',
       'Updated plugin sdk with some new features.',
       'Refreshed the item tier data.',
       'Fixed non-Voidborn Reliquary Keys pricing on the bulk exchange instead of trade search.',
@@ -10,6 +12,7 @@ export const CHANGELOG: { version: string; notes: string[] }[] = [
       'Fixed PoE2 gem trade listings not showing their level.',
       'Fixed private leagues resetting to the main league after restarting Scalpel.',
       'Fixed too many plugins pushing the close button off the overlay navbar.',
+      'Fixed hotkeys getting stuck off after clicking away from an overlay text box.',
     ],
   },
   {
