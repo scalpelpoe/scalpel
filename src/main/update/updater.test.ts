@@ -44,7 +44,8 @@ vi.mock('../diagnostics', () => ({
 vi.mock('../hotkeys', () => ({ stopHotkeyListener: vi.fn() }))
 
 import { stopHotkeyListener } from '../hotkeys'
-import { initUpdater } from './updater'
+
+let initUpdater: typeof import('./updater').initUpdater
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -82,10 +83,11 @@ function stage({ installedNative = NATIVE }: { installedNative?: Record<string, 
 }
 
 describe('install-update', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    vi.resetModules()
     vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
-    SPAWN.mockClear()
-    APP_EXIT.mockClear()
+    ;({ initUpdater } = await import('./updater'))
     stage()
   })
 
@@ -172,10 +174,11 @@ describe('install-update', () => {
 })
 
 describe('Linux manual updates', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
+    vi.clearAllMocks()
+    vi.resetModules()
     vi.spyOn(process, 'platform', 'get').mockReturnValue('linux')
-    SPAWN.mockClear()
-    APP_EXIT.mockClear()
+    ;({ initUpdater } = await import('./updater'))
     stage()
   })
 
