@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react'
 import type { RegistryEntry } from '@shared/plugin-registry-types'
 import { Button } from '@renderer/components/primitives/Button'
 import { ErrorBanner } from '@renderer/components/ErrorBanner'
+import { NativePluginSecurityNotice } from '@renderer/components/NativePluginSecurityNotice'
 import { partitionFeatured } from '@renderer/plugins/featured'
+import { isNativeRegistryEntry } from '@renderer/plugins/native-plugins'
 import { m } from '@shared/paraglide/messages.js'
 import { NavButtons } from '../NavButtons'
 import { StepHeader } from '../StepHeader'
@@ -135,6 +137,7 @@ export function PluginsStep({
     <div>
       <ErrorBanner message={error} tone={tone} inline />
       {header}
+      {(entries ?? []).some(isNativeRegistryEntry) && <NativePluginSecurityNotice className="mb-3" />}
       <div className="flex flex-col gap-4">
         {featured.length > 0 && (
           <section className="flex flex-col gap-2">

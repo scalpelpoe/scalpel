@@ -1,0 +1,24 @@
+{
+  "name": "@scalpel-examples/native-item-analyzer",
+  "private": true,
+  "type": "module",
+  "scalpelPlugin": {
+    "manifest": "manifest.template.json",
+    "entry": "src/plugin.ts",
+    "bundle": "plugin.js",
+    "outDir": "dist",
+    "contracts": [
+      {
+        "source": "proto",
+        "descriptor": "backend.binpb",
+        "generated": "src/generated",
+        "service": "scalpel.examples.item_analyzer.v1.NativeItemAnalyzer"
+      }
+    ],
+    "native": {
+      "cargoManifest": "native/Cargo.toml",
+      "binary": "native-item-analyzer",
+      "target": "win32-x64"
+    }
+  }
+}

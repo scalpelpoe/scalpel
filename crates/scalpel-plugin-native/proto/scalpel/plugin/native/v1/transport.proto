@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package scalpel.plugin.native.v1;
+
+message NativeFrame {
+  uint32 request_id = 1;
+
+  oneof body {
+    InitializeRequest initialize_request = 2;
+    InitializeResponse initialize_response = 3;
+    CallRequest call_request = 4;
+    CallResponse call_response = 5;
+    CallError call_error = 6;
+  }
+}
+
+message InitializeRequest {
+  uint32 protocol_version = 1;
+  string plugin_id = 2;
+  string service = 3;
+}
+
+message InitializeResponse {
+  uint32 protocol_version = 1;
+  string plugin_id = 2;
+  string service = 3;
+}
+
+message CallRequest {
+  string method = 1;
+  bytes payload = 2;
+}
+
+message CallResponse {
+  bytes payload = 1;
+}
+
+message CallError {
+  string code = 1;
+  string message = 2;
+}

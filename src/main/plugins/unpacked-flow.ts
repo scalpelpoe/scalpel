@@ -5,7 +5,7 @@ export interface UnpackedFlowDeps {
   /** Ids installed right now - read BEFORE the install to tell a first load
    *  from a re-install over a plugin that is already running. */
   installedIds: () => string[]
-  install: (sourceDir: string) => InstallResult
+  install: (sourceDir: string, expectedPluginId?: string) => InstallResult
   manifestOf: (id: string) => PluginManifest | undefined
   entryUrl: (id: string, version: string) => string
   broadcast: (
@@ -27,10 +27,17 @@ export interface UnpackedFlowDeps {
  *  re-runs activate() on a plugin that never tore down: its tab registration
  *  no-ops and the previous subscription set is orphaned. That is what used to
  *  make an app restart the only way to pick up freshly-built plugin code. */
-export function installUnpackedAndNotify(sourceDir: string, deps: UnpackedFlowDeps): InstallResult {
+export function installUnpackedAndNotify(
+  sourceDir: string,
+  deps: UnpackedFlowDeps,
+  expectedPluginId?: string,
+): InstallResult {
   const wasInstalled = new Set(deps.installedIds())
-  const result = deps.install(sourceDir)
+  const result = expectedPluginId ? deps.install(sourceDir, expectedPluginId) : deps.install(sourceDir)
   if (!result.ok) return result
+  if (expectedPluginId && result.id !== expectedPluginId) {
+    return { ok: false, error: `source contains plugin "${result.id}", expected "${expectedPluginId}"` }
+  }
 
   const manifest = deps.manifestOf(result.id)
   if (!manifest) return result
@@ -57,5 +64,5 @@ export function reloadUnpackedPlugin(pluginId: string, deps: UnpackedFlowDeps): 
   if (!deps.dirExists(sourceDir)) {
     return { ok: false, error: `Source directory no longer exists: ${sourceDir}` }
   }
-  return installUnpackedAndNotify(sourceDir, deps)
+  return installUnpackedAndNotify(sourceDir, deps, pluginId)
 }

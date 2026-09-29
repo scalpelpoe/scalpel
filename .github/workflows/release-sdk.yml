@@ -1,10 +1,4 @@
-name: Release SDK
-
-# Publishes @scalpelpoe/plugin-sdk to npm when a tag like `sdk-v0.2.0` is pushed.
-# The SDK is types-only: dist/index.d.ts (bundled declarations) + dist/index.js
-# (runtime stub). The actual SDK runtime lives in Scalpel and is served via the
-# scalpel-internal://sdk.js custom protocol; this published package is just the
-# author-facing types contract.
+name: Release Plugin RFC Packages
 
 on:
   push:
@@ -12,15 +6,12 @@ on:
       - 'sdk-v*'
 
 permissions:
-  contents: read
+  contents: write
   id-token: write # required for npm provenance
 
 jobs:
-  publish:
+  release:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src/plugin-sdk
     steps:
       - uses: actions/checkout@v4
 
@@ -29,24 +20,68 @@ jobs:
           node-version: 22
           registry-url: 'https://registry.npmjs.org'
 
-      - name: Verify tag matches package.json version
+      - name: Verify tag matches package versions
+        id: version
         shell: bash
         run: |
-          PKG_VERSION=$(node -p "require('./package.json').version")
+          SDK_VERSION=$(node -p "require('./src/plugin-sdk/package.json').version")
+          TOOLS_VERSION=$(node -p "require('./src/plugin-tools/package.json').version")
           TAG_VERSION="${GITHUB_REF_NAME#sdk-v}"
-          if [ "$PKG_VERSION" != "$TAG_VERSION" ]; then
-            echo "Tag $GITHUB_REF_NAME implies version $TAG_VERSION but package.json has $PKG_VERSION" >&2
+          if [ "$GITHUB_REF_NAME" != "sdk-v$SDK_VERSION" ] || [ "$TOOLS_VERSION" != "$SDK_VERSION" ]; then
+            echo "Tag $GITHUB_REF_NAME, SDK $SDK_VERSION, and tools $TOOLS_VERSION must have the same version" >&2
             exit 1
           fi
-          echo "Publishing @scalpelpoe/plugin-sdk@$PKG_VERSION"
+          echo "version=$TAG_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm ci --no-audit --no-fund --prefix src/plugin-sdk
+          npm ci --no-audit --no-fund --prefix src/plugin-tools
 
-      - name: Build
-        run: npm run build
+      - name: Test plugin packages
+        run: npm run test -- src/plugin-sdk/src scripts/scalpel-plugin.test.mjs
 
-      - name: Publish to npm
+      - name: Build SDK
+        run: npm run build --prefix src/plugin-sdk
+
+      - name: Pack and verify release assets
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          PACKAGE_DIR="$RUNNER_TEMP/plugin-packages"
+          SMOKE_DIR="$RUNNER_TEMP/plugin-tools-smoke"
+          mkdir -p "$PACKAGE_DIR" "$SMOKE_DIR"
+          npm pack ./src/plugin-sdk --pack-destination "$PACKAGE_DIR"
+          npm pack ./src/plugin-tools --pack-destination "$PACKAGE_DIR"
+          test -f "$PACKAGE_DIR/scalpelpoe-plugin-sdk-$VERSION.tgz"
+          test -f "$PACKAGE_DIR/scalpelpoe-plugin-tools-$VERSION.tgz"
+          cd "$SMOKE_DIR"
+          npm init -y
+          npm install --no-audit --no-fund "$PACKAGE_DIR/scalpelpoe-plugin-tools-$VERSION.tgz"
+          test -x node_modules/.bin/scalpel-plugin
+
+      - name: Check whether SDK version is already published
+        id: published
+        shell: bash
+        run: |
+          if npm view "@scalpelpoe/plugin-sdk@${{ steps.version.outputs.version }}" version >/dev/null 2>&1; then
+            echo "sdk=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "sdk=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish SDK to npm
+        if: steps.published.outputs.sdk != 'true'
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --provenance --access public
+        run: npm publish --provenance --access public "$RUNNER_TEMP/plugin-packages/scalpelpoe-plugin-sdk-${{ steps.version.outputs.version }}.tgz"
+
+      - name: Create RFC preview release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Plugin RFC packages v${{ steps.version.outputs.version }}
+          prerelease: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: ${{ runner.temp }}/plugin-packages/*.tgz

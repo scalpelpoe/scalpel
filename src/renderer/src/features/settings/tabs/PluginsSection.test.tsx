@@ -7,13 +7,17 @@ import type { RuntimeSettings } from '@shared/types'
 function installApi(hotkeys: Array<{ action: string; pluginId: string; label: string }>): void {
   ;(window as unknown as { api: Record<string, unknown> }).api = {
     listInstalledPlugins: vi.fn(async () => [
-      { manifest: { id: 'demo', name: 'Demo', version: '1.0.0', author: 'me' }, entryUrl: '' },
+      {
+        manifest: { id: 'demo', name: 'Demo', version: '1.0.0', author: 'me' },
+        entryUrl: '',
+      },
     ]),
     pluginListRegisteredHotkeys: vi.fn(async () => hotkeys),
     pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
     pluginUninstall: vi.fn(async () => ({ ok: true })),
     onPluginInstalled: vi.fn(() => () => {}),
     onPluginUpdated: vi.fn(() => () => {}),
+    onPluginUninstalled: vi.fn(() => () => {}),
     onPluginHotkeysChanged: vi.fn(() => () => {}),
   }
 }
@@ -22,11 +26,103 @@ const settings = { appMacros: [] } as unknown as RuntimeSettings
 const noop = (): void => {}
 const tryHotkey = (): boolean => true
 
+describe('PluginsSection native plugin notice', () => {
+  it('shows no notice and no auto-update native warning with a JS-only installed list and JS-only registry', async () => {
+    installApi([])
+    const { queryByRole, queryByText, findByText } = render(
+      <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    )
+    await findByText('Demo')
+    expect(queryByRole('note')).toBeNull()
+    expect(queryByText(/Auto-update may replace executable code/)).toBeNull()
+  })
+
+  it('warns that native plugins run unsandboxed and that auto-update can replace their executables when an installed manifest has a native backend', async () => {
+    ;(window as unknown as { api: Record<string, unknown> }).api = {
+      listInstalledPlugins: vi.fn(async () => [
+        {
+          manifest: {
+            id: 'native-demo',
+            name: 'Native Demo',
+            version: '1.0.0',
+            author: 'me',
+            nativeBackend: {
+              protocolVersion: 1,
+              contract: 'backend.binpb',
+              service: 'example.v1.Backend',
+              targets: { 'win32-x64': { file: 'backend.exe', sha256: '0'.repeat(64) } },
+            },
+          },
+          entryUrl: '',
+        },
+      ]),
+      pluginListRegisteredHotkeys: vi.fn(async () => []),
+      pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
+      pluginUninstall: vi.fn(async () => ({ ok: true })),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
+      onPluginHotkeysChanged: vi.fn(() => () => {}),
+    }
+    const { findByRole, findByText } = render(
+      <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    )
+
+    const warning = await findByRole('note')
+    expect(warning.textContent).toContain('without a sandbox')
+    expect(warning.textContent).toContain('temporary trust model')
+    expect(await findByText(/Auto-update may replace executable code/)).toBeTruthy()
+  })
+
+  it('shows the notice and the browse badge when a registry entry pins a native executable', async () => {
+    ;(window as unknown as { api: Record<string, unknown> }).api = {
+      listInstalledPlugins: vi.fn(async () => []),
+      pluginListRegisteredHotkeys: vi.fn(async () => []),
+      pluginFetchRegistry: vi.fn(async () => ({
+        ok: true,
+        snapshot: {
+          schemaVersion: 1,
+          plugins: [
+            {
+              id: 'native-fresh',
+              name: 'Native Fresh',
+              author: 'me',
+              description: 'd',
+              repo: 'me/native-fresh',
+              latestVersion: '1.0.0',
+              scalpelMinVersion: '>=0.0.0',
+              sha256: '0'.repeat(64),
+              assets: { 'backend.exe': '0'.repeat(64) },
+            },
+          ],
+        },
+      })),
+      pluginUninstall: vi.fn(async () => ({ ok: true })),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
+      onPluginHotkeysChanged: vi.fn(() => () => {}),
+    }
+    const { findByRole, findAllByText } = render(
+      <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    )
+
+    await findByRole('note')
+    expect(await findAllByText('Native executable')).toHaveLength(1)
+  })
+})
+
 describe('PluginsSection hotkey rows', () => {
   beforeEach(() => installApi([]))
 
   it('shows a bind row labeled by the hotkey for a plugin with one registered hotkey', async () => {
-    installApi([{ action: 'plugin-overlay:demo', pluginId: 'demo', label: 'Toggle Event Log' }])
+    installApi([
+      {
+        action: 'plugin-overlay:demo',
+        pluginId: 'demo',
+        label: 'Toggle Event Log',
+      },
+    ])
     const { findByText } = render(
       <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
     )
@@ -36,7 +132,11 @@ describe('PluginsSection hotkey rows', () => {
   it('shows two bind rows for a plugin with both an action and an overlay hotkey', async () => {
     installApi([
       { action: 'plugin:demo', pluginId: 'demo', label: 'Quick check' },
-      { action: 'plugin-overlay:demo', pluginId: 'demo', label: 'Toggle Event Log' },
+      {
+        action: 'plugin-overlay:demo',
+        pluginId: 'demo',
+        label: 'Toggle Event Log',
+      },
     ])
     const { findByText } = render(
       <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
@@ -59,16 +159,33 @@ describe('PluginsSection installed icon', () => {
   it('falls back to the registry iconUrl when the installed manifest omits one', async () => {
     ;(window as unknown as { api: Record<string, unknown> }).api = {
       listInstalledPlugins: vi.fn(async () => [
-        { manifest: { id: 'demo', name: 'Demo', version: '1.0.0', author: 'me' }, entryUrl: '' },
+        {
+          manifest: {
+            id: 'demo',
+            name: 'Demo',
+            version: '1.0.0',
+            author: 'me',
+          },
+          entryUrl: '',
+        },
       ]),
       pluginListRegisteredHotkeys: vi.fn(async () => []),
       pluginFetchRegistry: vi.fn(async () => ({
         ok: true,
-        snapshot: { plugins: [{ id: 'demo', latestVersion: '1.0.0', iconUrl: 'http://example/demo-icon.png' }] },
+        snapshot: {
+          plugins: [
+            {
+              id: 'demo',
+              latestVersion: '1.0.0',
+              iconUrl: 'http://example/demo-icon.png',
+            },
+          ],
+        },
       })),
       pluginUninstall: vi.fn(async () => ({ ok: true })),
       onPluginInstalled: vi.fn(() => () => {}),
       onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
       onPluginHotkeysChanged: vi.fn(() => () => {}),
     }
     const { container, findByText } = render(
@@ -81,17 +198,111 @@ describe('PluginsSection installed icon', () => {
   })
 })
 
-describe('PluginsSection icon fallback', () => {
-  function installApiWithIcon(iconUrl?: string): void {
+describe('PluginsSection native plugin badge', () => {
+  it('identifies an installed manifest that contains an author-supplied executable', async () => {
     ;(window as unknown as { api: Record<string, unknown> }).api = {
       listInstalledPlugins: vi.fn(async () => [
-        { manifest: { id: 'demo', name: 'Demo', version: '1.0.0', author: 'me', iconUrl }, entryUrl: '' },
+        {
+          manifest: {
+            id: 'native-demo',
+            name: 'Native Demo',
+            version: '1.0.0',
+            author: 'me',
+            nativeBackend: {
+              protocolVersion: 1,
+              contract: 'backend.binpb',
+              service: 'example.v1.Backend',
+              targets: { 'win32-x64': { file: 'backend.exe', sha256: '0'.repeat(64) } },
+            },
+          },
+          entryUrl: '',
+        },
       ]),
       pluginListRegisteredHotkeys: vi.fn(async () => []),
       pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
       pluginUninstall: vi.fn(async () => ({ ok: true })),
       onPluginInstalled: vi.fn(() => () => {}),
       onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
+      onPluginHotkeysChanged: vi.fn(() => () => {}),
+    }
+
+    const { findByText } = render(
+      <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    )
+    expect(await findByText('Native executable')).toBeTruthy()
+  })
+})
+
+describe('PluginsSection unavailable plugins', () => {
+  it('grays the row, shows the reason, and keeps uninstall available', async () => {
+    const pluginUninstall = vi.fn(async () => ({ ok: true as const }))
+    ;(window as unknown as { api: Record<string, unknown> }).api = {
+      listInstalledPlugins: vi.fn(async () => [
+        {
+          manifest: {
+            id: 'demo',
+            name: 'Demo',
+            version: '1.0.0',
+            author: 'me',
+          },
+          entryUrl: '',
+          availability: {
+            status: 'unavailable',
+            reason: {
+              code: 'missing-required-dependency',
+              dependencyId: 'provider',
+              requiredApiVersion: '1.0.0',
+              message: 'required plugin "provider" is not installed',
+            },
+          },
+        },
+      ]),
+      pluginListRegisteredHotkeys: vi.fn(async () => [{ action: 'plugin:demo', pluginId: 'demo', label: 'Analyze' }]),
+      pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
+      pluginUninstall,
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
+      onPluginHotkeysChanged: vi.fn(() => () => {}),
+    }
+
+    const { container, findByRole, findByText } = render(
+      <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    )
+    const reason = await findByRole('status')
+    expect(reason.textContent).toContain('required plugin "provider" is not installed')
+    expect(reason.closest('[data-plugin-availability]')?.getAttribute('data-plugin-availability')).toBe('unavailable')
+    expect(container.querySelector('[aria-disabled="true"]')).toBeTruthy()
+
+    const uninstall = await findByText('Uninstall')
+    expect((uninstall as HTMLButtonElement).disabled).toBe(false)
+    fireEvent.click(uninstall)
+    await waitFor(() => expect(pluginUninstall).toHaveBeenCalledWith('demo'))
+  })
+})
+
+describe('PluginsSection icon fallback', () => {
+  function installApiWithIcon(iconUrl?: string): void {
+    ;(window as unknown as { api: Record<string, unknown> }).api = {
+      listInstalledPlugins: vi.fn(async () => [
+        {
+          manifest: {
+            id: 'demo',
+            name: 'Demo',
+            version: '1.0.0',
+            author: 'me',
+            iconUrl,
+          },
+          entryUrl: '',
+        },
+      ]),
+      pluginListRegisteredHotkeys: vi.fn(async () => []),
+      pluginFetchRegistry: vi.fn(async () => ({ ok: false, error: 'offline' })),
+      pluginUninstall: vi.fn(async () => ({ ok: true })),
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
       onPluginHotkeysChanged: vi.fn(() => () => {}),
     }
   }
@@ -132,7 +343,10 @@ describe('PluginsSection icon fallback', () => {
 it('renders the auto-update toggle and flips pluginAutoUpdate', async () => {
   installApi([])
   const update = vi.fn()
-  const settings = { appMacros: [], pluginAutoUpdate: false } as unknown as RuntimeSettings
+  const settings = {
+    appMacros: [],
+    pluginAutoUpdate: false,
+  } as unknown as RuntimeSettings
   const { findByText } = render(
     <PluginsSection onError={() => {}} settings={settings} update={update} tryHotkey={() => true} />,
   )
@@ -186,13 +400,75 @@ describe('PluginsSection update button', () => {
       pluginUpdateFromRegistry,
       onPluginInstalled: vi.fn(() => () => {}),
       onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
       onPluginHotkeysChanged: vi.fn(() => () => {}),
     }
-    const { findByText } = render(
-      <PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    const onError = vi.fn()
+    const { findByText, queryByText } = render(
+      <PluginsSection onError={onError} settings={settings} update={noop} tryHotkey={tryHotkey} />,
     )
     const btn = await findByText('Update to v2.0.0')
     fireEvent.click(btn)
     await waitFor(() => expect(pluginUpdateFromRegistry).toHaveBeenCalled())
+    await waitFor(() => expect(onError).toHaveBeenCalledWith('Updated "Demo" to v2.0.0.', 'warn'))
+    expect(queryByText('Restart required')).toBeNull()
+  })
+})
+
+describe('PluginsSection registry install', () => {
+  function registryEntry(): Record<string, unknown> {
+    return {
+      id: 'fresh',
+      name: 'Fresh',
+      author: 'me',
+      description: 'd',
+      repo: 'me/fresh',
+      latestVersion: '1.0.0',
+      scalpelMinVersion: '>=0.0.0',
+      sha256: '0'.repeat(64),
+    }
+  }
+
+  it('installs from the registry and applies it without a restart banner', async () => {
+    const pluginInstallFromRegistry = vi.fn(async () => ({ ok: true as const, id: 'fresh' }))
+    ;(window as unknown as { api: Record<string, unknown> }).api = {
+      listInstalledPlugins: vi.fn(async () => []),
+      pluginListRegisteredHotkeys: vi.fn(async () => []),
+      pluginFetchRegistry: vi.fn(async () => ({
+        ok: true,
+        snapshot: { schemaVersion: 1, plugins: [registryEntry()] },
+      })),
+      pluginInstallFromRegistry,
+      onPluginInstalled: vi.fn(() => () => {}),
+      onPluginUpdated: vi.fn(() => () => {}),
+      onPluginUninstalled: vi.fn(() => () => {}),
+      onPluginHotkeysChanged: vi.fn(() => () => {}),
+    }
+    const onError = vi.fn()
+    const { findByText, queryByText } = render(
+      <PluginsSection onError={onError} settings={settings} update={noop} tryHotkey={tryHotkey} />,
+    )
+    fireEvent.click(await findByText('Install'))
+    await waitFor(() => expect(pluginInstallFromRegistry).toHaveBeenCalledWith(registryEntry()))
+    await waitFor(() => expect(onError).toHaveBeenCalledWith('Installed "Fresh".', 'warn'))
+    expect(queryByText('Restart required')).toBeNull()
+  })
+
+  it.each([
+    'onPluginInstalled',
+    'onPluginUpdated',
+    'onPluginUninstalled',
+  ])('refreshes the installed list on %s', async (event) => {
+    let fire: (() => void) | undefined
+    installApi([])
+    const api = (window as unknown as { api: Record<string, unknown> }).api
+    api[event] = vi.fn((cb: () => void) => {
+      fire = cb
+      return () => {}
+    })
+    render(<PluginsSection onError={noop} settings={settings} update={noop} tryHotkey={tryHotkey} />)
+    await waitFor(() => expect(api.listInstalledPlugins).toHaveBeenCalledTimes(1))
+    fire?.()
+    await waitFor(() => expect(api.listInstalledPlugins).toHaveBeenCalledTimes(2))
   })
 })
