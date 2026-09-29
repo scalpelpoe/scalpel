@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import iconsPoe2 from './items/item-icons-poe2.json'
+import iconsPoe2 from '@scalpel/item-data/poe2.json'
 import classesPoe2 from './items/item-classes-poe2.json'
 import uniquesPoe2 from './items/unique-info-poe2.json'
 import bulkPoe2 from './trade/bulk-exchange-ids-poe2.json'

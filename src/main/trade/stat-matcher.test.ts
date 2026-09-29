@@ -20,6 +20,106 @@ import bundledPremiumMods from '@shared/data/items/premium-mods.json'
 import type { PremiumModsData } from '@shared/data/items/premium-mods-types'
 import tabletMods from '@shared/data/trade/tablet-mods.json'
 
+describe('Whispering Ice exposure (issue #627)', () => {
+  const exposureStat = {
+    id: 'explicit.stat_533542952',
+    text: 'Inflict Elemental Exposure on Hit',
+    type: 'explicit',
+  }
+
+  let prevVersion: ReturnType<typeof getPoeVersion>
+  beforeEach(() => {
+    prevVersion = getPoeVersion()
+    setPoeVersion(2)
+  })
+  afterEach(() => {
+    _setStatEntriesForTests([])
+    setPoeVersion(prevVersion)
+  })
+
+  it('preserves the exposure roll from the full advanced clipboard item', async () => {
+    const { parseItemText } = await import('./clipboard')
+    _setStatEntriesForTests([exposureStat])
+    const item = parseItemText(`Item Class: Staves
+Rarity: Unique
+The Whispering Ice
+Permafrost Staff
+--------
+Requires: Level 75, 114 (unmet) Int
+--------
+Sockets: S
+--------
+Item Level: 80
+--------
+Grants Skill: Level 17 Heart of Ice
+Grants Skill: Level 18 Icestorm
+--------
+{ Unique Modifier — Elemental, Cold, Caster, Gem }
++5(5-7) to Level of all Cold Spell Skills
+{ Unique Modifier — Caster, Speed }
+10(20-10)% reduced Cast Speed
+{ Unique Modifier — Attribute }
+5(5-10)% increased Intelligence
+{ Unique Modifier — Damage, Caster }
+2% increased Spell Damage per 10 Intelligence
+{ Unique Modifier }
+Inflict Elemental Exposure on Hit, lowering Total Elemental Resistances by 56(50-60)%
+--------
+"From what beast you derived, we can only fathom.
+Aye, you of living ice, rotting gill, and untold nightmare!
+We Brinerot return ye to the sea."
+- Weylam Roth
+--------
+Note: ~b/o 10 exalted`)
+    expect(item).not.toBeNull()
+    const filters = matchItemMods(item!.explicits, item!.implicits, undefined, item!, item!.advancedMods)
+    expect(filters.find((f) => f.id === exposureStat.id)).toMatchObject({
+      text: 'Inflict Elemental Exposure on Hit, lowering Total Elemental Resistances by 56%',
+      value: 56,
+      min: 50,
+      max: null,
+      modRange: { min: 50, max: 60 },
+    })
+    expect(filters.some((f) => f.id === 'pseudo.pseudo_total_elemental_resistance')).toBe(false)
+  })
+
+  it('matches basic copies without requiring advanced roll annotations', () => {
+    _setStatEntriesForTests([exposureStat])
+    expect(
+      matchModToStat('Inflict Elemental Exposure on Hit, lowering Total Elemental Resistances by 60%'),
+    ).toMatchObject({ statId: exposureStat.id, value: 60 })
+    expect(matchModToStat(exposureStat.text)).toMatchObject({ statId: exposureStat.id, value: null })
+  })
+
+  it('does not match conditional exposure or a different modifier type', () => {
+    _setStatEntriesForTests([exposureStat])
+    expect(
+      matchModToStat('Inflict Elemental Exposure on Hit, lowering Total Elemental Resistances by 56% while raised'),
+    ).toBeNull()
+    expect(
+      matchModToStat(
+        'Inflict Elemental Exposure on Hit, lowering Total Elemental Resistances by 56%',
+        false,
+        'implicit',
+      ),
+    ).toBeNull()
+  })
+
+  it('prefers a full numeric stat when the catalog publishes one', () => {
+    _setStatEntriesForTests([
+      exposureStat,
+      {
+        id: 'explicit.test_numeric_exposure',
+        text: 'Inflict Elemental Exposure on Hit, lowering Total Elemental Resistances by #%',
+        type: 'explicit',
+      },
+    ])
+    expect(
+      matchModToStat('Inflict Elemental Exposure on Hit, lowering Total Elemental Resistances by 56%'),
+    ).toMatchObject({ statId: 'explicit.test_numeric_exposure', value: 56 })
+  })
+})
+
 // Helper to build a minimal itemInfo object
 function makeItemInfo(overrides: Record<string, unknown> = {}) {
   return {

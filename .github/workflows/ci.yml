@@ -81,6 +81,9 @@ jobs:
             throw 'Generated sources are not committed'
           }
 
+      - name: Verify shared item data release artifact
+        run: npm run test:item-data && npm run verify:item-data
+
       - name: Build
         run: npm run build
 

@@ -147,11 +147,13 @@ export function GeneralTab({
     <>
       <div className="settings-section-title mt-3">{m.settings_general_heading()}</div>
 
-      <SettingToggleBox
-        label={m.settings_start_in_tray()}
-        checked={settings.startInTray}
-        onChange={(val) => update('startInTray', val)}
-      />
+      {settings.platform !== 'linux' && (
+        <SettingToggleBox
+          label={m.settings_start_in_tray()}
+          checked={settings.startInTray}
+          onChange={(val) => update('startInTray', val)}
+        />
+      )}
 
       {/* Language. Reads the live locale (not settings.locale) so the box reflects
           the switch immediately; setAppLocale persists + broadcasts to other windows. */}

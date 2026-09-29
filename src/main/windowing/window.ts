@@ -18,6 +18,9 @@ interface CreateOptions {
 export function createOverlayWindow({ htmlEntry, bounds, interaction }: CreateOptions): BrowserWindow {
   const win = new BrowserWindow({
     ...OVERLAY_WINDOW_OPTS,
+    // Advertise a floating X11 window before mapping, including before the
+    // renderer has loaded the title used by the user's overlay window rule.
+    ...(hyprlandOverlayActive() ? { type: 'utility' as const, title: 'Scalpel Overlay' } : {}),
     width: bounds.width,
     height: bounds.height,
     x: bounds.x,

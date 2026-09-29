@@ -37,14 +37,16 @@ function generateTypeRegex(settings: Settings['tablet']['type']): string | null 
       settings.breach &&
       settings.abyss &&
       settings.temple &&
-      settings.overseer) ||
+      settings.overseer &&
+      settings.expedition) ||
     (!settings.irradiated &&
       !settings.ritual &&
       !settings.delirium &&
       !settings.breach &&
       !settings.abyss &&
       !settings.temple &&
-      !settings.overseer)
+      !settings.overseer &&
+      !settings.expedition)
   ) {
     return null
   }
@@ -55,7 +57,17 @@ function generateTypeRegex(settings: Settings['tablet']['type']): string | null 
   const abyssRegex = settings.abyss ? 'byss' : ''
   const templeRegex = settings.temple ? 'empl' : ''
   const overseerRegex = settings.overseer ? 'eer' : ''
-  const result = [irradiatedRegex, ritualRegex, deliriumRegex, breachRegex, abyssRegex, templeRegex, overseerRegex]
+  const expeditionRegex = settings.expedition ? 'xped' : ''
+  const result = [
+    irradiatedRegex,
+    ritualRegex,
+    deliriumRegex,
+    breachRegex,
+    abyssRegex,
+    templeRegex,
+    overseerRegex,
+    expeditionRegex,
+  ]
     .filter((e) => e.length > 0)
     .join('|')
   if (result.length === 0) return null

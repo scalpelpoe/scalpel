@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Item name to GGG artwork URL",
+  "type": "object",
+  "minProperties": 1,
+  "propertyNames": { "type": "string", "minLength": 1 },
+  "additionalProperties": { "type": "string", "pattern": "^https://web\\.poecdn\\.com/(gen/image|image)/[^\\s]+$" }
+}

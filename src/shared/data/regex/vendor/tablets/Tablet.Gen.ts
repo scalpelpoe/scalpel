@@ -27,14 +27,14 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
-    "id": -1251028574,
+    "id": -2137375004,
     "name": "## additional Rare Monsters are spawned from Abysses in Map",
     "regex": "wne",
     "values": [],
     "ranges": [
       [
-        1,
-        2
+        2,
+        3
       ]
     ],
     "prefix": false,
@@ -109,7 +109,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -155578423,
     "name": "##% increased chance for Desecrated Currency from Abysses in Map",
-    "regex": "ese",
+    "regex": "cra",
     "values": [],
     "ranges": [
       [
@@ -155,22 +155,6 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
-    "id": -291672141,
-    "name": "##% increased Effect of Expedition Remnants in Map",
-    "regex": "t o",
-    "values": [],
-    "ranges": [
-      [
-        12,
-        18
-      ]
-    ],
-    "prefix": false,
-    "tags": [
-      "expedition"
-    ]
-  },
-  {
     "id": 1266853844,
     "name": "##% increased Effectiveness of Rare Breach Monsters in Map",
     "regex": "h m",
@@ -187,14 +171,14 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
-    "id": -2071746539,
-    "name": "##% increased Expedition Explosive Placement Range in Map",
-    "regex": "ace",
+    "id": 1712452643,
+    "name": "##% increased Expedition Explosive Area of Effect in Map",
+    "regex": "xpl",
     "values": [],
     "ranges": [
       [
-        15,
-        30
+        5,
+        10
       ]
     ],
     "prefix": false,
@@ -203,14 +187,14 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
-    "id": 487812057,
-    "name": "##% increased Expedition Explosive Radius in Map",
-    "regex": "diu",
+    "id": -216918289,
+    "name": "##% increased Expedition Monster Rarity in Map",
+    "regex": "on m",
     "values": [],
     "ranges": [
       [
         15,
-        30
+        25
       ]
     ],
     "prefix": false,
@@ -251,22 +235,6 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
-    "id": 2028901489,
-    "name": "##% increased number of Rare Expedition Monsters in Map",
-    "regex": "re e",
-    "values": [],
-    "ranges": [
-      [
-        25,
-        40
-      ]
-    ],
-    "prefix": false,
-    "tags": [
-      "expedition"
-    ]
-  },
-  {
     "id": -1811629982,
     "name": "##% increased Pack Size for Monsters around Vaal Beacons in Map",
     "regex": "ze f",
@@ -299,30 +267,14 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
-    "id": -2025000667,
-    "name": "##% increased quantity of Expedition Artifacts dropped by Monsters in Map",
-    "regex": "rti",
-    "values": [],
-    "ranges": [
-      [
-        15,
-        30
-      ]
-    ],
-    "prefix": false,
-    "tags": [
-      "expedition"
-    ]
-  },
-  {
-    "id": -215640987,
+    "id": 1751989183,
     "name": "##% increased Quantity of Expedition Logbooks dropped by Runic Monsters in Map",
     "regex": "ok",
     "values": [],
     "ranges": [
       [
         15,
-        30
+        25
       ]
     ],
     "prefix": false,
@@ -461,7 +413,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -609484544,
     "name": "Abyss Pits in Map are twice as likely to have Rewards",
-    "regex": "tw",
+    "regex": "ew",
     "values": [],
     "ranges": [],
     "prefix": false,
@@ -506,7 +458,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": 567767661,
     "name": "Abysses in Map spawn ##% increased Monsters",
-    "regex": "n \\\\d+%",
+    "regex": "n \\d+%",
     "values": [],
     "ranges": [
       [
@@ -602,7 +554,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": -1301692462,
     "name": "Delirium Fog in Map lasts ## additional seconds before dissipating",
-    "regex": "ast",
+    "regex": "bef",
     "values": [],
     "ranges": [
       [
@@ -632,8 +584,8 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
-    "id": 489458160,
-    "name": "Delirium Fog in Map spawns ##% increased MirrorShards",
+    "id": 1960831546,
+    "name": "Delirium Fog in Map spawns ##% increased Mirror Shards",
     "regex": "har",
     "values": [],
     "ranges": [
@@ -664,14 +616,94 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
-    "id": -611532023,
-    "name": "Expeditions in Map have +## Remnants",
-    "regex": "tions",
+    "id": 1185635217,
+    "name": "Expeditions contain ## Additional Bosses encased in ice in Map",
+    "regex": "nca",
     "values": [],
     "ranges": [
       [
         1,
         2
+      ]
+    ],
+    "prefix": false,
+    "tags": [
+      "expedition"
+    ]
+  },
+  {
+    "id": 797578866,
+    "name": "Expeditions contain ## Additional Verisium Sentries in Map",
+    "regex": "ntr",
+    "values": [],
+    "ranges": [
+      [
+        1,
+        2
+      ]
+    ],
+    "prefix": false,
+    "tags": [
+      "expedition"
+    ]
+  },
+  {
+    "id": 1616979863,
+    "name": "Expeditions contain ## buried Strongboxes in Map",
+    "regex": "bur",
+    "values": [],
+    "ranges": [
+      [
+        1,
+        2
+      ]
+    ],
+    "prefix": false,
+    "tags": [
+      "expedition"
+    ]
+  },
+  {
+    "id": 799353206,
+    "name": "Expeditions contain ## Vaal Relics in Map",
+    "regex": "cs",
+    "values": [],
+    "ranges": [
+      [
+        1,
+        2
+      ]
+    ],
+    "prefix": false,
+    "tags": [
+      "expedition"
+    ]
+  },
+  {
+    "id": -334575182,
+    "name": "Expeditions have +##% Surpassing chance to contain an additional Verisium Remnant",
+    "regex": "ant$",
+    "values": [],
+    "ranges": [
+      [
+        30,
+        40
+      ]
+    ],
+    "prefix": false,
+    "tags": [
+      "expedition"
+    ]
+  },
+  {
+    "id": 1753784493,
+    "name": "Expeditions have +##% Surpassing chance to Duplicate Runic Monsters in Map",
+    "regex": "dup",
+    "values": [],
+    "ranges": [
+      [
+        30,
+        40
       ]
     ],
     "prefix": false,
@@ -821,14 +853,14 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
-    "id": -1924740467,
+    "id": -1629558797,
     "name": "Map contains ##% increased number of Runic Monster Markers",
     "regex": "rke",
     "values": [],
     "ranges": [
       [
         15,
-        30
+        25
       ]
     ],
     "prefix": false,
@@ -1054,7 +1086,7 @@ export const tabletRegex: TabletRegex[] = [
   {
     "id": 1553914577,
     "name": "Map has ##% increased number of Rare Monsters",
-    "regex": "f rare m",
+    "regex": "r of ra",
     "values": [],
     "ranges": [
       [
@@ -1078,6 +1110,22 @@ export const tabletRegex: TabletRegex[] = [
     "prefix": true,
     "tags": [
       "default"
+    ]
+  },
+  {
+    "id": -1916482172,
+    "name": "Monsters from Verisium Remnants drop ##% increased Verisium",
+    "regex": "m ve",
+    "values": [],
+    "ranges": [
+      [
+        15,
+        25
+      ]
+    ],
+    "prefix": false,
+    "tags": [
+      "expedition"
     ]
   },
   {
@@ -1209,6 +1257,22 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
+    "id": 272320305,
+    "name": "The first ## unearthed Runic Monsters will be Rare Monsters in Map",
+    "regex": "^th",
+    "values": [],
+    "ranges": [
+      [
+        1,
+        2
+      ]
+    ],
+    "prefix": false,
+    "tags": [
+      "expedition"
+    ]
+  },
+  {
     "id": 352380491,
     "name": "Unique Monsters have # additional Rare Modifier",
     "regex": "^uni",
@@ -1238,19 +1302,35 @@ export const tabletRegex: TabletRegex[] = [
     ]
   },
   {
-    "id": 138089255,
+    "id": 586785894,
     "name": "Unstable Breaches in Map spawn ## additional Rare Monsters when Stabilised",
     "regex": "wh",
     "values": [],
     "ranges": [
       [
         1,
-        3
+        2
       ]
     ],
     "prefix": false,
     "tags": [
       "breach"
+    ]
+  },
+  {
+    "id": -1155816712,
+    "name": "Verisium Remnants have +##% chance to add an additional Runic Modifier in Map",
+    "regex": "^ve",
+    "values": [],
+    "ranges": [
+      [
+        25,
+        35
+      ]
+    ],
+    "prefix": false,
+    "tags": [
+      "expedition"
     ]
   },
   {

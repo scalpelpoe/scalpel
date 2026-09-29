@@ -613,7 +613,8 @@ app.on('will-quit', () => {
   stopHotkeyListener()
   stopOnlineSync()
   recordMainBreadcrumb('will-quit complete')
-  if (process.platform === 'linux') app.exit(0)
+  // Let Electron finish shutting down its child processes before the AppImage
+  // runtime unmounts their executables. app.exit() interrupts that teardown.
 })
 
 app.on('window-all-closed', () => {

@@ -1,3 +1,4 @@
+import type { NodePlatform } from '@shared/contracts/settings'
 import { useEffect, useRef, useState } from 'react'
 import { BrickedReleaseBanner, JustUpdatedBanner, UpdateAvailableBanner } from '../shared/update-banners'
 
@@ -6,7 +7,7 @@ import { BrickedReleaseBanner, JustUpdatedBanner, UpdateAvailableBanner } from '
  * Reuses the shared banner primitives; wires its own state since the app window has no
  * overlay context (view/overlayData/priceCheckData) to preserve across restart.
  */
-export function AppUpdateBanner(): JSX.Element | null {
+export function AppUpdateBanner({ platform }: { platform: NodePlatform }): JSX.Element | null {
   const [updateVersion, setUpdateVersion] = useState<string | null>(null)
   const [updateProgress, setUpdateProgress] = useState<number | null>(null)
   const [updateReady, setUpdateReady] = useState(false)
@@ -55,6 +56,7 @@ export function AppUpdateBanner(): JSX.Element | null {
           auto-update is the mechanism we're telling the user can't work for them. */}
       {updateVersion && !brickedRelease && (
         <UpdateAvailableBanner
+          platform={platform}
           version={updateVersion}
           progress={updateProgress}
           ready={updateReady}

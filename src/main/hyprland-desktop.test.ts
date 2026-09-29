@@ -120,3 +120,62 @@ it('refuses cursor restoration outside the game context', () => {
   backend.warpHyprlandCursor({ x: -1440, y: 540 })
   expect(evals()).toEqual([])
 })
+
+const geometryCalls = () => mock.exec.mock.calls.filter(([, args]) => args[0] === 'eval')
+const mainClient = () => ({ ...game, address: '0x4', pid: process.pid, title: main.getTitle() })
+
+it('corrects a mapped overlay that is one pixel short without another Electron resize', async () => {
+  mock.clients.push({ ...mainClient(), size: [2399, 1349] })
+  vi.mocked(main.setBounds).mockClear()
+  await vi.advanceTimersByTimeAsync(250)
+  expect(geometryCalls()).toHaveLength(1)
+  expect(geometryCalls()[0][1][1]).toContain('address:0x4')
+  expect(main.setBounds).not.toHaveBeenCalled()
+  mock.clients[1] = mainClient()
+  await vi.advanceTimersByTimeAsync(1000)
+  expect(geometryCalls()).toHaveLength(1)
+})
+
+it('corrects position independently of size, including a nonzero monitor origin', async () => {
+  mock.clients.push({ ...mainClient(), at: [-2399, 22] })
+  await vi.advanceTimersByTimeAsync(250)
+  expect(geometryCalls()).toHaveLength(1)
+})
+
+it('does not resize correctly aligned overlays or secondary panels', async () => {
+  mock.clients.push(mainClient(), { ...panel, at: [100, 100], size: [800, 600] })
+  await vi.advanceTimersByTimeAsync(1000)
+  expect(geometryCalls()).toHaveLength(0)
+})
+
+it('bounds retries when geometry cannot converge, and retries after a remap', async () => {
+  const overlay = { ...mainClient(), size: [2399, 1349] as [number, number] }
+  mock.clients.push(overlay)
+  await vi.advanceTimersByTimeAsync(3000)
+  expect(geometryCalls()).toHaveLength(4)
+  mock.clients = [game]
+  await vi.advanceTimersByTimeAsync(250)
+  mock.clients.push(overlay)
+  await vi.advanceTimersByTimeAsync(1000)
+  expect(geometryCalls()).toHaveLength(8)
+})
+
+it('retries a new game geometry after a previous correction exhausted its budget', async () => {
+  mock.clients.push({ ...mainClient(), size: [2399, 1349] })
+  await vi.advanceTimersByTimeAsync(3000)
+  expect(geometryCalls()).toHaveLength(4)
+  mock.active = { ...game, at: [0, 1440], size: [5120, 2160] }
+  mock.clients[0] = mock.active
+  await vi.advanceTimersByTimeAsync(1000)
+  expect(geometryCalls()).toHaveLength(8)
+})
+
+it('uses an idempotent float request when an overlay is observed tiled', async () => {
+  mock.clients.push({ ...panel, floating: false })
+  await vi.advanceTimersByTimeAsync(250)
+  expect(mock.exec).toHaveBeenCalledWith(
+    'hyprctl',
+    ['dispatch', 'hl.dsp.window.float({ window = "address:0x2", action = "on" })'],
+    { timeout: 1000 },
+  )
+})

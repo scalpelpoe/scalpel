@@ -15,7 +15,7 @@ import { app, type BrowserWindow, ipcMain } from 'electron'
 import { ELECTRON_RELEASES, GITHUB_RELEASES_API } from '@shared/endpoints'
 import { gracefulRestart, gracefulShutdown } from '../restart'
 import type { InstallManifest } from '@shared/types'
-import { findBrickedMatch } from '@shared/version-match'
+import { compareVersions, findBrickedMatch } from '@shared/version-match'
 import { selectListRelease } from './select-release'
 import { recordMainBreadcrumb, registerDiagnosticProvider } from '../diagnostics'
 import { stopHotkeyListener } from '../hotkeys'
@@ -197,7 +197,7 @@ async function checkForUpdates(channel: string): Promise<void> {
       writeLocalManifest(local)
     }
 
-    if (runningVersion === remote.version) {
+    if (compareVersions(remote.version, runningVersion) <= 0) {
       return
     }
 
@@ -445,7 +445,8 @@ ipcMain.handle('get-update-state', () => ({
 }))
 
 ipcMain.handle('download-update', async () => {
-  if (IS_DEV) return
+  // Linux keeps release notifications, but updates through AppImage replacement or a package manager.
+  if (IS_DEV || process.platform === 'linux') return
   if (!pendingRemote) return
 
   const local = readLocalManifest()
@@ -487,8 +488,8 @@ function unpackedNeedsReplacing(destDir: string, pendingManifestPath: string): b
   }
 }
 
-ipcMain.handle('install-update', async () => {
-  if (IS_DEV) return
+ipcMain.handle('install-update', () => {
+  if (IS_DEV || process.platform === 'linux') return
   const stagingDir = getStagingDir()
   const asarNew = join(stagingDir, 'app.asar.new')
   const electronZip = join(stagingDir, 'electron.zip')

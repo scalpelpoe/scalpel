@@ -288,6 +288,20 @@ function _matchModToStat(
     }
   }
 
+  // Whispering Ice's exposure magnitude is searchable even though trade2 omits
+  // the entire lowering clause from stat_533542952's text (issue #627). An exact
+  // 56 query was verified against a 56% listing. Keep this fold narrowly scoped
+  // and after exact matching so a published numeric stat still takes precedence.
+  const exposure = modText.match(
+    /^(Inflict Elemental Exposure on Hit), lowering Total Elemental Resistances by (\d+(?:\.\d+)?)%$/i,
+  )
+  if (exposure) {
+    const entry = statEntries.find(
+      (e) => e.id.startsWith(typePrefix) && e.text.toLowerCase() === exposure[1].toLowerCase(),
+    )
+    if (entry) return { statId: entry.id, value: parseFloat(exposure[2]) }
+  }
+
   // Fallback: try relaxed patterns where hardcoded numbers in stat text become wildcards.
   // Handles cases like trade API having "increased by 50% of Overcapped" but item text has a different value.
   for (const variant of textVariants) {

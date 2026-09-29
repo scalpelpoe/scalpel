@@ -84,6 +84,9 @@ export async function fetchLeagueList(version: 1 | 2): Promise<string[] | null> 
 
 export function migrateLeague(current: string, fresh: readonly string[]): string | null {
   if (!current || fresh.includes(current)) return null
+  // Private leagues are absent from the public league list. Their PL id
+  // distinguishes them from public challenge leagues that have rotated out.
+  if (/\(PL\d+\)\s*$/.test(current)) return null
   return currentTradeLeague(fresh, { hardcore: isHardcoreLeague(current) }) ?? current
 }
 

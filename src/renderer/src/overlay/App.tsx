@@ -902,6 +902,7 @@ export default function App(): JSX.Element {
               />
 
               <UpdateBanner
+                platform={settings?.platform}
                 updateVersion={updateVersion}
                 updateProgress={updateProgress}
                 updateReady={updateReady}

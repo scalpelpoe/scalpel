@@ -1,6 +1,6 @@
 {
   "name": "scalpel",
-  "version": "1.0.4",
+  "version": "1.0.5-rc3",
   "description": "Path of Exile's First Fourth-Party Tool",
   "author": "Scalpel",
   "license": "AGPL-3.0-only",
@@ -43,7 +43,7 @@
     "sync-regex": "node scripts/sync-regex-data.js",
     "sync-prefabs": "node scripts/sync-prefabs.js",
     "sync-league": "node scripts/sync-league-data.js",
-    "sync-icons": "node scripts/sync-item-icons-poe1.js",
+    "sync-icons": "npm --prefix packages/item-data run sync:poe1 --",
     "dist:win": "npm run build && electron-builder --win --x64",
     "dist:linux": "npm run build && electron-builder --linux AppImage --x64",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.e2e.json && tsc --noEmit -p tsconfig.plugin-examples.json",
@@ -58,12 +58,15 @@
     "test:e2e:headed": "npm run build && playwright test -c playwright.electron.config.ts --headed",
     "storybook": "storybook dev -p 6006",
     "build-storybook": "storybook build",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:item-data": "npm --prefix packages/item-data test && npm --prefix packages/item-data run validate",
+    "verify:item-data": "node scripts/verify-item-data.mjs"
   },
   "dependencies": {
     "@coooookies/windows-smtc-monitor": "^1.0.12",
     "@bufbuild/protobuf": "2.14.0",
-    "electron-overlay-window": "github:scalpelpoe/electron-overlay-window#8209395b654d135eb0e76c254ba664942859fe2a",
+    "@scalpel/item-data": "file:vendor/scalpel-item-data-0.1.0.tgz",
+    "electron-overlay-window": "github:scalpelpoe/electron-overlay-window#c78dc44651cac99c462eefa5654a628c545e07ba",
     "electron-store": "^8.2.0",
     "koffi": "^3.1.6",
     "konva": "^9.3.22",

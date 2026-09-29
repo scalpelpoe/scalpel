@@ -42,6 +42,15 @@ describe('parseLeagueList', () => {
 })
 
 describe('migrateLeague', () => {
+  it.each([
+    'Limey Whelps (PL86569)',
+    'Hardcore Friends (PL12345)',
+    'Friends (PL12345) ',
+  ])('preserves private league %s when absent from the public list', (league) => {
+    expect(migrateLeague(league, ['Allflame', 'Hardcore Allflame', 'Standard', 'Hardcore'])).toBeNull()
+    expect(migrateLeague(league, [])).toBeNull()
+  })
+
   it('returns null when current league is still valid', () => {
     expect(migrateLeague('Mirage', ['Mirage', 'Hardcore Mirage', 'Standard', 'Hardcore'])).toBeNull()
     expect(migrateLeague('Standard', ['Mirage', 'Hardcore Mirage', 'Standard', 'Hardcore'])).toBeNull()
@@ -118,6 +127,30 @@ function makeFakeStore(initial: Record<string, unknown>): Store<AppSettings> {
 }
 
 describe('refreshLeagues', () => {
+  it.each([false, true])('preserves private leagues across refresh and reload (offline: %s)', async (offline) => {
+    const directory = mkdtempSync(join(tmpdir(), 'scalpel-league-profiles-'))
+    const profiles = initProfileStore(directory)
+    const poe1 = { ...profiles.createDefault(1), league: 'Limey Whelps (PL86569)' }
+    const poe2 = { ...profiles.createDefault(2), league: 'Friends (PL12345)' }
+    profiles.saveProfile(poe1)
+    profiles.saveProfile(poe2)
+    const store = makeFakeStore({
+      [ACTIVE_PROFILE_ID_KEY]: poe1.id,
+      poeVersion: 1,
+      leaguesPoe1: [],
+      leaguesPoe2: [],
+    })
+    const fetcher = async (): Promise<string[] | null> =>
+      offline ? null : ['Allflame', 'Hardcore Allflame', 'Standard', 'Hardcore']
+
+    const changed = await refreshLeagues(store, fetcher)
+
+    const reloaded = initProfileStore(directory)
+    expect(reloaded.getProfile(poe1.id)).toEqual(poe1)
+    expect(reloaded.getProfile(poe2.id)).toEqual(poe2)
+    expect(changed).not.toContain('activeProfile')
+  })
+
   it('persists fetched lists and migrates active profile league when poe1 is active', async () => {
     const profiles = initProfileStore(mkdtempSync(join(tmpdir(), 'scalpel-league-profiles-')))
     const poe1 = { ...profiles.createDefault(1), league: 'Mirage' }

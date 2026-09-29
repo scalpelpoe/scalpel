@@ -22,7 +22,7 @@ import { parseSocketString } from './parse-sockets'
 // Socket recolor is a PoE1-only feature (gated via features.socketRecolor), so we
 // pull its icons directly from the PoE1 sheet rather than going through the shared
 // iconMap -- these are module-load-time constants evaluated before initIconMap runs.
-import itemIcons from '@shared/data/items/item-icons-poe1.json'
+import itemIcons from '@scalpel/item-data/poe1.json'
 
 // Flatten the PoE1 per-class basetype lists into a name -> reqs lookup.
 // SocketRecolor is gated on features.socketRecolor (PoE1-only), so we pin the

@@ -14,6 +14,7 @@ function emptyState(): TabletTagState {
       abyss: false,
       temple: false,
       overseer: false,
+      expedition: false,
     },
     uses: { enabled: false, value: 1 },
   }
