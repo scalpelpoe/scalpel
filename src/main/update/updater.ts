@@ -488,7 +488,7 @@ function unpackedNeedsReplacing(destDir: string, pendingManifestPath: string): b
   }
 }
 
-ipcMain.handle('install-update', () => {
+ipcMain.handle('install-update', async () => {
   if (IS_DEV || process.platform === 'linux') return
   const stagingDir = getStagingDir()
   const asarNew = join(stagingDir, 'app.asar.new')
