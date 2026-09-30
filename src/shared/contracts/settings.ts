@@ -7,6 +7,7 @@ import type { PoeProfile } from './profiles'
 import type { HideableTabKey } from './items'
 import type { GameVariant } from './game-variant'
 import type { RadialMenuSettings } from './radial'
+import type { StreamSettings } from './stream'
 
 export interface LegacyAppSettings {
   filterPathPoe1?: string
@@ -90,6 +91,8 @@ export interface AppSettings {
   /** Radial menu ring config. Top-level (not profile-backed): the ring is a
    *  per-machine input preference, like plugin overlay geometry. */
   radialMenu?: RadialMenuSettings
+  /** Scalpel Stream (PoE2 streamer gear overlay). Per-machine, not profile-backed. */
+  stream?: StreamSettings
   onboardingCompleted: boolean
   onboardingStep?: string
   onboardingSelectedGames?: { poe1: boolean; poe2: boolean }

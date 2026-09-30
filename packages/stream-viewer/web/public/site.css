@@ -1,0 +1,219 @@
+/* live.scalpel.fourth.party pages in the Scalpel home page's design: tokens and components
+   copied from filter-scalpel-hub src/styles/home.css (scoped under .sc-home there too).
+   Shared by the static legal pages and the web viewer's landing and gear pages. */
+
+.sc-home {
+  --sc-bg-card: #23232e;
+  --sc-bg-hover: #2c2c3a;
+  --sc-border: rgba(56, 56, 77, 0.5);
+  --sc-accent: #c8a96e;
+  --sc-text: #e0d8cc;
+  --sc-text-dim: #9e9480;
+  --sc-heading: #f0e9dc;
+  --sc-radius: 10px;
+  --sc-mono: 'Consolas', 'Cascadia Code', monospace;
+
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #101118;
+  color: var(--sc-text);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+.sc-home ::selection {
+  background: rgba(200, 169, 110, 0.35);
+}
+
+.sc-main {
+  flex: 1 0 auto;
+  width: 100%;
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 0 28px;
+  box-sizing: border-box;
+}
+
+/* ---- text ---- */
+
+.sc-kicker {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--sc-accent);
+  font-weight: 700;
+}
+
+/* The app's title-bar wordmark (gold, bold, tracked). */
+.sc-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 0.22em;
+  font-size: clamp(28px, 5vw, 42px);
+  font-weight: 700;
+  letter-spacing: 0.0667em;
+  line-height: 1;
+  color: var(--sc-accent);
+}
+.sc-wordmark img {
+  height: 0.95em;
+  width: 0.95em;
+}
+.sc-wordmark span {
+  transform: translateY(-0.08em);
+}
+
+.sc-h2 {
+  font-size: clamp(26px, 4vw, 32px);
+  font-weight: 700;
+  letter-spacing: -0.6px;
+  line-height: 1.15;
+  color: var(--sc-heading);
+  margin: 0;
+}
+
+.sc-dim {
+  color: var(--sc-text-dim);
+}
+
+.sc-mono {
+  font-family: var(--sc-mono);
+}
+
+.sc-home a {
+  color: var(--sc-accent);
+}
+
+/* ---- controls and cards ---- */
+
+.sc-btn {
+  cursor: pointer;
+  border: none;
+  border-radius: var(--sc-radius);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--sc-text) !important;
+  padding: 8px 16px;
+  font-size: 13px;
+  line-height: 1.4;
+  font-family: inherit;
+  transition: background 0.12s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+.sc-btn:hover {
+  background: var(--sc-bg-hover);
+}
+
+.sc-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.sc-card {
+  background: var(--sc-bg-card);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: background 0.12s;
+}
+.sc-card:hover {
+  background: var(--sc-bg-hover);
+}
+.sc-card-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sc-heading);
+}
+.sc-card p {
+  margin: 0;
+  color: var(--sc-text-dim);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ---- long-form text (privacy, terms) ---- */
+
+.sc-doc {
+  max-width: 720px;
+  padding: 70px 0 55px;
+}
+.sc-doc h2 {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--sc-heading);
+  margin: 32px 0 6px;
+}
+.sc-doc p,
+.sc-doc li {
+  color: var(--sc-text);
+}
+.sc-doc ul {
+  padding-left: 20px;
+}
+
+/* ---- footer (the home page's bottom bar) ---- */
+
+.sc-footer {
+  border-top: 1px solid var(--sc-border);
+}
+.sc-footer-bar {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 24px 28px 14px;
+  box-sizing: border-box;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+.sc-footer-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.sc-footer-brand img {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+.sc-footer-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--sc-heading);
+}
+.sc-footer-links {
+  display: flex;
+  gap: 18px;
+}
+.sc-navlink {
+  color: var(--sc-text-dim) !important;
+  font-size: 12px;
+  text-decoration: none;
+  transition: color 0.12s;
+}
+.sc-navlink:hover {
+  color: var(--sc-text) !important;
+}
+.sc-legal {
+  max-width: 1060px;
+  margin: 0 auto;
+  padding: 0 28px 44px;
+  box-sizing: border-box;
+  color: var(--sc-text-dim);
+  font-size: 11px;
+  opacity: 0.7;
+}
+
+.sc-landing {
+  padding: 96px 0 48px;
+}

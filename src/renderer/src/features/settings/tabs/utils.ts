@@ -13,6 +13,7 @@ export const APP_MACRO_DEFS = [
   { id: 'closeOverlay', label: 'Close Overlay' },
   { id: 'toggleWhiteboard', label: 'Toggle Whiteboard' },
   { id: 'toggleRegexRemote', label: 'Toggle Regex Remote' },
+  { id: 'streamUpdateSlot', label: 'Update Stream Slot' },
 ] as const
 
 export function generateClientCategoryId(): string {

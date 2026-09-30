@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ['./src/renderer/src/**/*.{tsx,ts,jsx,js}'],
+  // The stream viewer is scanned too so Storybook, which uses this config, styles its stories.
+  content: ['./src/renderer/src/**/*.{tsx,ts,jsx,js}', './packages/stream-viewer/src/**/*.{tsx,ts}'],
   theme: {
     extend: {
       colors: {

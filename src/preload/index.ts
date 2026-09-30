@@ -1083,6 +1083,38 @@ export const api = {
       ipcRenderer.send('plugins:media-unwatch')
     }
   },
+
+  // ── Scalpel Stream ─────────────────────────────────────────────────────────
+  streamGetOverview: (): Promise<import('@shared/contracts/stream').StreamOverview> =>
+    ipcRenderer.invoke(IPC_CHANNELS.STREAM.GET_OVERVIEW),
+  streamEnable: (): Promise<import('@shared/contracts/stream').StreamOverview> =>
+    ipcRenderer.invoke(IPC_CHANNELS.STREAM.ENABLE),
+  streamDisable: (): Promise<import('@shared/contracts/stream').StreamOverview> =>
+    ipcRenderer.invoke(IPC_CHANNELS.STREAM.DISABLE),
+  streamDeleteProfile: (): Promise<import('@shared/contracts/stream').StreamOverview> =>
+    ipcRenderer.invoke(IPC_CHANNELS.STREAM.DELETE_PROFILE),
+  streamPairingCode: (): Promise<import('@shared/contracts/stream').PairingCodeResponse> =>
+    ipcRenderer.invoke(IPC_CHANNELS.STREAM.PAIRING_CODE),
+  streamSetState: (
+    state: import('@shared/contracts/stream').ProfileState,
+  ): Promise<import('@shared/contracts/stream').StreamOverview> =>
+    ipcRenderer.invoke(IPC_CHANNELS.STREAM.SET_STATE, state),
+  streamUpdateSettings: (
+    patch: Partial<
+      Pick<import('@shared/contracts/stream').StreamSettings, 'poeAccount' | 'pinnedCharacter' | 'hideCharacterName'>
+    >,
+  ): Promise<import('@shared/contracts/stream').StreamOverview> =>
+    ipcRenderer.invoke(IPC_CHANNELS.STREAM.UPDATE_SETTINGS, patch),
+  streamPushNow: (): Promise<import('@shared/contracts/stream').StreamOverview> =>
+    ipcRenderer.invoke(IPC_CHANNELS.STREAM.PUSH_NOW),
+  streamListCharacters: (): Promise<import('@shared/contracts/stream').StreamCharacterOption[]> =>
+    ipcRenderer.invoke(IPC_CHANNELS.STREAM.LIST_CHARACTERS),
+  onStreamOverview: (cb: (overview: import('@shared/contracts/stream').StreamOverview) => void): (() => void) => {
+    const handler = (_: Electron.IpcRendererEvent, overview: import('@shared/contracts/stream').StreamOverview): void =>
+      cb(overview)
+    ipcRenderer.on(IPC_CHANNELS.STREAM.OVERVIEW_EVENT, handler)
+    return () => ipcRenderer.removeListener(IPC_CHANNELS.STREAM.OVERVIEW_EVENT, handler)
+  },
 }
 
 contextBridge.exposeInMainWorld('api', api)

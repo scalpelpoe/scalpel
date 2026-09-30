@@ -13,7 +13,14 @@ export default defineConfig({
   },
   test: {
     globals: true,
-    include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'scripts/**/*.test.mjs'],
+    include: [
+      'src/**/*.test.ts',
+      'src/**/*.test.tsx',
+      'scripts/**/*.test.mjs',
+      'packages/stream-contract/src/**/*.test.ts',
+      'packages/stream-viewer/src/**/*.test.ts',
+      'packages/stream-viewer/src/**/*.test.tsx',
+    ],
     exclude: ['node_modules', 'out', 'dist'],
     passWithNoTests: true,
     environmentMatchGlobs: [

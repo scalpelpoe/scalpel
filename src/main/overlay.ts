@@ -5,6 +5,7 @@ import { OVERLAY_WINDOW_OPTS, OverlayController } from 'electron-overlay-window'
 import { uIOhook } from 'uiohook-napi'
 import { startClientLogWatcher } from './client-log'
 import { guardNativeListener, registerDiagnosticProvider } from './diagnostics'
+import { setGameAttached } from './game-presence'
 import { getPoeVersion, setPoeVersion } from './game-state'
 import { loadTierData, refreshTierData } from './tier-data'
 import { loadPremiumMods, refreshPremiumMods } from './premium-mods'
@@ -493,6 +494,7 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
 
   OverlayController.events.on('attach', (ev) => {
     lastAttachAt = Date.now()
+    setGameAttached(true)
     try {
       // During a retarget, poeVersion was already set by retargetForGame()
       // so we skip titleIndex inference.
@@ -548,6 +550,7 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
       // already hides the main overlay's BrowserWindow; we still need to
       // clear our renderer-side overlay state and hide every secondary
       // overlay using the same paths the Esc handler uses.
+      setGameAttached(false)
       hideOverlay()
       getWhiteboardOverlay()?.send(IPC_CHANNELS.SCREEN.SOURCE_INVALIDATED_EVENT)
       closeAllOverlaysOnPoeExit()
@@ -641,6 +644,8 @@ export function retargetForGame(target: 1 | 2): void {
   retargetWatchdog = setTimeout(() => {
     retargeting = false
     retargetWatchdog = null
+    // The retarget detach skipped its cleanup and no attach arrived: the target game isn't running.
+    setGameAttached(false)
   }, RETARGET_WATCHDOG_MS)
 }
 

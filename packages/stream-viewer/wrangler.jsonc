@@ -1,0 +1,12 @@
+{
+  // Static host for the public gear page and OBS view (live.scalpel.fourth.party).
+  // Build first: npm run build:web --prefix packages/stream-viewer
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "scalpel-stream-live",
+  "compatibility_date": "2026-08-15",
+  "assets": {
+    "directory": "./dist/web",
+    "not_found_handling": "single-page-application"
+  },
+  "routes": [{ "pattern": "live.scalpel.fourth.party", "custom_domain": true }]
+}

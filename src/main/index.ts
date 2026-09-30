@@ -63,9 +63,11 @@ import {
   createHotkeyHandler,
   createPriceCheckHandler,
   reEvaluateLastItem,
+  runMainHotkeyFlow,
   setOpenSide,
   setEvaluationStore,
 } from './evaluation'
+import { getStreamRuntime } from './handlers/stream'
 import { initLearning } from './learning'
 import { initMainLocale } from './locale'
 import { flushAll as flushPluginStorage } from './plugins/storage'
@@ -415,6 +417,13 @@ app.whenReady().then(() => {
   const dispatchAppMacro = (action: string, tag?: string, presetId?: string): void => {
     if (action === RADIAL_MACRO_ACTION) {
       toggleRadialMenu()
+      return
+    }
+    if (action === 'streamUpdateSlot') {
+      // One copy of the hovered item, read privately (no overlay, no evaluation).
+      void getStreamRuntime()?.patchFromHoveredItem(() =>
+        runMainHotkeyFlow(store, isElevated, { showOverlay: false, dispatch: false }),
+      )
       return
     }
     if (action === 'pasteRegex') {

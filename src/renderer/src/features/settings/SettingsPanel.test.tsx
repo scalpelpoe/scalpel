@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeSettings } from '@shared/types'
+import { PoeVersionProvider } from '../../shared/poe-version-context'
 import { SettingsPanel } from './SettingsPanel'
 
 vi.mock('./tabs', () => ({
@@ -18,6 +19,10 @@ vi.mock('./tabs', () => ({
 
 vi.mock('./tabs/DeveloperSection', () => ({
   DeveloperSection: () => <div>Developer Tab</div>,
+}))
+
+vi.mock('./tabs/StreamSection', () => ({
+  StreamSection: () => <div>Stream Tab</div>,
 }))
 
 vi.mock('./tabs/PluginsSection', () => ({
@@ -130,6 +135,33 @@ describe('SettingsPanel tab routing', () => {
     )
 
     expect(screen.queryByText('Developer')).not.toBeInTheDocument()
+  })
+
+  it('shows the Stream tab only while Scalpel is on PoE2', () => {
+    const poe1 = render(<SettingsPanel settings={settings()} onSettingsChange={vi.fn()} mode="overlay" />)
+    expect(screen.queryByRole('button', { name: 'Stream' })).toBeNull()
+    poe1.unmount()
+
+    render(
+      <PoeVersionProvider version={2}>
+        <SettingsPanel settings={settings({ poeVersion: 2 })} onSettingsChange={vi.fn()} mode="overlay" />
+      </PoeVersionProvider>,
+    )
+    fireEvent.click(screen.getByRole('button', { name: 'Stream' }))
+    expect(screen.getByText('Stream Tab')).toBeInTheDocument()
+  })
+
+  it('falls back to General when the Stream tab is requested on PoE1', () => {
+    render(
+      <SettingsPanel
+        settings={settings()}
+        onSettingsChange={vi.fn()}
+        mode="app"
+        tabRequest={{ tab: 'stream', n: 1 }}
+      />,
+    )
+    expect(screen.queryByText('Stream Tab')).toBeNull()
+    expect(screen.getByText('General Tab')).toBeInTheDocument()
   })
 
   it('opens the Filter tab from a tab request', () => {

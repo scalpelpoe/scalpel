@@ -13,7 +13,7 @@ const appVersion = (JSON.parse(readFileSync(new URL('../package.json', import.me
  *  whose visual state we want to iterate on without spinning up the full overlay
  *  flow. */
 const config: StorybookConfig = {
-  stories: ['../src/renderer/src/**/*.stories.@(ts|tsx)'],
+  stories: ['../src/renderer/src/**/*.stories.@(ts|tsx)', '../packages/stream-viewer/src/**/*.stories.@(ts|tsx)'],
   framework: {
     name: '@storybook/react-vite',
     options: {},

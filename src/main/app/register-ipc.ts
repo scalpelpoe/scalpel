@@ -32,6 +32,7 @@ import { registerPluginPriceHandlers } from '../handlers/plugin-prices'
 import { registerPluginCaptureHandlers } from '../handlers/plugin-capture'
 import { registerPluginCursorHandlers } from '../handlers/plugin-cursor'
 import { registerPluginMediaHandlers } from '../handlers/plugin-media'
+import { registerStreamHandlers } from '../handlers/stream'
 
 export interface IpcRegistrationDeps {
   store: Store<AppSettings>
@@ -67,6 +68,7 @@ export function registerAllIpc(deps: IpcRegistrationDeps): void {
   registerPluginCaptureHandlers()
   registerPluginCursorHandlers()
   registerPluginMediaHandlers()
+  registerStreamHandlers(store)
   registerDiagnostics({ store, getAppWindow, showAppWindow })
 
   // ── Simple inline handlers ────────────────────────────────────────────────

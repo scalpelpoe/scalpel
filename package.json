@@ -41,7 +41,8 @@
     "build-storybook": "storybook build",
     "prepare": "husky",
     "test:item-data": "npm --prefix packages/item-data test && npm --prefix packages/item-data run validate",
-    "verify:item-data": "node scripts/verify-item-data.mjs"
+    "verify:item-data": "node scripts/verify-item-data.mjs",
+    "capture:stream-fixtures": "node scripts/capture-stream-fixtures.mjs"
   },
   "dependencies": {
     "@coooookies/windows-smtc-monitor": "^1.0.12",
@@ -54,6 +55,7 @@
     "react-sortablejs": "^6.1.4",
     "sortablejs": "^1.15.7",
     "uiohook-napi": "^1.5.4",
+    "zod": "^4.1.0",
     "zustand": "^4.5.7"
   },
   "devDependencies": {
@@ -62,6 +64,7 @@
     "@icon-park/react": "^1.4.2",
     "@inlang/paraglide-js": "^2.18.2",
     "@playwright/test": "^1.60.0",
+    "@scalpel/stream-contract": "file:packages/stream-contract",
     "@storybook/react-vite": "^10.3.6",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",

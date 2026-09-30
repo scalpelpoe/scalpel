@@ -10,6 +10,7 @@ import type {
 import { GeneralTab, ViewTab, MacrosTab, FilterTab, PriceCheckTab, FaqTab, CheatSheetsTab } from './tabs'
 import { DeveloperSection } from './tabs/DeveloperSection'
 import { PluginsSection } from './tabs/PluginsSection'
+import { StreamSection } from './tabs/StreamSection'
 import { ErrorBanner } from '../../components/ErrorBanner'
 import { createTryHotkey } from '../../components/primitives/hotkey-collisions'
 import { usePoeVersion } from '../../shared/poe-version-context'
@@ -44,6 +45,7 @@ const TAB_KEYS = [
   'cheatsheets',
   'filter',
   'pricecheck',
+  'stream',
   'profiles',
   'plugins',
   'faq',
@@ -58,6 +60,7 @@ const TAB_LABELS: Record<TabKey, () => string> = {
   cheatsheets: m.settings_tab_cheatsheets,
   filter: m.settings_tab_filter,
   pricecheck: m.settings_tab_pricecheck,
+  stream: m.settings_tab_stream,
   profiles: m.settings_tab_profiles,
   plugins: m.settings_tab_plugins,
   faq: m.settings_tab_faq,
@@ -81,12 +84,14 @@ export function SettingsPanel({
   // Use the initial tab request as the seed if present, so the first-mount
   // case (panel created in response to "Open Sheet Settings") lands on the
   // right tab without waiting for an effect.
-  const [tab, setTab] = useState<TabKey>(() => {
+  const [selectedTab, setTab] = useState<TabKey>(() => {
     const t = tabRequest?.tab
     if (!t || !(TAB_KEYS as readonly string[]).includes(t)) return 'general'
     if (mode === 'overlay' && t === 'profiles') return 'general'
     return t as TabKey
   })
+  // Scalpel Stream is PoE2-only; a leftover Stream selection shows General on PoE1.
+  const tab: TabKey = selectedTab === 'stream' && currentGame !== 2 ? 'general' : selectedTab
   const [localError, setLocalError] = useState<string | null>(null)
   const [localErrorTone, setLocalErrorTone] = useState<'error' | 'warn'>('error')
 
@@ -155,6 +160,7 @@ export function SettingsPanel({
             // it stays hidden until developerMode is on, to keep the in-game UI lean.
             .filter((t) => t !== 'developer' || settings.developerMode || !isOverlay)
             .filter((t) => t !== 'profiles' || !isOverlay)
+            .filter((t) => t !== 'stream' || currentGame === 2)
             .map((t) => (
               <button
                 key={t}
@@ -204,6 +210,7 @@ export function SettingsPanel({
       {tab === 'pricecheck' && (
         <PriceCheckTab settings={settings} update={update} updateProfile={updateProfile} tryHotkey={tryHotkey} />
       )}
+      {tab === 'stream' && <StreamSection />}
       {tab === 'profiles' && !isOverlay && onEditProfile && (
         <ProfileManagerTab settings={settings} onSettingsChange={onSettingsChange} onEditProfile={onEditProfile} />
       )}

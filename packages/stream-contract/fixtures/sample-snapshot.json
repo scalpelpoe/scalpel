@@ -1,0 +1,1229 @@
+{
+  "schema": 1,
+  "game": "poe2",
+  "character": {
+    "name": "SampleExile",
+    "class": "Deadeye",
+    "level": 92,
+    "league": "Standard",
+    "activeWeaponSet": 2
+  },
+  "source": {
+    "kind": "sample",
+    "updatedUtc": "2026-09-29T11:52:48Z"
+  },
+  "publishedUtc": "2026-09-29T12:10:05Z",
+  "equipment": {
+    "Weapon": {
+      "name": "Doom Knell",
+      "ilvl": 81,
+      "flags": {},
+      "properties": [
+        {
+          "name": "Physical Damage",
+          "value": "58-120"
+        },
+        {
+          "name": "Critical Hit Chance",
+          "value": "5.00%"
+        },
+        {
+          "name": "Attacks per Second",
+          "value": "1.45"
+        }
+      ],
+      "requirements": [
+        {
+          "name": "Level",
+          "value": "67"
+        },
+        {
+          "name": "Str",
+          "value": "125"
+        }
+      ],
+      "sections": [
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "165% increased Physical Damage",
+              "tier": {
+                "affix": "prefix",
+                "num": 1,
+                "label": "P1"
+              },
+              "range": {
+                "min": 155,
+                "max": 169
+              }
+            },
+            {
+              "text": "Adds 18 to 34 Physical Damage",
+              "tier": {
+                "affix": "prefix",
+                "num": 2,
+                "label": "P2"
+              },
+              "range": {
+                "min": 16,
+                "max": 36
+              }
+            },
+            {
+              "text": "+4.2% to Critical Hit Chance",
+              "tier": {
+                "affix": "suffix",
+                "num": 1,
+                "label": "S1"
+              },
+              "range": {
+                "min": 4.1,
+                "max": 5
+              }
+            },
+            {
+              "text": "12% increased Attack Speed",
+              "tier": {
+                "affix": "suffix",
+                "num": 2,
+                "label": "S2"
+              },
+              "range": {
+                "min": 11,
+                "max": 13
+              }
+            }
+          ]
+        }
+      ],
+      "sockets": [],
+      "price": null,
+      "w": 2,
+      "h": 3,
+      "baseType": "Flanged Mace",
+      "rarity": "rare",
+      "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvV2VhcG9ucy9PbmVIYW5kV2VhcG9ucy9PbmVIYW5kTWFjZXMvQmFzZXR5cGVzLzFITWFjZTAzIiwidyI6MiwiaCI6Mywic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/928c9bbfe8/1HMace03.png"
+    },
+    "Weapon2": {
+      "name": "Rage Song",
+      "ilvl": 83,
+      "flags": {},
+      "properties": [
+        {
+          "name": "Quality",
+          "value": "+20%"
+        },
+        {
+          "name": "Physical Damage",
+          "value": "110-203"
+        },
+        {
+          "name": "Critical Hit Chance",
+          "value": "5.00%"
+        },
+        {
+          "name": "Attacks per Second",
+          "value": "1.20"
+        }
+      ],
+      "requirements": [
+        {
+          "name": "Level",
+          "value": "78"
+        },
+        {
+          "name": "Dex",
+          "value": "163"
+        }
+      ],
+      "sections": [
+        {
+          "kind": "rune",
+          "lines": [
+            {
+              "text": "Adds 7 to 12 Fire Damage"
+            }
+          ]
+        },
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "172% increased Physical Damage",
+              "tier": {
+                "affix": "prefix",
+                "num": 1,
+                "label": "P1"
+              },
+              "range": {
+                "min": 170,
+                "max": 179
+              }
+            },
+            {
+              "text": "Adds 21 to 38 Physical Damage",
+              "tier": {
+                "affix": "prefix",
+                "num": 1,
+                "label": "P1"
+              },
+              "range": {
+                "min": 20,
+                "max": 40
+              }
+            },
+            {
+              "text": "+5 to Level of all Projectile Skills",
+              "tier": {
+                "affix": "prefix",
+                "num": 1,
+                "label": "P1"
+              },
+              "range": {
+                "min": 5,
+                "max": 5
+              }
+            },
+            {
+              "text": "+3.8% to Critical Hit Chance",
+              "tier": {
+                "affix": "suffix",
+                "num": 2,
+                "label": "S2"
+              },
+              "range": {
+                "min": 3.1,
+                "max": 3.8
+              }
+            },
+            {
+              "text": "+35% to Critical Damage Bonus",
+              "tier": {
+                "affix": "suffix",
+                "num": 1,
+                "label": "S1"
+              },
+              "range": {
+                "min": 34,
+                "max": 39
+              }
+            }
+          ]
+        }
+      ],
+      "sockets": [
+        {
+          "kind": "rune",
+          "name": "Soul Core of Tacati",
+          "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQ3VycmVuY3kvU291bENvcmVzL0dyZWF0ZXJTb3VsQ29yZUNoYW9zIiwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/cd9c4fb0a7/GreaterSoulCoreChaos.png"
+        }
+      ],
+      "price": null,
+      "w": 2,
+      "h": 4,
+      "baseType": "Obliterator Bow",
+      "rarity": "rare",
+      "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvV2VhcG9ucy9Ud29IYW5kV2VhcG9ucy9Cb3dzL0Jhc2V0eXBlcy9Cb3cwOSIsInciOjIsImgiOjQsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/e62ea7f094/Bow09.png"
+    },
+    "Offhand2": {
+      "name": "Dragon Nock",
+      "ilvl": 82,
+      "flags": {},
+      "properties": [],
+      "requirements": [
+        {
+          "name": "Level",
+          "value": "65"
+        }
+      ],
+      "sections": [
+        {
+          "kind": "implicit",
+          "lines": [
+            {
+              "text": "25% increased Critical Hit Chance for Attacks"
+            }
+          ]
+        },
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "+2 to Level of all Projectile Skills",
+              "tier": {
+                "affix": "prefix",
+                "num": 1,
+                "label": "P1"
+              },
+              "range": {
+                "min": 2,
+                "max": 2
+              }
+            },
+            {
+              "text": "+95 to maximum Life",
+              "tier": {
+                "affix": "prefix",
+                "num": 1,
+                "label": "P1"
+              },
+              "range": {
+                "min": 90,
+                "max": 104
+              }
+            },
+            {
+              "text": "30% increased Projectile Speed",
+              "tier": {
+                "affix": "suffix",
+                "num": 2,
+                "label": "S2"
+              },
+              "range": {
+                "min": 26,
+                "max": 32
+              }
+            },
+            {
+              "text": "+38% to Fire Resistance",
+              "tier": {
+                "affix": "suffix",
+                "num": 1,
+                "label": "S1"
+              },
+              "range": {
+                "min": 36,
+                "max": 40
+              }
+            }
+          ]
+        }
+      ],
+      "sockets": [],
+      "price": null,
+      "w": 2,
+      "h": 3,
+      "baseType": "Visceral Quiver",
+      "rarity": "rare",
+      "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvUXVpdmVycy9CYXNldHlwZXMvUXVpdmVyVmlzY2VyYWwiLCJ3IjoyLCJoIjozLCJzY2FsZSI6MSwicmVhbG0iOiJwb2UyIn1d/1c5ba2c98f/QuiverVisceral.png"
+    },
+    "Helm": {
+      "name": "Grim Veil",
+      "ilvl": 82,
+      "flags": {},
+      "properties": [
+        {
+          "name": "Quality",
+          "value": "+20%"
+        },
+        {
+          "name": "Energy Shield",
+          "value": "312"
+        }
+      ],
+      "requirements": [
+        {
+          "name": "Level",
+          "value": "75"
+        },
+        {
+          "name": "Int",
+          "value": "142"
+        }
+      ],
+      "sections": [
+        {
+          "kind": "rune",
+          "lines": [
+            {
+              "text": "+12% to Cold Resistance"
+            }
+          ]
+        },
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "+62 to maximum Energy Shield",
+              "tier": {
+                "affix": "prefix",
+                "num": 1,
+                "label": "P1"
+              },
+              "range": {
+                "min": 57,
+                "max": 66
+              }
+            },
+            {
+              "text": "84% increased Energy Shield",
+              "tier": {
+                "affix": "prefix",
+                "num": 2,
+                "label": "P2"
+              },
+              "range": {
+                "min": 80,
+                "max": 91
+              }
+            },
+            {
+              "text": "+112 to maximum Life",
+              "tier": {
+                "affix": "prefix",
+                "num": 1,
+                "label": "P1"
+              },
+              "range": {
+                "min": 100,
+                "max": 119
+              }
+            },
+            {
+              "text": "+38% to Fire Resistance",
+              "tier": {
+                "affix": "suffix",
+                "num": 2,
+                "label": "S2"
+              },
+              "range": {
+                "min": 36,
+                "max": 40
+              }
+            },
+            {
+              "text": "+41% to Lightning Resistance",
+              "tier": {
+                "affix": "suffix",
+                "num": 1,
+                "label": "S1"
+              },
+              "range": {
+                "min": 41,
+                "max": 45
+              }
+            },
+            {
+              "text": "+22% to Chaos Resistance",
+              "tier": {
+                "affix": "suffix",
+                "num": 3,
+                "label": "S3"
+              },
+              "range": {
+                "min": 20,
+                "max": 23
+              }
+            }
+          ]
+        }
+      ],
+      "sockets": [
+        {
+          "kind": "rune",
+          "name": "Greater Rune of Leadership",
+          "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQ3VycmVuY3kvUnVuZXMvTGlnaHRuaW5nUnVuZVNwZWNpYWwxIiwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/81a3fe75a5/LightningRuneSpecial1.png"
+        }
+      ],
+      "price": null,
+      "w": 2,
+      "h": 2,
+      "baseType": "Ancestral Tiara",
+      "rarity": "rare",
+      "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9IZWxtZXRzL0Jhc2V0eXBlcy9IZWxtZXRJbnQwOCIsInciOjIsImgiOjIsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/6e0502ce1f/HelmetInt08.png"
+    },
+    "BodyArmour": {
+      "name": "Morior Invictus",
+      "ilvl": 84,
+      "flags": {},
+      "properties": [
+        {
+          "name": "Quality",
+          "value": "+20%"
+        },
+        {
+          "name": "Energy Shield",
+          "value": "705"
+        }
+      ],
+      "requirements": [
+        {
+          "name": "Level",
+          "value": "78"
+        },
+        {
+          "name": "Int",
+          "value": "172"
+        }
+      ],
+      "sections": [
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "+150 to maximum Energy Shield"
+            },
+            {
+              "text": "+16% to all Elemental Resistances"
+            },
+            {
+              "text": "Gain 20% of Maximum Life as Extra Maximum Energy Shield"
+            },
+            {
+              "text": "Recover 2% of maximum Energy Shield when you Kill an Enemy"
+            }
+          ]
+        }
+      ],
+      "sockets": [],
+      "price": {
+        "amount": 3.5,
+        "currency": "divine"
+      },
+      "w": 2,
+      "h": 3,
+      "baseType": "Grand Regalia",
+      "rarity": "unique",
+      "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9Cb2R5QXJtb3Vycy9VbmlxdWVzL01vcmlvckludmljdHVzX00iLCJ3IjoyLCJoIjozLCJzY2FsZSI6MSwicmVhbG0iOiJwb2UyIn1d/6674aa4ff6/MoriorInvictus_M.png"
+    },
+    "Gloves": {
+      "name": "Blight Grip",
+      "ilvl": 80,
+      "flags": {},
+      "properties": [
+        {
+          "name": "Evasion Rating",
+          "value": "221"
+        }
+      ],
+      "requirements": [
+        {
+          "name": "Level",
+          "value": "65"
+        },
+        {
+          "name": "Dex",
+          "value": "96"
+        }
+      ],
+      "sections": [
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "Adds 12 to 21 Physical Damage to Attacks",
+              "tier": {
+                "affix": "prefix",
+                "num": 1,
+                "label": "P1"
+              },
+              "range": {
+                "min": 11,
+                "max": 22
+              }
+            },
+            {
+              "text": "+85 to maximum Life",
+              "tier": {
+                "affix": "prefix",
+                "num": 2,
+                "label": "P2"
+              },
+              "range": {
+                "min": 80,
+                "max": 89
+              }
+            },
+            {
+              "text": "16% increased Attack Speed",
+              "tier": {
+                "affix": "suffix",
+                "num": 1,
+                "label": "S1"
+              },
+              "range": {
+                "min": 14,
+                "max": 16
+              }
+            },
+            {
+              "text": "+34% to Cold Resistance",
+              "tier": {
+                "affix": "suffix",
+                "num": 2,
+                "label": "S2"
+              },
+              "range": {
+                "min": 31,
+                "max": 35
+              }
+            }
+          ]
+        }
+      ],
+      "sockets": [],
+      "price": null,
+      "w": 2,
+      "h": 2,
+      "baseType": "Elegant Wraps",
+      "rarity": "rare",
+      "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9HbG92ZXMvQmFzZXR5cGVzL0dsb3Zlc0RleEludDAyIiwidyI6MiwiaCI6Miwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/e226df102d/GlovesDexInt02.png"
+    },
+    "Boots": {
+      "name": "Birth of Fury",
+      "ilvl": 79,
+      "flags": {},
+      "properties": [
+        {
+          "name": "Armour",
+          "value": "268"
+        }
+      ],
+      "requirements": [
+        {
+          "name": "Level",
+          "value": "70"
+        },
+        {
+          "name": "Str",
+          "value": "120"
+        }
+      ],
+      "sections": [
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "30% increased Movement Speed"
+            },
+            {
+              "text": "+90 to maximum Life"
+            },
+            {
+              "text": "Gain 1 Rage on Melee Hit"
+            },
+            {
+              "text": "+25% to Fire Resistance"
+            }
+          ]
+        }
+      ],
+      "sockets": [],
+      "price": {
+        "amount": 40,
+        "currency": "exalted"
+      },
+      "w": 2,
+      "h": 2,
+      "baseType": "Stone Greaves",
+      "rarity": "unique",
+      "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQXJtb3Vycy9Cb290cy9VbmlxdWVzL0JpcnRoT2ZGdXJ5IiwidyI6MiwiaCI6Miwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/11cb01dff1/BirthOfFury.png"
+    },
+    "Amulet": {
+      "name": "Vortex Clasp",
+      "ilvl": 82,
+      "flags": {
+        "fractured": true,
+        "desecrated": true
+      },
+      "properties": [],
+      "requirements": [
+        {
+          "name": "Level",
+          "value": "74"
+        }
+      ],
+      "sections": [
+        {
+          "kind": "enchant",
+          "lines": [
+            {
+              "text": "Allocates Heavy Buffer"
+            }
+          ]
+        },
+        {
+          "kind": "implicit",
+          "lines": [
+            {
+              "text": "+10 to Spirit"
+            }
+          ]
+        },
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "+3 to Level of all Projectile Skills",
+              "tier": {
+                "affix": "prefix",
+                "num": 1,
+                "label": "P1"
+              },
+              "range": {
+                "min": 3,
+                "max": 3
+              },
+              "fractured": true
+            },
+            {
+              "text": "+54 to Spirit",
+              "tier": {
+                "affix": "prefix",
+                "num": 1,
+                "label": "P1"
+              },
+              "range": {
+                "min": 50,
+                "max": 55
+              }
+            },
+            {
+              "text": "+38% to Critical Damage Bonus",
+              "tier": {
+                "affix": "suffix",
+                "num": 1,
+                "label": "S1"
+              },
+              "range": {
+                "min": 35,
+                "max": 39
+              }
+            },
+            {
+              "text": "+43 to Dexterity",
+              "tier": {
+                "affix": "suffix",
+                "num": 2,
+                "label": "S2"
+              },
+              "range": {
+                "min": 41,
+                "max": 45
+              }
+            },
+            {
+              "text": "+31% to Lightning Resistance",
+              "tier": {
+                "affix": "suffix",
+                "num": 3,
+                "label": "S3"
+              },
+              "range": {
+                "min": 31,
+                "max": 35
+              }
+            }
+          ]
+        },
+        {
+          "kind": "desecrated",
+          "lines": [
+            {
+              "text": "12% increased Skill Speed"
+            }
+          ]
+        }
+      ],
+      "sockets": [],
+      "price": null,
+      "w": 1,
+      "h": 1,
+      "baseType": "Solar Amulet",
+      "rarity": "rare",
+      "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQW11bGV0cy9CYXNldHlwZXMvU29sYXJBbXVsZXQiLCJ3IjoxLCJoIjoxLCJzY2FsZSI6MSwicmVhbG0iOiJwb2UyIn1d/f23b75f540/SolarAmulet.png"
+    },
+    "Ring": {
+      "name": "Plague Loop",
+      "ilvl": 81,
+      "flags": {},
+      "properties": [],
+      "requirements": [
+        {
+          "name": "Level",
+          "value": "60"
+        }
+      ],
+      "sections": [
+        {
+          "kind": "implicit",
+          "lines": [
+            {
+              "text": "+12% to Lightning Resistance"
+            }
+          ]
+        },
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "Adds 4 to 68 Lightning damage to Attacks",
+              "tier": {
+                "affix": "prefix",
+                "num": 1,
+                "label": "P1"
+              },
+              "range": {
+                "min": 3,
+                "max": 70
+              }
+            },
+            {
+              "text": "+95 to Accuracy Rating",
+              "tier": {
+                "affix": "prefix",
+                "num": 3,
+                "label": "P3"
+              },
+              "range": {
+                "min": 85,
+                "max": 123
+              }
+            },
+            {
+              "text": "+27 to Dexterity",
+              "tier": {
+                "affix": "suffix",
+                "num": 2,
+                "label": "S2"
+              },
+              "range": {
+                "min": 25,
+                "max": 28
+              }
+            },
+            {
+              "text": "+22% to Cold Resistance",
+              "tier": {
+                "affix": "suffix",
+                "num": 3,
+                "label": "S3"
+              },
+              "range": {
+                "min": 21,
+                "max": 25
+              }
+            }
+          ]
+        }
+      ],
+      "sockets": [],
+      "price": null,
+      "w": 1,
+      "h": 1,
+      "baseType": "Topaz Ring",
+      "rarity": "rare",
+      "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvUmluZ3MvQmFzZXR5cGVzL1RvcGF6UmluZyIsInciOjEsImgiOjEsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/83315d9397/TopazRing.png"
+    },
+    "Ring2": {
+      "name": "Blood Band",
+      "ilvl": 83,
+      "flags": {},
+      "properties": [],
+      "requirements": [
+        {
+          "name": "Level",
+          "value": "62"
+        }
+      ],
+      "sections": [
+        {
+          "kind": "implicit",
+          "lines": [
+            {
+              "text": "11% increased Rarity of Items found"
+            }
+          ]
+        },
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "+72 to maximum Life",
+              "tier": {
+                "affix": "prefix",
+                "num": 1,
+                "label": "P1"
+              },
+              "range": {
+                "min": 70,
+                "max": 84
+              }
+            },
+            {
+              "text": "Adds 5 to 9 Physical Damage to Attacks",
+              "tier": {
+                "affix": "prefix",
+                "num": 2,
+                "label": "P2"
+              },
+              "range": {
+                "min": 4,
+                "max": 10
+              }
+            },
+            {
+              "text": "+36% to Fire Resistance",
+              "tier": {
+                "affix": "suffix",
+                "num": 2,
+                "label": "S2"
+              },
+              "range": {
+                "min": 31,
+                "max": 35
+              }
+            },
+            {
+              "text": "+15% to Chaos Resistance",
+              "tier": {
+                "affix": "suffix",
+                "num": 3,
+                "label": "S3"
+              },
+              "range": {
+                "min": 14,
+                "max": 17
+              }
+            }
+          ]
+        }
+      ],
+      "sockets": [],
+      "price": null,
+      "w": 1,
+      "h": 1,
+      "baseType": "Gold Ring",
+      "rarity": "rare",
+      "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvUmluZ3MvQmFzZXR5cGVzL0dvbGRSaW5nIiwidyI6MSwiaCI6MSwic2NhbGUiOjEsInJlYWxtIjoicG9lMiJ9XQ/a138f2df65/GoldRing.png"
+    },
+    "Belt": {
+      "name": "Tempest Cord",
+      "ilvl": 80,
+      "flags": {},
+      "properties": [],
+      "requirements": [
+        {
+          "name": "Level",
+          "value": "55"
+        }
+      ],
+      "sections": [
+        {
+          "kind": "implicit",
+          "lines": [
+            {
+              "text": "20% of Flask Recovery applied Instantly"
+            }
+          ]
+        },
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "+118 to maximum Life",
+              "tier": {
+                "affix": "prefix",
+                "num": 1,
+                "label": "P1"
+              },
+              "range": {
+                "min": 110,
+                "max": 124
+              }
+            },
+            {
+              "text": "+44 to Strength",
+              "tier": {
+                "affix": "suffix",
+                "num": 1,
+                "label": "S1"
+              },
+              "range": {
+                "min": 41,
+                "max": 45
+              }
+            },
+            {
+              "text": "+27% to Cold Resistance",
+              "tier": {
+                "affix": "suffix",
+                "num": 2,
+                "label": "S2"
+              },
+              "range": {
+                "min": 26,
+                "max": 30
+              }
+            },
+            {
+              "text": "18% increased Charm Effect Duration",
+              "tier": {
+                "affix": "suffix",
+                "num": 3,
+                "label": "S3"
+              },
+              "range": {
+                "min": 16,
+                "max": 20
+              }
+            }
+          ]
+        }
+      ],
+      "sockets": [],
+      "price": null,
+      "w": 2,
+      "h": 1,
+      "baseType": "Utility Belt",
+      "rarity": "rare",
+      "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQmVsdHMvQmFzZXR5cGVzL0JlbHQxMCIsInciOjIsImgiOjEsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/d95952e174/Belt10.png"
+    }
+  },
+  "flasks": [
+    {
+      "name": "Concentrated Ultimate Life Flask of the Surgeon",
+      "ilvl": 83,
+      "flags": {},
+      "properties": [
+        {
+          "name": "Recovers 1330 Life over 3 Seconds",
+          "value": null
+        },
+        {
+          "name": "Consumes 10 of 75 Charges on use",
+          "value": null
+        }
+      ],
+      "requirements": [],
+      "sections": [
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "40% increased Amount Recovered"
+            },
+            {
+              "text": "25% chance to gain a Flask Charge when you deal a Critical Hit"
+            }
+          ]
+        }
+      ],
+      "sockets": [],
+      "price": null,
+      "w": 1,
+      "h": 2,
+      "baseType": "Ultimate Life Flask",
+      "rarity": "magic",
+      "icon": "https://web.poecdn.com/gen/image/WzksMTQseyJmIjoiMkRJdGVtcy9GbGFza3MvQmFzZXR5cGVzL0ZsYXNrTGlmZTA5IiwidyI6MSwiaCI6Miwic2NhbGUiOjEsInJlYWxtIjoicG9lMiIsImxldmVsIjoxfV0/8ed5f669f0/FlaskLife09.png"
+    },
+    {
+      "name": "Saturated Lesser Mana Flask of the Chemist",
+      "ilvl": 60,
+      "flags": {},
+      "properties": [
+        {
+          "name": "Recovers 120 Mana over 3 Seconds",
+          "value": null
+        }
+      ],
+      "requirements": [],
+      "sections": [
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "30% reduced Charges per use"
+            }
+          ]
+        }
+      ],
+      "sockets": [],
+      "price": null,
+      "w": 1,
+      "h": 2,
+      "baseType": "Lesser Mana Flask",
+      "rarity": "magic",
+      "icon": "https://web.poecdn.com/gen/image/WzksMTQseyJmIjoiMkRJdGVtcy9GbGFza3MvQmFzZXR5cGVzL0ZsYXNrTWFuYTAxIiwidyI6MSwiaCI6Miwic2NhbGUiOjEsInJlYWxtIjoicG9lMiIsImxldmVsIjoxfV0/a3294604bd/FlaskMana01.png"
+    }
+  ],
+  "charms": [
+    {
+      "name": "Thawing Charm of the Ox",
+      "ilvl": 78,
+      "flags": {},
+      "properties": [
+        {
+          "name": "Used when you become Frozen",
+          "value": null
+        }
+      ],
+      "requirements": [],
+      "sections": [
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "+14 to Strength"
+            }
+          ]
+        }
+      ],
+      "sockets": [],
+      "price": null,
+      "w": 1,
+      "h": 1,
+      "baseType": "Thawing Charm",
+      "rarity": "magic",
+      "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvQ2hhcm1zL0Jhc2V0eXBlcy9UaGF3aW5nQ2hhcm0iLCJ3IjoxLCJoIjoxLCJzY2FsZSI6MSwicmVhbG0iOiJwb2UyIn1d/d9184b853a/ThawingCharm.png"
+    }
+  ],
+  "jewels": [
+    {
+      "name": "Storm Heart",
+      "ilvl": 80,
+      "flags": {},
+      "properties": [],
+      "requirements": [],
+      "sections": [
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "15% increased Lightning Damage"
+            },
+            {
+              "text": "8% increased Projectile Speed"
+            },
+            {
+              "text": "+6% to Critical Damage Bonus"
+            }
+          ]
+        }
+      ],
+      "sockets": [],
+      "price": null,
+      "w": 1,
+      "h": 1,
+      "baseType": "Sapphire",
+      "rarity": "rare",
+      "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvSmV3ZWxzL1NhcHBoaXJlSmV3ZWwiLCJ3IjoxLCJoIjoxLCJzY2FsZSI6MSwicmVhbG0iOiJwb2UyIn1d/976a8c1642/SapphireJewel.png"
+    },
+    {
+      "name": "Viper Eye",
+      "ilvl": 79,
+      "flags": {},
+      "properties": [],
+      "requirements": [],
+      "sections": [
+        {
+          "kind": "explicit",
+          "lines": [
+            {
+              "text": "6% increased Attack Speed with Bows"
+            },
+            {
+              "text": "10% increased Evasion Rating"
+            }
+          ]
+        }
+      ],
+      "sockets": [],
+      "price": null,
+      "w": 1,
+      "h": 1,
+      "baseType": "Emerald",
+      "rarity": "rare",
+      "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvSmV3ZWxzL0VtZXJhbGRKZXdlbCIsInciOjEsImgiOjEsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/0df7b1d23b/EmeraldJewel.png"
+    }
+  ],
+  "other": [],
+  "skills": [
+    {
+      "gem": {
+        "name": "Lightning Arrow",
+        "icon": null,
+        "level": 20,
+        "quality": 20
+      },
+      "supports": [
+        {
+          "name": "Pierce",
+          "icon": null
+        },
+        {
+          "name": "Lightning Penetration",
+          "icon": null
+        },
+        {
+          "name": "Magnified Area",
+          "icon": null
+        }
+      ]
+    },
+    {
+      "gem": {
+        "name": "Herald of Thunder",
+        "icon": null,
+        "level": 18,
+        "quality": 0
+      },
+      "supports": [
+        {
+          "name": "Overabundance",
+          "icon": null
+        }
+      ]
+    },
+    {
+      "gem": {
+        "name": "Wind Dancer",
+        "icon": null,
+        "level": 20,
+        "quality": 0
+      },
+      "supports": []
+    },
+    {
+      "gem": {
+        "name": "Escape Shot",
+        "icon": null,
+        "level": 19,
+        "quality": 0
+      },
+      "supports": [
+        {
+          "name": "Cold Penetration",
+          "icon": null
+        }
+      ]
+    }
+  ],
+  "keystones": [
+    {
+      "name": "Resonance",
+      "icon": "https://assets.poe.ninja/poe2/tree/passives/resonancekeystone.webp",
+      "stats": [
+        "Gain Power Charges instead of Frenzy Charges",
+        "Gain Frenzy Charges instead of Endurance Charges",
+        "Gain Endurance Charges instead of Power Charges"
+      ]
+    },
+    {
+      "name": "Giant's Blood",
+      "icon": null,
+      "stats": [
+        "You can wield Two-Handed Axes, Maces and Swords in one hand",
+        "Triple Attribute requirements of Martial Weapons"
+      ]
+    }
+  ],
+  "pob": null,
+  "patches": [
+    {
+      "slot": "Ring2",
+      "atUtc": "2026-09-29T12:10:00Z"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "@scalpel/stream-viewer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Scalpel Stream viewer: Twitch extension views, public gear page and OBS view",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "scripts": {
+    "build:extension": "node ../../node_modules/vite/bin/vite.js build --config vite.extension.config.ts",
+    "zip:extension": "npm run build:extension && node scripts/zip-extension.mjs",
+    "build:web": "node ../../node_modules/vite/bin/vite.js build --config vite.web.config.ts",
+    "dev:web": "node ../../node_modules/vite/bin/vite.js --config vite.web.config.ts",
+    "dev:web:local": "node ../../node_modules/vite/bin/vite.js --config vite.web.config.ts --mode localapi --port 5188 --strictPort"
+  }
+}

@@ -309,6 +309,19 @@ export const IPC_CHANNELS = {
     SOURCE_INVALIDATED_EVENT: 'screen:source-invalidated',
     SOURCE_MAYBE_STALE_EVENT: 'screen:source-maybe-stale',
   },
+
+  STREAM: {
+    GET_OVERVIEW: 'stream:get-overview',
+    ENABLE: 'stream:enable',
+    DISABLE: 'stream:disable',
+    DELETE_PROFILE: 'stream:delete-profile',
+    PAIRING_CODE: 'stream:pairing-code',
+    SET_STATE: 'stream:set-state',
+    UPDATE_SETTINGS: 'stream:update-settings',
+    PUSH_NOW: 'stream:push-now',
+    LIST_CHARACTERS: 'stream:list-characters',
+    OVERVIEW_EVENT: 'stream:overview',
+  },
 } as const
 
 export type IpcChannel = (typeof IPC_CHANNELS)[keyof typeof IPC_CHANNELS] extends infer Group

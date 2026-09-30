@@ -1,0 +1,13 @@
+{
+  "snapshotVersions": [
+    {
+      "url": "streamers",
+      "name": "Streamers",
+      "timeMachineLabels": [],
+      "version": "1337-20260929-12374",
+      "snapshotName": "streamers",
+      "overviewType": 1,
+      "passiveTree": "PassiveTree-0.5"
+    }
+  ]
+}

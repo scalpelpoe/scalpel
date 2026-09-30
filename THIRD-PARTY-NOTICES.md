@@ -15,8 +15,8 @@ Scalpel includes the following third-party software and data:
 ### poe.ninja
 
 - Source: https://poe.ninja
-- Used for: Real-time item price data, fetched at runtime
-- Data is cached locally and refreshed every 10 minutes
+- Used for: Real-time item price & build data
+- Data is cached locally
 
 ### wraeclast.cards
 
@@ -37,6 +37,7 @@ Scalpel includes the following third-party software and data:
 
 - Trade API: https://www.pathofexile.com/api/trade
 - Item artwork: https://web.poecdn.com
+- Socket art: `packages/stream-viewer/src/assets/item-frame/socket-empty.webp`, from the game's UI art
 - Used for: Trade search, item/card artwork
 
 ---
@@ -48,6 +49,12 @@ Scalpel includes the following third-party software and data:
 - Source: https://github.com/deathbeam/maps-of-exile
 - License: MIT
 - Files: `src/shared/data/economy/div-cards.json`, `div-maps.json`, `div-globals.json`
+
+### Path of Building Community, PoE2 (PathOfBuildingCommunity/PathOfBuilding-PoE2)
+
+- Source: https://github.com/PathOfBuildingCommunity/PathOfBuilding-PoE2
+- License: MIT
+- Files: `packages/stream-viewer/src/assets/item-frame/` (item tooltip header and separator art)
 
 ### Awakened PoE Trade (SnosMe/awakened-poe-trade)
 

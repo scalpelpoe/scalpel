@@ -10,6 +10,7 @@ import tabletModMap from '@shared/data/trade/tablet-mods.json'
 import { TRANSFIGURED_GEM_DISC } from '@shared/data/trade/transfigured-gems'
 import { vaalGemType } from '@shared/data/trade/vaal-gems'
 import { getTradeUrls } from '@shared/endpoints'
+import { stripTradeTokens } from '@shared/game-text'
 import { hasGeneratedName, isClusterJewel, isSkillGem, splitRuneTier } from '@shared/poe-item'
 import { recordMainBreadcrumb } from '../diagnostics'
 import { getPoeVersion } from '../game-state'
@@ -82,15 +83,7 @@ interface TradeDialect {
   weightedPseudoIds: ReadonlySet<string>
 }
 
-/** PoE2 trade-fetch responses return mod text with localization tokens like
- *  `[Attributes|Attribute]` and `[Spirit]` embedded in the string. Trade-site UI
- *  resolves these via its i18n layer; we don't have that, so rewrite the tokens
- *  into their display form: `[a|b]` -> `b`, `[a]` -> `a`. No-op on PoE1 strings
- *  (which never contain these brackets) so it runs unconditionally. Mirrors EE2's
- *  parseAffixStrings helper. */
-export function stripTradeTokens(s: string): string {
-  return s.replace(/\[([^\]|]+)\|?([^\]]*)\]/g, (_, a: string, b: string) => b || a)
-}
+export { stripTradeTokens }
 
 /** Special categories GGG tags onto a folded `explicitMods` entry. */
 const MOD_CATEGORY_FLAGS = ['fractured', 'crafted', 'desecrated', 'mutated'] as const

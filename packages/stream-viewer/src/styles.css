@@ -1,0 +1,648 @@
+/* Scalpel Stream viewer: the game-specific pieces only. Loaded after Scalpel's own
+   stylesheet (src/renderer/src/styles.css, via src/styles.ts), whose tokens these rules
+   use; ViewerRoot scopes the viewer's Scalpel theme to its subtree. Item colours are the
+   game's, as Path of Building uses them (PathOfBuilding-PoE2 Data/Global.lua colorCodes);
+   the tier badge colours are Scalpel's price checker's. Every class is ssv- prefixed so the
+   views can mount inside Storybook next to Scalpel's stories. */
+
+:root {
+  --ssv-normal: #c8c8c8;
+  --ssv-magic: #8888ff;
+  --ssv-rare: #ffff77;
+  --ssv-unique: #af6025;
+  --ssv-gem: #74cabf;
+
+  --ssv-prop: #7f7f7f;
+  --ssv-value: #ffffff;
+  --ssv-mod-explicit: #8888ff;
+  --ssv-mod-implicit: #8888ff;
+  --ssv-mod-crafted: #b8daf1;
+  --ssv-mod-enchant: #b8daf1;
+  --ssv-mod-desecrated: #9ccc65;
+  --ssv-fractured: #a29160;
+  --ssv-corrupted: #d20000;
+  --ssv-tier-prefix: #ec7676;
+  --ssv-tier-suffix: #7aaff1;
+
+  --ssv-cell: 38px;
+}
+
+.ssv-root {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--text);
+}
+
+body.ssv-transparent {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+}
+
+/* ---- Window ---------------------------------------------------------------- */
+
+/* Anchor for the side tooltip, which sits outside the window's clipped corners. */
+.ssv-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.ssv-panel > .ssv-window {
+  flex: 1 1 auto;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
+
+/* --ssv-scale enlarges a surface's window as a whole (text, tabs, paperdoll) via zoom;
+   item cards keep their own size wherever they render. */
+.ssv-window {
+  zoom: var(--ssv-scale, 1);
+  /* Keeps the portrait glow's blur from painting past the window's clipped edges. */
+  contain: paint;
+}
+
+.ssv-window .ssv-tooltip {
+  zoom: calc(1 / var(--ssv-scale, 1));
+}
+
+.ssv-panel-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 10px 12px;
+  overflow: auto;
+  container-type: inline-size;
+}
+
+.ssv-stale {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.ssv-message {
+  padding: 18px 12px;
+  color: var(--text-dim);
+  text-align: center;
+}
+
+/* ---- Paperdoll ------------------------------------------------------------ */
+
+/* The item grid is PoB Redux's equipment grid (pob-redux src/lib/components/EquipmentGrid.svelte):
+   its dark-theme oklch tokens as hex, with its color-mix results precomputed so older browser
+   engines (OBS's) keep them. Occupied tiles take a rarity tint, border = rarity 40% over
+   --line-0, background = rarity 7% over --bg-0; hover rings the tile in the full rarity colour. */
+:root {
+  --ssv-cell-bg: #0b0b0c;
+  --ssv-cell-line: #27272d;
+  --ssv-doll-glow: #151518;
+  --ssv-slot-label: #8a8a94;
+}
+
+/* Paperdoll cells shrink to fit narrow panels (8 cells across). Declared together so
+   the gutter scales with the cell it is computed from. */
+.ssv-doll-wrap {
+  --ssv-cell: min(38px, 12.5cqw);
+  --ssv-gap: calc(var(--ssv-cell) * 0.13);
+  background: radial-gradient(ellipse at 50% 35%, var(--ssv-doll-glow), transparent 75%);
+}
+
+.ssv-doll {
+  position: relative;
+  width: calc(var(--ssv-cell) * 8 - var(--ssv-gap));
+  height: calc(var(--ssv-cell) * 6 - var(--ssv-gap));
+  margin: 0 auto;
+}
+
+/* Weapon set I / II, stacked in the free column between the main hand and the helmet. */
+.ssv-set-toggle {
+  position: absolute;
+  top: 0;
+  left: calc(var(--ssv-cell) * 2);
+  width: calc(var(--ssv-cell) - var(--ssv-gap));
+  display: flex;
+  flex-direction: column;
+  gap: var(--ssv-gap);
+}
+
+.ssv-slot {
+  --ssv-rarity: var(--ssv-cell-line);
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #202026;
+  border-radius: 3px;
+  background: #0d0d0e;
+  cursor: default;
+  padding: 3px;
+}
+
+.ssv-slot img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.ssv-slot.ssv-empty {
+  border-color: var(--ssv-cell-line);
+  background: var(--ssv-cell-bg);
+}
+
+.ssv-slot-label {
+  color: var(--ssv-slot-label);
+  font-size: 9px;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+  opacity: 0.55;
+}
+
+.ssv-slot[data-rarity='unique'] {
+  --ssv-rarity: #d7843d;
+  border-color: #67462c;
+  background: #19130f;
+}
+
+.ssv-slot[data-rarity='rare'] {
+  --ssv-rarity: #e0c34f;
+  border-color: #6a5f34;
+  background: #1a1811;
+}
+
+.ssv-slot[data-rarity='magic'] {
+  --ssv-rarity: #7f8dff;
+  border-color: #44497a;
+  background: #13141d;
+}
+
+.ssv-slot[data-rarity='gem'] {
+  --ssv-rarity: #48d7b4;
+  border-color: #2d675c;
+  background: #0f1918;
+}
+
+.ssv-slot:not(.ssv-empty):hover,
+.ssv-slot:focus-visible,
+.ssv-slot.ssv-active {
+  border-color: var(--ssv-rarity);
+  box-shadow: 0 0 0 1px var(--ssv-rarity);
+}
+
+/* Runes over the item art on hover, each on the game's empty socket art. */
+.ssv-runes {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  place-items: center;
+  width: min(64px, calc(100% - 6px));
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.ssv-slot:hover .ssv-runes,
+.ssv-slot:focus-visible .ssv-runes {
+  opacity: 1;
+  visibility: visible;
+}
+
+.ssv-rune {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  max-width: 32px;
+  max-height: 32px;
+  min-width: 0;
+  min-height: 0;
+  background: url('./assets/item-frame/socket-empty.webp') center / contain no-repeat;
+}
+
+.ssv-slot .ssv-rune img {
+  width: 90%;
+  height: 90%;
+}
+
+.ssv-patched {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 6px var(--accent);
+}
+
+.ssv-belt {
+  display: flex;
+  justify-content: center;
+  gap: var(--ssv-gap);
+  margin-top: calc(var(--ssv-gap) * 2);
+}
+
+/* Flasks and charms share one tile size, as in the inventory's belt row. */
+.ssv-belt .ssv-slot {
+  position: relative;
+  width: calc(var(--ssv-cell) * 0.95);
+  height: calc(var(--ssv-cell) * 1.6);
+}
+
+.ssv-jewels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+}
+
+.ssv-jewels .ssv-slot {
+  position: relative;
+  width: calc(var(--ssv-cell) * 1.2);
+  height: calc(var(--ssv-cell) * 1.2);
+}
+
+/* ---- Item card ------------------------------------------------------------ */
+
+/* The game's tooltip, drawn the way PoB Redux's ItemFrame does it: black card framed in
+   the rarity colour, three-piece header art per rarity, rarity separators, Fontin
+   SmallCaps. The art is PoB's (PathOfBuilding-PoE2 src/Assets), halved-ish to PoB's sizes. */
+/* Sized to its longest line like the game's, within limits; narrow screens wrap. */
+.ssv-tooltip {
+  width: max-content;
+  min-width: 280px;
+  max-width: 460px;
+  background: rgba(0, 0, 0, 0.94);
+  border: 1px solid var(--ssv-normal);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+  font-family: var(--font-poe);
+  text-align: center;
+}
+
+.ssv-tooltip[data-frame='unique'] {
+  border-color: var(--ssv-unique);
+}
+.ssv-tooltip[data-frame='rare'] {
+  border-color: var(--ssv-rare);
+}
+.ssv-tooltip[data-frame='magic'] {
+  border-color: var(--ssv-magic);
+}
+.ssv-tooltip[data-frame='gem'] {
+  border-color: var(--ssv-gem);
+}
+
+.ssv-tooltip-head {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background-position:
+    left top,
+    right top,
+    center top;
+  background-repeat: no-repeat, no-repeat, repeat-x;
+}
+
+/* Two-line headers (name over base) for rares and uniques. */
+.ssv-tooltip-head[data-frame='unique'],
+.ssv-tooltip-head[data-frame='rare'] {
+  min-height: 58px;
+  padding: 4px 47px 0;
+  background-size:
+    47px 100%,
+    47px 100%,
+    47px 100%;
+}
+
+.ssv-tooltip-head[data-frame='magic'],
+.ssv-tooltip-head[data-frame='white'],
+.ssv-tooltip-head[data-frame='gem'] {
+  min-height: 38px;
+  padding: 5px 32px 0;
+  background-size:
+    32px 100%,
+    32px 100%,
+    32px 100%;
+}
+
+.ssv-tooltip-head[data-frame='unique'] {
+  background-image:
+    url('./assets/item-frame/itemsheaderuniqueleft.png'), url('./assets/item-frame/itemsheaderuniqueright.png'),
+    url('./assets/item-frame/itemsheaderuniquemiddle.png');
+}
+.ssv-tooltip-head[data-frame='rare'] {
+  background-image:
+    url('./assets/item-frame/itemsheaderrareleft.png'), url('./assets/item-frame/itemsheaderrareright.png'),
+    url('./assets/item-frame/itemsheaderraremiddle.png');
+}
+.ssv-tooltip-head[data-frame='magic'] {
+  background-image:
+    url('./assets/item-frame/itemsheadermagicleft.png'), url('./assets/item-frame/itemsheadermagicright.png'),
+    url('./assets/item-frame/itemsheadermagicmiddle.png');
+}
+.ssv-tooltip-head[data-frame='white'] {
+  background-image:
+    url('./assets/item-frame/itemsheaderwhiteleft.png'), url('./assets/item-frame/itemsheaderwhiteright.png'),
+    url('./assets/item-frame/itemsheaderwhitemiddle.png');
+}
+.ssv-tooltip-head[data-frame='gem'] {
+  background-image:
+    url('./assets/item-frame/itemsheadergemleft.png'), url('./assets/item-frame/itemsheadergemright.png'),
+    url('./assets/item-frame/itemsheadergemmiddle.png');
+}
+
+.ssv-tooltip-name {
+  font-size: 17px;
+  line-height: 20px;
+}
+
+.ssv-tooltip-body {
+  padding: 6px 12px 9px;
+  font-size: 14px;
+  line-height: 18px;
+}
+
+.ssv-sep {
+  height: 9px;
+  margin: 3px 0;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+}
+
+.ssv-sep[data-frame='unique'] {
+  background-image: url('./assets/item-frame/itemsseparatorunique.png');
+}
+.ssv-sep[data-frame='rare'] {
+  background-image: url('./assets/item-frame/itemsseparatorrare.png');
+}
+.ssv-sep[data-frame='magic'] {
+  background-image: url('./assets/item-frame/itemsseparatormagic.png');
+}
+.ssv-sep[data-frame='white'] {
+  background-image: url('./assets/item-frame/itemsseparatorwhite.png');
+}
+.ssv-sep[data-frame='gem'] {
+  background-image: url('./assets/item-frame/itemsseparatorgem.png');
+}
+
+.ssv-prop {
+  color: var(--ssv-prop);
+}
+
+.ssv-val {
+  color: var(--ssv-value);
+}
+
+.ssv-mod {
+  position: relative;
+  padding: 0 34px;
+  white-space: pre-line;
+}
+
+/* Scalpel's additions (tier badge, tier detail, price) stay in the app's UI font. */
+.ssv-tier {
+  position: absolute;
+  left: 0;
+  top: 1px;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: help;
+}
+
+.ssv-tier[data-affix='prefix'] {
+  color: var(--ssv-tier-prefix);
+}
+
+.ssv-tier[data-affix='suffix'] {
+  color: var(--ssv-tier-suffix);
+}
+
+.ssv-tier[data-affix='none'] {
+  color: var(--text-dim);
+}
+
+.ssv-mod-note {
+  display: block;
+  color: rgba(255, 255, 255, 0.55);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 11px;
+}
+
+.ssv-flags {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ssv-flag-corrupted {
+  color: var(--ssv-corrupted);
+}
+
+.ssv-flag {
+  color: var(--text-dim);
+}
+
+.ssv-sockets {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.ssv-socket {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ssv-mod-enchant);
+  font-size: 13px;
+}
+
+.ssv-socket img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.ssv-price {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 2px 8px;
+  border: 1px solid var(--accent-dim);
+  border-radius: var(--radius);
+  color: var(--accent);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 11px;
+}
+
+/* ---- Rarity text ---------------------------------------------------------- */
+
+.ssv-r-normal {
+  color: var(--ssv-normal);
+}
+.ssv-r-magic {
+  color: var(--ssv-magic);
+}
+.ssv-r-rare {
+  color: var(--ssv-rare);
+}
+.ssv-r-unique {
+  color: var(--ssv-unique);
+}
+.ssv-r-gem {
+  color: var(--ssv-gem);
+}
+.ssv-r-currency {
+  color: var(--ssv-normal);
+}
+
+/* ---- Video overlay ---------------------------------------------------------- */
+
+/* The Armoury replacement, so it gets room: a fifth bigger than the base panel. */
+.ssv-overlay {
+  --ssv-scale: 1.2;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Steps down with the player so the gear tab fits without scrolling (it needs about
+   472px * scale plus the 100px controls margin): 720px players and up get the full size,
+   small and embedded players the base size. */
+@media (max-height: 719px) {
+  .ssv-overlay {
+    --ssv-scale: 1.1;
+  }
+}
+
+@media (max-height: 639px) {
+  .ssv-overlay {
+    --ssv-scale: 1;
+  }
+}
+
+/* Left edge, where the PoE1 Armoury's tab sits. */
+.ssv-edge-tab {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translateY(-50%);
+  pointer-events: auto;
+  padding: calc(10px * var(--ssv-scale, 1)) calc(7px * var(--ssv-scale, 1));
+  border: 1px solid var(--border);
+  border-left: none;
+  border-radius: 0 var(--radius) var(--radius) 0;
+  background: var(--bg-solid-translucent);
+  color: var(--accent);
+  font-size: calc(11px * var(--ssv-scale, 1));
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  writing-mode: vertical-rl;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: opacity 0.2s;
+}
+
+.ssv-edge-tab:hover {
+  background: var(--bg-hover);
+}
+
+.ssv-edge-tab.ssv-dim {
+  opacity: 0.35;
+}
+
+/* Clear of the player's title bar and controls (about 50px each); the panel body scrolls when
+   the player is short. Anchored at the top on whole pixels, so switching to a shorter tab
+   neither moves the tab bar nor leaves the panel on a half pixel. */
+.ssv-overlay-panel {
+  position: absolute;
+  top: 50px;
+  left: calc(38px * var(--ssv-scale, 1));
+  display: flex;
+  flex-direction: column;
+  width: calc((var(--ssv-cell) * 8 + 26px) * var(--ssv-scale, 1));
+  max-height: calc(100% - 100px);
+  pointer-events: auto;
+}
+
+/* Beside the panel, toward the middle of the player, level with its top; a card taller than
+   the player keeps its header and loses the tail. */
+.ssv-overlay-tooltip {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 0;
+  max-height: calc(100vh - 58px);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.ssv-inline-tooltip {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+/* Inside a panel the card also fits the panel's width. */
+.ssv-inline-tooltip .ssv-tooltip {
+  max-width: min(100%, 460px);
+}
+
+/* ---- Web page / OBS --------------------------------------------------------- */
+
+/* The Scalpel home page's background (web/public/site.css), which frames these pages. */
+body.ssv-page {
+  margin: 0;
+  min-height: 100vh;
+  background: #101118;
+}
+
+.ssv-page-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 24px 16px;
+}
+
+.ssv-page-wrap .ssv-panel {
+  width: calc((var(--ssv-cell) * 8 + 26px) * var(--ssv-scale, 1));
+  max-width: 100%;
+}
+
+@media (min-width: 640px) {
+  .ssv-page-wrap {
+    --ssv-scale: 1.333;
+  }
+}
+
+.ssv-obs .ssv-window {
+  box-shadow: none;
+}
+
+.ssv-obs-compact {
+  width: 300px;
+}
+
+/* ---- Config page ------------------------------------------------------------ */
+
+/* The broadcaster's dashboard may be light, so the page brings its own backdrop. */
+.ssv-config {
+  min-height: 100vh;
+  padding: 16px;
+  background: var(--bg-solid);
+}
+
+@media (max-width: 420px) {
+  :root {
+    --ssv-cell: 34px;
+  }
+  .ssv-tooltip {
+    width: 100%;
+  }
+}

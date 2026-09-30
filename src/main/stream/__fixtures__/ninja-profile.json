@@ -1,0 +1,103 @@
+[
+  {
+    "accountName": "aer0_#2690",
+    "name": "GassiusClay",
+    "level": 96,
+    "updated": "2026-09-30T15:50:44.175248Z",
+    "isCurrent": true,
+    "league": "Forbidden Rites",
+    "leagueUrl": "forbiddenrites",
+    "className": "Gemling Legionnaire",
+    "skills": [
+      {
+        "name": "Boneshatter",
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvR2Vtcy9OZXcvQm9uZXNoYXR0ZXJTa2lsbEdlbSIsInciOjEsImgiOjEsInNjYWxlIjoxLCJyZWFsbSI6InBvZTIifV0/bf631a7d17/BoneshatterSkillGem.png",
+        "damage": [
+          4538,
+          12,
+          13,
+          18,
+          38,
+          19,
+          0
+        ]
+      }
+    ],
+    "eligibility": {
+      "type": "listed"
+    }
+  },
+  {
+    "accountName": "aer0_#2690",
+    "name": "SpiralTheDragon",
+    "level": 95,
+    "updated": "2026-09-22T13:26:12.154112Z",
+    "isCurrent": false,
+    "league": "Forbidden Rites",
+    "leagueUrl": "forbiddenrites",
+    "className": "Martial Artist",
+    "skills": [
+      {
+        "name": "Hollow Focus",
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvR2Vtcy9OZXcvQmxhbmtHZW0iLCJ3IjoxLCJoIjoxLCJzY2FsZSI6MSwicmVhbG0iOiJwb2UyIn1d/250ec3ed08/BlankGem.png",
+        "damage": [
+          123,
+          28,
+          54,
+          18,
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "eligibility": {
+      "type": "listed"
+    }
+  },
+  {
+    "accountName": "aer0_#2690",
+    "name": "sadgashdahsf",
+    "level": 2,
+    "updated": "2026-09-12T12:25:27.845602Z",
+    "isCurrent": false,
+    "league": "Forbidden Rites",
+    "leagueUrl": "forbiddenrites",
+    "className": "Huntress",
+    "skills": [],
+    "eligibility": {
+      "type": "belowCutoff",
+      "effectiveFloorLevel": 80,
+      "nominalMinLevel": 80
+    }
+  },
+  {
+    "accountName": "aer0_#2690",
+    "name": "aerOThrowsIce",
+    "level": 95,
+    "updated": "2026-09-11T19:03:48.849378Z",
+    "isCurrent": false,
+    "league": "Forbidden Rites",
+    "leagueUrl": "forbiddenrites",
+    "className": "Deadeye",
+    "skills": [
+      {
+        "name": "Glacial Lance",
+        "icon": "https://web.poecdn.com/gen/image/WzI1LDE0LHsiZiI6IjJESXRlbXMvR2Vtcy9OZXcvR2xhY2lhbExhbmNlU2tpbGxHZW0iLCJ3IjoxLCJoIjoxLCJzY2FsZSI6MSwicmVhbG0iOiJwb2UyIn1d/d50ca868bb/GlacialLanceSkillGem.png",
+        "damage": [
+          78635,
+          9,
+          0,
+          91,
+          0,
+          0,
+          0
+        ]
+      }
+    ],
+    "eligibility": {
+      "type": "inactive",
+      "recencyCutoff": "2026-09-18T19:53:36.24349Z"
+    }
+  }
+]
