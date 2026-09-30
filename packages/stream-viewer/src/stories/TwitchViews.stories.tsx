@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { ConfigPage } from '../components/ConfigPage'
 import { MobileView, OverlayView, PanelView } from '../components/TwitchViews'
 import { fakeExt, PlayerFrame, playerFrame, realSnapshot, withFakeApi, withMissingProfile } from './story-data'
+import '../../web/public/site.css'
 
 const meta: Meta = {
   title: 'Stream/Twitch',
@@ -41,9 +42,10 @@ export const Panel: Story = {
   ),
 }
 
+/** Twitch's extension settings frame; the page brings the home page's navy (site.css). */
 export const Config: Story = {
   render: () => (
-    <div style={{ width: 700, background: '#18181b' }}>
+    <div style={{ width: 700 }}>
       <ConfigPage ext={fakeExt()} />
     </div>
   ),

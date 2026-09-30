@@ -631,11 +631,69 @@ body.ssv-page {
 
 /* ---- Config page ------------------------------------------------------------ */
 
-/* The broadcaster's dashboard may be light, so the page brings its own backdrop. */
+/* Twitch's extension settings frame, in the Scalpel home page's design (web/public/site.css)
+   rather than the in-game theme. The dashboard may be light, so the page brings its navy. */
 .ssv-config {
-  min-height: 100vh;
-  padding: 16px;
-  background: var(--bg-solid);
+  box-sizing: border-box;
+  padding: 28px 24px 40px;
+}
+
+.ssv-config-inner {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ssv-config .sc-wordmark {
+  font-size: 28px;
+}
+
+/* A form, not a link: no hover lift. */
+.ssv-config .sc-card,
+.ssv-config .sc-card:hover {
+  gap: 14px;
+  padding: 18px;
+  background: var(--sc-bg-card);
+}
+
+.ssv-config .sc-card-title {
+  font-size: 15px;
+}
+
+.ssv-config-steps {
+  margin: 0;
+  padding-left: 20px;
+  list-style: decimal;
+  color: var(--sc-text-dim);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.ssv-config-code-row {
+  display: flex;
+  gap: 8px;
+}
+
+.ssv-config-code {
+  flex: 1;
+  font-family: var(--sc-mono);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.25em;
+}
+
+.ssv-config-code-row .sc-btn {
+  padding: 8px 18px;
+  font-size: 14px;
+}
+
+.ssv-config-unlink {
+  align-self: flex-start;
+  font-size: 12px;
+  padding: 6px 12px;
 }
 
 @media (max-width: 420px) {

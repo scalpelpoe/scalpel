@@ -3,10 +3,14 @@
    Shared by the static legal pages and the web viewer's landing and gear pages. */
 
 .sc-home {
+  --sc-bg-solid: #171821;
   --sc-bg-card: #23232e;
   --sc-bg-hover: #2c2c3a;
   --sc-border: rgba(56, 56, 77, 0.5);
   --sc-accent: #c8a96e;
+  --sc-accent-hover: #e0bd7b;
+  --sc-match: #4caf50;
+  --sc-danger: #ef5350;
   --sc-text: #e0d8cc;
   --sc-text-dim: #9e9480;
   --sc-heading: #f0e9dc;
@@ -107,6 +111,60 @@
 }
 .sc-btn:hover {
   background: var(--sc-bg-hover);
+}
+.sc-btn-primary {
+  background: var(--sc-accent);
+  color: var(--sc-bg-solid) !important;
+  font-weight: 600;
+}
+.sc-btn-primary:hover {
+  background: var(--sc-accent-hover);
+}
+.sc-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.sc-btn:disabled:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.sc-btn-primary:disabled:hover {
+  background: var(--sc-accent);
+}
+
+/* The app's inset text field. */
+.sc-input {
+  box-sizing: border-box;
+  min-width: 0;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--sc-border);
+  border-radius: var(--sc-radius);
+  color: var(--sc-heading);
+  font: inherit;
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.12s;
+}
+.sc-input::placeholder {
+  color: var(--sc-text-dim);
+  opacity: 0.55;
+}
+.sc-input:focus {
+  border-color: var(--sc-accent);
+}
+
+.sc-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sc-text-dim);
+  margin-bottom: 6px;
+}
+
+.sc-home .sc-ok {
+  color: var(--sc-match);
+}
+.sc-home .sc-error {
+  color: var(--sc-danger);
 }
 
 .sc-cards {

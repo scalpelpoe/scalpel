@@ -1,13 +1,10 @@
 import type { ProfileStatus } from '@scalpel/stream-contract'
 import { paths } from '@scalpel/stream-contract/paths'
-import { Button } from '@renderer/components/primitives/Button'
-import { Label } from '@renderer/components/primitives/Label'
-import { TextInput } from '@renderer/components/primitives/TextInput'
-import { useEffect, useState } from 'react'
+import { type FormEvent, useEffect, useState } from 'react'
+import logo from '../assets/scalpel-logo-96.png'
 import { API_BASE } from '../config'
 import type { Fetcher } from '../data/api'
 import type { TwitchAuth, TwitchExt } from '../twitch'
-import { ViewerRoot } from './ViewerRoot'
 
 const CODE_CHARS = /[^23456789ABCDEFGHJKMNPQRSTUVWXYZ]/g
 const CODE_LENGTH = 8
@@ -25,7 +22,8 @@ async function errorMessage(res: Response): Promise<string> {
   return body?.error ?? `Something went wrong (${res.status}).`
 }
 
-/** Broadcaster setup: pair this channel with a Scalpel install via its 8-character code. */
+/** Broadcaster setup: pair this channel with a Scalpel install via its 8-character code.
+ *  Styled like the Scalpel home page (web/public/site.css), not the in-game theme. */
 export function ConfigPage({ ext, fetcher = fetch }: { ext: TwitchExt | undefined; fetcher?: Fetcher }): JSX.Element {
   const [auth, setAuth] = useState<TwitchAuth | null>(null)
   const [code, setCode] = useState('')
@@ -56,7 +54,11 @@ export function ConfigPage({ ext, fetcher = fetch }: { ext: TwitchExt | undefine
     }
   }
 
-  const claim = async (): Promise<void> => {
+  const canLink = !!auth && !busy && code.length === CODE_LENGTH
+
+  const claim = async (e: FormEvent): Promise<void> => {
+    e.preventDefault()
+    if (!canLink) return
     const res = await send('POST', paths.twitchClaim(), { code })
     if (!res) return
     if (!res.ok) return setError(await errorMessage(res))
@@ -74,45 +76,59 @@ export function ConfigPage({ ext, fetcher = fetch }: { ext: TwitchExt | undefine
   }
 
   return (
-    <ViewerRoot className="ssv-config">
-      <div className="section-title">Scalpel Stream</div>
-      <p className="text-text-dim mt-1 mb-4">
-        Shows your Path of Exile 2 gear to viewers. In Scalpel (PoE2 mode), open Settings, then the Stream tab. Turn it
-        on, press "Get pairing code", and enter the code here.
-      </p>
-      {linked ? (
-        <p className="text-match mb-4">
-          Linked{linked.twitch?.login ? ` as ${linked.twitch.login}` : ''}. Viewers will see your gear once Scalpel
-          publishes it.
-        </p>
-      ) : (
-        <div className="mb-4">
-          <Label htmlFor="ssv-pairing-code">Pairing code</Label>
-          <div className="flex gap-2">
-            <TextInput
-              id="ssv-pairing-code"
-              fullWidth
-              placeholder="ABCD2345"
-              value={code}
-              maxLength={CODE_LENGTH + 4}
-              style={{ fontFamily: 'var(--font-mono)', fontSize: 16, fontWeight: 700, letterSpacing: '0.25em' }}
-              onChange={(e) => setCode(normalizeCode(e.target.value))}
-            />
-            <Button
-              variant="primary"
-              disabled={!auth || busy || code.length !== CODE_LENGTH}
-              onClick={() => void claim()}
-            >
-              {busy ? 'Linking...' : 'Link channel'}
-            </Button>
-          </div>
+    <div className="sc-home ssv-config">
+      <main className="ssv-config-inner">
+        <div className="sc-wordmark">
+          <img src={logo} alt="" />
+          <span>Scalpel Stream</span>
         </div>
-      )}
-      {unlinked && <p className="text-text-dim mb-4">Unlinked. Viewers won't see your gear until you pair again.</p>}
-      {error && <p className="text-danger mb-4">{error}</p>}
-      <Button variant="ghost" size="sm" disabled={!auth || busy} onClick={() => void unlink()}>
-        Unlink this channel
-      </Button>
-    </ViewerRoot>
+        <div className="sc-dim">Shows your Path of Exile 2 gear to your viewers, live from Scalpel.</div>
+        <section className="sc-card">
+          {linked ? (
+            <>
+              <span className="sc-card-title">Channel linked</span>
+              <div className="sc-ok">
+                Linked{linked.twitch?.login ? ` as ${linked.twitch.login}` : ''}. Viewers will see your gear once
+                Scalpel publishes it.
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="sc-card-title">Link your channel</span>
+              <ol className="ssv-config-steps">
+                <li>In Scalpel (PoE2 mode), open Settings, then the Stream tab.</li>
+                <li>Turn on Scalpel Stream and press "Get pairing code".</li>
+                <li>Enter the code below. It expires after 10 minutes.</li>
+              </ol>
+              <form onSubmit={(e) => void claim(e)}>
+                <label className="sc-label" htmlFor="ssv-pairing-code">
+                  Pairing code
+                </label>
+                <div className="ssv-config-code-row">
+                  <input
+                    id="ssv-pairing-code"
+                    className="sc-input ssv-config-code"
+                    placeholder="ABCD2345"
+                    value={code}
+                    maxLength={CODE_LENGTH + 4}
+                    autoComplete="off"
+                    spellCheck={false}
+                    onChange={(e) => setCode(normalizeCode(e.target.value))}
+                  />
+                  <button type="submit" className="sc-btn sc-btn-primary" disabled={!canLink}>
+                    {busy ? 'Linking...' : 'Link channel'}
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
+          {unlinked && <div className="sc-dim">Unlinked. Viewers won't see your gear until you pair again.</div>}
+          {error && <div className="sc-error">{error}</div>}
+        </section>
+        <button type="button" className="sc-btn ssv-config-unlink" disabled={!auth || busy} onClick={() => void unlink()}>
+          Unlink this channel
+        </button>
+      </main>
+    </div>
   )
 }
