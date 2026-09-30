@@ -2,6 +2,10 @@ export const CHANGELOG: { version: string; notes: string[] }[] = [
   {
     version: '1.0.5',
     notes: [
+      'Added Scalpel Stream, a new PoE2 settings tab that shows your gear to stream viewers.',
+      'Added a public gear page and an OBS browser source for Scalpel Stream.',
+      'Added framework for Twitch extension, which will work once it is submitted to Twitch.',
+      'Added an "Update Stream Slot" macro that puts a newly equipped item on stream right away.',
       'Added Expedition Tablets to the PoE2 Tablets regex tab.',
       'Regex Remote presets can now be reordered by dragging.',
       'Updated plugin sdk with some new features.',
