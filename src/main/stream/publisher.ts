@@ -1,7 +1,7 @@
 import { type Slot, type SnapshotItem, type StreamSnapshot, validateSnapshot } from '@scalpel/stream-contract'
 import type { StreamPublisherStatus, StreamSettings } from '@shared/contracts/stream'
 import { StreamApiError, type StreamClient } from './client'
-import { ninjaAccountKey } from './poe-account'
+import { ninjaAccountKey } from '@shared/poe-account'
 import type { PoeNinjaSource, ProfileCharacter } from './sources/poe-ninja'
 import type { NinjaCharacter } from './sources/ninja-types'
 

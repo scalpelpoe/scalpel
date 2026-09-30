@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { useRef } from 'react'
 import type { ProfileState } from '@scalpel/stream-contract'
-import { normalizePoeAccount } from '@main/stream/poe-account'
+import { normalizePoeAccount } from '@shared/poe-account'
 import {
   DEFAULT_STREAM_SETTINGS,
   type StreamCharacterOption,

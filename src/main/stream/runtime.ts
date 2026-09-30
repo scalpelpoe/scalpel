@@ -21,7 +21,7 @@ import { paperdollSide, slotForItem, snapshotItemFromClipboard } from './clipboa
 import { enrichCharacter, toSnapshotPrice } from './enrich'
 import { normalizeCharacter } from './normalize'
 import { createPublisher, type Publisher } from './publisher'
-import { normalizePoeAccount } from './poe-account'
+import { normalizePoeAccount } from '@shared/poe-account'
 import { createPoeNinjaSource, type SourceFetch } from './sources/poe-ninja'
 import { clearStreamToken, loadStreamToken, saveStreamToken } from './token-store'
 

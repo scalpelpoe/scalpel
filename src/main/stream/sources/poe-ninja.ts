@@ -1,4 +1,4 @@
-import { ninjaAccountKey, normalizePoeAccount } from '../poe-account'
+import { ninjaAccountKey, normalizePoeAccount } from '@shared/poe-account'
 import { parseStreamerSearch } from './ninja-search'
 import {
   type NinjaCharacter,
