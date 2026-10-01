@@ -4,6 +4,10 @@ export const CHANGELOG: { version: string; notes: string[] }[] = [
     notes: [
       'Added Scalpel Stream, a new PoE2 settings tab that shows your gear to stream viewers.',
       'Added a public gear page and an OBS browser source for Scalpel Stream.',
+      "Stream viewers can now price check any of your items with Scalpel's price checker.",
+      'Stream viewers can now hover your skills, supports and runes to see their in-game cards.',
+      'Stream item cards now show tiers on flasks, charms and rune-unlocked mods, and keep desecrated mods in place (in green!).',
+      'Added build guide and item filter links to Scalpel Stream.',
       'Added framework for Twitch extension, which will work once it is submitted to Twitch.',
       'Added an "Update Stream Slot" macro that puts a newly equipped item on stream right away.',
       'Added Expedition Tablets to the PoE2 Tablets regex tab.',
