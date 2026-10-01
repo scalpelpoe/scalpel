@@ -1,5 +1,6 @@
 import {
   LIMITS,
+  type Card,
   type ModLine,
   type ModSection,
   NINJA_ASSETS_PREFIX,
@@ -123,19 +124,66 @@ function buildSections(raw: NinjaItemData): ModSection[] {
   return sections.slice(0, LIMITS.sections)
 }
 
+/** A card for a socketed gem or rune. Never throws: a card that can't be built is just absent. */
+function buildCard(raw: NinjaItemData, kind: 'gem' | 'rune', warnings: string[]): Card | undefined {
+  try {
+    if (!isCdnUrl(raw.icon)) return undefined
+    const name = clean(raw.typeLine)
+    if (!name) return undefined
+    const lines = (texts: string[]): ModLine[] => modLines(texts).slice(0, LIMITS.linesPerSection)
+    const sections: ModSection[] = []
+    const push = (sectionKind: ModSection['kind'], texts: string[]): void => {
+      const l = lines(texts)
+      if (l.length > 0) sections.push({ kind: sectionKind, lines: l })
+    }
+    let properties = raw.properties.map(formatProperty).filter(nonNull)
+    if (kind === 'gem') {
+      push('description', raw.secDescrText ? [raw.secDescrText] : [])
+      // Skill gems list their stats per skill; supports put theirs on the first page.
+      push('explicit', raw.explicitMods.length > 0 ? raw.explicitMods : (raw.gemTabs?.[0]?.pages[0]?.stats ?? []))
+    } else {
+      // Stack Size is the rune's inventory count, and the bare "[Rune|Rune]" line is only a tag.
+      properties = properties.filter((p) => p.name !== 'Stack Size' && !(p.value === null && /^rune$/i.test(p.name)))
+      push('explicit', raw.explicitMods)
+      push('description', raw.descrText ? [raw.descrText] : [])
+      // The game wraps flavour text across lines; join them so the flavour section reads as one passage.
+      push('flavour', raw.flavourText?.length ? [raw.flavourText.map((l) => l.trim()).join(' ')] : [])
+    }
+    return {
+      name,
+      baseType: clean(raw.baseType || raw.typeLine),
+      rarity: kind === 'gem' ? 'gem' : 'currency',
+      icon: raw.icon,
+      properties: properties.slice(0, LIMITS.properties),
+      requirements: raw.requirements
+        .map(formatProperty)
+        .filter(nonNull)
+        .map((p) => ({ name: p.name, value: p.value ?? '' }))
+        .slice(0, LIMITS.requirements),
+      sections: sections.slice(0, LIMITS.sections),
+    }
+  } catch (err) {
+    warnings.push(`${raw.typeLine}: card dropped (${err instanceof Error ? err.message : String(err)})`)
+    return undefined
+  }
+}
+
 function parseChildren(raw: NinjaItemData): NinjaItemData[] {
   return raw.socketedItems.map((c) => NinjaItemDataSchema.safeParse(c)).flatMap((r) => (r.success ? [r.data] : []))
 }
 
-function buildSockets(raw: NinjaItemData): Socket[] {
+function buildSockets(raw: NinjaItemData, warnings: string[]): Socket[] {
   const children = parseChildren(raw)
   return raw.sockets.slice(0, LIMITS.sockets).map((s, i) => {
     const child = children.find((c) => c.socket === i)
     const kind: Socket['kind'] = s.type === 'rune' || s.type === 'gem' || s.type === 'jewel' ? s.type : 'other'
+    const card = child && kind === 'rune' ? buildCard(child, 'rune', warnings) : undefined
     return {
       kind,
       name: child ? clean(child.typeLine) || null : null,
       icon: child && isCdnUrl(child.icon) ? child.icon : null,
+      // The clipboard path (clipboard-item.ts) has no socketed-item data, so its runes carry no card.
+      ...(card ? { card } : {}),
     }
   })
 }
@@ -187,7 +235,7 @@ export function normalizeItem(
       .map((p) => ({ name: p.name, value: p.value ?? '' }))
       .slice(0, LIMITS.requirements),
     sections: buildSections(raw),
-    sockets: buildSockets(raw),
+    sockets: buildSockets(raw, warnings),
     price: null,
   }
   return { item, raw }
@@ -200,7 +248,7 @@ function propertyNumber(item: NinjaItemData, name: string, max: number): number 
   return Number.isFinite(n) && n >= 0 && n <= max ? n : null
 }
 
-function buildSkill(entry: NinjaCharacter['skills'][number]): SnapshotSkill | null {
+function buildSkill(entry: NinjaCharacter['skills'][number], warnings: string[]): SnapshotSkill | null {
   const gems = entry.allGems
     .map((g) => NinjaItemDataSchema.safeParse(g.itemData))
     .flatMap((r) => (r.success ? [r.data] : []))
@@ -208,15 +256,20 @@ function buildSkill(entry: NinjaCharacter['skills'][number]): SnapshotSkill | nu
   if (!main) return null
   const supports = parseChildren(main)
     .filter((s) => s.support)
-    .map((s) => ({ name: clean(s.typeLine), icon: isCdnUrl(s.icon) ? s.icon : null }))
+    .map((s) => {
+      const card = buildCard(s, 'gem', warnings)
+      return { name: clean(s.typeLine), icon: isCdnUrl(s.icon) ? s.icon : null, ...(card ? { card } : {}) }
+    })
     .filter((s) => s.name)
     .slice(0, LIMITS.supportsPerSkill)
+  const gemCard = buildCard(main, 'gem', warnings)
   return {
     gem: {
       name: clean(main.typeLine),
       icon: isCdnUrl(main.icon) ? main.icon : null,
       level: propertyNumber(main, 'Level', 40),
       quality: propertyNumber(main, 'Quality', 40),
+      ...(gemCard ? { card: gemCard } : {}),
     },
     supports,
   }
@@ -285,7 +338,10 @@ export function normalizeCharacter(raw: NinjaCharacter, opts: NormalizeOptions):
     charms,
     jewels,
     other,
-    skills: raw.skills.map(buildSkill).filter(nonNull).slice(0, LIMITS.skills),
+    skills: raw.skills
+      .map((e) => buildSkill(e, warnings))
+      .filter(nonNull)
+      .slice(0, LIMITS.skills),
     keystones: raw.keystones
       .map((k) => ({
         name: clean(k.name),

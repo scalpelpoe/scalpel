@@ -7,7 +7,7 @@ const VIEWER_THEME = 'poe2'
 
 /** Scalpel's theme engine output as inline custom properties, so the theme styles the
  *  viewer's subtree only (Storybook shares one document with Scalpel's own stories). */
-const themeVars = resolveCssVars(PRESETS_BY_ID[VIEWER_THEME].palette) as CSSProperties
+export const themeVars = resolveCssVars(PRESETS_BY_ID[VIEWER_THEME].palette) as CSSProperties
 
 /** Root of every viewer surface: applies the viewer theme and base type. */
 export function ViewerRoot({

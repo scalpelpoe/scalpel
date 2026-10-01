@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { validateSnapshot } from '@scalpel/stream-contract'
+import { LIMITS, validateSnapshot } from '@scalpel/stream-contract'
 import { describe, expect, it } from 'vitest'
 import { normalizeCharacter, normalizeItem } from './normalize'
 import { NinjaCharacterSchema } from './sources/ninja-types'
@@ -160,5 +160,46 @@ describe('normalizeItem', () => {
     )
     expect(magic?.item.name).toBe('Dense Ultimate Life Flask')
     expect(normal?.item.name).toBeNull()
+  })
+})
+
+describe('gem and rune cards', () => {
+  it('builds the main gem card from its item data', () => {
+    const { snapshot } = normalize()
+    const gem = snapshot.skills.find((s) => s.gem.name === 'Boneshatter')?.gem.card
+    expect(gem?.name).toBe('Boneshatter')
+    expect(gem?.rarity).toBe('gem')
+    expect(gem?.properties[0]).toEqual({ name: 'Attack, AoE, Melee, Strike', value: null })
+    expect(gem?.properties).toContainEqual({ name: 'Level', value: '2' })
+    expect(gem?.properties).toContainEqual({ name: 'Quality', value: '+20%' })
+    expect(gem?.requirements).toContainEqual({ name: 'Level', value: '3' })
+    expect(gem?.sections[0].kind).toBe('description')
+    expect(gem?.sections[0].lines[0].text).toMatch(/^Attack enemies with a melee Strike\./)
+  })
+
+  it('builds support cards, with gem stats when the support lists them', () => {
+    const { snapshot } = normalize()
+    const support = snapshot.skills.flatMap((s) => s.supports).find((s) => s.name === 'Rapid Attacks III')
+    expect(support?.card?.rarity).toBe('gem')
+    expect(support?.card?.sections[0].lines[0].text).toMatch(/^Supports Attacks/)
+    expect(support?.card?.sections[1].lines.map((l) => l.text)).toContain('Supported Skills deal 50% less Damage')
+  })
+
+  it('attaches rune cards to their sockets', () => {
+    const { snapshot } = normalize()
+    const card = snapshot.equipment.Gloves?.sockets.find((s) => s.name === "Kolr's Hunt")?.card
+    expect(card?.rarity).toBe('currency')
+    expect(card?.properties).toEqual([{ name: 'Limited to', value: '1' }])
+    expect(card?.sections[0].lines.map((l) => l.text)).toEqual(['Gloves: Can roll Marksman modifiers'])
+    const texts = card?.sections.flatMap((s) => s.lines.map((l) => l.text)) ?? []
+    expect(texts.some((t) => t.startsWith('Place into an empty Augment Socket'))).toBe(true)
+    expect(texts.some((t) => t.startsWith('To win over the Wildking'))).toBe(true)
+    expect(JSON.stringify(card)).not.toContain('\r')
+  })
+
+  it('validates the whole snapshot and stays under the size cap', () => {
+    const { snapshot } = normalize()
+    expect(validateSnapshot(snapshot).ok).toBe(true)
+    expect(Buffer.byteLength(JSON.stringify(snapshot))).toBeLessThan(LIMITS.snapshotBytes)
   })
 })

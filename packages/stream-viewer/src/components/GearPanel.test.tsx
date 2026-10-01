@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import type { Card, StreamSnapshot } from '@scalpel/stream-contract'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 import { sampleHead, sampleSnapshot } from '../test-helpers'
@@ -75,7 +76,7 @@ describe('GearPanel', () => {
     expect(screen.getByLabelText('Off hand: empty')).toHaveTextContent('Off hand')
     const helm = screen.getByLabelText('Helmet: Grim Veil')
     expect(helm.querySelectorAll('.ssv-rune')).toHaveLength(1)
-    expect(helm.querySelector('.ssv-rune')).toHaveAttribute('title', 'Greater Rune of Leadership')
+    expect(helm.querySelector('.ssv-rune')).not.toHaveAttribute('title')
     // Socketless items get no overlay.
     expect(screen.getByLabelText('Body armour: Morior Invictus').querySelector('.ssv-runes')).toBeNull()
     expect(container.querySelectorAll('.ssv-runes').length).toBeGreaterThan(0)
@@ -236,6 +237,159 @@ describe('GearPanel price check', () => {
     renderPanel(withPriceCheck())
     fireEvent.mouseEnter(screen.getByLabelText('Helmet: Grim Veil'))
     expect(screen.queryByRole('button', { name: 'Price check' })).toBeNull()
+  })
+
+  describe('gem, support and rune cards', () => {
+    const card = (name: string, line: string, rarity: 'gem' | 'currency' = 'gem'): Card => ({
+      name,
+      baseType: name,
+      rarity,
+      icon: 'https://x/y.webp',
+      properties: [],
+      requirements: [],
+      sections: [{ kind: 'description', lines: [{ text: line }] }],
+    })
+    const withCards = (): StreamSnapshot => {
+      const s = sampleSnapshot()
+      s.skills[0].gem.card = card('Lightning Arrow', 'Fires a bolt of lightning.')
+      s.skills[0].supports[0].card = card('Pierce', 'Supports projectile skills.')
+      s.equipment.Helm!.sockets[0].card = card('Greater Rune of Leadership', 'Rune text here.', 'currency')
+      return s
+    }
+    const toSkills = (): void => {
+      fireEvent.click(screen.getByRole('tab', { name: 'Skills' }))
+    }
+
+    it('shows a gem card on hover', () => {
+      renderPanel(withCards())
+      toSkills()
+      const row = screen.getByText('Lightning Arrow').closest('[data-card]') as HTMLElement
+      fireEvent.mouseEnter(row)
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Fires a bolt of lightning.')
+      expect(screen.queryByRole('button', { name: 'Price check' })).toBeNull()
+      fireEvent.mouseLeave(row)
+      expect(screen.queryByRole('tooltip')).toBeNull()
+    })
+
+    it('shows a support card on hover', () => {
+      renderPanel(withCards())
+      toSkills()
+      fireEvent.mouseEnter(screen.getByText('Pierce').closest('[data-card]') as HTMLElement)
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Supports projectile skills.')
+    })
+
+    it('pins on click and unpins on a second click', () => {
+      renderPanel(withCards())
+      toSkills()
+      const chip = screen.getByText('Pierce').closest('[data-card]') as HTMLElement
+      fireEvent.click(chip)
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Pierce')
+      fireEvent.click(chip)
+      expect(screen.queryByRole('tooltip')).toBeNull()
+    })
+
+    it('leaves entries without a card inert', () => {
+      renderPanel(withCards())
+      toSkills()
+      const chip = screen.getByText('Magnified Area')
+      expect(chip).not.toHaveAttribute('data-card')
+      // Already inside the row (mouseEnter alone would also enter it): a chip with no card changes nothing.
+      fireEvent.mouseOver(chip, { relatedTarget: chip.parentElement })
+      fireEvent.click(chip)
+      expect(screen.queryByRole('tooltip')).toBeNull()
+    })
+
+    it('clears a pinned gem card on tab switch', () => {
+      renderPanel(withCards())
+      toSkills()
+      fireEvent.click(screen.getByText('Pierce').closest('[data-card]') as HTMLElement)
+      fireEvent.click(screen.getByRole('tab', { name: 'Gear' }))
+      expect(screen.queryByRole('tooltip')).toBeNull()
+    })
+
+    it('shows the rune card while a rune is hovered, then the item card again', () => {
+      const { container } = renderPanel(withCards())
+      fireEvent.click(screen.getByRole('button', { name: 'I' }))
+      const helm = screen.getByLabelText('Helmet: Grim Veil')
+      fireEvent.mouseEnter(helm)
+      const rune = helm.querySelector('.ssv-rune') as HTMLElement
+      fireEvent.mouseEnter(rune)
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Rune text here.')
+      expect(container.querySelector('.ssv-tooltip')).toHaveAttribute('data-frame', 'white')
+      // Pointer moves from the rune back onto its slot (mouseLeave alone would also leave the slot).
+      fireEvent.mouseOut(rune, { relatedTarget: helm })
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Grim Veil')
+    })
+
+    it('shows a hovered gem over a pinned card and returns to the pin on leave', () => {
+      renderPanel(withCards())
+      toSkills()
+      fireEvent.click(screen.getByText('Pierce').closest('[data-card]') as HTMLElement)
+      const row = screen.getByText('Lightning Arrow').closest('[data-card]') as HTMLElement
+      fireEvent.mouseEnter(row)
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Fires a bolt of lightning.')
+      fireEvent.mouseLeave(row)
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Supports projectile skills.')
+    })
+
+    it('clears a hovered or pinned rune card on tab switch', () => {
+      renderPanel(withCards())
+      const helm = screen.getByLabelText('Helmet: Grim Veil')
+      fireEvent.mouseEnter(helm)
+      const rune = helm.querySelector('.ssv-rune') as HTMLElement
+      fireEvent.mouseEnter(rune)
+      fireEvent.click(rune)
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Rune text here.')
+      fireEvent.click(screen.getByRole('tab', { name: 'Skills' }))
+      expect(screen.queryByRole('tooltip')).toBeNull()
+      fireEvent.click(screen.getByRole('tab', { name: 'Gear' }))
+      expect(screen.queryByRole('tooltip')).toBeNull()
+    })
+
+    it('takes pointer events for a pinned item with a rune card, so the sockets line can be hovered', () => {
+      const { container } = renderPanel(withCards(), sampleHead(), 'side')
+      const helm = screen.getByLabelText('Helmet: Grim Veil')
+      fireEvent.mouseEnter(helm)
+      const wrap = container.querySelector('.ssv-overlay-tooltip') as HTMLElement
+      expect(wrap).not.toHaveClass('!pointer-events-auto')
+      fireEvent.click(helm)
+      expect(wrap).toHaveClass('!pointer-events-auto')
+    })
+
+    it('makes carded gem rows and support chips keyboard operable', () => {
+      renderPanel(withCards())
+      toSkills()
+      const row = screen.getByText('Lightning Arrow').closest('[data-card]') as HTMLElement
+      expect(row).toHaveAttribute('role', 'button')
+      expect(row).toHaveAttribute('tabindex', '0')
+      fireEvent.focus(row)
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Fires a bolt of lightning.')
+      fireEvent.blur(row)
+      expect(screen.queryByRole('tooltip')).toBeNull()
+      fireEvent.keyDown(row, { key: 'Enter' })
+      fireEvent.blur(row)
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Fires a bolt of lightning.')
+      fireEvent.keyDown(row, { key: ' ' })
+      expect(screen.queryByRole('tooltip')).toBeNull()
+      const chip = screen.getByText('Pierce').closest('[data-card]') as HTMLElement
+      expect(chip).toHaveAttribute('role', 'button')
+      fireEvent.keyDown(chip, { key: 'Enter' })
+      expect(screen.getByRole('tooltip')).toHaveTextContent('Supports projectile skills.')
+      // A card-less chip is not a tab stop.
+      expect(screen.getByText('Magnified Area')).not.toHaveAttribute('tabindex')
+    })
+
+    it('keeps a gem card click-through on the overlay, even pinned', () => {
+      const { container } = renderPanel(withCards(), sampleHead(), 'side')
+      toSkills()
+      const chip = screen.getByText('Pierce').closest('[data-card]') as HTMLElement
+      fireEvent.mouseEnter(chip)
+      const wrap = container.querySelector('.ssv-overlay-tooltip') as HTMLElement
+      expect(wrap).toBeInTheDocument()
+      expect(wrap).not.toHaveClass('!pointer-events-auto')
+      fireEvent.click(chip)
+      expect(wrap).not.toHaveClass('!pointer-events-auto')
+    })
   })
 
   describe('side placement pointer events', () => {

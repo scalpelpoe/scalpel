@@ -1,6 +1,9 @@
-import type { ModLine, ModSection, SnapshotItem } from '@scalpel/stream-contract'
+import type { ModLine, ModSection, Socket, SnapshotItem } from '@scalpel/stream-contract'
 import { Button } from '@renderer/components/primitives/Button'
-import { type ReactNode, type Ref, useState } from 'react'
+import { type ReactNode, type Ref, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { cardToItem } from './card-item'
+import { themeVars } from './ViewerRoot'
 
 const SECTION_COLOR: Record<ModSection['kind'], string> = {
   enchant: 'var(--ssv-mod-enchant)',
@@ -10,6 +13,8 @@ const SECTION_COLOR: Record<ModSection['kind'], string> = {
   explicit: 'var(--ssv-mod-explicit)',
   desecrated: 'var(--ssv-mod-desecrated)',
   bonded: 'var(--ssv-mod-enchant)',
+  description: 'var(--ssv-prop)',
+  flavour: 'var(--ssv-unique)',
 }
 
 const FLAG_LABELS: Array<[keyof SnapshotItem['flags'], string]> = [
@@ -51,7 +56,7 @@ function ModLineView({ kind, line }: { kind: ModSection['kind']; line: ModLine }
   return (
     <div
       className="ssv-mod"
-      style={{ color: lineColor(kind, line) }}
+      style={{ color: lineColor(kind, line), ...(kind === 'flavour' ? { fontStyle: 'italic' } : {}) }}
       onMouseEnter={() => detail && setShowTier(true)}
       onMouseLeave={() => setShowTier(false)}
       onClick={() => detail && setShowTier((v) => !v)}
@@ -94,6 +99,62 @@ function Requirements({ item }: { item: SnapshotItem }): JSX.Element {
 function priceText(price: NonNullable<SnapshotItem['price']>): string {
   const unit = price.currency === 'divine' ? 'div' : price.currency === 'exalted' ? 'ex' : 'c'
   return `≈ ${price.amount} ${unit}`
+}
+
+const FLOAT_GAP = 8
+/** The floating card stays this far inside the viewport. */
+const EDGE = 8
+
+/** A socketed rune; with a card, hovering shows it beside the socket. The card goes to the body so
+ *  neither the item card's box nor the overlay's clipping can cut it, and is placed from the socket's
+ *  rect (no zoom or transform on a positioned element). */
+function SocketChip({ socket }: { socket: Socket }): JSX.Element {
+  const [hover, setHover] = useState(false)
+  const chip = useRef<HTMLSpanElement>(null)
+  const floating = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const el = floating.current
+    const anchor = chip.current
+    if (!hover || !el || !anchor) return
+    const place = (): void => {
+      const a = anchor.getBoundingClientRect()
+      const w = el.offsetWidth
+      const h = el.offsetHeight
+      const vw = window.innerWidth
+      const vh = window.innerHeight
+      const right = a.right + FLOAT_GAP
+      const left = right + w <= vw - EDGE ? right : a.left - FLOAT_GAP - w
+      el.style.left = `${Math.max(EDGE, Math.min(left, vw - EDGE - w))}px`
+      el.style.top = `${Math.max(EDGE, Math.min(a.top, vh - EDGE - h))}px`
+      el.style.visibility = 'visible'
+    }
+    place()
+    window.addEventListener('resize', place)
+    window.addEventListener('scroll', place, true)
+    return () => {
+      window.removeEventListener('resize', place)
+      window.removeEventListener('scroll', place, true)
+    }
+  }, [hover])
+  return (
+    <span
+      ref={chip}
+      className="ssv-socket"
+      onMouseEnter={() => socket.card && setHover(true)}
+      onMouseLeave={() => setHover(false)}
+    >
+      {socket.icon && <img src={socket.icon} alt="" />}
+      {socket.name}
+      {hover &&
+        socket.card &&
+        createPortal(
+          <div ref={floating} className="ssv-float-card" style={themeVars}>
+            <ItemTooltip item={cardToItem(socket.card)} />
+          </div>,
+          document.body,
+        )}
+    </span>
+  )
 }
 
 /** One item as the game draws it: rarity header art, properties, separators, mod sections.
@@ -162,10 +223,7 @@ export function ItemTooltip({
             {item.sockets
               .filter((s) => s.name)
               .map((s, i) => (
-                <span key={i} className="ssv-socket">
-                  {s.icon && <img src={s.icon} alt="" />}
-                  {s.name}
-                </span>
+                <SocketChip key={i} socket={s} />
               ))}
           </div>
         )}

@@ -56,6 +56,15 @@ export const NinjaItemDataSchema = z.object({
   sockets: z.array(z.object({ group: z.number().optional(), type: z.string().optional() })).catch([]),
   /** Runes, soul cores and support gems; parsed with this same schema on demand. */
   socketedItems: z.array(z.unknown()).catch([]),
+  /** Gem and rune hover text. flavourText is one entry per wrapped line. */
+  descrText: z.string().optional().catch(undefined),
+  secDescrText: z.string().optional().catch(undefined),
+  flavourText: z.array(z.string()).optional().catch(undefined),
+  /** Gems: per-skill stat lines; supports list their effects in the first page. */
+  gemTabs: z
+    .array(z.object({ pages: z.array(z.object({ stats: strings })).catch([]) }))
+    .optional()
+    .catch(undefined),
   /** poe.ninja's own addition: mod ids with their rolled stat values, per category. */
   mods: z.record(z.string(), z.array(ModEntrySchema)).optional(),
 })

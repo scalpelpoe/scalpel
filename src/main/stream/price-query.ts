@@ -19,7 +19,7 @@ import { diffOps, removalOps, SENTINEL_MAX, SENTINEL_MIN, sentinelPath } from '.
 const MAX_ROWS = 40
 /**
  * A weapon carries six DPS/damage rows plus quality, sockets, runes and its mods, so a
- * real rare weapon lands at 8.5-9.6 KB with nothing redundant in it. fitPriceChecks
+ * real rare weapon lands at 8.5-9.6 KB with nothing redundant in it. fitSnapshot
  * still keeps the whole snapshot under its budget by dropping the largest checks.
  */
 export const MAX_PRICE_CHECK_BYTES = 12288

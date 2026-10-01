@@ -234,3 +234,44 @@ describe('paths', () => {
     expect(paths.headByProfile('p1')).toBe('/v1/heads/profile/p1')
   })
 })
+
+describe('gem and rune cards', () => {
+  const card = {
+    name: "Kolr's Hunt",
+    baseType: "Kolr's Hunt",
+    rarity: 'currency',
+    icon: 'https://web.poecdn.com/x.png',
+    properties: [{ name: 'Limited to', value: '1' }],
+    requirements: [],
+    sections: [{ kind: 'explicit', lines: [{ text: 'Gloves: Can roll Marksman modifiers' }] }],
+  }
+
+  it('still parses snapshots without any card', () => {
+    expect(validateSnapshot(fresh()).ok).toBe(true)
+  })
+
+  it('round-trips a skill with gem and support cards', () => {
+    const s = fresh()
+    const gem = { ...card, name: 'Boneshatter', rarity: 'gem' }
+    s.skills = [
+      {
+        gem: { name: 'Boneshatter', icon: null, level: 2, quality: 20, card: gem },
+        supports: [{ name: 'Rapid Attacks III', icon: null, card: { ...gem, name: 'Rapid Attacks III' } }],
+      },
+    ]
+    const result = validateSnapshot(s)
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.snapshot.skills[0].gem.card?.name).toBe('Boneshatter')
+      expect(result.snapshot.skills[0].supports[0].card?.name).toBe('Rapid Attacks III')
+    }
+  })
+
+  it('round-trips a socket card and rejects a card with extra keys', () => {
+    const s = fresh()
+    s.equipment.Helm.sockets = [{ kind: 'rune', name: card.name, icon: card.icon, card }]
+    expect(validateSnapshot(s).ok).toBe(true)
+    s.equipment.Helm.sockets[0].card = { ...card, price: null }
+    expect(validateSnapshot(s).ok).toBe(false)
+  })
+})

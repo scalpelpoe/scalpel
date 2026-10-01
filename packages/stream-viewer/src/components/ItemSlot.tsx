@@ -1,5 +1,6 @@
 import type { SnapshotItem } from '@scalpel/stream-contract'
 import type { CSSProperties } from 'react'
+import { cardToItem } from './card-item'
 
 interface Props {
   item: SnapshotItem | undefined
@@ -20,7 +21,16 @@ function socketPosition(index: number, count: number): { x: number; y: number } 
 }
 
 /** The item's runes over its art, shown while the slot is hovered or focused. */
-function Runes({ sockets }: { sockets: SnapshotItem['sockets'] }): JSX.Element {
+function Runes({
+  sockets,
+  onHover,
+  onPin,
+}: {
+  sockets: SnapshotItem['sockets']
+  /** Called with the rune's card while hovered; null when it leaves (the slot's own hover resumes). */
+  onHover?: (card: SnapshotItem | null) => void
+  onPin?: (card: SnapshotItem) => void
+}): JSX.Element {
   const rows = Math.ceil(sockets.length / 2)
   return (
     <span
@@ -30,11 +40,22 @@ function Runes({ sockets }: { sockets: SnapshotItem['sockets'] }): JSX.Element {
     >
       {sockets.map((socket, i) => {
         const point = socketPosition(i, sockets.length)
+        const card = socket.card ? cardToItem(socket.card) : null
         return (
           <span
             key={i}
             className="ssv-rune"
-            title={socket.name ?? 'Empty socket'}
+            data-card={card ? '' : undefined}
+            onMouseEnter={card ? () => onHover?.(card) : undefined}
+            onMouseLeave={card ? () => onHover?.(null) : undefined}
+            onClick={
+              card
+                ? (e) => {
+                    e.stopPropagation()
+                    onPin?.(card)
+                  }
+                : undefined
+            }
             style={{
               gridColumn: sockets.length === 1 ? '1 / -1' : `${(point.x + 12) / 24}`,
               gridRow: `${(point.y + 12) / 24}`,
@@ -65,7 +86,7 @@ export function ItemSlot({ item, label, style, active, patched, onHover, onPin }
       onClick={() => item && onPin?.(item)}
     >
       {item ? <img src={item.icon} alt="" draggable={false} /> : <span className="ssv-slot-label">{label}</span>}
-      {item && item.sockets.length > 0 && <Runes sockets={item.sockets} />}
+      {item && item.sockets.length > 0 && <Runes sockets={item.sockets} onHover={(card) => onHover?.(card ?? item)} onPin={onPin} />}
       {patched && <span className="ssv-patched" title="Just updated by the streamer" />}
     </button>
   )

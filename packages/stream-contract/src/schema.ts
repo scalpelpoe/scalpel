@@ -80,7 +80,7 @@ export const ModLineSchema = z.strictObject({
 })
 
 export const ModSectionSchema = z.strictObject({
-  kind: z.enum(['enchant', 'rune', 'implicit', 'explicit', 'desecrated', 'bonded', 'granted-skill']),
+  kind: z.enum(['enchant', 'rune', 'implicit', 'explicit', 'desecrated', 'bonded', 'granted-skill', 'description', 'flavour']),
   lines: z.array(ModLineSchema).max(LIMITS.linesPerSection),
 })
 
@@ -94,10 +94,24 @@ export const ItemFlagsSchema = z.strictObject({
   unidentified: z.literal(true).optional(),
 })
 
+/** A gem or rune hover card: the part of an item the game draws for it. The viewer renders it with the
+ *  item tooltip and fills the omitted fields (size, ilvl, flags, sockets, price) with defaults. */
+export const CardSchema = z.strictObject({
+  name: text.nullable(),
+  baseType: text,
+  rarity: RaritySchema,
+  icon: iconUrl,
+  properties: z.array(z.strictObject({ name: text, value: text.nullable() })).max(LIMITS.properties),
+  requirements: z.array(z.strictObject({ name: text, value: text })).max(LIMITS.requirements),
+  sections: z.array(ModSectionSchema).max(LIMITS.sections),
+})
+
 export const SocketSchema = z.strictObject({
   kind: z.enum(['rune', 'gem', 'jewel', 'other']),
   name: text.nullable(),
   icon: iconUrl.nullable(),
+  /** Hover card for the socketed rune; absent when the source has no data for it. */
+  card: CardSchema.optional(),
 })
 
 export const PriceSchema = z.strictObject({
@@ -218,8 +232,11 @@ export const SnapshotSkillSchema = z.strictObject({
     icon: iconUrl.nullable(),
     level: z.number().int().min(0).max(40).nullable(),
     quality: z.number().int().min(0).max(40).nullable(),
+    card: CardSchema.optional(),
   }),
-  supports: z.array(z.strictObject({ name: text, icon: iconUrl.nullable() })).max(LIMITS.supportsPerSkill),
+  supports: z
+    .array(z.strictObject({ name: text, icon: iconUrl.nullable(), card: CardSchema.optional() }))
+    .max(LIMITS.supportsPerSkill),
 })
 
 export const KeystoneSchema = z.strictObject({
@@ -274,6 +291,7 @@ export type Tier = z.infer<typeof TierSchema>
 export type ModLine = z.infer<typeof ModLineSchema>
 export type ModSection = z.infer<typeof ModSectionSchema>
 export type ItemFlags = z.infer<typeof ItemFlagsSchema>
+export type Card = z.infer<typeof CardSchema>
 export type Socket = z.infer<typeof SocketSchema>
 export type QueryOp = z.infer<typeof QueryOpSchema>
 export type JsonPath = z.infer<typeof JsonPathSchema>

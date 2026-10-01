@@ -211,6 +211,28 @@ body.ssv-transparent {
   visibility: visible;
 }
 
+/* A rune with a card takes the pointer (over its slot) so it can show that card. */
+.ssv-rune[data-card] {
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+/* A rune card floating beside a socket in an item card; placed from the socket's rect
+   (ItemTooltip SocketChip), in the body so nothing clips it. Never zoomed. */
+.ssv-float-card {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 50;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.ssv-float-card .ssv-tooltip {
+  max-width: min(460px, calc(100vw - 16px));
+  min-width: min(280px, calc(100vw - 16px));
+}
+
 .ssv-rune {
   display: flex;
   align-items: center;

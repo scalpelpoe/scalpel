@@ -1,7 +1,8 @@
-import type { Keystone, SnapshotItem, StreamHead, StreamSnapshot } from '@scalpel/stream-contract'
+import type { Card, Keystone, SnapshotItem, StreamHead, StreamSnapshot } from '@scalpel/stream-contract'
 import { ErrorBanner } from '@renderer/components/ErrorBanner'
 import { Button } from '@renderer/components/primitives/Button'
-import { useEffect, useState } from 'react'
+import { type HTMLAttributes, useEffect, useState } from 'react'
+import { cardToItem } from './card-item'
 import { CardOrPriceCheck, type CheckableItem } from './CardOrPriceCheck'
 import { CharacterHeader, UpdatedAge } from './CharacterHeader'
 import { ItemSlot } from './ItemSlot'
@@ -21,12 +22,59 @@ interface Props {
   placement: TooltipPlacement
 }
 
-function SkillsList({ snapshot }: { snapshot: StreamSnapshot }): JSX.Element {
+interface CardHandlers {
+  onHover: (item: SnapshotItem | null) => void
+  onPin: (item: SnapshotItem) => void
+}
+
+/** Hover/tap props for an element that has a card; empty (inert) when it has none. A chip inside a
+ *  carded row passes the row's card as `parent`, which the hover returns to when the pointer leaves the chip. */
+function cardProps(
+  card: Card | undefined,
+  { onHover, onPin }: CardHandlers,
+  parent?: Card,
+): HTMLAttributes<HTMLElement> & { 'data-card'?: string } {
+  // A card-less chip inside a carded row must not pin the row's card.
+  if (!card) return parent ? { onClick: (e) => e.stopPropagation() } : {}
+  const item = cardToItem(card)
+  const back = parent ? cardToItem(parent) : null
+  return {
+    'data-card': '',
+    role: 'button',
+    tabIndex: 0,
+    onMouseEnter: () => onHover(item),
+    onMouseLeave: () => onHover(back),
+    onFocus: (e) => {
+      e.stopPropagation()
+      onHover(item)
+    },
+    onBlur: (e) => {
+      e.stopPropagation()
+      onHover(back)
+    },
+    onClick: (e) => {
+      e.stopPropagation()
+      onPin(item)
+    },
+    onKeyDown: (e) => {
+      if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return
+      e.preventDefault()
+      e.stopPropagation()
+      onPin(item)
+    },
+  }
+}
+
+function SkillsList({ snapshot, ...handlers }: { snapshot: StreamSnapshot } & CardHandlers): JSX.Element {
   if (snapshot.skills.length === 0) return <div className="ssv-message">No skills listed.</div>
   return (
     <div className="flex flex-col gap-1.5">
       {snapshot.skills.map((skill, i) => (
-        <div key={i} className="flex gap-2 p-2 rounded bg-black/30">
+        <div
+          key={i}
+          className={`flex gap-2 p-2 rounded bg-black/30${skill.gem.card ? ' cursor-pointer hover:bg-black/50' : ''}`}
+          {...cardProps(skill.gem.card, handlers)}
+        >
           {skill.gem.icon ? <img className="w-7 h-7 shrink-0 object-contain" src={skill.gem.icon} alt="" /> : null}
           <div className="min-w-0">
             <div className="font-bold ssv-r-gem">{skill.gem.name}</div>
@@ -38,7 +86,11 @@ function SkillsList({ snapshot }: { snapshot: StreamSnapshot }): JSX.Element {
             {skill.supports.length > 0 && (
               <div className="flex flex-wrap gap-1 mt-1">
                 {skill.supports.map((s, j) => (
-                  <span key={j} className="flex items-center gap-1 px-1.5 rounded bg-black/30 text-[10.5px]">
+                  <span
+                    key={j}
+                    className={`flex items-center gap-1 px-1.5 rounded bg-black/30 text-[10.5px]${s.card ? ' cursor-pointer hover:bg-black/50' : ''}`}
+                    {...cardProps(s.card, handlers, skill.gem.card)}
+                  >
                     {s.icon && <img className="w-3.5 h-3.5" src={s.icon} alt="" />}
                     {s.name}
                   </span>
@@ -135,7 +187,7 @@ export function GearPanel({ snapshot, head, now, placement }: Props): JSX.Elemen
     setChecking(null)
     setPinned((p) => (p === item ? null : item))
   }
-  const cardTab = tab === 'gear' || tab === 'jewels'
+  const cardTab = tab === 'gear' || tab === 'skills' || tab === 'jewels'
   // A hover never gets its mouseleave once the tab's slots unmount, so every switch clears the card.
   const selectTab = (next: Tab): void => {
     setTab(next)
@@ -143,6 +195,8 @@ export function GearPanel({ snapshot, head, now, placement }: Props): JSX.Elemen
     setPinned(null)
     setChecking(null)
   }
+  const interactive =
+    checking || (pinned === shown && shown && (shown.priceCheck || shown.sockets.some((s) => s.card)))
   const card = shown && (
     <CardOrPriceCheck item={shown} checking={checking} canCheck={pinned === shown} onCheck={setChecking} />
   )
@@ -157,9 +211,9 @@ export function GearPanel({ snapshot, head, now, placement }: Props): JSX.Elemen
     <div className="ssv-panel">
       {placement === 'side' && shown && cardTab && (
         // The overlay layer ignores the pointer so a hover card never eats video clicks; a pinned card
-        // with a price check (its button) and the open checker must take it back.
+        // with a price check (its button) or hoverable rune sockets, and the open checker, must take it back.
         <div
-          className={`ssv-overlay-tooltip${checking || (pinned === shown && shown.priceCheck) ? ' !pointer-events-auto !overflow-y-auto' : ''}`}
+          className={`ssv-overlay-tooltip${interactive ? ' !pointer-events-auto !overflow-y-auto' : ''}`}
         >
           {card}
         </div>
@@ -197,7 +251,7 @@ export function GearPanel({ snapshot, head, now, placement }: Props): JSX.Elemen
         </div>
         <div className="ssv-panel-body">
           {tab === 'gear' && <Paperdoll snapshot={snapshot} selected={shown} onHover={setHovered} onPin={pin} />}
-          {tab === 'skills' && <SkillsList snapshot={snapshot} />}
+          {tab === 'skills' && <SkillsList snapshot={snapshot} onHover={setHovered} onPin={pin} />}
           {tab === 'jewels' &&
             (snapshot.jewels.length === 0 ? (
               <div className="ssv-message">No jewels socketed.</div>

@@ -186,6 +186,7 @@ export function snapshotItemFromClipboard(item: PoeItem, deps: ClipboardItemDeps
     properties: properties(item),
     requirements: requirements(item),
     sections: sections(item),
+    // Clipboard runes carry no card: the clipboard has no socketed-item data.
     sockets: [],
     price: null,
   }

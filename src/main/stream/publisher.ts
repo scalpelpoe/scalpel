@@ -54,22 +54,45 @@ function allItems(s: StreamSnapshot): SnapshotItem[] {
   ]
 }
 
-/** Strip `priceCheck` from the items carrying the largest ones until the serialized
- *  snapshot fits `maxBytes` (UTF-8 bytes, as the contract measures). Mutates in place. */
-export function fitPriceChecks(snapshot: StreamSnapshot, maxBytes: number): void {
+/** Shed optional detail until the serialized snapshot fits `maxBytes` (UTF-8 bytes, as the
+ *  contract measures). Support cards go first, then gem cards, rune cards and finally price
+ *  checks, the most valuable; within each class the largest goes first, and shedding stops as
+ *  soon as it fits. Mutates in place, so callers pass their own clone. */
+export function fitSnapshot(snapshot: StreamSnapshot, maxBytes: number): void {
   const size = (v: unknown): number => Buffer.byteLength(JSON.stringify(v), 'utf8')
-  let total = size(snapshot)
-  if (total <= maxBytes) return
-  const carriers = allItems(snapshot)
-    .filter((i) => i.priceCheck)
-    .map((item) => ({ item, bytes: size(item.priceCheck) }))
-    .sort((a, b) => b.bytes - a.bytes)
-  for (const c of carriers) {
-    if (total <= maxBytes) break
-    delete c.item.priceCheck
-    // Removing `"priceCheck":` plus a comma accounts for 14 more bytes.
-    total -= c.bytes + 14
+  let estimate = size(snapshot)
+  if (estimate <= maxBytes) return
+  const items = allItems(snapshot)
+  const carriers = (holders: Array<{ card?: unknown; priceCheck?: unknown }>, key: 'card' | 'priceCheck') =>
+    holders
+      .filter((h) => h[key])
+      .map((h) => ({ bytes: size(h[key]) + key.length + 4, drop: () => void delete h[key] }))
+      .sort((a, b) => b.bytes - a.bytes)
+  const classes = [
+    carriers(
+      snapshot.skills.flatMap((s) => s.supports),
+      'card',
+    ),
+    carriers(
+      snapshot.skills.map((s) => s.gem),
+      'card',
+    ),
+    carriers(
+      items.flatMap((i) => i.sockets),
+      'card',
+    ),
+    carriers(items, 'priceCheck'),
+  ]
+  // `bytes` includes the `,"key":` overhead, so the running estimate needs no re-stringify per drop.
+  // Shed on the estimate, then confirm exactly; if the estimate was optimistic, keep shedding exactly.
+  const queue = classes.flat()
+  let next = 0
+  while (next < queue.length && estimate > maxBytes) {
+    const c = queue[next++]
+    c.drop()
+    estimate -= c.bytes
   }
+  for (; next < queue.length && size(snapshot) > maxBytes; next++) queue[next].drop()
 }
 
 export interface Publisher {
@@ -171,7 +194,7 @@ export function createPublisher(deps: PublisherDeps): Publisher {
     // Links come from the prefs current at push time, so a hotkey patch never republishes stale ones.
     // Clone so trimming never reaches the base snapshot or patch items the publisher retains.
     const snapshot: StreamSnapshot = structuredClone({ ...unlinked, links: snapshotLinks(deps.getPrefs()) })
-    fitPriceChecks(snapshot, LIMITS.snapshotBytes - SNAPSHOT_HEADROOM_BYTES)
+    fitSnapshot(snapshot, LIMITS.snapshotBytes - SNAPSHOT_HEADROOM_BYTES)
     const check = validateSnapshot(snapshot)
     if (!check.ok) throw new Error(`Snapshot failed validation: ${check.issues.slice(0, 3).join('; ')}`)
     const wait = lastPushAt + MIN_PUSH_GAP_MS - now()

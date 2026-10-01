@@ -1,11 +1,11 @@
 import sample from '@scalpel/stream-contract/fixtures/sample-snapshot.json'
-import type { SnapshotItem, StreamSnapshot } from '@scalpel/stream-contract'
+import { LIMITS, type SnapshotItem, type StreamSnapshot } from '@scalpel/stream-contract'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { StreamApiError, type StreamClient } from './client'
 import {
   CHECK_INTERVAL_MS,
   createPublisher,
-  fitPriceChecks,
+  fitSnapshot,
   MIN_PUSH_GAP_MS,
   PATCH_TTL_MS,
   type PublisherDeps,
@@ -409,7 +409,7 @@ describe('createPublisher', () => {
   })
 })
 
-describe('fitPriceChecks', () => {
+describe('fitSnapshot', () => {
   const bytes = (s: StreamSnapshot) => Buffer.byteLength(JSON.stringify(s), 'utf8')
   const withPc = (item: SnapshotItem, pad: number): SnapshotItem => ({
     ...item,
@@ -424,7 +424,7 @@ describe('fitPriceChecks', () => {
     snap.equipment.Ring = withPc(ring, 9000)
     snap.other = [withPc(helm, 6000)]
     const limit = bytes(snap) - 5000
-    fitPriceChecks(snap, limit)
+    fitSnapshot(snap, limit)
     expect(snap.equipment.Ring?.priceCheck).toBeUndefined()
     expect(snap.other[0].priceCheck).toBeDefined()
     expect(snap.equipment.Helm?.priceCheck).toBeDefined()
@@ -434,7 +434,7 @@ describe('fitPriceChecks', () => {
   it('leaves a snapshot that already fits untouched', () => {
     const snap = structuredClone(base)
     snap.equipment.Helm = withPc(snap.equipment.Helm as SnapshotItem, 100)
-    fitPriceChecks(snap, 10_000_000)
+    fitSnapshot(snap, 10_000_000)
     expect(snap.equipment.Helm.priceCheck).toBeDefined()
   })
 
@@ -444,7 +444,95 @@ describe('fitPriceChecks', () => {
     snap.equipment.Helm.priceCheck!.body = { pad: '€'.repeat(2000) }
     const limit = bytes(snap) - 1
     expect(JSON.stringify(snap).length).toBeLessThan(limit)
-    fitPriceChecks(snap, limit)
+    fitSnapshot(snap, limit)
     expect(snap.equipment.Helm.priceCheck).toBeUndefined()
+  })
+})
+
+describe('fitSnapshot card shedding', () => {
+  const bytes = (s: StreamSnapshot) => Buffer.byteLength(JSON.stringify(s), 'utf8')
+  const card = (pad: number) => ({
+    name: 'X',
+    baseType: 'X',
+    rarity: 'gem' as const,
+    icon: 'https://web.poecdn.com/x.png',
+    properties: [],
+    requirements: [],
+    sections: [
+      {
+        kind: 'description' as const,
+        lines: Array.from({ length: Math.ceil(pad / 1000) }, () => ({ text: 'y'.repeat(1000) })),
+      },
+    ],
+  })
+  const loaded = (): StreamSnapshot => {
+    const snap = structuredClone(base)
+    snap.skills = [
+      {
+        gem: { name: 'G', icon: null, level: 1, quality: 0, card: card(3000) },
+        supports: [
+          { name: 'S1', icon: null, card: card(2000) },
+          { name: 'S2', icon: null, card: card(4000) },
+        ],
+      },
+    ]
+    const helm = snap.equipment.Helm as SnapshotItem
+    helm.sockets = [{ kind: 'rune', name: 'R', icon: null, card: card(1500) }]
+    helm.priceCheck = { league: 'Standard', body: { pad: 'x'.repeat(5000) }, rows: [] }
+    return snap
+  }
+
+  it('sheds support cards before gem cards before price checks, largest first', () => {
+    const snap = loaded()
+    fitSnapshot(snap, bytes(snap) - 3000)
+    expect(snap.skills[0].supports[1].card).toBeUndefined()
+    expect(snap.skills[0].supports[0].card).toBeDefined()
+    expect(snap.skills[0].gem.card).toBeDefined()
+    const snap2 = loaded()
+    fitSnapshot(snap2, bytes(snap2) - 7500)
+    expect(snap2.skills[0].supports.every((s) => !s.card)).toBe(true)
+    expect(snap2.skills[0].gem.card).toBeUndefined()
+    expect((snap2.equipment.Helm as SnapshotItem).sockets[0].card).toBeDefined()
+    expect((snap2.equipment.Helm as SnapshotItem).priceCheck).toBeDefined()
+  })
+
+  it('sheds everything when needed and the snapshot still publishes', () => {
+    const snap = loaded()
+    const stripped = structuredClone(snap)
+    fitSnapshot(snap, bytes(base))
+    expect(snap.skills[0].supports.every((s) => !s.card)).toBe(true)
+    expect(snap.skills[0].gem.card).toBeUndefined()
+    expect((snap.equipment.Helm as SnapshotItem).sockets[0].card).toBeUndefined()
+    expect((snap.equipment.Helm as SnapshotItem).priceCheck).toBeUndefined()
+    expect(bytes(snap)).toBeLessThan(bytes(stripped))
+  })
+
+  it('publishes an oversized snapshot with cards shed and leaves the retained base untouched', async () => {
+    const huge = (): StreamSnapshot => {
+      const snap = loaded()
+      const fat = {
+        ...card(0),
+        sections: [
+          { kind: 'description' as const, lines: Array.from({ length: 40 }, () => ({ text: 'z'.repeat(2000) })) },
+        ],
+      }
+      snap.skills[0].supports = [1, 2, 3, 4].map((n) => ({ name: `S${n}`, icon: null, card: fat }))
+      return snap
+    }
+    const t = setup({
+      build: (raw) => ({
+        snapshot: { ...huge(), source: { kind: 'test', updatedUtc: new Date(raw.updatedUtc).toISOString() } },
+        warnings: [],
+      }),
+    })
+    t.publisher.start()
+    await settle()
+    expect(t.client.putSnapshot).toHaveBeenCalledTimes(1)
+    const sent = t.pushed()[0]
+    expect(bytes(sent)).toBeLessThanOrEqual(LIMITS.snapshotBytes)
+    expect(sent.skills[0].supports.some((s) => !s.card)).toBe(true)
+    expect(sent.skills[0].gem.card).toBeDefined()
+    expect(t.publisher.getStatus().phase).toBe('idle')
+    expect(t.publisher.currentSnapshot()?.skills[0].supports.every((s) => s.card)).toBe(true)
   })
 })
