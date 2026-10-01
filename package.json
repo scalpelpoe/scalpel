@@ -14,7 +14,7 @@
   },
   "main": "out/main/index.js",
   "scripts": {
-    "dev": "npm run build:i18n && npm run build:internal-assets && node scripts/sync-regex-data.js & electron-vite dev",
+    "dev": "paraglide-js compile --project ./project.inlang --outdir ./src/shared/paraglide && node scripts/build-internal-assets.mjs && electron-vite dev",
     "build": "npm run build:i18n && npm run build:internal-assets && electron-vite build",
     "build:internal-assets": "node scripts/build-internal-assets.mjs",
     "build:i18n": "paraglide-js compile --project ./project.inlang --outdir ./src/shared/paraglide",

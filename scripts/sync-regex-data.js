@@ -4,7 +4,7 @@
  *
  * Fetches generated data files from their GitHub repo and saves them locally.
  * Run manually: npm run sync-regex
- * Runs automatically in background on dev start.
+ * Not part of `npm run dev`: upstream moved to veiset/poe.re and restructured, so these paths 404.
  */
 
 const https = require('node:https')
