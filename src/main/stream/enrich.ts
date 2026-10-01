@@ -1,13 +1,15 @@
 import type { PriceCheck, SnapshotItem } from '@scalpel/stream-contract'
 import type { PriceInfo } from '@shared/contracts/prices'
-import type { TierDataset } from '@shared/data/tiers/types'
-import type { NormalizedCharacter } from './normalize'
+import type { StreamTierDataset, TierDataset } from '@shared/data/tiers/types'
+import { type NormalizedCharacter, placeDesecratedLines } from './normalize'
 import type { NinjaItemData } from './sources/ninja-types'
 import { applyTiers } from './tiers'
 
 export interface EnrichDeps {
   /** Scalpel's PoE2 tier dataset; null until it has loaded. */
   tierData: TierDataset | null
+  /** Stream-only coverage (flasks, charms, rune influences, abyss); main process only. */
+  streamTierData?: StreamTierDataset | null
   /** Unique price by name and base from Scalpel's poe.ninja economy snapshot. */
   uniquePrice: (name: string, baseType: string) => PriceInfo | undefined
   /** Precomputed viewer price check for a source item; null when it can't be price-checked. */
@@ -28,7 +30,8 @@ export function toSnapshotPrice(info: PriceInfo | undefined): SnapshotItem['pric
 /** Layer tier badges and unique prices onto a freshly normalized character, in place. */
 export function enrichCharacter(normalized: NormalizedCharacter, deps: EnrichDeps): void {
   for (const [item, raw] of normalized.sourceOf) {
-    if (deps.tierData) applyTiers(item, raw, deps.tierData)
+    if (deps.tierData) applyTiers(item, raw, deps.tierData, deps.streamTierData ?? null)
+    placeDesecratedLines(item)
     if (item.rarity === 'unique' && item.name) item.price = toSnapshotPrice(deps.uniquePrice(item.name, item.baseType))
     if (deps.priceCheck) {
       const pc = deps.priceCheck(raw)

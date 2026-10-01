@@ -6,13 +6,13 @@ import { cardToItem } from './card-item'
 import { themeVars } from './ViewerRoot'
 
 const SECTION_COLOR: Record<ModSection['kind'], string> = {
-  enchant: 'var(--ssv-mod-enchant)',
-  rune: 'var(--ssv-mod-enchant)',
+  enchant: 'var(--ssv-mod-rune)',
+  rune: 'var(--ssv-mod-rune)',
   implicit: 'var(--ssv-mod-implicit)',
-  'granted-skill': 'var(--ssv-mod-enchant)',
+  'granted-skill': 'var(--ssv-mod-rune)',
   explicit: 'var(--ssv-mod-explicit)',
   desecrated: 'var(--ssv-mod-desecrated)',
-  bonded: 'var(--ssv-mod-enchant)',
+  bonded: 'var(--ssv-mod-rune)',
   description: 'var(--ssv-prop)',
   flavour: 'var(--ssv-unique)',
 }
@@ -39,6 +39,7 @@ const FRAME: Record<SnapshotItem['rarity'], Frame> = {
 
 function lineColor(kind: ModSection['kind'], line: ModLine): string {
   if (line.fractured) return 'var(--ssv-fractured)'
+  if (line.desecrated) return 'var(--ssv-mod-desecrated)'
   if (line.crafted) return 'var(--ssv-mod-crafted)'
   return SECTION_COLOR[kind]
 }

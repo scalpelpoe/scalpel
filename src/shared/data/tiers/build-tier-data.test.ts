@@ -1,11 +1,15 @@
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, it, expect, test } from 'vitest'
 // CJS module; import its pure exports.
 import {
   buildCompact,
   buildDesecrated,
   buildModSources,
+  buildStreamTiers,
   familyToSource,
   normKey,
+  sha256,
 } from '../../../../scripts/build-tier-data.js'
 
 const mbb = {
@@ -92,6 +96,147 @@ describe('buildCompact', () => {
   it('excludes non-item-domain mods', () => {
     const out = buildCompact(mbb, mods, baseItems)
     expect(out.mods.some((m) => m.n === 'Junk')).toBe(false)
+    // Flask mods stay out of the price-check dataset; they ship in the stream file.
+    const withFlasks = buildCompact(flaskMbb, { ...mods, ...flaskMods }, { ...baseItems, ...flaskBaseItems })
+    expect(withFlasks.bases['Thawing Charm']).toBeUndefined()
+    expect(withFlasks.mods.some((m) => m.n === 'Drizzling')).toBe(false)
+  })
+})
+
+const flaskMbb = {
+  ...mbb,
+  Charms: {
+    'utility_flask,flask,default': {
+      bases: ['Metadata/Items/Flasks/Charm1'],
+      mods: {
+        prefix: { CharmGainManaOnUse: { CharmGainManaOnUse2: 1, CharmGainManaOnUse1: 1 } },
+        suffix: { FlaskIncreasedMaxCharges: { FlaskExtraCharges2__: 1 } },
+      },
+      conditional_mods: {},
+    },
+  },
+}
+const flaskMods = {
+  CharmGainManaOnUse1: {
+    name: 'Drizzling',
+    required_level: 1,
+    groups: ['CharmGainManaOnUse'],
+    domain: 'flask',
+    stats: [{ id: 'charm_recover_X_mana_when_used', min: 16, max: 24 }],
+    text: 'Recover (16-24) Mana when Used',
+    generation_type: 'prefix',
+  },
+  CharmGainManaOnUse2: {
+    name: 'Pouring',
+    required_level: 20,
+    groups: ['CharmGainManaOnUse'],
+    domain: 'flask',
+    stats: [{ id: 'charm_recover_X_mana_when_used', min: 25, max: 32 }],
+    text: 'Recover (25-32) Mana when Used',
+    generation_type: 'prefix',
+  },
+  FlaskExtraCharges2__: {
+    name: 'of the Plentiful',
+    required_level: 10,
+    groups: ['FlaskIncreasedMaxCharges'],
+    domain: 'flask',
+    stats: [{ id: 'local_max_charges_+%', min: 35, max: 40 }],
+    text: '(35-40)% increased Charges',
+    generation_type: 'suffix',
+  },
+  MarksmanInfluenceProjectileDamage2: {
+    name: "Kolr's",
+    required_level: 65,
+    groups: ['ProjectileDamage'],
+    domain: 'item',
+    stats: [{ id: 'projectile_damage_+%', min: 21, max: 30 }],
+    text: '(21-30)% increased Projectile Damage',
+    generation_type: 'prefix',
+  },
+  MarksmanInfluenceProjectileDamage1: {
+    name: "Kolr's",
+    required_level: 45,
+    groups: ['ProjectileDamage'],
+    domain: 'item',
+    stats: [{ id: 'projectile_damage_+%', min: 11, max: 20 }],
+    text: '(11-20)% increased Projectile Damage',
+    generation_type: 'prefix',
+  },
+  SoulInfluenceIncreasedLifePercent: {
+    name: 'of the Soul',
+    required_level: 65,
+    groups: ['MaximumLifeIncreasePercent'],
+    domain: 'item',
+    stats: [{ id: 'maximum_life_+%', min: 3, max: 5 }],
+    text: '(3-5)% increased maximum Life',
+    generation_type: 'suffix',
+  },
+  // Influence-named mods outside the item domain (here area) stay out.
+  ShaperInfluenceArea1: {
+    name: '',
+    required_level: 1,
+    groups: ['X'],
+    domain: 'area',
+    stats: [{ id: 'x', min: 1, max: 1 }],
+    text: 'x',
+    generation_type: 'unique',
+  },
+  AbyssModAmuletKurgalSuffixQualityofAllSkills: {
+    name: 'of Kurgal',
+    required_level: 65,
+    groups: ['AbyssQuality'],
+    domain: 'desecrated',
+    stats: [{ id: 'all_skill_gem_quality_+', min: 3, max: 5 }],
+    text: '+(3-5)% to Quality of all Skills',
+    generation_type: 'suffix',
+  },
+}
+const flaskBaseItems = {
+  'Metadata/Items/Flasks/Charm1': { name: 'Thawing Charm', tags: ['flask'], item_class: 'UtilityFlask' },
+}
+
+describe('buildStreamTiers', () => {
+  const all = { ...mods, ...flaskMods }
+  const out = buildStreamTiers(flaskMbb, all, { ...baseItems, ...flaskBaseItems })
+  const names = (indices: number[]) => indices.map((i) => out.mods[i].n)
+
+  it('holds flask and charm pools only, with each mod tagged by its generation type', () => {
+    expect(Object.keys(out.bases)).toEqual(['Thawing Charm'])
+    const pool = out.pools[out.bases['Thawing Charm']]
+    expect(names(pool.CharmGainManaOnUse)).toEqual(['Drizzling', 'Pouring'])
+    expect(pool.FlaskIncreasedMaxCharges.map((i: number) => out.mods[i].a)).toEqual(['s'])
+    expect(out.mods[pool.CharmGainManaOnUse[0]].a).toBe('p')
+  })
+
+  it('ladders rune influences by id family and keys abyss mods by full id', () => {
+    expect(names(out.families.MarksmanInfluenceProjectileDamage)).toEqual(["Kolr's", "Kolr's"])
+    expect(out.families.MarksmanInfluenceProjectileDamage.map((i: number) => out.mods[i].s[0][1])).toEqual([11, 21])
+    expect(names(out.families.SoulInfluenceIncreasedLifePercent)).toEqual(['of the Soul'])
+    expect(out.families.ShaperInfluenceArea).toBeUndefined()
+    const abyss = out.families.AbyssModAmuletKurgalSuffixQualityofAllSkills
+    expect(abyss.map((i: number) => out.mods[i].a)).toEqual(['s'])
+    // Ordinary item mods never enter the stream file.
+    expect(out.mods.some((m: { n: string }) => m.n === 'Healthy')).toBe(false)
+  })
+})
+
+describe('committed price-check datasets', () => {
+  // Released clients fetch tiers-poe{1,2}.json live from GitHub main; the stream
+  // file must never change them. The manifest hash pins the bytes they fetch.
+  const dir = resolve(__dirname)
+  const manifest = JSON.parse(readFileSync(resolve(dir, 'tier-manifest.json'), 'utf8'))
+  for (const game of ['poe1', 'poe2']) {
+    it(`tiers-${game}.json matches its manifest hash`, () => {
+      expect(sha256(readFileSync(resolve(dir, `tiers-${game}.json`), 'utf8'))).toBe(manifest.perGameHash[game])
+    })
+  }
+
+  it('the stream dataset carries no base the price-check dataset has', () => {
+    const main = JSON.parse(readFileSync(resolve(dir, 'tiers-poe2.json'), 'utf8'))
+    const stream = JSON.parse(readFileSync(resolve(dir, 'stream-tiers-poe2.json'), 'utf8'))
+    expect(Object.keys(stream.bases).filter((b) => b in main.bases)).toEqual([])
+    expect(Object.keys(stream.bases)).toContain('Ultimate Life Flask')
+    expect(stream.families.MarksmanInfluenceProjectileDamage.length).toBeGreaterThan(1)
   })
 })
 

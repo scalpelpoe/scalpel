@@ -96,8 +96,33 @@ function modLines(texts: string[], extra: Omit<ModLine, 'text'> = {}): ModLine[]
     .map((text) => ({ text, ...extra }))
 }
 
+/** Move each desecrated line to its affix position in the explicit block, using
+ *  the tier badges applyTiers added: a prefix goes right after the last known
+ *  prefix (or before the first known suffix), anything else goes last. Without
+ *  badges every desecrated line stays at the end of the block. */
+export function placeDesecratedLines(item: SnapshotItem): void {
+  for (const section of item.sections) {
+    if (section.kind !== 'explicit') continue
+    const moving = section.lines.filter((l) => l.desecrated)
+    if (moving.length === 0) continue
+    const lines = section.lines.filter((l) => !l.desecrated)
+    for (const line of moving) {
+      if (line.tier?.affix !== 'prefix') {
+        lines.push(line)
+        continue
+      }
+      const lastPrefix = lines.map((l) => l.tier?.affix).lastIndexOf('prefix')
+      const firstSuffix = lines.findIndex((l) => l.tier?.affix === 'suffix')
+      const at = lastPrefix !== -1 ? lastPrefix + 1 : firstSuffix !== -1 ? firstSuffix : lines.length
+      lines.splice(at, 0, line)
+    }
+    section.lines = lines
+  }
+}
+
 /** Sections in in-game tooltip order. Fractured lines lead the explicit block,
- *  crafted ones close it, matching Scalpel's own item cards. */
+ *  crafted ones follow, and desecrated ones close it until placeDesecratedLines
+ *  moves them to their affix position. */
 function buildSections(raw: NinjaItemData): ModSection[] {
   const sections: ModSection[] = []
   const push = (kind: ModSection['kind'], lines: ModLine[]): void => {
@@ -118,8 +143,8 @@ function buildSections(raw: NinjaItemData): ModSection[] {
     ...modLines(raw.explicitMods),
     ...modLines(raw.mutatedMods),
     ...modLines(raw.craftedMods, { crafted: true }),
+    ...modLines(raw.desecratedMods, { desecrated: true }),
   ])
-  push('desecrated', modLines(raw.desecratedMods))
   push('bonded', modLines(raw.bondedMods))
   return sections.slice(0, LIMITS.sections)
 }

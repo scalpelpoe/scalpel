@@ -74,6 +74,8 @@ export const ModLineSchema = z.strictObject({
   text,
   fractured: z.literal(true).optional(),
   crafted: z.literal(true).optional(),
+  /** Desecrated mod, drawn in the desecrated colour wherever it sits in the block. */
+  desecrated: z.literal(true).optional(),
   tier: TierSchema.optional(),
   /** Roll range of the tier this line rolled in. */
   range: z.strictObject({ min: z.number(), max: z.number() }).optional(),

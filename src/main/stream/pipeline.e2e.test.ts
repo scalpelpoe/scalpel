@@ -7,8 +7,9 @@
 //
 // Optional: SCALPEL_STREAM_E2E_ACCOUNT (default aer0_#2690).
 import { paths, StreamHeadSchema, validateSnapshot } from '@scalpel/stream-contract'
+import streamData from '@shared/data/tiers/stream-tiers-poe2.json'
 import data from '@shared/data/tiers/tiers-poe2.json'
-import type { TierDataset } from '@shared/data/tiers/types'
+import type { StreamTierDataset, TierDataset } from '@shared/data/tiers/types'
 import { describe, expect, it } from 'vitest'
 import { createStreamClient } from './client'
 import { enrichCharacter } from './enrich'
@@ -29,7 +30,11 @@ describe.skipIf(!api)('stream pipeline (live)', () => {
     const raw = await source.fetchCharacter(ref)
 
     const normalized = normalizeCharacter(raw, { now: new Date(), hideCharacterName: false })
-    enrichCharacter(normalized, { tierData: data as unknown as TierDataset, uniquePrice: () => undefined })
+    enrichCharacter(normalized, {
+      tierData: data as unknown as TierDataset,
+      streamTierData: streamData as unknown as StreamTierDataset,
+      uniquePrice: () => undefined,
+    })
     const check = validateSnapshot(normalized.snapshot)
     expect(check.ok, check.ok ? '' : check.issues.join('\n')).toBe(true)
 

@@ -5,8 +5,9 @@ import type { PriceCheck, SnapshotItem, StreamHead, StreamSnapshot } from '@scal
 import sample from '@scalpel/stream-contract/fixtures/sample-snapshot.json'
 import priceChecks from './price-checks.json'
 import realPriceChecks from './price-checks-real.json'
+import streamTierData from '@shared/data/tiers/stream-tiers-poe2.json'
 import tierData from '@shared/data/tiers/tiers-poe2.json'
-import type { TierDataset } from '@shared/data/tiers/types'
+import type { StreamTierDataset, TierDataset } from '@shared/data/tiers/types'
 import type { Decorator } from '@storybook/react-vite'
 import ninjaCharacter from '../../../../src/main/stream/__fixtures__/ninja-character.json'
 import { normalizeCharacter } from '../../../../src/main/stream/normalize'
@@ -84,7 +85,9 @@ export function realSnapshot(): StreamSnapshot {
     now: new Date(Date.now() - 4 * 60_000),
     hideCharacterName: false,
   })
-  for (const [item, raw] of normalized.sourceOf) applyTiers(item, raw, tierData as unknown as TierDataset)
+  // Stories only (Storybook); the viewer builds' entries never import this file.
+  for (const [item, raw] of normalized.sourceOf)
+    applyTiers(item, raw, tierData as unknown as TierDataset, streamTierData as unknown as StreamTierDataset)
   attachRealChecks(normalized.snapshot)
   return normalized.snapshot
 }

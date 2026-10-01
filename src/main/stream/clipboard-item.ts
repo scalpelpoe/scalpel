@@ -88,6 +88,7 @@ function plainLines(texts: string[] | undefined): ModLine[] {
     .map((text) => ({ text }))
 }
 
+// No PoE2 clipboard fixture marks desecrated lines (the suffix is stripped by LINE_TAG, never emitted), so none are flagged here.
 function explicitLines(item: PoeItem): ModLine[] {
   const advanced = (item.advancedMods ?? []).filter((m) => m.type === 'prefix' || m.type === 'suffix')
   if (advanced.length === 0) return plainLines(item.explicits)

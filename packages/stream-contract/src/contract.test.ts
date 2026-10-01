@@ -25,6 +25,21 @@ describe('validateSnapshot', () => {
     expect(validateSnapshot(JSON.stringify(sample)).ok).toBe(true)
   })
 
+  it('round-trips a desecrated line and still parses lines without the flag', () => {
+    const s = fresh()
+    const helm = s.equipment.Helm as { sections: { kind: string; lines: object[] }[] }
+    helm.sections.push({ kind: 'explicit', lines: [{ text: 'a', desecrated: true }, { text: 'b' }] })
+    const rt = validateSnapshot(s)
+    expect(rt.ok).toBe(true)
+    if (rt.ok) {
+      const lines = rt.snapshot.equipment.Helm?.sections.at(-1)?.lines
+      expect(lines?.[0].desecrated).toBe(true)
+      expect(lines?.[1].desecrated).toBeUndefined()
+    }
+    helm.sections.push({ kind: 'explicit', lines: [{ text: 'c', desecrated: false }] })
+    expect(validateSnapshot(s).ok).toBe(false)
+  })
+
   it('accepts streamer links and snapshots published before links existed', () => {
     const s = fresh()
     expect(s.links).toBeUndefined()

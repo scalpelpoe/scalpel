@@ -7,6 +7,7 @@ import {
   type StreamSettingsPatch,
 } from '@shared/contracts/stream'
 import bundledPoe2Icons from '@scalpel/item-data/poe2.json'
+import type { StreamTierDataset } from '@shared/data/tiers/types'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 import type { AppSettings, PoeItem } from '@shared/types'
 import { net } from 'electron'
@@ -45,6 +46,18 @@ const LIVE_BASE = process.env.SCALPEL_STREAM_LIVE || STREAM_LIVE_BASE
 const USER_AGENT = 'Scalpel-Stream'
 const PROFILE_CACHE_MS = 60_000
 const bundledIcons = bundledPoe2Icons as Record<string, string>
+/** Card-badge coverage the price-check dataset leaves out. Bundled only (no remote
+ *  refresh) and main-process only, like the PoE2 TierDataset it complements. Loaded
+ *  lazily (tier-data.ts pattern); builds before it resolves just skip it. */
+let streamTiers: StreamTierDataset | null = null
+function loadStreamTiers(): void {
+  if (streamTiers) return
+  import('@shared/data/tiers/stream-tiers-poe2.json')
+    .then((m) => {
+      streamTiers = m.default as unknown as StreamTierDataset
+    })
+    .catch((e) => debugWarn('stream tier data failed to load:', (e as Error).message))
+}
 
 export type { StreamSettingsPatch }
 
@@ -96,6 +109,7 @@ export function createStreamRuntime(
   const apiFetch: ApiFetch = (url, init) =>
     net.fetch(url, { method: init.method, headers: { ...init.headers, 'User-Agent': USER_AGENT }, body: init.body })
 
+  loadStreamTiers()
   const source = createPoeNinjaSource(sourceFetch)
   const client = createStreamClient(apiFetch, API_BASE)
 
@@ -133,6 +147,7 @@ export function createStreamRuntime(
       const poe2 = getPoeVersion() === 2
       enrichCharacter(normalized, {
         tierData: poe2 ? getTierData() : null,
+        streamTierData: poe2 ? streamTiers : null,
         uniquePrice: poe2 ? lookupUniquePriceForBase : () => undefined,
         priceCheck: poe2 ? ninjaPriceCheck(normalized.snapshot.character.league) : undefined,
       })

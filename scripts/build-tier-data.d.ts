@@ -6,6 +6,8 @@ export interface CompactMod {
   g: string
   s: Array<[string, number, number]>
   t: string
+  /** Generation-type affix; stream file only. */
+  a?: 'p' | 's'
 }
 
 export interface CompactDataset {
@@ -35,7 +37,18 @@ export declare function buildCompact(
   modsByBase: Record<string, unknown>,
   mods: Record<string, unknown>,
   baseItems: Record<string, unknown>,
+  opts?: { domains?: string[]; withAffix?: boolean },
 ): CompactDataset
+
+export interface StreamCompactDataset extends CompactDataset {
+  families: Record<string, number[]>
+}
+
+export declare function buildStreamTiers(
+  modsByBase: Record<string, unknown>,
+  mods: Record<string, unknown>,
+  baseItems: Record<string, unknown>,
+): StreamCompactDataset
 
 export declare function stripMarkup(text: string): string
 

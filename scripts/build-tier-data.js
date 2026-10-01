@@ -10,6 +10,11 @@
  * Emits a compact, interned dataset: a global deduped `mods` array plus a
  * `bases` map of displayBaseType -> group -> ascending tier-index list.
  *
+ * For PoE2 it also emits stream-tiers-poe2.json: the same compact shape for the mods
+ * the price-check dataset leaves out (flask/charm pools, rune-influence and abyss
+ * families). Scalpel Stream's item cards read it; it is bundled only, never part of
+ * the manifest or the remote refresh, so it can't change shipped price checks.
+ *
  * Source: https://repoe-fork.github.io/ (PoE1) and /poe2/ (PoE2). Build-time
  * only; never bundled into the app. Attribution to RePoE-fork.
  *
@@ -29,19 +34,36 @@ const SOURCES = {
   poe2: 'https://repoe-fork.github.io/poe2/',
 }
 
-/** Pure: join the three upstream objects into the compact dataset. */
-function buildCompact(modsByBase, mods, baseItems) {
+/** Compact one RePoE mod. `withAffix` adds `a` ('p'/'s') from its generation type. */
+function compactMod(m, withAffix) {
+  const out = {
+    n: m.name,
+    l: m.required_level,
+    g: (m.groups && m.groups[0]) || '',
+    s: (m.stats || []).map((s) => [s.id, s.min, s.max]),
+    t: m.text,
+  }
+  if (withAffix && (m.generation_type === 'prefix' || m.generation_type === 'suffix')) out.a = m.generation_type[0]
+  return out
+}
+
+/**
+ * Pure: join the three upstream objects into the compact dataset.
+ * opts.domains: mod domains to keep (default ['item']; the price-check datasets).
+ * opts.withAffix: tag each mod with its generation type (stream file only).
+ */
+function buildCompact(modsByBase, mods, baseItems, opts = {}) {
+  const domains = opts.domains || ['item']
   const modIndex = new Map() // modId -> index into `out.mods`
   const outMods = []
 
   function internMod(modId) {
     if (modIndex.has(modId)) return modIndex.get(modId)
     const m = mods[modId]
-    if (!m || m.domain !== 'item') return -1
-    const stats = (m.stats || []).map((s) => [s.id, s.min, s.max])
-    if (stats.length === 0) return -1
+    if (!m || !domains.includes(m.domain)) return -1
+    if (!m.stats || m.stats.length === 0) return -1
     const idx = outMods.length
-    outMods.push({ n: m.name, l: m.required_level, g: (m.groups && m.groups[0]) || '', s: stats, t: m.text })
+    outMods.push(compactMod(m, opts.withAffix))
     modIndex.set(modId, idx)
     return idx
   }
@@ -100,6 +122,52 @@ function buildCompact(modsByBase, mods, baseItems) {
   }
 
   return { schemaVersion: SCHEMA_VERSION, mods: outMods, pools, bases }
+}
+
+/** Rune-granted influence mods ("Can roll Marksman modifiers"): the tag only exists
+ *  once the rune is socketed, so no mods_by_base combo lists them. Their `type`s
+ *  collide with ordinary groups, so they ladder on their own id family instead. */
+const RUNE_INFLUENCE_ID = /^[A-Z][a-z]+Influence/
+/** Abyss lord desecrated mods: one entry per type, lord and slot, always Tier 1. */
+const ABYSS_ID = /^AbyssMod/
+
+/** Id family: the id minus trailing underscores and its tier index. */
+function idFamily(id) {
+  return id.replace(/_+$/, '').replace(/\d+$/, '')
+}
+
+function idIndex(id) {
+  const m = /(\d+)_*$/.exec(id)
+  return m ? Number(m[1]) : 0
+}
+
+/**
+ * Build the stream-only companion dataset (stream-tiers-poe2.json): flask/charm base
+ * pools plus `families` for mods no base pool lists. Same compact shape as
+ * buildCompact, with its own `mods` array and an `a` affix tag on every mod.
+ */
+function buildStreamTiers(modsByBase, mods, baseItems) {
+  const out = buildCompact(modsByBase, mods, baseItems, { domains: ['flask'], withAffix: true })
+  const families = {}
+  for (const id of Object.keys(mods).sort()) {
+    const m = mods[id]
+    if (!m || !m.stats || m.stats.length === 0) continue
+    if (m.generation_type !== 'prefix' && m.generation_type !== 'suffix') continue
+    let key
+    if (RUNE_INFLUENCE_ID.test(id) && m.domain === 'item') key = idFamily(id)
+    else if (ABYSS_ID.test(id) && m.domain === 'desecrated') key = id
+    else continue
+    if (!families[key]) families[key] = []
+    families[key].push({ id, idx: out.mods.length })
+    out.mods.push(compactMod(m, true))
+  }
+  const sorted = {}
+  for (const key of Object.keys(families).sort()) {
+    sorted[key] = families[key]
+      .sort((a, b) => out.mods[a.idx].l - out.mods[b.idx].l || idIndex(a.id) - idIndex(b.id))
+      .map((e) => e.idx)
+  }
+  return { ...out, families: sorted }
 }
 
 /** RePoE influence family suffix -> the source we badge the row with. GGG's internal
@@ -319,10 +387,11 @@ async function main() {
     const outPath = path.join(OUT_DIR, `tiers-${game}.json`)
     const desecPath = path.join(OUT_DIR, 'desecrated-poe2.json')
     const sourcesPath = path.join(OUT_DIR, 'mod-sources-poe1.json')
+    const streamPath = path.join(OUT_DIR, 'stream-tiers-poe2.json')
     if (
       !gameChanged &&
       fs.existsSync(outPath) &&
-      (game !== 'poe2' || fs.existsSync(desecPath)) &&
+      (game !== 'poe2' || (fs.existsSync(desecPath) && fs.existsSync(streamPath))) &&
       (game !== 'poe1' || fs.existsSync(sourcesPath))
     ) {
       perGameHash[game] = sha256(fs.readFileSync(outPath, 'utf8'))
@@ -352,6 +421,16 @@ async function main() {
       if (desecJson !== desecExisting) {
         fs.writeFileSync(desecPath, desecJson, 'utf8')
         console.log(`poe2: wrote desecrated-poe2.json (${JSON.parse(desecJson).mods.length} mods)`)
+      }
+      // Bundled only: not in the manifest, so it never sets anyChange.
+      const stream = buildStreamTiers(fetched['mods_by_base.json'], fetched['mods.json'], fetched['base_items.json'])
+      const streamJson = `${JSON.stringify(stream)}\n`
+      const streamExisting = fs.existsSync(streamPath) ? fs.readFileSync(streamPath, 'utf8') : null
+      if (streamJson !== streamExisting) {
+        fs.writeFileSync(streamPath, streamJson, 'utf8')
+        console.log(
+          `poe2: wrote stream-tiers-poe2.json (${stream.mods.length} mods, ${Object.keys(stream.bases).length} bases, ${Object.keys(stream.families).length} families)`,
+        )
       }
     }
     const json = `${JSON.stringify(compact)}\n`
@@ -398,6 +477,7 @@ module.exports = {
   buildCompact,
   buildDesecrated,
   buildModSources,
+  buildStreamTiers,
   familyToSource,
   normKey,
   stripMarkup,

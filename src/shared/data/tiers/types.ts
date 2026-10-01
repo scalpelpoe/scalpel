@@ -39,3 +39,16 @@ export interface TierDataset {
   /** Base display name -> index into `pools`. */
   bases: Record<string, number>
 }
+
+/** Stream-only companion to the PoE2 TierDataset (stream-tiers-poe2.json, built by
+ *  scripts/build-tier-data.js). Bundled with the main process for Scalpel Stream's
+ *  item-card badges; the price check never reads it and it is never fetched remotely.
+ *  Its `mods` indices are local to this file. */
+export interface StreamTierDataset extends Omit<TierDataset, 'mods'> {
+  /** As TierDataset mods, plus `a`: the affix from the mod's generation type. */
+  mods: Array<TierDataset['mods'][number] & { a?: 'p' | 's' }>
+  /** Mod-id family -> ascending tier indices for mods no base pool lists: rune
+   *  influences (MarksmanInfluence*, SoulInfluence*, ...) keyed by id minus its
+   *  trailing index, and AbyssMod* keyed by full id. */
+  families: Record<string, number[]>
+}

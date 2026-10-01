@@ -45,6 +45,30 @@ describe('ItemTooltip', () => {
     expect(amulet.getByText('Desecrated')).toBeInTheDocument()
   })
 
+  it('colours desecrated, crafted and rune lines apart', () => {
+    const item = structuredClone(equipment.Helm as SnapshotItem)
+    item.sections = [
+      { kind: 'rune', lines: [{ text: 'rune line' }] },
+      { kind: 'enchant', lines: [{ text: 'enchant line' }] },
+      {
+        kind: 'explicit',
+        lines: [
+          { text: 'plain line' },
+          { text: 'desecrated line', desecrated: true },
+          { text: 'crafted line', crafted: true },
+        ],
+      },
+    ]
+    render(<ItemTooltip item={item} />)
+    const color = (t: string): string => (screen.getByText(t).closest('.ssv-mod') as HTMLElement).style.color
+    expect(color('desecrated line')).toBe('var(--ssv-mod-desecrated)')
+    expect(color('crafted line')).toBe('var(--ssv-mod-crafted)')
+    expect(color('plain line')).toBe('var(--ssv-mod-explicit)')
+    expect(color('rune line')).toBe('var(--ssv-mod-rune)')
+    expect(color('enchant line')).toBe('var(--ssv-mod-rune)')
+    expect(color('rune line')).not.toBe(color('crafted line'))
+  })
+
   it('shows magic items by their full name only', () => {
     const flask = sampleSnapshot().flasks[0]
     render(<ItemTooltip item={flask} />)

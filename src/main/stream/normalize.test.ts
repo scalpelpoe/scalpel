@@ -77,7 +77,8 @@ describe('normalizeCharacter', () => {
     const ring = snapshot.equipment.Ring2
     expect(ring).toMatchObject({ name: 'Blood Knot', baseType: 'Gold Ring', rarity: 'rare' })
     expect(ring?.flags).toMatchObject({ corrupted: true, desecrated: true })
-    expect(ring?.sections.map((s) => s.kind)).toEqual(['implicit', 'desecrated'])
+    // Desecrated mods sit inline in the explicit block; no separate section.
+    expect(ring?.sections.map((s) => s.kind)).toEqual(['implicit', 'explicit'])
     expect(ring?.sections[0].lines[0].text).toBe('10% increased Rarity of Items found')
     const allText = Object.values(snapshot.equipment).flatMap(
       (i) => i?.sections.flatMap((s) => s.lines.map((l) => l.text)) ?? [],
