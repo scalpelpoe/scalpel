@@ -133,6 +133,36 @@ describe('StreamSection', () => {
     expect(api.streamUpdateSettings).toHaveBeenCalledTimes(1)
   })
 
+  it('offers the filters link toggle only once there is an account', async () => {
+    api.streamGetOverview.mockResolvedValue(
+      enabled({ settings: { ...DEFAULT_STREAM_SETTINGS, enabled: true, profileId: 'p1', poeAccount: '' } }),
+    )
+    const { unmount } = render(<StreamSection />)
+    await screen.findByText('Build guide link')
+    expect(screen.queryByText('Link my item filters')).toBeNull()
+    unmount()
+
+    api.streamGetOverview.mockResolvedValue(enabled())
+    render(<StreamSection />)
+    // The box under the heading is the click target.
+    fireEvent.click((await screen.findByText('Link my item filters')).nextElementSibling as Element)
+    await waitFor(() => expect(api.streamUpdateSettings).toHaveBeenCalledWith({ linkItemFilters: false }))
+  })
+
+  it('saves the build guide link on blur and keeps the draft when main refuses it', async () => {
+    api.streamGetOverview.mockResolvedValue(enabled())
+    api.streamUpdateSettings.mockRejectedValueOnce(
+      new Error("my build isn't a web address. Paste the guide's full link."),
+    )
+    render(<StreamSection />)
+    const input = (await screen.findByPlaceholderText('YouTube video or guide URL')) as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'my build' } })
+    fireEvent.blur(input)
+    await screen.findByText(/isn't a web address/)
+    expect(input.value).toBe('my build')
+    expect(api.streamUpdateSettings).toHaveBeenCalledWith({ buildGuideUrl: 'my build' })
+  })
+
   it('picks up a broadcast account when the user has not edited the field', async () => {
     api.streamGetOverview.mockResolvedValue(enabled())
     render(<StreamSection />)

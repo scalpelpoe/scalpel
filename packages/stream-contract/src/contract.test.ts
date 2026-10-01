@@ -25,6 +25,27 @@ describe('validateSnapshot', () => {
     expect(validateSnapshot(JSON.stringify(sample)).ok).toBe(true)
   })
 
+  it('accepts streamer links and snapshots published before links existed', () => {
+    const s = fresh()
+    expect(s.links).toBeUndefined()
+    expect(validateSnapshot(s).ok).toBe(true)
+    s.links = {
+      filters: 'https://www.pathofexile.com/account/view-profile/Name-1234/item-filters',
+      buildGuide: 'https://youtu.be/abc',
+    }
+    expect(validateSnapshot(s).ok).toBe(true)
+    s.links = { filters: null, buildGuide: null }
+    expect(validateSnapshot(s).ok).toBe(true)
+  })
+
+  it('rejects a filters link off pathofexile.com and a non-web build guide', () => {
+    const s = fresh()
+    s.links = { filters: 'https://example.com/filters', buildGuide: null }
+    expect(validateSnapshot(s).ok).toBe(false)
+    s.links = { filters: null, buildGuide: 'javascript:alert(1)' }
+    expect(validateSnapshot(s).ok).toBe(false)
+  })
+
   it('rejects item art off the poecdn host', () => {
     const s = fresh()
     s.equipment.Helm.icon = 'https://example.com/helm.png'

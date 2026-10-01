@@ -26,6 +26,61 @@ function phaseText(overview: StreamOverview): string {
   return m.settings_stream_phase_off()
 }
 
+/** A text setting saved on blur or Enter. It follows `value` (main may rewrite or
+ *  auto-fill it) unless the streamer is mid-edit; `onCommit` resolves to the value main
+ *  settled on, or null when the save failed and the draft should stay for another try. */
+function CommitTextBox({
+  label,
+  value,
+  placeholder,
+  onCommit,
+}: {
+  label: string
+  value: string
+  placeholder: string
+  onCommit: (text: string) => Promise<string | null>
+}): JSX.Element {
+  const [draft, setDraft] = useState(value)
+  const dirty = useRef(false)
+
+  useEffect(() => {
+    if (!dirty.current) setDraft(value)
+  }, [value])
+
+  const commit = (): void => {
+    if (!dirty.current) return
+    if (draft.trim() === value) {
+      dirty.current = false
+      return
+    }
+    void onCommit(draft).then((settled) => {
+      if (settled === null) return
+      dirty.current = false
+      // Show what main stored (a pasted URL becomes the account), so a later blur is a no-op.
+      setDraft(settled)
+    })
+  }
+
+  return (
+    <section>
+      <label>{label}</label>
+      <div className="setting-box mt-[2px] min-h-[40px]">
+        <input
+          className="value flex-1 bg-transparent outline-none"
+          value={draft}
+          placeholder={placeholder}
+          onChange={(e) => {
+            dirty.current = true
+            setDraft(e.target.value)
+          }}
+          onBlur={commit}
+          onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
+        />
+      </div>
+    </section>
+  )
+}
+
 /** Scalpel Stream: publishes the streamer's PoE2 gear to the Twitch extension and
  *  public page. State lives in main (see src/main/stream); this section only
  *  renders the overview main broadcasts and forwards the streamer's choices. */
@@ -33,8 +88,6 @@ export function StreamSection(): JSX.Element {
   const [overview, setOverview] = useState<StreamOverview | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [account, setAccount] = useState('')
-  const accountDirty = useRef(false)
   const [characters, setCharacters] = useState<StreamCharacterOption[]>([])
   const [pairing, setPairing] = useState<{ code: string; expiresUtc: string } | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
@@ -47,15 +100,11 @@ export function StreamSection(): JSX.Element {
       .then((o) => {
         if (!alive) return
         setOverview(o)
-        setAccount(o.settings.poeAccount)
       })
       .catch((e) => alive && setError(errorText(e)))
-    const off = window.api.onStreamOverview((o) => {
-      setOverview(o)
-      // Main may auto-fill the account (e.g. once it finds the linked Twitch
-      // channel on poe.ninja); pick that up unless the streamer is mid-edit.
-      if (!accountDirty.current) setAccount(o.settings.poeAccount)
-    })
+    // Main may auto-fill the account (e.g. once it finds the linked Twitch channel on
+    // poe.ninja); CommitTextBox picks that up unless the streamer is mid-edit.
+    const off = window.api.onStreamOverview(setOverview)
     return () => {
       alive = false
       off()
@@ -99,17 +148,15 @@ export function StreamSection(): JSX.Element {
     })
   }
 
-  const saveAccount = (): void => {
-    if (overview && account.trim() === overview.settings.poeAccount) accountDirty.current = false
-    else if (overview) {
-      void run(async () => {
-        const next = await window.api.streamUpdateSettings({ poeAccount: account })
-        // Show the account main settled on (a pasted URL becomes the account), so a later blur is a no-op.
-        setAccount(next.settings.poeAccount)
-        accountDirty.current = false
-        return next
-      })
-    }
+  /** Save one text setting; resolves to the value main stored, or null when the save failed. */
+  const saveText = async (key: 'poeAccount' | 'buildGuideUrl', text: string): Promise<string | null> => {
+    let settled: string | null = null
+    await run(async () => {
+      const next = await window.api.streamUpdateSettings({ [key]: text })
+      settled = next.settings[key]
+      return next
+    })
+    return settled
   }
 
   if (!overview) {
@@ -157,22 +204,12 @@ export function StreamSection(): JSX.Element {
         {enabled && (
           <>
             <div className="grid grid-cols-2 gap-x-2 gap-y-[10px]">
-              <section>
-                <label>{m.settings_stream_poe_account()}</label>
-                <div className="setting-box mt-[2px] min-h-[40px]">
-                  <input
-                    className="value flex-1 bg-transparent outline-none"
-                    value={account}
-                    placeholder={m.settings_stream_poe_account_placeholder()}
-                    onChange={(e) => {
-                      accountDirty.current = true
-                      setAccount(e.target.value)
-                    }}
-                    onBlur={saveAccount}
-                    onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()}
-                  />
-                </div>
-              </section>
+              <CommitTextBox
+                label={m.settings_stream_poe_account()}
+                value={poeAccount}
+                placeholder={m.settings_stream_poe_account_placeholder()}
+                onCommit={(text) => saveText('poeAccount', text)}
+              />
               <SettingSelectBox
                 label={m.settings_stream_character()}
                 value={pinned ? characterKey(pinned) : AUTO}
@@ -197,6 +234,20 @@ export function StreamSection(): JSX.Element {
                 checked={overview.settings.hideCharacterName}
                 onChange={(v) => void run(() => window.api.streamUpdateSettings({ hideCharacterName: v }))}
               />
+              <CommitTextBox
+                label={m.settings_stream_build_guide()}
+                value={overview.settings.buildGuideUrl}
+                placeholder={m.settings_stream_build_guide_placeholder()}
+                onCommit={(text) => saveText('buildGuideUrl', text)}
+              />
+              {/* The filters link is built from the account, so it only means something once there is one. */}
+              {poeAccount && (
+                <SettingToggleBox
+                  label={m.settings_stream_link_filters()}
+                  checked={overview.settings.linkItemFilters}
+                  onChange={(v) => void run(() => window.api.streamUpdateSettings({ linkItemFilters: v }))}
+                />
+              )}
             </div>
 
             <section>

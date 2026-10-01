@@ -27,7 +27,7 @@ export function Window({
       </div>
       {children}
       {footer && (
-        <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-border shrink-0">{footer}</div>
+        <div className="flex flex-wrap items-center gap-2 px-3 py-2 border-t border-border shrink-0">{footer}</div>
       )}
     </div>
   )

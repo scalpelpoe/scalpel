@@ -6,6 +6,7 @@ import { CharacterHeader, UpdatedAge } from './CharacterHeader'
 import { ItemSlot } from './ItemSlot'
 import { ItemTooltip } from './ItemTooltip'
 import { Paperdoll } from './Paperdoll'
+import { StreamLinks } from './StreamLinks'
 import { PoweredBy, Window } from './Window'
 
 type Tab = 'gear' | 'skills' | 'jewels' | 'keystones'
@@ -155,6 +156,7 @@ export function GearPanel({ snapshot, head, now, placement }: Props): JSX.Elemen
         footer={
           <>
             <CopyPob pob={snapshot.pob} />
+            <StreamLinks links={snapshot.links} />
             <PoweredBy />
           </>
         }

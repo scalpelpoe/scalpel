@@ -28,6 +28,29 @@ const ICON_SIZES: Record<ButtonSize, string> = {
   md: 'w-7 h-7 rounded',
 }
 
+/** The Button look as a class string, for elements that are not a <button> (e.g. link buttons). */
+export function buttonClassName({
+  variant = 'secondary',
+  size = 'md',
+  iconOnly,
+  disabled,
+}: {
+  variant?: ButtonVariant
+  size?: ButtonSize
+  iconOnly?: boolean
+  disabled?: boolean
+}): string {
+  const sizeCls = iconOnly ? ICON_SIZES[size] : SIZES[size]
+  return [
+    'btn-bounce inline-flex items-center justify-center gap-1.5 transition-colors',
+    VARIANTS[variant],
+    sizeCls,
+    disabled && 'opacity-50 cursor-not-allowed',
+  ]
+    .filter(Boolean)
+    .join(' ')
+}
+
 export function Button({
   variant = 'secondary',
   size = 'md',
@@ -36,15 +59,7 @@ export function Button({
   children,
   ...rest
 }: ButtonProps): JSX.Element {
-  const sizeCls = iconOnly ? ICON_SIZES[size] : SIZES[size]
-  const className = [
-    'btn-bounce inline-flex items-center justify-center gap-1.5 transition-colors',
-    VARIANTS[variant],
-    sizeCls,
-    disabled && 'opacity-50 cursor-not-allowed',
-  ]
-    .filter(Boolean)
-    .join(' ')
+  const className = buttonClassName({ variant, size, iconOnly, disabled })
   return (
     <button {...rest} disabled={disabled} className={className}>
       {children}

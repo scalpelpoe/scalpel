@@ -10,7 +10,16 @@ export interface StreamSettings {
   /** Publish this character instead of following the one poe.ninja marks current. */
   pinnedCharacter: { account: string; name: string } | null
   hideCharacterName: boolean
+  /** Link viewers to the account's public item filters on pathofexile.com. Only takes effect with an account. */
+  linkItemFilters: boolean
+  /** A video or written guide for the build, shown to viewers as "Build Guide". Empty for none. */
+  buildGuideUrl: string
 }
+
+/** The stream settings the Streaming section can change. */
+export type StreamSettingsPatch = Partial<
+  Pick<StreamSettings, 'poeAccount' | 'pinnedCharacter' | 'hideCharacterName' | 'linkItemFilters' | 'buildGuideUrl'>
+>
 
 export const DEFAULT_STREAM_SETTINGS: StreamSettings = {
   enabled: false,
@@ -18,6 +27,8 @@ export const DEFAULT_STREAM_SETTINGS: StreamSettings = {
   poeAccount: '',
   pinnedCharacter: null,
   hideCharacterName: false,
+  linkItemFilters: true,
+  buildGuideUrl: '',
 }
 
 export type StreamPublisherPhase = 'off' | 'waiting-for-game' | 'working' | 'idle' | 'error'

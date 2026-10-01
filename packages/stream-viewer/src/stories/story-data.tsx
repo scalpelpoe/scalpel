@@ -13,7 +13,13 @@ import { applyTiers } from '../../../../src/main/stream/tiers'
 import type { TwitchExt } from '../twitch'
 import '../styles.css'
 
-export const sampleSnapshot = sample as StreamSnapshot
+export const sampleSnapshot = {
+  ...sample,
+  links: {
+    filters: 'https://www.pathofexile.com/account/view-profile/Example-1234/item-filters',
+    buildGuide: 'https://www.youtube.com/@example/videos',
+  },
+} as StreamSnapshot
 
 export function realSnapshot(): StreamSnapshot {
   const normalized = normalizeCharacter(NinjaCharacterSchema.parse(ninjaCharacter), {

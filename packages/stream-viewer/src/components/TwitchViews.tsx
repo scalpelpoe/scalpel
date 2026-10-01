@@ -7,6 +7,7 @@ import { CharacterHeader, UpdatedAge } from './CharacterHeader'
 import { CompactGear } from './CompactGear'
 import { StreamView, useNow } from './StreamView'
 import { ViewerRoot } from './ViewerRoot'
+import { StreamLinks } from './StreamLinks'
 import { PoweredBy, Window } from './Window'
 
 /** Channel id from the helper's onAuthorized, plus the player context. */
@@ -89,7 +90,12 @@ export function PanelView({ ext }: { ext: TwitchExt | undefined }): JSX.Element 
         <Window
           title="Scalpel Stream"
           headerEnd={<UpdatedAge snapshot={snapshot} now={now} />}
-          footer={<PoweredBy />}
+          footer={
+            <>
+              <StreamLinks links={snapshot.links} />
+              <PoweredBy />
+            </>
+          }
         >
           <CharacterHeader snapshot={snapshot} />
           <div className="ssv-panel-body">

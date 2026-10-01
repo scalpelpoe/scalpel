@@ -1,6 +1,7 @@
 import { type Slot, type SnapshotItem, type StreamSnapshot, validateSnapshot } from '@scalpel/stream-contract'
 import type { StreamPublisherStatus, StreamSettings } from '@shared/contracts/stream'
 import { StreamApiError, type StreamClient } from './client'
+import { snapshotLinks } from './links'
 import { ninjaAccountKey } from '@shared/poe-account'
 import type { PoeNinjaSource, ProfileCharacter } from './sources/poe-ninja'
 import type { NinjaCharacter } from './sources/ninja-types'
@@ -80,7 +81,7 @@ export function createPublisher(deps: PublisherDeps): Publisher {
   let waiting: { force: boolean; done: Promise<void> } | null = null
   let failures = 0
   let lastPushAt = 0
-  let lastPushed: { key: string; updatedUtc: string; hideName: boolean } | null = null
+  let lastPushed: { key: string; updatedUtc: string; hideName: boolean; links: string } | null = null
   /** The last source snapshot, unpatched, so patches can be re-applied without a refetch. */
   let base: StreamSnapshot | null = null
   let patches: Patch[] = []
@@ -136,7 +137,9 @@ export function createPublisher(deps: PublisherDeps): Publisher {
     return characters.find((c) => c.isCurrent) ?? newest
   }
 
-  async function push(snapshot: StreamSnapshot, profileId: string, token: string): Promise<void> {
+  async function push(unlinked: StreamSnapshot, profileId: string, token: string): Promise<void> {
+    // Links come from the prefs current at push time, so a hotkey patch never republishes stale ones.
+    const snapshot: StreamSnapshot = { ...unlinked, links: snapshotLinks(deps.getPrefs()) }
     const check = validateSnapshot(snapshot)
     if (!check.ok) throw new Error(`Snapshot failed validation: ${check.issues.slice(0, 3).join('; ')}`)
     const wait = lastPushAt + MIN_PUSH_GAP_MS - now()
@@ -164,12 +167,14 @@ export function createPublisher(deps: PublisherDeps): Publisher {
 
       const who = await resolveCharacter(prefs)
       const key = `${who.account}|${who.name}`
+      const links = JSON.stringify(snapshotLinks(prefs))
       // The profile says when poe.ninja last updated the character, so an unchanged one
       // costs no character download.
       const unchanged =
         lastPushed?.key === key &&
         lastPushed.updatedUtc === who.updatedUtc &&
-        lastPushed.hideName === prefs.hideCharacterName
+        lastPushed.hideName === prefs.hideCharacterName &&
+        lastPushed.links === links
 
       if (!unchanged || force) {
         const raw = await deps.source.fetchCharacter(who)
@@ -177,7 +182,7 @@ export function createPublisher(deps: PublisherDeps): Publisher {
         prunePatches(snapshot)
         base = snapshot
         await push(withPatches(snapshot), prefs.profileId, token)
-        lastPushed = { key, updatedUtc: who.updatedUtc, hideName: prefs.hideCharacterName }
+        lastPushed = { key, updatedUtc: who.updatedUtc, hideName: prefs.hideCharacterName, links }
         update({ warnings })
       } else if (base && patches.some((p) => now() - p.at >= PATCH_TTL_MS)) {
         // Nothing new from the source, but a hotkey patch outlived its TTL: republish without it.

@@ -67,6 +67,8 @@ function setup(overrides: Partial<PublisherDeps> = {}, prefs: Partial<StreamPref
     poeAccount: 'aer0_#2690',
     pinnedCharacter: null,
     hideCharacterName: false,
+    linkItemFilters: true,
+    buildGuideUrl: '',
     ...prefs,
   }
   const gameActive = { value: true }
@@ -205,6 +207,27 @@ describe('createPublisher', () => {
     t.publisher.refresh()
     await vi.advanceTimersByTimeAsync(MIN_PUSH_GAP_MS)
     expect(t.client.putSnapshot).toHaveBeenCalledTimes(2)
+  })
+
+  it('publishes the filters and build guide links from the current prefs', async () => {
+    const t = setup({}, { buildGuideUrl: 'https://youtu.be/abc' })
+    t.publisher.start()
+    await settle()
+    expect(t.pushed()[0].links).toEqual({
+      filters: 'https://www.pathofexile.com/account/view-profile/aer0_-2690/item-filters',
+      buildGuide: 'https://youtu.be/abc',
+    })
+  })
+
+  it('republishes when the links change and drops the filters link when turned off', async () => {
+    const t = setup()
+    t.publisher.start()
+    await settle()
+    t.prefs.linkItemFilters = false
+    t.publisher.refresh()
+    await vi.advanceTimersByTimeAsync(MIN_PUSH_GAP_MS)
+    expect(t.client.putSnapshot).toHaveBeenCalledTimes(2)
+    expect(t.pushed()[1].links).toEqual({ filters: null, buildGuide: null })
   })
 
   it('backs off on failures and resets after a success', async () => {

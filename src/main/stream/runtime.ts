@@ -4,6 +4,7 @@ import {
   type StreamCharacterOption,
   type StreamOverview,
   type StreamSettings,
+  type StreamSettingsPatch,
 } from '@shared/contracts/stream'
 import bundledPoe2Icons from '@scalpel/item-data/poe2.json'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
@@ -20,6 +21,7 @@ import { type ApiFetch, createStreamClient, STREAM_API, StreamApiError } from '.
 import { paperdollSide, slotForItem, snapshotItemFromClipboard } from './clipboard-item'
 import { enrichCharacter, toSnapshotPrice } from './enrich'
 import { normalizeCharacter } from './normalize'
+import { normalizeBuildGuideUrl } from './links'
 import { createPublisher, type Publisher } from './publisher'
 import { normalizePoeAccount } from '@shared/poe-account'
 import { createPoeNinjaSource, type SourceFetch } from './sources/poe-ninja'
@@ -39,7 +41,7 @@ function debugWarn(...args: unknown[]): void {
   if (process.env.SCALPEL_DEBUG_LOG) console.warn('[stream]', ...args)
 }
 
-export type StreamSettingsPatch = Partial<Pick<StreamSettings, 'poeAccount' | 'pinnedCharacter' | 'hideCharacterName'>>
+export type { StreamSettingsPatch }
 
 export interface StreamRuntime {
   publisher: Publisher
@@ -244,6 +246,8 @@ export function createStreamRuntime(
       }
       if (patch.pinnedCharacter !== undefined) next.pinnedCharacter = patch.pinnedCharacter
       if (patch.hideCharacterName !== undefined) next.hideCharacterName = patch.hideCharacterName
+      if (patch.linkItemFilters !== undefined) next.linkItemFilters = patch.linkItemFilters
+      if (patch.buildGuideUrl !== undefined) next.buildGuideUrl = normalizeBuildGuideUrl(patch.buildGuideUrl)
       saveSettings(next)
       if (next.profileId && next.hideCharacterName !== current.hideCharacterName) {
         await patchServer({ hideCharacterName: next.hideCharacterName })

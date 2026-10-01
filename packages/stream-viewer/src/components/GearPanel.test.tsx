@@ -141,4 +141,40 @@ describe('GearPanel', () => {
     expect(screen.getByRole('button', { name: 'Copy PoB' })).toBeDisabled()
     expect(screen.getByText('Powered by Scalpel ↗')).toHaveAttribute('href', 'https://live.scalpel.fourth.party/')
   })
+
+  it('links to the streamer build guide and item filters', () => {
+    const snapshot = sampleSnapshot()
+    snapshot.links = {
+      filters: 'https://www.pathofexile.com/account/view-profile/Example-1234/item-filters',
+      buildGuide: 'https://youtu.be/guide',
+    }
+    renderPanel(snapshot)
+    const guide = screen.getByRole('link', { name: 'Build Guide ↗' })
+    const filters = screen.getByRole('link', { name: 'Item Filters ↗' })
+    expect(guide).toHaveAttribute('href', 'https://youtu.be/guide')
+    expect(filters).toHaveAttribute(
+      'href',
+      'https://www.pathofexile.com/account/view-profile/Example-1234/item-filters',
+    )
+    for (const a of [guide, filters]) {
+      expect(a).toHaveAttribute('target', '_blank')
+      expect(a).toHaveAttribute('rel', 'noopener noreferrer')
+    }
+  })
+
+  it('renders only the build guide when there are no filters', () => {
+    const snapshot = sampleSnapshot()
+    snapshot.links = { filters: null, buildGuide: 'https://example.com/guide' }
+    renderPanel(snapshot)
+    expect(screen.getByRole('link', { name: 'Build Guide ↗' })).toHaveAttribute('href', 'https://example.com/guide')
+    expect(screen.queryByRole('link', { name: 'Item Filters ↗' })).toBeNull()
+  })
+
+  it('renders no stream links when the snapshot has none', () => {
+    const snapshot = sampleSnapshot()
+    snapshot.links = undefined
+    renderPanel(snapshot)
+    expect(screen.queryByRole('link', { name: 'Build Guide ↗' })).toBeNull()
+    expect(screen.queryByRole('link', { name: 'Item Filters ↗' })).toBeNull()
+  })
 })

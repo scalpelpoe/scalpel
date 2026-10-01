@@ -6,6 +6,9 @@ export const POECDN_PREFIX = 'https://web.poecdn.com/'
 /** poe.ninja's asset host (passive tree art, class portraits), the other allowlisted image host. */
 export const NINJA_ASSETS_PREFIX = 'https://assets.poe.ninja/'
 
+/** The streamer's pathofexile.com profile; the only place the item-filter link may point. */
+export const POE_PROFILE_PREFIX = 'https://www.pathofexile.com/account/view-profile/'
+
 export const LIMITS = {
   snapshotBytes: 256 * 1024,
   items: 64,
@@ -52,6 +55,9 @@ const treeArtUrl = z
   .refine((url) => url.startsWith(POECDN_PREFIX) || url.startsWith(NINJA_ASSETS_PREFIX), {
     message: 'Art must come from web.poecdn.com or assets.poe.ninja',
   })
+
+/** A streamer-supplied page viewers open in a new tab. */
+const webUrl = z.url({ protocol: /^https?$/ }).max(LIMITS.string)
 
 export const RaritySchema = z.enum(['normal', 'magic', 'rare', 'unique', 'gem', 'currency'])
 
@@ -179,6 +185,15 @@ export const StreamSnapshotSchema = z.strictObject({
   keystones: z.array(KeystoneSchema).max(LIMITS.keystones),
   /** Path of Building export code for "Copy PoB". */
   pob: z.string().max(LIMITS.pob).nullable(),
+  /** Pages the streamer links viewers to. Optional so snapshots published before links existed still parse. */
+  links: z
+    .strictObject({
+      /** The streamer's public item filters on pathofexile.com. */
+      filters: z.string().max(LIMITS.string).startsWith(POE_PROFILE_PREFIX).nullable(),
+      /** A video or written guide for the build. */
+      buildGuide: webUrl.nullable(),
+    })
+    .optional(),
   /** Slots overridden by the streamer's hotkey patches. */
   patches: z.array(z.strictObject({ slot: SlotSchema, atUtc: utc })).max(LIMITS.patches),
 })

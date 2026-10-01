@@ -1100,9 +1100,7 @@ export const api = {
   ): Promise<import('@shared/contracts/stream').StreamOverview> =>
     ipcRenderer.invoke(IPC_CHANNELS.STREAM.SET_STATE, state),
   streamUpdateSettings: (
-    patch: Partial<
-      Pick<import('@shared/contracts/stream').StreamSettings, 'poeAccount' | 'pinnedCharacter' | 'hideCharacterName'>
-    >,
+    patch: import('@shared/contracts/stream').StreamSettingsPatch,
   ): Promise<import('@shared/contracts/stream').StreamOverview> =>
     ipcRenderer.invoke(IPC_CHANNELS.STREAM.UPDATE_SETTINGS, patch),
   streamPushNow: (): Promise<import('@shared/contracts/stream').StreamOverview> =>
