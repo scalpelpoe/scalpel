@@ -2,9 +2,9 @@ import type { Keystone, SnapshotItem, StreamHead, StreamSnapshot } from '@scalpe
 import { ErrorBanner } from '@renderer/components/ErrorBanner'
 import { Button } from '@renderer/components/primitives/Button'
 import { useEffect, useState } from 'react'
+import { CardOrPriceCheck, type CheckableItem } from './CardOrPriceCheck'
 import { CharacterHeader, UpdatedAge } from './CharacterHeader'
 import { ItemSlot } from './ItemSlot'
-import { ItemTooltip } from './ItemTooltip'
 import { Paperdoll } from './Paperdoll'
 import { StreamLinks } from './StreamLinks'
 import { PoweredBy, Window } from './Window'
@@ -119,23 +119,33 @@ export function GearPanel({ snapshot, head, now, placement }: Props): JSX.Elemen
   const [tab, setTab] = useState<Tab>('gear')
   const [hovered, setHovered] = useState<SnapshotItem | null>(null)
   const [pinned, setPinned] = useState<SnapshotItem | null>(null)
+  const [checking, setChecking] = useState<CheckableItem | null>(null)
 
   // A new snapshot replaces every item object; drop stale selections.
   // biome-ignore lint/correctness/useExhaustiveDependencies: reset keyed on the snapshot identity only.
   useEffect(() => {
     setHovered(null)
     setPinned(null)
+    setChecking(null)
   }, [snapshot])
 
-  const shown = hovered ?? pinned
-  const pin = (item: SnapshotItem): void => setPinned((p) => (p === item ? null : item))
+  // While the price checker is open it owns the card area; hover and pin changes don't replace it.
+  const shown = checking ?? hovered ?? pinned
+  const pin = (item: SnapshotItem): void => {
+    setChecking(null)
+    setPinned((p) => (p === item ? null : item))
+  }
   const cardTab = tab === 'gear' || tab === 'jewels'
   // A hover never gets its mouseleave once the tab's slots unmount, so every switch clears the card.
   const selectTab = (next: Tab): void => {
     setTab(next)
     setHovered(null)
     setPinned(null)
+    setChecking(null)
   }
+  const card = shown && (
+    <CardOrPriceCheck item={shown} checking={checking} canCheck={pinned === shown} onCheck={setChecking} />
+  )
   const tabs: Array<[Tab, string]> = [
     ['gear', 'Gear'],
     ['skills', 'Skills'],
@@ -146,8 +156,12 @@ export function GearPanel({ snapshot, head, now, placement }: Props): JSX.Elemen
   return (
     <div className="ssv-panel">
       {placement === 'side' && shown && cardTab && (
-        <div className="ssv-overlay-tooltip">
-          <ItemTooltip item={shown} />
+        // The overlay layer ignores the pointer so a hover card never eats video clicks; a pinned card
+        // with a price check (its button) and the open checker must take it back.
+        <div
+          className={`ssv-overlay-tooltip${checking || (pinned === shown && shown.priceCheck) ? ' !pointer-events-auto !overflow-y-auto' : ''}`}
+        >
+          {card}
         </div>
       )}
       <Window
@@ -204,7 +218,7 @@ export function GearPanel({ snapshot, head, now, placement }: Props): JSX.Elemen
           {tab === 'keystones' && <KeystoneList keystones={snapshot.keystones} />}
           {placement === 'below' && shown && cardTab && (
             <div className="ssv-inline-tooltip">
-              <ItemTooltip item={shown} />
+              {card}
             </div>
           )}
         </div>

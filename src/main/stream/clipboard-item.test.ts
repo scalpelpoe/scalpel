@@ -87,6 +87,15 @@ describe('snapshotItemFromClipboard', () => {
     expect(item?.price).toBeNull()
   })
 
+  it('attaches the price check dep for a rare and omits it when null', () => {
+    const parsed = parseItemText(ringText)
+    if (!parsed) throw new Error('fixture did not parse')
+    const pc = { league: 'Standard', body: { query: {}, sort: { price: 'asc' } }, rows: [] }
+    expect(snapshotItemFromClipboard(parsed, { ...deps, priceCheck: () => pc })?.priceCheck).toEqual(pc)
+    const none = snapshotItemFromClipboard(parsed, { ...deps, priceCheck: () => null })
+    expect(none && 'priceCheck' in none).toBe(false)
+  })
+
   it('prices uniques and refuses items without art', () => {
     const unique = defaultPoeItem(
       { itemClass: 'Body Armours', rarity: 'Unique', name: 'Morior Invictus', baseType: 'Grand Regalia' },

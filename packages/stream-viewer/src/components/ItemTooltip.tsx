@@ -1,5 +1,6 @@
 import type { ModLine, ModSection, SnapshotItem } from '@scalpel/stream-contract'
-import { type ReactNode, useState } from 'react'
+import { Button } from '@renderer/components/primitives/Button'
+import { type ReactNode, type Ref, useState } from 'react'
 
 const SECTION_COLOR: Record<ModSection['kind'], string> = {
   enchant: 'var(--ssv-mod-enchant)',
@@ -97,7 +98,17 @@ function priceText(price: NonNullable<SnapshotItem['price']>): string {
 
 /** One item as the game draws it: rarity header art, properties, separators, mod sections.
  *  Mod lines keep Scalpel's tier badges; hovering (or tapping) a line shows its tier and range. */
-export function ItemTooltip({ item }: { item: SnapshotItem }): JSX.Element {
+export function ItemTooltip({
+  item,
+  onPriceCheck,
+  rootRef,
+}: {
+  item: SnapshotItem
+  /** The card's root element, so the price checker can take the card's width. */
+  rootRef?: Ref<HTMLDivElement>
+  /** Set by the caller when the item is pinned; shows the Price check button when the item has a query. */
+  onPriceCheck?: () => void
+}): JSX.Element {
   const frame = FRAME[item.rarity]
   const title = item.name ?? item.baseType
   const showBase = (frame === 'unique' || frame === 'rare') && item.name && item.name !== item.baseType
@@ -173,7 +184,7 @@ export function ItemTooltip({ item }: { item: SnapshotItem }): JSX.Element {
   }
 
   return (
-    <div className="ssv-tooltip" role="tooltip" data-frame={frame}>
+    <div ref={rootRef} className="ssv-tooltip" role="tooltip" data-frame={frame}>
       <div className="ssv-tooltip-head" data-frame={frame}>
         <div className={`ssv-tooltip-name ssv-r-${item.rarity}`}>{title}</div>
         {showBase && <div className={`ssv-tooltip-name ssv-r-${item.rarity}`}>{item.baseType}</div>}
@@ -187,6 +198,13 @@ export function ItemTooltip({ item }: { item: SnapshotItem }): JSX.Element {
         ))}
         {item.price && <div className="ssv-price">{priceText(item.price)}</div>}
       </div>
+      {onPriceCheck && item.priceCheck && (
+        <div className="flex justify-center px-2 py-2 border-t border-border">
+          <Button size="sm" onClick={onPriceCheck}>
+            Price check
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

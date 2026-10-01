@@ -5,6 +5,7 @@ import { StreamApiError, type StreamClient } from './client'
 import {
   CHECK_INTERVAL_MS,
   createPublisher,
+  fitPriceChecks,
   MIN_PUSH_GAP_MS,
   PATCH_TTL_MS,
   type PublisherDeps,
@@ -276,6 +277,34 @@ describe('createPublisher', () => {
     expect(unknown.publisher.getStatus().error).toMatch(/poe.ninja has no profile for aer0_#2690/)
   })
 
+  it('trims oversized price checks on the wire without touching retained base or patch items', async () => {
+    const huge = (): SnapshotItem['priceCheck'] => ({
+      league: 'Standard',
+      body: { pad: 'x'.repeat(300_000) },
+      rows: [],
+    })
+    const t = setup({
+      build: (raw) => {
+        const snapshot = structuredClone(base)
+        snapshot.source = { kind: 'test', updatedUtc: new Date(raw.updatedUtc).toISOString() }
+        if (snapshot.equipment.Helm) snapshot.equipment.Helm.priceCheck = huge()
+        return { snapshot, warnings: [] }
+      },
+    })
+    t.publisher.start()
+    await settle()
+    expect(t.pushed()[0].equipment.Helm?.priceCheck).toBeUndefined()
+    expect(t.publisher.currentSnapshot()?.equipment.Helm?.priceCheck).toBeDefined()
+
+    const patchItem: SnapshotItem = { ...structuredClone(base.equipment.Ring2 as SnapshotItem), priceCheck: huge() }
+    const applied = t.publisher.applyPatch('Ring2', patchItem)
+    await vi.advanceTimersByTimeAsync(MIN_PUSH_GAP_MS)
+    await applied
+    expect(t.pushed()[1].equipment.Ring2?.priceCheck).toBeUndefined()
+    expect(patchItem.priceCheck).toBeDefined()
+    expect(t.publisher.currentSnapshot()?.equipment.Helm?.priceCheck).toBeDefined()
+  })
+
   it('shows hotkey patches until poe.ninja catches up', async () => {
     const t = setup()
     t.publisher.start()
@@ -377,5 +406,45 @@ describe('createPublisher', () => {
   it('refuses patches before the first publish', async () => {
     const t = setup({}, { enabled: false })
     await expect(t.publisher.applyPatch('Ring', base.equipment.Ring as SnapshotItem)).rejects.toThrow(/not published/)
+  })
+})
+
+describe('fitPriceChecks', () => {
+  const bytes = (s: StreamSnapshot) => Buffer.byteLength(JSON.stringify(s), 'utf8')
+  const withPc = (item: SnapshotItem, pad: number): SnapshotItem => ({
+    ...item,
+    priceCheck: { league: 'Standard', body: { pad: 'x'.repeat(pad) }, rows: [] },
+  })
+
+  it('drops the largest price checks first and stops once it fits', () => {
+    const snap = structuredClone(base)
+    const helm = snap.equipment.Helm as SnapshotItem
+    const ring = snap.equipment.Ring as SnapshotItem
+    snap.equipment.Helm = withPc(helm, 3000)
+    snap.equipment.Ring = withPc(ring, 9000)
+    snap.other = [withPc(helm, 6000)]
+    const limit = bytes(snap) - 5000
+    fitPriceChecks(snap, limit)
+    expect(snap.equipment.Ring?.priceCheck).toBeUndefined()
+    expect(snap.other[0].priceCheck).toBeDefined()
+    expect(snap.equipment.Helm?.priceCheck).toBeDefined()
+    expect(bytes(snap)).toBeLessThanOrEqual(limit)
+  })
+
+  it('leaves a snapshot that already fits untouched', () => {
+    const snap = structuredClone(base)
+    snap.equipment.Helm = withPc(snap.equipment.Helm as SnapshotItem, 100)
+    fitPriceChecks(snap, 10_000_000)
+    expect(snap.equipment.Helm.priceCheck).toBeDefined()
+  })
+
+  it('measures bytes, not characters', () => {
+    const snap = structuredClone(base)
+    snap.equipment.Helm = withPc(snap.equipment.Helm as SnapshotItem, 0)
+    snap.equipment.Helm.priceCheck!.body = { pad: '€'.repeat(2000) }
+    const limit = bytes(snap) - 1
+    expect(JSON.stringify(snap).length).toBeLessThan(limit)
+    fitPriceChecks(snap, limit)
+    expect(snap.equipment.Helm.priceCheck).toBeUndefined()
   })
 })

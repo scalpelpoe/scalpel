@@ -2,6 +2,7 @@ import {
   LIMITS,
   type ModLine,
   type ModSection,
+  type PriceCheck,
   POECDN_PREFIX,
   type Slot,
   type SnapshotItem,
@@ -156,6 +157,8 @@ export interface ClipboardItemDeps {
   /** Item art by unique name or base type. */
   iconFor: (name: string, baseType: string) => string | undefined
   price: (item: SnapshotItem) => SnapshotItem['price']
+  /** Precomputed viewer price check for the copied item; null when it can't be price-checked. */
+  priceCheck?: (item: PoeItem) => PriceCheck | null
 }
 
 /** Build a snapshot item from a clipboard-parsed item, or null when it has no item art to show. */
@@ -187,5 +190,9 @@ export function snapshotItemFromClipboard(item: PoeItem, deps: ClipboardItemDeps
     price: null,
   }
   snapshotItem.price = rarity === 'unique' ? deps.price(snapshotItem) : null
+  if (deps.priceCheck) {
+    const pc = deps.priceCheck(item)
+    if (pc) snapshotItem.priceCheck = pc
+  }
   return snapshotItem
 }

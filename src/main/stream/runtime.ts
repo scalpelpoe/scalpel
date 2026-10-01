@@ -1,4 +1,4 @@
-import type { PairingCodeResponse, ProfileState, ProfileStatus } from '@scalpel/stream-contract'
+import type { PairingCodeResponse, PriceCheck, ProfileState, ProfileStatus } from '@scalpel/stream-contract'
 import {
   DEFAULT_STREAM_SETTINGS,
   type StreamCharacterOption,
@@ -16,14 +16,23 @@ import { isGameAttached, onGameAttachedChange } from '../game-presence'
 import { getPoeVersion } from '../game-state'
 import { getTierData } from '../tier-data'
 import { loadIconCache } from '../trade/icon-cache'
+import { parseItemText } from '../trade/clipboard'
 import { lookupUniquePriceForBase } from '../trade/prices'
+import { ensureStatsLoaded } from '../trade/stat-matcher'
+import { getStatsFetched } from '../trade/stat-matcher/stats-cache'
+import { getProfileBackedSetting } from '../profiles/profile-settings'
 import { type ApiFetch, createStreamClient, STREAM_API, StreamApiError } from './client'
 import { paperdollSide, slotForItem, snapshotItemFromClipboard } from './clipboard-item'
 import { enrichCharacter, toSnapshotPrice } from './enrich'
+import { createStatsGate } from './stats-gate'
 import { normalizeCharacter } from './normalize'
+import { ninjaItemText } from './ninja-item-text'
+import { debugWarn } from './debug-warn'
+import { buildPriceCheck } from './price-query'
 import { normalizeBuildGuideUrl } from './links'
 import { createPublisher, type Publisher } from './publisher'
 import { normalizePoeAccount } from '@shared/poe-account'
+import type { NinjaItemData } from './sources/ninja-types'
 import { createPoeNinjaSource, type SourceFetch } from './sources/poe-ninja'
 import { clearStreamToken, loadStreamToken, saveStreamToken } from './token-store'
 
@@ -36,10 +45,6 @@ const LIVE_BASE = process.env.SCALPEL_STREAM_LIVE || STREAM_LIVE_BASE
 const USER_AGENT = 'Scalpel-Stream'
 const PROFILE_CACHE_MS = 60_000
 const bundledIcons = bundledPoe2Icons as Record<string, string>
-
-function debugWarn(...args: unknown[]): void {
-  if (process.env.SCALPEL_DEBUG_LOG) console.warn('[stream]', ...args)
-}
 
 export type { StreamSettingsPatch }
 
@@ -56,6 +61,30 @@ export interface StreamRuntime {
   listCharacters(): Promise<StreamCharacterOption[]>
   /** "Update Stream Slot" macro: copy the hovered equipped item and show it in its slot now. */
   patchFromHoveredItem(capture: () => Promise<PoeItem | null>): Promise<void>
+}
+
+/** Price checks need the trade stats. Both publish paths are gated on them without
+ *  awaiting: when they aren't loaded the item ships without a price check, a load
+ *  starts, and the stream is force-republished once it finishes. */
+let statsReady: () => boolean = () => false
+
+/** Run a price-check builder; any failure means "no price check", never a failed publish. */
+function safePriceCheck(build: () => PriceCheck | null): PriceCheck | null {
+  try {
+    return statsReady() ? build() : null
+  } catch (e) {
+    debugWarn('price check failed:', (e as Error).message)
+    return null
+  }
+}
+
+function ninjaPriceCheck(league: string): (raw: NinjaItemData) => PriceCheck | null {
+  return (raw) =>
+    safePriceCheck(() => {
+      const text = ninjaItemText(raw)
+      const parsed = text ? parseItemText(text) : null
+      return parsed ? buildPriceCheck(parsed, league) : null
+    })
 }
 
 export function createStreamRuntime(
@@ -105,6 +134,7 @@ export function createStreamRuntime(
       enrichCharacter(normalized, {
         tierData: poe2 ? getTierData() : null,
         uniquePrice: poe2 ? lookupUniquePriceForBase : () => undefined,
+        priceCheck: poe2 ? ninjaPriceCheck(normalized.snapshot.character.league) : undefined,
       })
       return { snapshot: normalized.snapshot, warnings: normalized.warnings }
     },
@@ -112,6 +142,11 @@ export function createStreamRuntime(
     getToken: loadStreamToken,
     isGameActive: () => isGameAttached() && getPoeVersion() === 2,
     onStatus: () => onOverview(overviewNow()),
+  })
+  statsReady = createStatsGate({
+    isLoaded: getStatsFetched,
+    load: ensureStatsLoaded,
+    onLoaded: () => void publisher.pushNow().catch(() => {}),
   })
   onGameAttachedChange(() => publisher.refresh())
 
@@ -286,7 +321,9 @@ export function createStreamRuntime(
         debugWarn(`slot patch skipped: ${item.itemClass} has no paperdoll slot`)
         return
       }
+      const league = base.character.league || getProfileBackedSetting(store, 'league')
       const patched = snapshotItemFromClipboard(item, {
+        priceCheck: (i) => safePriceCheck(() => buildPriceCheck(i, league)),
         iconFor: (name, baseType) => {
           const runtime = loadIconCache(2)
           return bundledIcons[name] ?? bundledIcons[baseType] ?? runtime[name] ?? runtime[baseType]

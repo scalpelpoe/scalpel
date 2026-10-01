@@ -1,4 +1,4 @@
-import { type Slot, type SnapshotItem, type StreamSnapshot, validateSnapshot } from '@scalpel/stream-contract'
+import { LIMITS, type Slot, type SnapshotItem, type StreamSnapshot, validateSnapshot } from '@scalpel/stream-contract'
 import type { StreamPublisherStatus, StreamSettings } from '@shared/contracts/stream'
 import { StreamApiError, type StreamClient } from './client'
 import { snapshotLinks } from './links'
@@ -40,6 +40,36 @@ interface Patch {
 function itemKey(item: SnapshotItem | undefined): string | null {
   if (!item) return null
   return [item.name, item.baseType, ...item.sections.flatMap((s) => s.lines.map((l) => l.text))].join('|')
+}
+
+const SNAPSHOT_HEADROOM_BYTES = 4096
+
+function allItems(s: StreamSnapshot): SnapshotItem[] {
+  return [
+    ...(Object.values(s.equipment).filter(Boolean) as SnapshotItem[]),
+    ...s.flasks,
+    ...s.charms,
+    ...s.jewels,
+    ...s.other,
+  ]
+}
+
+/** Strip `priceCheck` from the items carrying the largest ones until the serialized
+ *  snapshot fits `maxBytes` (UTF-8 bytes, as the contract measures). Mutates in place. */
+export function fitPriceChecks(snapshot: StreamSnapshot, maxBytes: number): void {
+  const size = (v: unknown): number => Buffer.byteLength(JSON.stringify(v), 'utf8')
+  let total = size(snapshot)
+  if (total <= maxBytes) return
+  const carriers = allItems(snapshot)
+    .filter((i) => i.priceCheck)
+    .map((item) => ({ item, bytes: size(item.priceCheck) }))
+    .sort((a, b) => b.bytes - a.bytes)
+  for (const c of carriers) {
+    if (total <= maxBytes) break
+    delete c.item.priceCheck
+    // Removing `"priceCheck":` plus a comma accounts for 14 more bytes.
+    total -= c.bytes + 14
+  }
 }
 
 export interface Publisher {
@@ -139,7 +169,9 @@ export function createPublisher(deps: PublisherDeps): Publisher {
 
   async function push(unlinked: StreamSnapshot, profileId: string, token: string): Promise<void> {
     // Links come from the prefs current at push time, so a hotkey patch never republishes stale ones.
-    const snapshot: StreamSnapshot = { ...unlinked, links: snapshotLinks(deps.getPrefs()) }
+    // Clone so trimming never reaches the base snapshot or patch items the publisher retains.
+    const snapshot: StreamSnapshot = structuredClone({ ...unlinked, links: snapshotLinks(deps.getPrefs()) })
+    fitPriceChecks(snapshot, LIMITS.snapshotBytes - SNAPSHOT_HEADROOM_BYTES)
     const check = validateSnapshot(snapshot)
     if (!check.ok) throw new Error(`Snapshot failed validation: ${check.issues.slice(0, 3).join('; ')}`)
     const wait = lastPushAt + MIN_PUSH_GAP_MS - now()

@@ -35,15 +35,7 @@ export const CHIP_COLORS: Record<string, string> = {
   'misc.exclude_elder': '#81c784',
 }
 
-export const TERNARY_CHIP_IDS = new Set([
-  'misc.corrupted',
-  'misc.mirrored',
-  'misc.fractured',
-  'misc.vestigial',
-  'misc.foulborn',
-  'misc.sanctified',
-])
-export const MINMAX_CHIP_IDS = new Set(['misc.ilvl'])
+export { MINMAX_CHIP_IDS, TERNARY_CHIP_IDS } from '@shared/price-check-chips'
 
 export function getChipColor(id: string): string {
   if (CHIP_COLORS[id]) return CHIP_COLORS[id]

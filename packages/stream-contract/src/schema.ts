@@ -105,6 +105,73 @@ export const PriceSchema = z.strictObject({
   currency: z.enum(['exalted', 'divine', 'chaos']),
 })
 
+const JsonPathSchema = z.array(z.union([z.string().max(64), z.number().int().nonnegative()])).max(12)
+
+export const QueryOpSchema = z.discriminatedUnion('op', [
+  z.strictObject({ op: z.literal('delete'), path: JsonPathSchema }),
+  z.strictObject({ op: z.literal('disable'), path: JsonPathSchema }),
+  /** Writes `value` at `path`, creating missing intermediate objects. */
+  z.strictObject({ op: z.literal('set'), path: JsonPathSchema, value: z.custom<unknown>((v) => v !== undefined) }),
+])
+
+/** Chip states; 'none' is Any for a yesno chip and Off for a minmax chip. */
+export const ChipStateSchema = z.enum(['yes', 'no', 'min', 'max', 'none'])
+
+const CHIP_MODE_STATES = {
+  yesno: ['yes', 'no', 'none'],
+  minmax: ['min', 'max', 'none'],
+} as const
+
+export const PriceCheckChipSchema = z
+  .strictObject({
+    mode: z.enum(['yesno', 'minmax']),
+    default: ChipStateSchema,
+    /** Ops applied to the all-on query to move the chip from its default to each state. */
+    states: z.partialRecord(ChipStateSchema, z.array(QueryOpSchema).max(16)),
+  })
+  .superRefine((chip, ctx) => {
+    const allowed: readonly string[] = CHIP_MODE_STATES[chip.mode]
+    for (const key of Object.keys(chip.states)) {
+      if (!allowed.includes(key)) {
+        ctx.addIssue({ code: 'custom', path: ['states', key], message: `${chip.mode} chips cannot use state '${key}'` })
+      }
+    }
+    if (!allowed.includes(chip.default)) {
+      ctx.addIssue({ code: 'custom', path: ['default'], message: `${chip.mode} chips cannot default to '${chip.default}'` })
+    }
+    if (!(chip.default in chip.states)) {
+      ctx.addIssue({ code: 'custom', path: ['default'], message: 'default must be a key of states' })
+    }
+  })
+
+export const PriceCheckRowSchema = z.strictObject({
+  id: z.string().max(LIMITS.string),
+  text,
+  /** StatFilter.type: 'explicit' | 'implicit' | 'pseudo' | 'rune' | 'misc' | ... drives row colour. */
+  type: z.string().max(32),
+  value: z.number().nullable(),
+  min: z.number().nullable(),
+  max: z.number().nullable(),
+  modTier: z.number().int().optional(),
+  modRange: z.strictObject({ min: z.number(), max: z.number() }).optional(),
+  defaultEnabled: z.boolean(),
+  /** Shown at its default state; the viewer can't toggle or edit it. */
+  locked: z.boolean(),
+  /** Applied to the all-on query when the viewer turns this row off. */
+  offOps: z.array(QueryOpSchema).max(16),
+  minPath: JsonPathSchema.nullable(),
+  maxPath: JsonPathSchema.nullable(),
+  /** Yes/No/Any or Min/Max/Off chip; absent on plain rows and 0.3.0-era rows. */
+  chip: PriceCheckChipSchema.optional(),
+})
+
+export const PriceCheckSchema = z.strictObject({
+  league: z.string().min(1).max(64),
+  /** trade2 search body with every toggleable row on: { query, sort }. */
+  body: z.record(z.string(), z.unknown()),
+  rows: z.array(PriceCheckRowSchema).max(40),
+})
+
 export const SnapshotItemSchema = z.strictObject({
   /** Unique/rare name, or the full magic name; null when the item shows only its base type. */
   name: text.nullable(),
@@ -123,6 +190,8 @@ export const SnapshotItemSchema = z.strictObject({
   sockets: z.array(SocketSchema).max(LIMITS.sockets),
   /** Uniques only. */
   price: PriceSchema.nullable(),
+  /** Viewer price check; absent on 0.3.0 snapshots or when the item can't be price-checked. */
+  priceCheck: PriceCheckSchema.optional(),
 })
 
 const optionalItem = SnapshotItemSchema.optional()
@@ -206,6 +275,12 @@ export type ModLine = z.infer<typeof ModLineSchema>
 export type ModSection = z.infer<typeof ModSectionSchema>
 export type ItemFlags = z.infer<typeof ItemFlagsSchema>
 export type Socket = z.infer<typeof SocketSchema>
+export type QueryOp = z.infer<typeof QueryOpSchema>
+export type JsonPath = z.infer<typeof JsonPathSchema>
+export type PriceCheckRow = z.infer<typeof PriceCheckRowSchema>
+export type ChipState = z.infer<typeof ChipStateSchema>
+export type PriceCheckChip = z.infer<typeof PriceCheckChipSchema>
+export type PriceCheck = z.infer<typeof PriceCheckSchema>
 export type Price = z.infer<typeof PriceSchema>
 export type SnapshotItem = z.infer<typeof SnapshotItemSchema>
 export type Equipment = z.infer<typeof EquipmentSchema>

@@ -1,0 +1,785 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`buildTradeQuery > builds the same body searchTrade posts: armour 1`] = `
+"{
+  "query": {
+    "status": {
+      "option": "available"
+    },
+    "filters": {
+      "type_filters": {
+        "filters": {
+          "rarity": {
+            "option": "nonunique"
+          },
+          "category": {
+            "option": "armour.chest"
+          }
+        }
+      },
+      "equipment_filters": {
+        "disabled": false,
+        "filters": {
+          "ev": {
+            "min": 585
+          },
+          "es": {
+            "min": 219
+          }
+        }
+      },
+      "misc_filters": {
+        "filters": {
+          "corrupted": {
+            "option": "false"
+          },
+          "mirrored": {
+            "option": "false"
+          }
+        }
+      },
+      "trade_filters": {
+        "disabled": false,
+        "filters": {
+          "collapse": {
+            "option": "true"
+          },
+          "price": {
+            "min": null,
+            "max": null,
+            "option": "exalted_divine"
+          }
+        }
+      }
+    },
+    "stats": [
+      {
+        "type": "and",
+        "filters": [
+          {
+            "id": "pseudo.pseudo_total_life",
+            "value": {
+              "min": 85
+            }
+          },
+          {
+            "id": "pseudo.pseudo_total_elemental_resistance",
+            "value": {
+              "min": 60
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "sort": {
+    "price": "asc"
+  }
+}"
+`;
+
+exports[`buildTradeQuery > builds the same body searchTrade posts: bow 1`] = `
+"{
+  "query": {
+    "status": {
+      "option": "available"
+    },
+    "filters": {
+      "type_filters": {
+        "filters": {
+          "rarity": {
+            "option": "nonunique"
+          },
+          "category": {
+            "option": "weapon.bow"
+          }
+        }
+      },
+      "equipment_filters": {
+        "disabled": false,
+        "filters": {
+          "dps": {
+            "min": 185
+          }
+        }
+      },
+      "misc_filters": {
+        "filters": {
+          "corrupted": {
+            "option": "false"
+          },
+          "mirrored": {
+            "option": "false"
+          }
+        }
+      },
+      "trade_filters": {
+        "disabled": false,
+        "filters": {
+          "collapse": {
+            "option": "true"
+          },
+          "price": {
+            "min": null,
+            "max": null,
+            "option": "exalted_divine"
+          }
+        }
+      }
+    },
+    "stats": [
+      {
+        "type": "and",
+        "filters": [
+          {
+            "id": "explicit.stat_phys",
+            "value": {
+              "min": 16
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "sort": {
+    "price": "asc"
+  }
+}"
+`;
+
+exports[`buildTradeQuery > builds the same body searchTrade posts: flask 1`] = `
+"{
+  "query": {
+    "status": {
+      "option": "available"
+    },
+    "filters": {
+      "type_filters": {
+        "filters": {
+          "rarity": {
+            "option": "nonunique"
+          },
+          "category": {
+            "option": "flask"
+          }
+        }
+      },
+      "misc_filters": {
+        "filters": {
+          "corrupted": {
+            "option": "false"
+          },
+          "mirrored": {
+            "option": "false"
+          }
+        }
+      },
+      "trade_filters": {
+        "disabled": false,
+        "filters": {
+          "collapse": {
+            "option": "true"
+          },
+          "price": {
+            "min": null,
+            "max": null,
+            "option": "exalted_divine"
+          }
+        }
+      }
+    },
+    "type": "Transcendent Life Flask",
+    "stats": [
+      {
+        "type": "and",
+        "filters": [
+          {
+            "id": "explicit.stat_charges",
+            "value": {
+              "min": 36
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "sort": {
+    "price": "asc"
+  }
+}"
+`;
+
+exports[`buildTradeQuery > builds the same body searchTrade posts: jewel 1`] = `
+"{
+  "query": {
+    "status": {
+      "option": "available"
+    },
+    "filters": {
+      "type_filters": {
+        "filters": {
+          "rarity": {
+            "option": "nonunique"
+          },
+          "category": {
+            "option": "jewel"
+          }
+        }
+      },
+      "misc_filters": {
+        "filters": {
+          "corrupted": {
+            "option": "false"
+          },
+          "mirrored": {
+            "option": "false"
+          }
+        }
+      },
+      "trade_filters": {
+        "disabled": false,
+        "filters": {
+          "collapse": {
+            "option": "true"
+          },
+          "price": {
+            "min": null,
+            "max": null,
+            "option": "exalted_divine"
+          }
+        }
+      }
+    },
+    "stats": [
+      {
+        "type": "and",
+        "filters": [
+          {
+            "id": "pseudo.pseudo_total_mana",
+            "value": {
+              "min": 4
+            }
+          },
+          {
+            "id": "explicit.stat_skillspeed",
+            "value": {
+              "min": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "sort": {
+    "price": "asc"
+  }
+}"
+`;
+
+exports[`buildTradeQuery > builds the same body searchTrade posts: ring 1`] = `
+"{
+  "query": {
+    "status": {
+      "option": "available"
+    },
+    "filters": {
+      "type_filters": {
+        "filters": {
+          "rarity": {
+            "option": "nonunique"
+          },
+          "category": {
+            "option": "accessory.ring"
+          }
+        }
+      },
+      "misc_filters": {
+        "filters": {
+          "corrupted": {
+            "option": "false"
+          },
+          "mirrored": {
+            "option": "false"
+          }
+        }
+      },
+      "trade_filters": {
+        "disabled": false,
+        "filters": {
+          "collapse": {
+            "option": "true"
+          },
+          "price": {
+            "min": null,
+            "max": null,
+            "option": "exalted_divine"
+          }
+        }
+      }
+    },
+    "stats": [
+      {
+        "type": "and",
+        "filters": [
+          {
+            "id": "pseudo.pseudo_total_life",
+            "value": {
+              "min": 64
+            }
+          },
+          {
+            "id": "pseudo.pseudo_total_elemental_resistance",
+            "value": {
+              "min": 32
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "sort": {
+    "price": "asc"
+  }
+}"
+`;
+
+exports[`buildTradeQuery > builds the same body searchTrade posts: unique 1`] = `
+"{
+  "query": {
+    "status": {
+      "option": "available"
+    },
+    "name": "Ventor's Gamble",
+    "type": "Gold Ring",
+    "filters": {
+      "misc_filters": {
+        "filters": {
+          "corrupted": {
+            "option": "false"
+          },
+          "mutated": {
+            "option": "false"
+          },
+          "identified": {
+            "option": "true"
+          }
+        }
+      },
+      "trade_filters": {
+        "disabled": false,
+        "filters": {
+          "collapse": {
+            "option": "true"
+          },
+          "price": {
+            "min": null,
+            "max": null,
+            "option": "exalted_divine"
+          }
+        }
+      }
+    },
+    "stats": [
+      {
+        "type": "and",
+        "filters": []
+      }
+    ]
+  },
+  "sort": {
+    "price": "asc"
+  }
+}"
+`;
+
+exports[`searchTrade POST body (golden) > posts the golden body: armour 1`] = `
+"{
+  "query": {
+    "status": {
+      "option": "available"
+    },
+    "filters": {
+      "type_filters": {
+        "filters": {
+          "rarity": {
+            "option": "nonunique"
+          },
+          "category": {
+            "option": "armour.chest"
+          }
+        }
+      },
+      "equipment_filters": {
+        "disabled": false,
+        "filters": {
+          "ev": {
+            "min": 585
+          },
+          "es": {
+            "min": 219
+          }
+        }
+      },
+      "misc_filters": {
+        "filters": {
+          "corrupted": {
+            "option": "false"
+          },
+          "mirrored": {
+            "option": "false"
+          }
+        }
+      },
+      "trade_filters": {
+        "disabled": false,
+        "filters": {
+          "collapse": {
+            "option": "true"
+          },
+          "price": {
+            "min": null,
+            "max": null,
+            "option": "exalted_divine"
+          }
+        }
+      }
+    },
+    "stats": [
+      {
+        "type": "and",
+        "filters": [
+          {
+            "id": "pseudo.pseudo_total_life",
+            "value": {
+              "min": 85
+            }
+          },
+          {
+            "id": "pseudo.pseudo_total_elemental_resistance",
+            "value": {
+              "min": 60
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "sort": {
+    "price": "asc"
+  }
+}"
+`;
+
+exports[`searchTrade POST body (golden) > posts the golden body: bow 1`] = `
+"{
+  "query": {
+    "status": {
+      "option": "available"
+    },
+    "filters": {
+      "type_filters": {
+        "filters": {
+          "rarity": {
+            "option": "nonunique"
+          },
+          "category": {
+            "option": "weapon.bow"
+          }
+        }
+      },
+      "equipment_filters": {
+        "disabled": false,
+        "filters": {
+          "dps": {
+            "min": 185
+          }
+        }
+      },
+      "misc_filters": {
+        "filters": {
+          "corrupted": {
+            "option": "false"
+          },
+          "mirrored": {
+            "option": "false"
+          }
+        }
+      },
+      "trade_filters": {
+        "disabled": false,
+        "filters": {
+          "collapse": {
+            "option": "true"
+          },
+          "price": {
+            "min": null,
+            "max": null,
+            "option": "exalted_divine"
+          }
+        }
+      }
+    },
+    "stats": [
+      {
+        "type": "and",
+        "filters": [
+          {
+            "id": "explicit.stat_phys",
+            "value": {
+              "min": 16
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "sort": {
+    "price": "asc"
+  }
+}"
+`;
+
+exports[`searchTrade POST body (golden) > posts the golden body: flask 1`] = `
+"{
+  "query": {
+    "status": {
+      "option": "available"
+    },
+    "filters": {
+      "type_filters": {
+        "filters": {
+          "rarity": {
+            "option": "nonunique"
+          },
+          "category": {
+            "option": "flask"
+          }
+        }
+      },
+      "misc_filters": {
+        "filters": {
+          "corrupted": {
+            "option": "false"
+          },
+          "mirrored": {
+            "option": "false"
+          }
+        }
+      },
+      "trade_filters": {
+        "disabled": false,
+        "filters": {
+          "collapse": {
+            "option": "true"
+          },
+          "price": {
+            "min": null,
+            "max": null,
+            "option": "exalted_divine"
+          }
+        }
+      }
+    },
+    "type": "Transcendent Life Flask",
+    "stats": [
+      {
+        "type": "and",
+        "filters": [
+          {
+            "id": "explicit.stat_charges",
+            "value": {
+              "min": 36
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "sort": {
+    "price": "asc"
+  }
+}"
+`;
+
+exports[`searchTrade POST body (golden) > posts the golden body: jewel 1`] = `
+"{
+  "query": {
+    "status": {
+      "option": "available"
+    },
+    "filters": {
+      "type_filters": {
+        "filters": {
+          "rarity": {
+            "option": "nonunique"
+          },
+          "category": {
+            "option": "jewel"
+          }
+        }
+      },
+      "misc_filters": {
+        "filters": {
+          "corrupted": {
+            "option": "false"
+          },
+          "mirrored": {
+            "option": "false"
+          }
+        }
+      },
+      "trade_filters": {
+        "disabled": false,
+        "filters": {
+          "collapse": {
+            "option": "true"
+          },
+          "price": {
+            "min": null,
+            "max": null,
+            "option": "exalted_divine"
+          }
+        }
+      }
+    },
+    "stats": [
+      {
+        "type": "and",
+        "filters": [
+          {
+            "id": "pseudo.pseudo_total_mana",
+            "value": {
+              "min": 4
+            }
+          },
+          {
+            "id": "explicit.stat_skillspeed",
+            "value": {
+              "min": 10
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "sort": {
+    "price": "asc"
+  }
+}"
+`;
+
+exports[`searchTrade POST body (golden) > posts the golden body: ring 1`] = `
+"{
+  "query": {
+    "status": {
+      "option": "available"
+    },
+    "filters": {
+      "type_filters": {
+        "filters": {
+          "rarity": {
+            "option": "nonunique"
+          },
+          "category": {
+            "option": "accessory.ring"
+          }
+        }
+      },
+      "misc_filters": {
+        "filters": {
+          "corrupted": {
+            "option": "false"
+          },
+          "mirrored": {
+            "option": "false"
+          }
+        }
+      },
+      "trade_filters": {
+        "disabled": false,
+        "filters": {
+          "collapse": {
+            "option": "true"
+          },
+          "price": {
+            "min": null,
+            "max": null,
+            "option": "exalted_divine"
+          }
+        }
+      }
+    },
+    "stats": [
+      {
+        "type": "and",
+        "filters": [
+          {
+            "id": "pseudo.pseudo_total_life",
+            "value": {
+              "min": 64
+            }
+          },
+          {
+            "id": "pseudo.pseudo_total_elemental_resistance",
+            "value": {
+              "min": 32
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "sort": {
+    "price": "asc"
+  }
+}"
+`;
+
+exports[`searchTrade POST body (golden) > posts the golden body: unique 1`] = `
+"{
+  "query": {
+    "status": {
+      "option": "available"
+    },
+    "name": "Ventor's Gamble",
+    "type": "Gold Ring",
+    "filters": {
+      "misc_filters": {
+        "filters": {
+          "corrupted": {
+            "option": "false"
+          },
+          "mutated": {
+            "option": "false"
+          },
+          "identified": {
+            "option": "true"
+          }
+        }
+      },
+      "trade_filters": {
+        "disabled": false,
+        "filters": {
+          "collapse": {
+            "option": "true"
+          },
+          "price": {
+            "min": null,
+            "max": null,
+            "option": "exalted_divine"
+          }
+        }
+      }
+    },
+    "stats": [
+      {
+        "type": "and",
+        "filters": []
+      }
+    ]
+  },
+  "sort": {
+    "price": "asc"
+  }
+}"
+`;

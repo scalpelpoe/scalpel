@@ -19,6 +19,8 @@ interface FilterChipProps {
   /** Greyed-out, non-interactive state (e.g. Load when there is nothing to load).
    *  Takes precedence over active/solidInactive and swallows clicks. */
   disabled?: boolean
+  /** Keeps the normal active/inactive look but swallows clicks and shows a default cursor. */
+  readOnly?: boolean
 }
 
 const TERNARY_GREEN = '#5ba85b'
@@ -55,6 +57,7 @@ export function FilterChip({
   mode = 'yesno',
   solidInactive = false,
   disabled = false,
+  readOnly = false,
 }: FilterChipProps): JSX.Element {
   // Ternary/minmax mode is enabled when an `onChange` handler is provided -- this lets
   // us distinguish "ternary chip with current state = any" from "binary chip"
@@ -70,7 +73,7 @@ export function FilterChip({
   const isAccent = effectiveColor === 'var(--accent)'
 
   const handleClick = (): void => {
-    if (disabled) return
+    if (disabled || readOnly) return
     if (ternary) onChange?.(nextTernary(state, mode))
     else onClick?.()
   }
@@ -80,7 +83,7 @@ export function FilterChip({
       onClick={handleClick}
       className="flex items-center gap-1 px-[10px] py-1 rounded-full cursor-pointer text-[11px] font-semibold select-none relative overflow-visible"
       style={{
-        cursor: disabled ? 'default' : undefined,
+        cursor: disabled || readOnly ? 'default' : undefined,
         background: disabled
           ? 'rgba(0,0,0,0.25)'
           : effectiveActive

@@ -1,7 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { ConfigPage } from '../components/ConfigPage'
 import { MobileView, OverlayView, PanelView } from '../components/TwitchViews'
-import { fakeExt, PlayerFrame, playerFrame, realSnapshot, withFakeApi, withMissingProfile } from './story-data'
+import {
+  fakeExt,
+  PlayerFrame,
+  playerFrame,
+  realSnapshot,
+  withFakeApi,
+  withMissingProfile,
+} from './story-data'
 import '../../web/public/site.css'
 
 const meta: Meta = {
@@ -13,8 +20,9 @@ export default meta
 type Story = StoryObj
 
 /** The video overlay over a stand-in player. Click "GEAR" on the left edge. */
+/** Left ring and body armour carry a price check: pin one, then use its Price check button. */
 export const VideoOverlay: Story = {
-  decorators: [PlayerFrame],
+  decorators: [PlayerFrame, withFakeApi(realSnapshot)],
   render: () => <OverlayView ext={fakeExt()} />,
 }
 

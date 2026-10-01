@@ -1,5 +1,6 @@
 import type { Slot, SnapshotItem, StreamSnapshot } from '@scalpel/stream-contract'
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { fireEvent, within } from '@testing-library/react'
 import { GearPanel } from '../components/GearPanel'
 import { ViewerRoot } from '../components/ViewerRoot'
 import { head, realSnapshot, sampleSnapshot } from './story-data'
@@ -64,5 +65,16 @@ export const Stale: Story = {
       source: { kind: 'poe.ninja', updatedUtc: new Date(Date.now() - 7 * 3600_000).toISOString() },
     },
     head: head(),
+  },
+}
+
+/** A pinned item opened in the price checker (pins the left ring, clicks Price check). */
+export const PriceChecking: Story = {
+  args: { snapshot: sampleSnapshot, head: head() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    fireEvent.click(await canvas.findByLabelText('Left ring: Blood Band'))
+    fireEvent.click(await canvas.findByRole('button', { name: 'Price check' }))
+    await canvas.findByRole('link', { name: /Search on trade/ })
   },
 }

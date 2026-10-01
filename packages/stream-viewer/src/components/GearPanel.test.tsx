@@ -178,3 +178,84 @@ describe('GearPanel', () => {
     expect(screen.queryByRole('link', { name: 'Item Filters ↗' })).toBeNull()
   })
 })
+
+describe('GearPanel price check', () => {
+  const withPriceCheck = () => {
+    const snapshot = sampleSnapshot()
+    const helm = snapshot.equipment.Helm
+    if (!helm) throw new Error('sample has no helm')
+    helm.priceCheck = {
+      league: 'Fate of the Vaal',
+      body: { query: { stats: [{ type: 'and', filters: [{ id: 'explicit.stat_life', value: { min: 72 } }] }] } },
+      rows: [
+        {
+          id: 'explicit.stat_life',
+          text: '+72 to maximum Life',
+          type: 'explicit',
+          value: 72,
+          min: 72,
+          max: null,
+          defaultEnabled: true,
+          locked: false,
+          offOps: [{ op: 'disable', path: ['query', 'stats', 0, 'filters', 0] }],
+          minPath: ['query', 'stats', 0, 'filters', 0, 'value', 'min'],
+          maxPath: ['query', 'stats', 0, 'filters', 0, 'value', 'max'],
+        },
+      ],
+    }
+    return snapshot
+  }
+
+  it('swaps the pinned card for the panel and restores it on tab switch', () => {
+    renderPanel(withPriceCheck())
+    fireEvent.click(screen.getByLabelText('Helmet: Grim Veil'))
+    fireEvent.click(screen.getByRole('button', { name: 'Price check' }))
+    expect(screen.getByRole('link', { name: /Search on trade/ })).toBeInTheDocument()
+    expect(screen.queryByRole('tooltip')).toBeNull()
+    // Hovering another slot does not replace the panel.
+    fireEvent.mouseEnter(screen.getByLabelText('Body armour: Morior Invictus'))
+    expect(screen.getByRole('link', { name: /Search on trade/ })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('tab', { name: 'Skills' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Gear' }))
+    expect(screen.queryByRole('link', { name: /Search on trade/ })).toBeNull()
+    fireEvent.click(screen.getByLabelText('Helmet: Grim Veil'))
+    expect(screen.getByRole('tooltip')).toBeInTheDocument()
+  })
+
+  it('goes back to the card and offers no button for items without a price check', () => {
+    renderPanel(withPriceCheck())
+    fireEvent.click(screen.getByLabelText('Helmet: Grim Veil'))
+    fireEvent.click(screen.getByRole('button', { name: 'Price check' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Back to item' }))
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Grim Veil')
+    fireEvent.click(screen.getByLabelText('Body armour: Morior Invictus'))
+    expect(screen.queryByRole('button', { name: 'Price check' })).toBeNull()
+  })
+
+  it('only offers the button on a pinned item, not a hover', () => {
+    renderPanel(withPriceCheck())
+    fireEvent.mouseEnter(screen.getByLabelText('Helmet: Grim Veil'))
+    expect(screen.queryByRole('button', { name: 'Price check' })).toBeNull()
+  })
+
+  describe('side placement pointer events', () => {
+    const wrapper = (container: HTMLElement): HTMLElement => container.querySelector('.ssv-overlay-tooltip') as HTMLElement
+
+    it('leaves a hovered card click-through, but takes pointer events for a pinned card and the checker', () => {
+      const { container } = renderPanel(withPriceCheck(), sampleHead(), 'side')
+      const helm = screen.getByLabelText('Helmet: Grim Veil')
+      fireEvent.mouseEnter(helm)
+      expect(wrapper(container)).not.toHaveClass('!pointer-events-auto')
+      fireEvent.click(helm)
+      expect(wrapper(container)).toHaveClass('!pointer-events-auto', '!overflow-y-auto')
+      fireEvent.click(screen.getByRole('button', { name: 'Price check' }))
+      expect(wrapper(container)).toHaveClass('!pointer-events-auto', '!overflow-y-auto')
+    })
+
+    it('keeps a pinned card without a price check click-through', () => {
+      const { container } = renderPanel(withPriceCheck(), sampleHead(), 'side')
+      fireEvent.click(screen.getByLabelText('Body armour: Morior Invictus'))
+      expect(wrapper(container)).not.toHaveClass('!pointer-events-auto')
+    })
+  })
+})

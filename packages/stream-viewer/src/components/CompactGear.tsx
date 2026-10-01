@@ -1,6 +1,6 @@
 import type { SLOTS, SnapshotItem, StreamSnapshot } from '@scalpel/stream-contract'
 import { useState } from 'react'
-import { ItemTooltip } from './ItemTooltip'
+import { CardOrPriceCheck, type CheckableItem } from './CardOrPriceCheck'
 
 type SlotName = (typeof SLOTS)[number]
 
@@ -34,6 +34,7 @@ export function equippedRows(snapshot: StreamSnapshot): Array<{ label: string; i
  *  is false for the OBS view, which only shows names. */
 export function CompactGear({ snapshot, interactive = true }: { snapshot: StreamSnapshot; interactive?: boolean }): JSX.Element {
   const [open, setOpen] = useState<SnapshotItem | null>(null)
+  const [checking, setChecking] = useState<CheckableItem | null>(null)
   return (
     <div className="flex flex-col gap-0.5">
       {equippedRows(snapshot).map(({ label, item }) => (
@@ -43,7 +44,10 @@ export function CompactGear({ snapshot, interactive = true }: { snapshot: Stream
             className="w-full flex items-center gap-2 px-1.5 py-1 text-left bg-transparent hover:bg-bg-hover aria-expanded:bg-bg-hover"
             aria-expanded={open === item}
             disabled={!interactive}
-            onClick={() => setOpen((cur) => (cur === item ? null : item))}
+            onClick={() => {
+              setChecking(null)
+              setOpen((cur) => (cur === item ? null : item))
+            }}
           >
             <img className="w-[26px] h-[26px] shrink-0 object-contain" src={item.icon} alt="" />
             <span className="min-w-0">
@@ -56,7 +60,7 @@ export function CompactGear({ snapshot, interactive = true }: { snapshot: Stream
           </button>
           {interactive && open === item && (
             <div className="ssv-inline-tooltip" style={{ marginTop: 4 }}>
-              <ItemTooltip item={item} />
+              <CardOrPriceCheck item={item} checking={checking} canCheck onCheck={setChecking} />
             </div>
           )}
         </div>

@@ -46,6 +46,104 @@ describe('validateSnapshot', () => {
     expect(validateSnapshot(s).ok).toBe(false)
   })
 
+  it('accepts items with and without priceCheck, and rejects bad ones', () => {
+    const s = fresh()
+    expect(s.equipment.Helm.priceCheck).toBeUndefined()
+    expect(validateSnapshot(s).ok).toBe(true)
+    const row = {
+      id: 'explicit.stat_1',
+      text: '+# to maximum Life',
+      type: 'explicit',
+      value: 80,
+      min: 72,
+      max: null,
+      modTier: 2,
+      modRange: { min: 70, max: 90 },
+      defaultEnabled: true,
+      locked: false,
+      offOps: [{ op: 'disable', path: ['query', 'stats', 0, 'filters', 0] }],
+      minPath: ['query', 'stats', 0, 'filters', 0, 'value', 'min'],
+      maxPath: null,
+    }
+    s.equipment.Helm.priceCheck = { league: 'Standard', body: { query: {}, sort: { price: 'asc' } }, rows: [row] }
+    expect(validateSnapshot(s).ok).toBe(true)
+    const rt = validateSnapshot(s)
+    if (rt.ok) expect(rt.snapshot.equipment.Helm?.priceCheck?.rows[0]).toEqual(row)
+    s.equipment.Helm.priceCheck.rows = Array.from({ length: 41 }, () => row)
+    expect(validateSnapshot(s).ok).toBe(false)
+    s.equipment.Helm.priceCheck.rows = [{ ...row, offOps: [{ op: 'replace', path: [] }] }]
+    expect(validateSnapshot(s).ok).toBe(false)
+  })
+
+  const pcRow = {
+    id: 'misc.corrupted',
+    text: 'Corrupted',
+    type: 'misc',
+    value: null,
+    min: null,
+    max: null,
+    defaultEnabled: true,
+    locked: false,
+    offOps: [],
+    minPath: null,
+    maxPath: null,
+  }
+  const withRow = (row: unknown) => {
+    const s = fresh()
+    s.equipment.Helm.priceCheck = { league: 'Standard', body: { query: {}, sort: { price: 'asc' } }, rows: [row] }
+    return s
+  }
+
+  it('round-trips a set op', () => {
+    const value = { filters: { corrupted: { option: 'true' } } }
+    const set = { op: 'set', path: ['query', 'filters', 'misc_filters'], value }
+    const rt = validateSnapshot(withRow({ ...pcRow, offOps: [set] }))
+    expect(rt.ok).toBe(true)
+    if (rt.ok) expect(rt.snapshot.equipment.Helm?.priceCheck?.rows[0].offOps).toEqual([set])
+    expect(validateSnapshot(withRow({ ...pcRow, offOps: [{ op: 'set', path: ['a'] }] })).ok).toBe(false)
+    expect(validateSnapshot(withRow({ ...pcRow, offOps: [{ op: 'delete', path: ['a'], value: 1 }] })).ok).toBe(false)
+  })
+
+  it('round-trips a chip row', () => {
+    const chip = {
+      mode: 'yesno',
+      default: 'no',
+      states: {
+        no: [],
+        yes: [{ op: 'set', path: ['query', 'filters', 'misc_filters', 'filters', 'corrupted', 'option'], value: 'true' }],
+        none: [{ op: 'delete', path: ['query', 'filters', 'misc_filters', 'filters', 'corrupted'] }],
+      },
+    }
+    const rt = validateSnapshot(withRow({ ...pcRow, chip }))
+    expect(rt.ok).toBe(true)
+    if (rt.ok) expect(rt.snapshot.equipment.Helm?.priceCheck?.rows[0].chip).toEqual(chip)
+    expect(validateSnapshot(withRow({ ...pcRow, chip: { ...chip, mode: 'ternary' } })).ok).toBe(false)
+    expect(validateSnapshot(withRow({ ...pcRow, chip: { ...chip, states: { maybe: [] } } })).ok).toBe(false)
+    expect(validateSnapshot(withRow({ ...pcRow, chip: { ...chip, extra: 1 } })).ok).toBe(false)
+  })
+
+  it('rejects chips with a state outside their mode or a default missing from states', () => {
+    const chip = (mode: string, def: string, states: string[]): unknown => ({
+      mode,
+      default: def,
+      states: Object.fromEntries(states.map((k) => [k, []])),
+    })
+    const ok = (c: unknown): boolean => validateSnapshot(withRow({ ...pcRow, chip: c })).ok
+    expect(ok(chip('yesno', 'no', ['no', 'yes', 'none']))).toBe(true)
+    expect(ok(chip('minmax', 'none', ['none', 'min', 'max']))).toBe(true)
+    expect(ok(chip('yesno', 'min', ['min', 'yes']))).toBe(false)
+    expect(ok(chip('yesno', 'no', ['no', 'max']))).toBe(false)
+    expect(ok(chip('minmax', 'yes', ['yes', 'min']))).toBe(false)
+    expect(ok(chip('minmax', 'none', ['none', 'no']))).toBe(false)
+    expect(ok(chip('yesno', 'yes', ['no', 'none']))).toBe(false)
+  })
+
+  it('still parses a 0.3.0-shaped price-check row (no chip field)', () => {
+    const rt = validateSnapshot(withRow(pcRow))
+    expect(rt.ok).toBe(true)
+    if (rt.ok) expect(rt.snapshot.equipment.Helm?.priceCheck?.rows[0].chip).toBeUndefined()
+  })
+
   it('rejects item art off the poecdn host', () => {
     const s = fresh()
     s.equipment.Helm.icon = 'https://example.com/helm.png'

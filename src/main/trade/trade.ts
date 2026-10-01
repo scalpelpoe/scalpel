@@ -717,25 +717,31 @@ export interface SearchTradeOptions {
   loggedIn?: boolean
 }
 
-export async function searchTrade(
-  league: string,
-  item: {
-    name: string
-    baseType: string
-    itemClass: string
-    rarity: string
-    armour?: number
-    evasion?: number
-    energyShield?: number
-    ward?: number
-    block?: number
-    vaalGem?: boolean
-  },
+export type TradeQueryItem = {
+  name: string
+  baseType: string
+  itemClass: string
+  rarity: string
+  armour?: number
+  evasion?: number
+  energyShield?: number
+  ward?: number
+  block?: number
+  vaalGem?: boolean
+}
+
+export interface BuiltTradeQuery {
+  body: { query: Record<string, unknown>; sort: { price: 'asc' } }
+  loginRequiredField: { loginRequiredPseudoIds?: string[]; loginRequiredMercenaryIds?: string[] }
+}
+
+/** Pure, synchronous query builder behind searchTrade. Stats must already be loaded. */
+export function buildTradeQuery(
+  item: TradeQueryItem,
   statFilters: StatFilter[],
   options: SearchTradeOptions = {},
-): Promise<TradeResult> {
+): BuiltTradeQuery {
   const { tradeStatus = 'available', tradePriceOption, listedTime, collapseListings = true, loggedIn = true } = options
-  await _ensureStatsLoaded()
   const dialect = TRADE_DIALECTS[getPoeVersion()]
   const priceOption = tradePriceOption ?? dialect.priceDivinePair
 
@@ -1446,10 +1452,18 @@ export async function searchTrade(
     trade_filters: { disabled: false, filters: tradeFiltersInner },
   }
 
-  const body = JSON.stringify({
-    query,
-    sort: { price: 'asc' },
-  })
+  return { body: { query, sort: { price: 'asc' } }, loginRequiredField }
+}
+
+export async function searchTrade(
+  league: string,
+  item: TradeQueryItem,
+  statFilters: StatFilter[],
+  options: SearchTradeOptions = {},
+): Promise<TradeResult> {
+  await _ensureStatsLoaded()
+  const { body: queryBody, loginRequiredField } = buildTradeQuery(item, statFilters, options)
+  const body = JSON.stringify(queryBody)
 
   const urls = getTradeUrls(getPoeVersion())
   const searchResult = (await fetchJson(urls.search(league), {

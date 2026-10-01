@@ -1,0 +1,482 @@
+[
+  {
+    "id": "pseudo.pseudo_total_elemental_resistance",
+    "text": "+#% total Elemental Resistance",
+    "type": "pseudo"
+  },
+  {
+    "id": "pseudo.pseudo_total_life",
+    "text": "+# total maximum Life",
+    "type": "pseudo"
+  },
+  {
+    "id": "explicit.stat_3299347043",
+    "text": "# to maximum Life",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_4220027924",
+    "text": "#% to Cold Resistance",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3372524247",
+    "text": "#% to Fire Resistance",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1671376347",
+    "text": "#% to Lightning Resistance",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3917489142",
+    "text": "#% increased Rarity of Items found",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3032590688",
+    "text": "Adds # to # Physical Damage to Attacks",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_4052037485",
+    "text": "# to maximum Energy Shield (Local)",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_4015621042",
+    "text": "#% increased Energy Shield",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_2901986750",
+    "text": "#% to all Elemental Resistances",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1509134228",
+    "text": "#% increased Physical Damage",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3981240776",
+    "text": "# to Spirit",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_2250533757",
+    "text": "#% increased Movement Speed",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1754445556",
+    "text": "Adds # to # Lightning damage to Attacks",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_691932474",
+    "text": "# to Accuracy Rating (Local)",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1573130764",
+    "text": "Adds # to # Fire damage to Attacks",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_587431675",
+    "text": "#% increased Critical Hit Chance",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_2106365538",
+    "text": "#% increased Evasion Rating",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1940865751",
+    "text": "Adds # to # Physical Damage",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3336890334",
+    "text": "Adds # to # Lightning Damage",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3556824919",
+    "text": "#% increased Critical Damage Bonus",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_709508406",
+    "text": "Adds # to # Fire Damage",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_210067635",
+    "text": "#% increased Attack Speed (Local)",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1037193709",
+    "text": "Adds # to # Cold Damage",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1202301673",
+    "text": "# to Level of all Projectile Skills",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_518292764",
+    "text": "#% to Critical Hit Chance",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3141070085",
+    "text": "#% increased Elemental Damage",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_2694482655",
+    "text": "#% to Critical Damage Bonus",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3015669065",
+    "text": "Gain #% of Damage as Extra Fire Damage",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_2194114101",
+    "text": "#% increased Critical Hit Chance for Attacks",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3714003708",
+    "text": "#% increased Critical Damage Bonus for Attack Damage",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1839076647",
+    "text": "#% increased Projectile Damage",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_821021828",
+    "text": "Grants # Life per Enemy Hit",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1241625305",
+    "text": "#% increased Damage with Bow Skills",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1366840608",
+    "text": "#% increased Charges",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3196823591",
+    "text": "#% increased Charges gained",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1604736568",
+    "text": "Recover #% of maximum Mana on Kill (Jewel)",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_700317374",
+    "text": "#% increased Amount Recovered",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_173226756",
+    "text": "#% increased Recovery rate",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3523867985",
+    "text": "#% increased Armour, Evasion and Energy Shield",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1120862500",
+    "text": "Recover # Mana when Used",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3398787959",
+    "text": "Gain #% of Damage as Extra Chaos Damage",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1177404658",
+    "text": "#% increased Global Armour, Evasion and Energy Shield",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_2463230181",
+    "text": "#% Surpassing chance to fire an additional Arrow",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_2356156926",
+    "text": "Drop Ignited Ground while moving, which lasts 8 seconds and Ignites as though dealing Fire Damage equal to #% of your maximum Life",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_4077035099",
+    "text": "Passives in Radius can be Allocated without being connected to your tree",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_4163415912",
+    "text": "+# to Spirit per Socket filled",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3655769732",
+    "text": "#% to Quality of all Skills",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_2980117882",
+    "text": "This Flask cannot be Used but applies its Effect constantly",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1352561456",
+    "text": "Notable Passive Skills in Radius also grant #% increased Critical Damage Bonus for Attack Damage",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1166140625",
+    "text": "Notable Passive Skills in Radius also grant #% increased Magnitude of Shock you inflict",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1777421941",
+    "text": "Notable Passive Skills in Radius also grant #% increased Projectile Speed",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3865605585",
+    "text": "Notable Passive Skills in Radius also grant #% increased Critical Hit Chance for Attacks",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3474271079",
+    "text": "# to all Attributes per Socket filled",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_332337290",
+    "text": "# Life Regeneration per second per Socket filled",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1347539079",
+    "text": "#% Surpassing chance to fire an additional Projectile",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3642528642|5",
+    "text": "Only affects Passives in Medium-Large Ring",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_3874491706",
+    "text": "All Mage's Legacies have #% increased effect per duplicate Mage's Legacy you have",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_264262054|11",
+    "text": "Legacy of Silver",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_264262054|4",
+    "text": "Legacy of Diamond",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_264262054|7",
+    "text": "Legacy of Jade",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_448592698|89",
+    "text": "+# to Level of all Gas Arrow Skills",
+    "type": "explicit"
+  },
+  {
+    "id": "explicit.stat_1685559578",
+    "text": "Possessed by Spirit Of The Boar for # seconds on use",
+    "type": "explicit"
+  },
+  {
+    "id": "implicit.stat_3917489142",
+    "text": "#% increased Rarity of Items found",
+    "type": "implicit"
+  },
+  {
+    "id": "implicit.stat_1416292992",
+    "text": "Has # Charm Slot",
+    "type": "implicit"
+  },
+  {
+    "id": "implicit.stat_1671376347",
+    "text": "#% to Lightning Resistance",
+    "type": "implicit"
+  },
+  {
+    "id": "implicit.stat_462041840",
+    "text": "#% of Flask Recovery applied Instantly",
+    "type": "implicit"
+  },
+  {
+    "id": "implicit.stat_2194114101",
+    "text": "#% increased Critical Hit Chance for Attacks",
+    "type": "implicit"
+  },
+  {
+    "id": "implicit.stat_3182714256",
+    "text": "# Prefix Modifier allowed",
+    "type": "implicit"
+  },
+  {
+    "id": "implicit.stat_718638445",
+    "text": "# Suffix Modifier allowed",
+    "type": "implicit"
+  },
+  {
+    "id": "implicit.stat_3398402065",
+    "text": "#% increased Projectile Range",
+    "type": "implicit"
+  },
+  {
+    "id": "implicit.stat_1691862754",
+    "text": "Used when you become Frozen",
+    "type": "implicit"
+  },
+  {
+    "id": "implicit.stat_2778646494",
+    "text": "Used when you are affected by a Slow",
+    "type": "implicit"
+  },
+  {
+    "id": "implicit.stat_4010341289",
+    "text": "Used when you kill a Rare or Unique enemy",
+    "type": "implicit"
+  },
+  {
+    "id": "fractured.stat_3981240776",
+    "text": "# to Spirit",
+    "type": "fractured"
+  },
+  {
+    "id": "fractured.stat_2106365538",
+    "text": "#% increased Evasion Rating",
+    "type": "fractured"
+  },
+  {
+    "id": "fractured.stat_1839076647",
+    "text": "#% increased Projectile Damage",
+    "type": "fractured"
+  },
+  {
+    "id": "enchant.stat_1037193709",
+    "text": "Adds # to # Cold Damage",
+    "type": "enchant"
+  },
+  {
+    "id": "enchant.stat_387439868",
+    "text": "#% increased Elemental Damage with Attacks",
+    "type": "enchant"
+  },
+  {
+    "id": "enchant.stat_3780644166",
+    "text": "#% increased Freeze Threshold",
+    "type": "enchant"
+  },
+  {
+    "id": "enchant.stat_2954116742|20686",
+    "text": "Allocates Paragon",
+    "type": "enchant"
+  },
+  {
+    "id": "enchant.stat_2954116742|56666",
+    "text": "Allocates Thaumaturgic Generator",
+    "type": "enchant"
+  },
+  {
+    "id": "rune.stat_3523867985",
+    "text": "#% increased Armour, Evasion and Energy Shield",
+    "type": "augment"
+  },
+  {
+    "id": "rune.stat_4220027924",
+    "text": "#% to Cold Resistance",
+    "type": "augment"
+  },
+  {
+    "id": "rune.stat_2901986750",
+    "text": "#% to all Elemental Resistances",
+    "type": "augment"
+  },
+  {
+    "id": "rune.stat_201332984",
+    "text": "Can roll Marksman modifiers",
+    "type": "augment"
+  },
+  {
+    "id": "rune.stat_681332047",
+    "text": "#% increased Attack Speed",
+    "type": "augment"
+  },
+  {
+    "id": "rune.stat_3885405204",
+    "text": "Bow Attacks fire # additional Arrows",
+    "type": "augment"
+  },
+  {
+    "id": "rune.stat_726496846",
+    "text": "Idols socketed in this item gain the benefits of their Bonded modifiers",
+    "type": "augment"
+  },
+  {
+    "id": "rune.stat_3917489142",
+    "text": "#% increased Rarity of Items found",
+    "type": "augment"
+  },
+  {
+    "id": "rune.stat_3198163869",
+    "text": "Raven-Touched",
+    "type": "augment"
+  },
+  {
+    "id": "rune.stat_3040571529",
+    "text": "#% increased Deflection Rating",
+    "type": "augment"
+  },
+  {
+    "id": "rune.stat_2942439603",
+    "text": "Skills have #% chance to not remove Charges but still count as consuming them",
+    "type": "augment"
+  },
+  {
+    "id": "rune.stat_3972229254",
+    "text": "#% of Armour also applies to Chaos Damage",
+    "type": "augment"
+  },
+  {
+    "id": "rune.stat_2463230181",
+    "text": "#% Surpassing chance to fire an additional Arrow",
+    "type": "augment"
+  }
+]

@@ -63,7 +63,8 @@ body.ssv-transparent {
   contain: paint;
 }
 
-.ssv-window .ssv-tooltip {
+.ssv-window .ssv-tooltip,
+.ssv-window .ssv-pc {
   zoom: calc(1 / var(--ssv-scale, 1));
 }
 
@@ -592,6 +593,13 @@ body.ssv-transparent {
   max-width: min(100%, 460px);
 }
 
+/* The price checker replacing a card: same zoom as the card (above), same limits as its
+   width rule, and the card's measured width set inline (CardOrPriceCheck). */
+.ssv-pc {
+  min-width: min(280px, 100%);
+  max-width: min(100%, 460px);
+}
+
 /* ---- Web page / OBS --------------------------------------------------------- */
 
 /* The Scalpel home page's background (web/public/site.css), which frames these pages. */
@@ -706,7 +714,8 @@ body.ssv-page {
   :root {
     --ssv-cell: 34px;
   }
-  .ssv-tooltip {
-    width: 100%;
+  .ssv-tooltip,
+  .ssv-pc {
+    width: 100% !important;
   }
 }
