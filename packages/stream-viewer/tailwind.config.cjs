@@ -8,7 +8,7 @@ module.exports = {
     relative: true,
     files: [
       './src/**/*.{ts,tsx}',
-      '../../src/renderer/src/components/primitives/{Button,Label,TextInput}.tsx',
+      '../../src/renderer/src/components/primitives/{Button,FilterChip,Label,ScrubInput,TextInput}.tsx',
       '../../src/renderer/src/components/ErrorBanner.tsx',
       '../../src/renderer/src/shared/IconGlow.tsx',
     ],

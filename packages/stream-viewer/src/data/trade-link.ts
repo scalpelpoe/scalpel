@@ -112,6 +112,18 @@ export function applyEdits(pc: PriceCheck, edits: Array<RowEdit | undefined>): R
  * Build a trade2 search URL from a price check and viewer edits.
  */
 export function tradeSearchUrl(pc: PriceCheck, edits: Array<RowEdit | undefined>): string {
-  const q = encodeURIComponent(JSON.stringify(applyEdits(pc, edits)))
+  const body = applyEdits(pc, edits)
+  const query = body.query as Node | undefined
+  if (query && typeof query === 'object') {
+    // The trade2 ?q= parser ignores object-form type/name for rune bases; plain text loads.
+    for (const key of ['type', 'name']) {
+      const v = query[key] as Node | null | undefined
+      if (typeof v === 'object' && v !== null && v.discriminator === 'legacy' && typeof v.option === 'string') {
+        query[key] = v.option
+      }
+    }
+    query.status = { option: 'securable' }
+  }
+  const q = encodeURIComponent(JSON.stringify(body))
   return `https://www.pathofexile.com/trade2/search/poe2/${encodeURIComponent(pc.league)}?q=${q}`
 }

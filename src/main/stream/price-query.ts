@@ -37,6 +37,14 @@ export function tradeLeague(league: string): string {
   return m[1] ? `${m[1]} ${m[2]}` : m[2]
 }
 
+/**
+ * League a stream price check searches: the streamer's own Scalpel trade league, else the
+ * character's league.
+ */
+export function priceCheckLeague(settingLeague: string | null | undefined, characterLeague: string): string {
+  return settingLeague?.trim() ? settingLeague : characterLeague
+}
+
 /** Effective state of a locked chip row, appended to its text so the checked row says what it filters. */
 export function lockedSuffix(f: StatFilter): string {
   if (f.option !== undefined) {
@@ -138,7 +146,8 @@ export function buildPriceCheck(item: PoeItem, league: string): PriceCheck | nul
     if (filters.length === 0) return fail('no matched rows')
 
     const tradeItem = tradeItemFromPoeItem(item)
-    const build = (fs: StatFilter[]) => buildTradeQuery(tradeItem, fs, { loggedIn: false }).body
+    const build = (fs: StatFilter[]) =>
+      buildTradeQuery(tradeItem, fs, { loggedIn: false, tradeStatus: 'securable' }).body
 
     // Chip rows (Yes/No/Any, Min/Max/Off) stay at their default state in `on` and ship
     // ops for every other state; other chip-state/option rows are locked.

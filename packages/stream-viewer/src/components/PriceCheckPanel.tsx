@@ -112,7 +112,7 @@ export function PriceCheckPanel({ item, onBack, width }: Props): JSX.Element {
 
   return (
     <div
-      className="ssv-pc bg-black/90 border border-border text-left shadow-lg"
+      className="ssv-pc border border-border text-left shadow-lg"
       style={{ width: width ?? '100%' }}
       role="region"
       aria-label="Price check"

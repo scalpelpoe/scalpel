@@ -300,6 +300,7 @@ body.ssv-transparent {
   width: max-content;
   min-width: 280px;
   max-width: 460px;
+  position: relative;
   background: rgba(0, 0, 0, 0.94);
   border: 1px solid var(--ssv-normal);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
@@ -382,6 +383,26 @@ body.ssv-transparent {
 .ssv-tooltip-name {
   font-size: 17px;
   line-height: 20px;
+}
+
+/* Top-right, just under the header art, with the same gap above as to the right. It floats
+   over the body's usually empty top-right corner, so the content keeps its place.
+   Positioned inside the card, which is already counter-zoomed, so it is never zoomed itself. */
+.ssv-tooltip-pc {
+  --ssv-pc-gap: 6px;
+  position: absolute;
+  /* +1px on top matches the card's 1px border, which the right offset already sits inside. */
+  top: calc(38px + var(--ssv-pc-gap) + 1px);
+  right: var(--ssv-pc-gap);
+  z-index: 1;
+}
+.ssv-tooltip-pc[data-frame='unique'],
+.ssv-tooltip-pc[data-frame='rare'] {
+  top: calc(58px + var(--ssv-pc-gap) + 1px);
+}
+/* Set by ItemTooltip only when a long first line would run under the button. */
+.ssv-tooltip-body[data-pc] {
+  padding-top: 30px;
 }
 
 .ssv-tooltip-body {
@@ -619,6 +640,7 @@ body.ssv-transparent {
 /* The price checker replacing a card: same zoom as the card (above), same limits as its
    width rule, and the card's measured width set inline (CardOrPriceCheck). */
 .ssv-pc {
+  background: rgba(0, 0, 0, 0.94);
   min-width: min(280px, 100%);
   max-width: min(100%, 460px);
 }

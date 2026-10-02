@@ -53,6 +53,51 @@ describe('validateSnapshot', () => {
     expect(validateSnapshot(s).ok).toBe(true)
   })
 
+  describe('theme', () => {
+    const palette = {
+      bgSolid: '#0b0e1a',
+      bgCard: '#141a2e',
+      accent: '#c8a45a',
+      match: '#5ad1ff',
+      secondaryMatch: '#a78bfa',
+      text: '#e6e8f0',
+      textDim: '#8a90a6',
+      border: '#2a3350',
+      danger: '#ef4444',
+      warn: '#f59e0b',
+      dangerBg: '#3b1212',
+      hideColor: '#6b7280',
+      showColor: '#22c55e',
+      minimalColor: '#3b82f6',
+    }
+
+    it('round-trips a theme and still parses snapshots without one', () => {
+      const s = fresh()
+      expect(s.theme).toBeUndefined()
+      expect(validateSnapshot(s).ok).toBe(true)
+      s.theme = palette
+      const r = validateSnapshot(JSON.parse(JSON.stringify(s)))
+      expect(r.ok).toBe(true)
+      if (r.ok) expect(r.snapshot.theme).toEqual(palette)
+    })
+
+    it('rejects a bad hex and an extra key', () => {
+      const bad = fresh()
+      bad.theme = { ...palette, accent: 'red' }
+      expect(validateSnapshot(bad).ok).toBe(false)
+      const short = fresh()
+      short.theme = { ...palette, accent: '#fff' }
+      expect(validateSnapshot(short).ok).toBe(false)
+      const extra = fresh()
+      extra.theme = { ...palette, glow: '#ffffff' }
+      expect(validateSnapshot(extra).ok).toBe(false)
+      const missing = fresh()
+      const { accent: _a, ...rest } = palette
+      missing.theme = rest
+      expect(validateSnapshot(missing).ok).toBe(false)
+    })
+  })
+
   it('rejects a filters link off pathofexile.com and a non-web build guide', () => {
     const s = fresh()
     s.links = { filters: 'https://example.com/filters', buildGuide: null }

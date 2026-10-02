@@ -3,7 +3,7 @@ import { Button } from '@renderer/components/primitives/Button'
 import { type ReactNode, type Ref, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { cardToItem } from './card-item'
-import { themeVars } from './ViewerRoot'
+import { useThemeVars } from './ViewerRoot'
 
 const SECTION_COLOR: Record<ModSection['kind'], string> = {
   enchant: 'var(--ssv-mod-rune)',
@@ -110,6 +110,7 @@ const EDGE = 8
  *  neither the item card's box nor the overlay's clipping can cut it, and is placed from the socket's
  *  rect (no zoom or transform on a positioned element). */
 function SocketChip({ socket }: { socket: Socket }): JSX.Element {
+  const themeVars = useThemeVars()
   const [hover, setHover] = useState(false)
   const chip = useRef<HTMLSpanElement>(null)
   const floating = useRef<HTMLDivElement>(null)
@@ -158,6 +159,24 @@ function SocketChip({ socket }: { socket: Socket }): JSX.Element {
   )
 }
 
+/** True when any text inside `body` is drawn under `over`. */
+function textUnder(body: HTMLElement, over: HTMLElement): boolean {
+  const box = over.getBoundingClientRect()
+  const walker = document.createTreeWalker(body, NodeFilter.SHOW_TEXT)
+  const range = document.createRange()
+  // jsdom has no Range layout; without it, assume the corner is clear.
+  if (typeof range.getClientRects !== 'function') return false
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (!node.textContent?.trim()) continue
+    range.selectNodeContents(node)
+    for (const r of range.getClientRects()) {
+      if (r.top >= box.bottom) return false
+      if (r.right > box.left && r.left < box.right && r.bottom > box.top) return true
+    }
+  }
+  return false
+}
+
 /** One item as the game draws it: rarity header art, properties, separators, mod sections.
  *  Mod lines keep Scalpel's tier badges; hovering (or tapping) a line shows its tier and range. */
 export function ItemTooltip({
@@ -176,6 +195,28 @@ export function ItemTooltip({
   const showBase = (frame === 'unique' || frame === 'rare') && item.name && item.name !== item.baseType
   const flags = FLAG_LABELS.filter(([key]) => item.flags[key])
   const corrupted = item.flags.doubleCorrupted ? 'Twice Corrupted' : item.flags.corrupted ? 'Corrupted' : null
+  const showPriceCheck = Boolean(onPriceCheck && item.priceCheck)
+  const pcRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  // The button floats over the body's top-right corner, which is usually empty. Only when a
+  // long first line would run under it does the body drop a strip, so most cards keep their
+  // layout. Set on the DOM directly: React doesn't own the attribute, and it needs measuring.
+  useLayoutEffect(() => {
+    const check = (): void => {
+      const body = bodyRef.current
+      if (!body) return
+      body.removeAttribute('data-pc')
+      const pc = pcRef.current
+      if (pc && textUnder(body, pc)) body.setAttribute('data-pc', '')
+    }
+    check()
+    // Fontin can finish loading after the first paint and widen the lines.
+    let live = true
+    document.fonts?.ready.then(() => live && check())
+    return () => {
+      live = false
+    }
+  }, [item, showPriceCheck])
 
   const blocks: JSX.Element[] = []
   if (item.properties.length > 0) {
@@ -248,7 +289,14 @@ export function ItemTooltip({
         <div className={`ssv-tooltip-name ssv-r-${item.rarity}`}>{title}</div>
         {showBase && <div className={`ssv-tooltip-name ssv-r-${item.rarity}`}>{item.baseType}</div>}
       </div>
-      <div className="ssv-tooltip-body">
+      {showPriceCheck && (
+        <div ref={pcRef} className="ssv-tooltip-pc" data-frame={frame}>
+          <Button size="sm" onClick={onPriceCheck}>
+            Price check
+          </Button>
+        </div>
+      )}
+      <div ref={bodyRef} className="ssv-tooltip-body">
         {blocks.map((block, i) => (
           <div key={block.key ?? i}>
             {i > 0 && <div className="ssv-sep" data-frame={frame} />}
@@ -257,13 +305,6 @@ export function ItemTooltip({
         ))}
         {item.price && <div className="ssv-price">{priceText(item.price)}</div>}
       </div>
-      {onPriceCheck && item.priceCheck && (
-        <div className="flex justify-center px-2 py-2 border-t border-border">
-          <Button size="sm" onClick={onPriceCheck}>
-            Price check
-          </Button>
-        </div>
-      )}
     </div>
   )
 }

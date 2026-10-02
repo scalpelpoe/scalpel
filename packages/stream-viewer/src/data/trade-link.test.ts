@@ -243,7 +243,43 @@ describe('trade-link', () => {
       expect(qMatch).not.toBeNull()
       const decodedQuery = JSON.parse(decodeURIComponent(qMatch![1]))
       const expectedBody = applyEdits(pc, edits)
-      expect(decodedQuery).toEqual(expectedBody)
+      expect(decodedQuery).toEqual({
+        ...expectedBody,
+        query: { ...(expectedBody.query as object), status: { option: 'securable' } },
+      })
+    })
+
+    const bodyOf = (pc: PriceCheck) =>
+      JSON.parse(decodeURIComponent(tradeSearchUrl(pc, initialEdits(pc.rows)).split('?q=')[1])) as {
+        query: Record<string, unknown>
+      }
+
+    it('forces Instant Buyout without mutating the snapshot body', () => {
+      const pc = buildTestPriceCheck()
+      ;(pc.body as { query: Record<string, unknown> }).query.status = { option: 'available' }
+      expect(bodyOf(pc).query.status).toEqual({ option: 'securable' })
+      expect((pc.body as { query: { status: unknown } }).query.status).toEqual({ option: 'available' })
+    })
+
+    it('flattens legacy-discriminator type/name to plain text (rune bases)', () => {
+      const pc = buildTestPriceCheck()
+      const q = (pc.body as { query: Record<string, unknown> }).query
+      q.type = { option: 'Runemastered Stone Greaves', discriminator: 'legacy' }
+      q.name = { option: 'Birth of Fury', discriminator: 'legacy' }
+      const out = bodyOf(pc).query
+      expect(out.type).toBe('Runemastered Stone Greaves')
+      expect(out.name).toBe('Birth of Fury')
+      expect(q.type).toEqual({ option: 'Runemastered Stone Greaves', discriminator: 'legacy' })
+    })
+
+    it('leaves other discriminator forms and plain strings alone', () => {
+      const pc = buildTestPriceCheck()
+      const q = (pc.body as { query: Record<string, unknown> }).query
+      q.type = { option: 'Waystone', discriminator: 'map' }
+      q.name = 'Plain'
+      const out = bodyOf(pc).query
+      expect(out.type).toEqual({ option: 'Waystone', discriminator: 'map' })
+      expect(out.name).toBe('Plain')
     })
 
     it('encodes special characters in league name', () => {

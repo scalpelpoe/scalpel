@@ -248,6 +248,27 @@ export const KeystoneSchema = z.strictObject({
   stats: z.array(text).max(LIMITS.keystoneStats),
 })
 
+/** The streamer's Scalpel theme: a solid #rrggbb per base colour. The keys mirror `ThemePalette`
+ *  in src/shared/theme/palette.ts (this package stays self-contained, so the list is duplicated;
+ *  src/main/stream/theme-contract.test.ts fails when the two drift). */
+const hexColor = z.string().regex(/^#[0-9a-f]{6}$/i)
+export const ThemePaletteSchema = z.strictObject({
+  bgSolid: hexColor,
+  bgCard: hexColor,
+  accent: hexColor,
+  match: hexColor,
+  secondaryMatch: hexColor,
+  text: hexColor,
+  textDim: hexColor,
+  border: hexColor,
+  danger: hexColor,
+  warn: hexColor,
+  dangerBg: hexColor,
+  hideColor: hexColor,
+  showColor: hexColor,
+  minimalColor: hexColor,
+})
+
 export const StreamSnapshotSchema = z.strictObject({
   schema: z.literal(1),
   game: z.literal('poe2'),
@@ -282,6 +303,8 @@ export const StreamSnapshotSchema = z.strictObject({
       buildGuide: webUrl.nullable(),
     })
     .optional(),
+  /** The streamer's active Scalpel theme, so the viewer matches it. Optional so older snapshots still parse. */
+  theme: ThemePaletteSchema.optional(),
   /** Slots overridden by the streamer's hotkey patches. */
   patches: z.array(z.strictObject({ slot: SlotSchema, atUtc: utc })).max(LIMITS.patches),
 })
@@ -305,4 +328,5 @@ export type Price = z.infer<typeof PriceSchema>
 export type SnapshotItem = z.infer<typeof SnapshotItemSchema>
 export type Equipment = z.infer<typeof EquipmentSchema>
 export type SnapshotSkill = z.infer<typeof SnapshotSkillSchema>
+export type StreamTheme = z.infer<typeof ThemePaletteSchema>
 export type StreamSnapshot = z.infer<typeof StreamSnapshotSchema>

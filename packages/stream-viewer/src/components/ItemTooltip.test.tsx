@@ -4,7 +4,9 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { sampleSnapshot } from '../test-helpers'
 import { ItemTooltip, tierDetail } from './ItemTooltip'
-import { themeVars } from './ViewerRoot'
+import { resolveCssVars } from '@shared/theme/derive'
+import { PRESETS_BY_ID } from '@shared/theme/presets'
+import { defaultThemeVars as themeVars, ViewerRoot } from './ViewerRoot'
 
 const equipment = sampleSnapshot().equipment
 
@@ -120,12 +122,16 @@ describe('ItemTooltip floating rune card placement', () => {
     requirements: [],
     sections: [],
   }
-  const hoverSocket = (rect: Partial<DOMRect>, size: { w: number; h: number }): HTMLElement => {
+  const hoverSocket = (
+    rect: Partial<DOMRect>,
+    size: { w: number; h: number },
+    wrap: (el: JSX.Element) => JSX.Element = (el) => el,
+  ): HTMLElement => {
     const item = structuredClone(equipment.Helm as SnapshotItem)
     item.sockets[0].card = card
     vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(size.w)
     vi.spyOn(HTMLElement.prototype, 'offsetHeight', 'get').mockReturnValue(size.h)
-    render(<ItemTooltip item={item} />)
+    render(wrap(<ItemTooltip item={item} />))
     const socket = screen.getByText('Greater Rune of Leadership').closest('.ssv-socket') as HTMLElement
     vi.spyOn(socket, 'getBoundingClientRect').mockReturnValue({ left: 0, right: 0, top: 0, bottom: 0, ...rect } as DOMRect)
     fireEvent.mouseEnter(socket)
@@ -176,5 +182,16 @@ describe('ItemTooltip floating rune card placement', () => {
     const el = hoverSocket({ left: 100, right: 160, top: 10, bottom: 20 }, { w: 300, h: 100 })
     for (const key of Object.keys(themeVars)) expect(el.style.getPropertyValue(key)).toBe(String((themeVars as Record<string, string>)[key]))
     expect(Object.keys(themeVars).length).toBeGreaterThan(0)
+  })
+
+  it("takes the viewer root's theme through context, since the portal leaves its DOM subtree", () => {
+    setViewport(1280, 720)
+    const palette = PRESETS_BY_ID.default.palette
+    const el = hoverSocket({ left: 100, right: 160, top: 10, bottom: 20 }, { w: 300, h: 100 }, (card) => (
+      <ViewerRoot theme={palette}>{card}</ViewerRoot>
+    ))
+    const vars = resolveCssVars(palette) as Record<string, string>
+    for (const key of Object.keys(vars)) expect(el.style.getPropertyValue(key)).toBe(String(vars[key]))
+    expect(vars).not.toEqual(themeVars)
   })
 })

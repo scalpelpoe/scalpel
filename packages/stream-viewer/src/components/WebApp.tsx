@@ -7,7 +7,7 @@ import { CharacterHeader } from './CharacterHeader'
 import { CompactGear } from './CompactGear'
 import { StreamView, useNow } from './StreamView'
 import { SiteFooter } from './SiteFooter'
-import { ViewerRoot } from './ViewerRoot'
+import { themeOf, ViewerRoot } from './ViewerRoot'
 import { Window } from './Window'
 
 /** live.scalpel.fourth.party/: what Scalpel Stream is, in the Scalpel home page's design. Twitch's
@@ -67,7 +67,7 @@ function Page({ source }: { source: WebSource }): JSX.Element {
   return (
     <div className="sc-home">
       <main className="sc-main">
-        <ViewerRoot className="ssv-page-wrap">
+        <ViewerRoot className="ssv-page-wrap" theme={themeOf(state)}>
           <StreamView state={state} placement="below" />
         </ViewerRoot>
       </main>
@@ -82,7 +82,7 @@ function Obs({ source, layout }: { source: WebSource; layout: 'compact' | 'full'
   useNow()
   if (state.status !== 'ready' || state.head.state === 'hidden') return <ViewerRoot className="ssv-obs" />
   return (
-    <ViewerRoot className="ssv-obs" style={{ pointerEvents: 'none' }}>
+    <ViewerRoot className="ssv-obs" theme={state.snapshot.theme} style={{ pointerEvents: 'none' }}>
       {layout === 'full' ? (
         <StreamView state={state} placement="below" />
       ) : (

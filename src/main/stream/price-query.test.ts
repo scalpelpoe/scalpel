@@ -29,6 +29,7 @@ import {
   duplicateOpLocks,
   lockedSuffix,
   MAX_PRICE_CHECK_BYTES,
+  priceCheckLeague,
   tradeLeague,
 } from './price-query'
 import { NinjaCharacterSchema, NinjaItemDataSchema } from './sources/ninja-types'
@@ -170,6 +171,7 @@ describe('buildPriceCheck', () => {
       const viewer = applyOps(pc.body, ops)
       const expected = buildTradeQuery(tradeItemFromPoeItem(item), defaultFilters(FIXTURES[name]), {
         loggedIn: false,
+        tradeStatus: 'securable',
       }).body
       expect(normalise(viewer)).toEqual(normalise(expected))
     })
@@ -183,7 +185,10 @@ describe('buildPriceCheck', () => {
       pc.rows.forEach((row, r) => {
         if (row.locked || row.chip) return
         const off = onFilters.map((f, j) => (j === idx[r] ? { ...f, enabled: false } : f))
-        const expected = buildTradeQuery(tradeItemFromPoeItem(item), off, { loggedIn: false }).body
+        const expected = buildTradeQuery(tradeItemFromPoeItem(item), off, {
+          loggedIn: false,
+          tradeStatus: 'securable',
+        }).body
         expect(normalise(applyOps(pc.body, row.offOps))).toEqual(normalise(expected))
       })
     })
@@ -203,7 +208,10 @@ describe('buildPriceCheck', () => {
         expect(row.chip.states[row.chip.default]).toEqual([])
         for (const [state, ops] of Object.entries(row.chip.states) as Array<[ChipState, QueryOp[]]>) {
           const variant = filters.map((f, j) => (j === idx[r] ? chipVariant(f, state) : f))
-          const expected = buildTradeQuery(tradeItemFromPoeItem(item), variant, { loggedIn: false }).body
+          const expected = buildTradeQuery(tradeItemFromPoeItem(item), variant, {
+            loggedIn: false,
+            tradeStatus: 'securable',
+          }).body
           expect(normalise(applyOps(pc.body, [...ops, ...defaultOff])), `${row.id} ${state}`).toEqual(
             normalise(expected),
           )
@@ -231,7 +239,10 @@ describe('buildPriceCheck', () => {
           const change = r >= 0 ? changes.get(r) : undefined
           return change ? change(f) : f
         })
-        const expected = buildTradeQuery(tradeItemFromPoeItem(item), fs, { loggedIn: false }).body
+        const expected = buildTradeQuery(tradeItemFromPoeItem(item), fs, {
+          loggedIn: false,
+          tradeStatus: 'securable',
+        }).body
         expect(normalise(viewer), label).toEqual(normalise(expected))
       }
       const chipRows = pc.rows.map((r, k) => ({ r, k })).filter(({ r }) => r.chip)
@@ -315,7 +326,10 @@ describe('buildPriceCheck', () => {
         const change = changes.get(r)
         return change ? change(base) : base
       })
-      const expected = buildTradeQuery(tradeItemFromPoeItem(item), fs, { loggedIn: false }).body
+      const expected = buildTradeQuery(tradeItemFromPoeItem(item), fs, {
+        loggedIn: false,
+        tradeStatus: 'securable',
+      }).body
       expect(normalise(viewer)).toEqual(normalise(expected))
     })
   }
@@ -343,7 +357,10 @@ describe('buildPriceCheck', () => {
     const onFilters = onFiltersFor(pc, filters)
     const fi = filterIndexes(pc, filters)[i]
     onFilters[fi] = { ...onFilters[fi], min: 50 }
-    const expected = buildTradeQuery(tradeItemFromPoeItem(item), onFilters, { loggedIn: false }).body
+    const expected = buildTradeQuery(tradeItemFromPoeItem(item), onFilters, {
+      loggedIn: false,
+      tradeStatus: 'securable',
+    }).body
     expect(setAt(pc.body, path!, 50)).toEqual(expected)
   })
 
@@ -372,6 +389,23 @@ describe('tradeLeague', () => {
 
   it('is applied to the league stored on the price check', () => {
     expect(buildPriceCheck(parse(FIXTURES.ring), 'SSF Runes of Aldur')?.league).toBe('Runes of Aldur')
+  })
+})
+
+describe('priceCheckLeague', () => {
+  it('prefers the streamer trade league setting', () => {
+    expect(priceCheckLeague('Fate of the Vaal', 'SSF Standard')).toBe('Fate of the Vaal')
+  })
+  it.each([[''], ['  '], [undefined], [null]])('falls back to the character league for %j', (v) => {
+    expect(priceCheckLeague(v, 'Standard')).toBe('Standard')
+  })
+})
+
+describe('instant buyout', () => {
+  it('ships securable status in every price check body', () => {
+    for (const name of Object.keys(FIXTURES)) {
+      expect((check(name).body as { query: { status: { option: string } } }).query.status.option).toBe('securable')
+    }
   })
 })
 

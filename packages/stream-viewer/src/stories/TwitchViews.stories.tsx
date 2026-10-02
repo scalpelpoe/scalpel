@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { PRESETS_BY_ID } from '@shared/theme/presets'
 import { ConfigPage } from '../components/ConfigPage'
 import { MobileView, OverlayView, PanelView } from '../components/TwitchViews'
 import {
@@ -24,6 +25,13 @@ type Story = StoryObj
 export const VideoOverlay: Story = {
   decorators: [PlayerFrame, withFakeApi(realSnapshot)],
   render: () => <OverlayView ext={fakeExt()} />,
+}
+
+/** The streamer's own Scalpel theme (Steam 2026 here, not the poe2 default) reaches the panel and the rune card. */
+export const VideoOverlayCustomTheme: Story = {
+  name: 'Video Overlay, custom theme',
+  decorators: [PlayerFrame, withFakeApi(() => ({ ...realSnapshot(), theme: PRESETS_BY_ID.steam2026.palette }))],
+  render: () => <OverlayView ext={fakeExt()} initiallyOpen />,
 }
 
 /** Twitch's screenshot slot is 4:3, at least 1024x768. This is a 1024x768 player drawn at 2x,

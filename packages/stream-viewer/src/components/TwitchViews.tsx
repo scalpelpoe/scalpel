@@ -6,7 +6,7 @@ import type { TwitchContext, TwitchExt } from '../twitch'
 import { CharacterHeader, UpdatedAge } from './CharacterHeader'
 import { CompactGear } from './CompactGear'
 import { StreamView, useNow } from './StreamView'
-import { ViewerRoot } from './ViewerRoot'
+import { themeOf, ViewerRoot } from './ViewerRoot'
 import { StreamLinks } from './StreamLinks'
 import { PoweredBy, Window } from './Window'
 
@@ -44,7 +44,7 @@ export function OverlayView({
   const [open, setOpen] = useState(initiallyOpen)
   const controlsVisible = context.arePlayerControlsVisible !== false
   return (
-    <ViewerRoot className="ssv-overlay">
+    <ViewerRoot className="ssv-overlay" theme={themeOf(state)}>
       <button
         type="button"
         className={`ssv-edge-tab${!controlsVisible && !open ? ' ssv-dim' : ''}`}
@@ -66,7 +66,7 @@ export function OverlayView({
 export function MobileView({ ext }: { ext: TwitchExt | undefined }): JSX.Element {
   const { state } = useTwitchStream(ext)
   return (
-    <ViewerRoot style={{ padding: 6 }}>
+    <ViewerRoot theme={themeOf(state)} style={{ padding: 6 }}>
       <StreamView state={state} placement="below" />
     </ViewerRoot>
   )
@@ -85,7 +85,7 @@ export function PanelView({ ext }: { ext: TwitchExt | undefined }): JSX.Element 
   }
   const { snapshot } = state
   return (
-    <ViewerRoot style={{ padding: 6 }}>
+    <ViewerRoot theme={snapshot.theme} style={{ padding: 6 }}>
       <div className="ssv-panel">
         <Window
           title="Scalpel Stream"

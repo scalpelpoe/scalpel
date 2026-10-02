@@ -29,8 +29,9 @@ import { createStatsGate } from './stats-gate'
 import { normalizeCharacter } from './normalize'
 import { ninjaItemText } from './ninja-item-text'
 import { debugWarn } from './debug-warn'
-import { buildPriceCheck } from './price-query'
+import { buildPriceCheck, priceCheckLeague } from './price-query'
 import { normalizeBuildGuideUrl } from './links'
+import { streamTheme, watchThemeChanges } from './theme'
 import { createPublisher, type Publisher } from './publisher'
 import { normalizePoeAccount } from '@shared/poe-account'
 import type { NinjaItemData } from './sources/ninja-types'
@@ -149,9 +150,17 @@ export function createStreamRuntime(
         tierData: poe2 ? getTierData() : null,
         streamTierData: poe2 ? streamTiers : null,
         uniquePrice: poe2 ? lookupUniquePriceForBase : () => undefined,
-        priceCheck: poe2 ? ninjaPriceCheck(normalized.snapshot.character.league) : undefined,
+        priceCheck: poe2
+          ? ninjaPriceCheck(
+              priceCheckLeague(getProfileBackedSetting(store, 'league'), normalized.snapshot.character.league),
+            )
+          : undefined,
       })
-      return { snapshot: normalized.snapshot, warnings: normalized.warnings }
+      const snapshot = {
+        ...normalized.snapshot,
+        theme: streamTheme({ themeId: store.get('themeId'), customThemePalette: store.get('customThemePalette') }),
+      }
+      return { snapshot, warnings: normalized.warnings }
     },
     getPrefs: getSettings,
     getToken: loadStreamToken,
@@ -164,6 +173,13 @@ export function createStreamRuntime(
     onLoaded: () => void publisher.pushNow().catch(() => {}),
   })
   onGameAttachedChange(() => publisher.refresh())
+  // A theme change reaches viewers on the next push; debounced so a colour drag sends one.
+  watchThemeChanges(
+    store,
+    () => void publisher.pushNow().catch(() => {}),
+    1000,
+    () => getSettings().enabled,
+  )
 
   async function requireIdentity(): Promise<{ profileId: string; token: string }> {
     const { profileId } = getSettings()
@@ -336,7 +352,7 @@ export function createStreamRuntime(
         debugWarn(`slot patch skipped: ${item.itemClass} has no paperdoll slot`)
         return
       }
-      const league = base.character.league || getProfileBackedSetting(store, 'league')
+      const league = priceCheckLeague(getProfileBackedSetting(store, 'league'), base.character.league)
       const patched = snapshotItemFromClipboard(item, {
         priceCheck: (i) => safePriceCheck(() => buildPriceCheck(i, league)),
         iconFor: (name, baseType) => {
