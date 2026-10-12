@@ -2,18 +2,10 @@ export const CHANGELOG: { version: string; notes: string[] }[] = [
   {
     version: '1.0.5',
     notes: [
-      'Added Scalpel Stream, a new PoE2 settings tab that shows your gear to stream viewers.',
-      'Added a public gear page and an OBS browser source for Scalpel Stream.',
-      "Stream viewers can now price check any of your items with Scalpel's price checker.",
-      'Stream viewers can now hover your skills, supports and runes to see their in-game cards.',
-      'Stream item cards now show tiers on flasks, charms and rune-unlocked mods, and keep desecrated mods in place (in green!).',
-      'Scalpel Stream now uses your Scalpel theme.',
-      'Stream viewer price checks now search your trade league with Instant Buyout.',
-      'Added build guide and item filter links to Scalpel Stream.',
-      'Added framework for Twitch extension, which will work once it is submitted to Twitch.',
-      'Added an "Update Stream Slot" macro that puts a newly equipped item on stream right away.',
+      'Added Scalpel Stream, a new PoE2 settings tab that shows your gear and lets viewers price check it.',
       'Added Expedition Tablets to the PoE2 Tablets regex tab.',
       'Regex Remote presets can now be reordered by dragging.',
+      'PoE2 weapon price checks now search "Critical Hit Chance" by default.',
       'Updated plugin sdk with some new features.',
       'Refreshed the item tier data.',
       'Fixed non-Voidborn Reliquary Keys pricing on the bulk exchange instead of trade search.',
@@ -23,6 +15,7 @@ export const CHANGELOG: { version: string; notes: string[] }[] = [
       'Fixed private leagues resetting to the main league after restarting Scalpel.',
       'Fixed too many plugins pushing the close button off the overlay navbar.',
       'Fixed hotkeys getting stuck off after clicking away from an overlay text box.',
+      'Fixed Linux pop-out windows staying stuck on screen and forgetting their position.',
     ],
   },
   {
