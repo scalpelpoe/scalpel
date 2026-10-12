@@ -10,6 +10,7 @@ import { prewarmSnapCanvas, type Rect, setSnapGhost } from './snap-canvas'
 import { type FlushEdges, nearestMountTarget } from './snap-mounts'
 import { fireOnLeaveScalpel, type OverlayState, overlays } from './state'
 import { createOverlayWindow } from './window'
+import { trackLinuxBounds } from './linux-bounds'
 
 export type { OverlayAnchor } from '@shared/types'
 export {
@@ -508,6 +509,13 @@ app.on('before-quit', () => {
 })
 
 function wireWindowEvents(state: OverlayState, win: BrowserWindow): void {
+  if (process.platform === 'linux') {
+    trackLinuxBounds(
+      win,
+      () => state.inProgrammaticMove,
+      () => persistBounds(state),
+    )
+  }
   win.on('close', (e) => {
     if (appQuitting) return
     e.preventDefault()

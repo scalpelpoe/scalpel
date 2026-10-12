@@ -443,8 +443,9 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
     // sheets etc.) - that's an in-app interaction, not "user left the app".
     if (hyprlandOverlayActive() ? hyprlandInputAllowed() : isAnyScalpelWindowFocused()) return
 
-    // Make it invisible and click-through - don't actually hide from OS to avoid animation
-    if (hyprlandOverlayActive()) origHide()
+    // Linux setOpacity is a no-op; unmap so a hidden, click-through overlay
+    // cannot remain painted over another application. Windows avoids animation.
+    if (process.platform === 'linux' || hyprlandOverlayActive()) origHide()
     else overlayWindow?.setOpacity(0)
     overlayWindow?.setIgnoreMouseEvents(true)
     currentInteractiveWindow = null

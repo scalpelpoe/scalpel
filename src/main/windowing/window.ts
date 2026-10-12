@@ -4,6 +4,9 @@ import { OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
 import type { Rect } from './snap-canvas'
 import { desktop, type OverlayInteraction } from '../desktop'
 import { hyprlandOverlayActive, nameHyprlandOverlay } from '../hyprland'
+import { linkX11Transient } from '../desktop/x11-transient'
+import { GAME_TITLES } from '@shared/contracts/game-variant'
+import { getPoeVersion } from '../game-state'
 
 interface CreateOptions {
   htmlEntry: string
@@ -48,11 +51,12 @@ export function createOverlayWindow({ htmlEntry, bounds, interaction }: CreateOp
   return win
 }
 
-/** Replace .hide()/.show()/.isVisible() with opacity-based equivalents.
+/** Replace .hide()/.show()/.isVisible() with platform-aware equivalents.
  *  Windows fires a zoom animation on every actual show/hide, so toggling via
  *  opacity gives us an instant, flicker-free cycle. The window stays
  *  registered with the OS the whole time - only the very first show triggers
- *  an animation. Mirrors the main overlay's pattern.
+ *  an animation. Linux must use native hide: Electron's setOpacity is a no-op
+ *  there, leaving a visible but click-through window after focus loss.
  *
  *  Map without taking focus first. The declared interaction policy then claims
  *  input for dialogs, leaves panels available for normal interaction, or keeps
@@ -64,15 +68,29 @@ function installOpacityHideShow(win: BrowserWindow, interaction: () => OverlayIn
   let opacityHidden = false
   win.hide = (): void => {
     desktop.releaseOverlay(win)
-    if (hyprlandOverlayActive()) origHide()
+    if (process.platform === 'linux' || hyprlandOverlayActive()) origHide()
     else win.setOpacity(0)
     win.setIgnoreMouseEvents(true)
     opacityHidden = true
   }
   win.show = (): void => {
+    if (process.platform === 'linux' && !hyprlandOverlayActive()) {
+      try {
+        linkX11Transient(win.getNativeWindowHandle(), GAME_TITLES[getPoeVersion()])
+      } catch {
+        // Keep the overlay usable if the native X11 backend is unavailable.
+      }
+    }
+    const bounds = process.platform === 'linux' ? win.getBounds() : null
     win.setOpacity(1)
     opacityHidden = false
     origShowInactive()
+    // Reapply the current bounds after mapping so window-manager placement
+    // cannot replace the user's position. Includes game moves while hidden.
+    if (bounds) win.setBounds(bounds)
+    // Restack after Linux remaps the native window. Fullscreen layering is
+    // handled by the X11 transient relationship, not by raising alone.
+    if (process.platform === 'linux') win.moveTop()
     desktop.applyInteraction(win, interaction())
   }
   // Mirror: showInactive matches show. Some callers (electron-overlay-window
