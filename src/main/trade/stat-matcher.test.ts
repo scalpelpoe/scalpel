@@ -383,6 +383,22 @@ describe('matchItemMods', () => {
       expect(damageChip.value).toBe((totalDpsChip.value as number) / 1.5)
     })
 
+    it.each([
+      [2, true, 'Critical Hit Chance: 7.5%'],
+      [1, false, 'Critical Strike Chance: 7.5%'],
+    ] as const)('PoE%i crit chance chip defaults enabled=%s', (version, enabled, text) => {
+      const prev = getPoeVersion()
+      setPoeVersion(version)
+      try {
+        const filters = matchItemMods([], [], undefined, makeItemInfo({ critChance: 7.5 }))
+        const crit = filters.find((f) => f.id === 'weapon.crit')!
+        expect(crit.enabled).toBe(enabled)
+        expect(crit.text).toBe(text)
+      } finally {
+        setPoeVersion(prev)
+      }
+    })
+
     it('emits Damage chip even when attacksPerSecond is undefined', () => {
       const filters = matchItemMods(
         [],

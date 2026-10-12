@@ -2,6 +2,7 @@ import type { AdvancedMod } from '@shared/types'
 import type { StatFilter } from '../trade'
 import type { DefenseValues, ItemInfo } from './context'
 import { deriveContext } from './context'
+import { getPoeVersion } from '@main/game-state'
 import { ITEM_CLASS_TO_CATEGORY } from './item-classes'
 import { buildAtzoatlFilters } from './producers/atzoatl'
 import { buildBasePercentileFilter } from './producers/base-percentile'
@@ -86,7 +87,7 @@ export function matchItemMods(
   const basePercentileFilters = buildBasePercentileFilter(ctx)
 
   // Add weapon DPS filters
-  const weaponFilters = buildWeaponDpsFilters(itemInfo, qualityNorm, ctx.pct)
+  const weaponFilters = buildWeaponDpsFilters(itemInfo, qualityNorm, ctx.pct, getPoeVersion() === 2)
 
   // Process imbue lines (gem imbued supports)
   const imbueFilters = buildImbueFilters(itemInfo)

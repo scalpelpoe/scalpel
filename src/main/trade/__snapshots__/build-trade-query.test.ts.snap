@@ -100,6 +100,9 @@ exports[`buildTradeQuery > builds the same body searchTrade posts: bow 1`] = `
         "filters": {
           "dps": {
             "min": 185
+          },
+          "crit": {
+            "min": 4.5
           }
         }
       },
@@ -492,6 +495,9 @@ exports[`searchTrade POST body (golden) > posts the golden body: bow 1`] = `
         "filters": {
           "dps": {
             "min": 185
+          },
+          "crit": {
+            "min": 4.5
           }
         }
       },

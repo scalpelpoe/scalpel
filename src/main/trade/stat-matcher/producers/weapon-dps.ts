@@ -14,6 +14,7 @@ export function buildWeaponDpsFilters(
   itemInfo: WeaponItemInfo | undefined,
   qualityNorm: number,
   pct: number,
+  isPoe2: boolean,
 ): StatFilter[] {
   const out: StatFilter[] = []
 
@@ -106,16 +107,17 @@ export function buildWeaponDpsFilters(
   }
 
   // Critical strike chance chip (parsed from clipboard, independent of APS so it's
-  // outside the `if (attacksPerSecond)` block).
+  // outside the `if (attacksPerSecond)` block). Base crit is a price driver on PoE2
+  // weapons, so it defaults on there; PoE1 keeps it off.
   if (itemInfo?.critChance && itemInfo.critChance > 0) {
     const crit = itemInfo.critChance
     out.push({
       id: 'weapon.crit',
-      text: `Critical Strike Chance: ${crit.toFixed(1)}%`,
+      text: `${isPoe2 ? 'Critical Hit Chance' : 'Critical Strike Chance'}: ${crit.toFixed(1)}%`,
       value: crit,
       min: Math.floor(crit * pct * 10) / 10,
       max: null,
-      enabled: false,
+      enabled: isPoe2,
       type: 'weapon',
     })
   }
