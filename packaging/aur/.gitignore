@@ -16,6 +16,7 @@ scalpel/
 *.tar.zst
 *.png
 LICENSE
+*-LICENSE
 
 # logs / partial downloads
 *.log
