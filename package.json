@@ -61,6 +61,7 @@
     "prepare": "husky",
     "test:item-data": "npm --prefix packages/item-data test && npm --prefix packages/item-data run validate",
     "verify:item-data": "node scripts/verify-item-data.mjs",
+    "verify:plugin-registry": "node scripts/verify-plugin-registry.mjs",
     "capture:stream-fixtures": "node scripts/capture-stream-fixtures.mjs"
   },
   "dependencies": {
