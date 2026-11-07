@@ -9,7 +9,7 @@ import {
   AnalyzeItemRequestSchema,
   AnalyzeItemResponseSchema,
 } from '../../plugin-service-examples/native-item-analyzer/src/generated/native_item_analyzer_pb'
-import { launchScalpelE2E } from './helpers/electron'
+import { launchScalpelE2E, openPluginHostWindow } from './helpers/electron'
 
 const PLUGIN_ID = 'native-item-analyzer'
 const SERVICE = 'scalpel.examples.item_analyzer.v1.NativeItemAnalyzer'
@@ -63,8 +63,8 @@ test('calls an installed Rust backend through Electron IPC', async () => {
   expect(packedManifest.nativeBackend.targets['win32-x64'].sha256).toBe(
     createHash('sha256').update(executable).digest('hex'),
   )
-  // This branch still identifies as 1.0.4; only relax the host gate in the
-  // throwaway profile while preserving every packed release asset byte-for-byte.
+  // The example targets the first release with native plugins (>=1.1.0). Relax the
+  // host gate only in the throwaway profile, keeping every packed asset byte-for-byte.
   const testManifest = JSON.stringify({ ...packedManifest, scalpelMinVersion: '>=0.0.0' })
   const request = analyzeRequest()
   const scalpel = await launchScalpelE2E({
@@ -85,32 +85,8 @@ test('calls an installed Rust backend through Electron IPC', async () => {
     }, PLUGIN_ID)
     expect(loadable).toEqual({ id: PLUGIN_ID, availability: 'available' })
 
-    const hostWindow = scalpel.app.waitForEvent('window')
     const appPath = await scalpel.app.evaluate(({ app }) => app.getAppPath())
-    await scalpel.app.evaluate(
-      async ({ BrowserWindow }, paths) => {
-        const win = new BrowserWindow({
-          show: false,
-          webPreferences: { preload: paths.preload, sandbox: false, contextIsolation: true },
-        })
-        ;(globalThis as unknown as Record<string, unknown>).__scalpelPluginE2EWindow = win
-        await win.loadFile(paths.html)
-      },
-      {
-        html: join(process.cwd(), 'out', 'renderer', 'index.html'),
-        preload: join(process.cwd(), 'out', 'preload', 'index.js'),
-      },
-    )
-    const hostPage = await hostWindow
-    const hostErrors: string[] = []
-    hostPage.on('pageerror', (error) => hostErrors.push(error.message))
-    hostPage.on('console', (message) => {
-      if (message.type() === 'error') hostErrors.push(message.text())
-    })
-    hostPage.on('response', (response) => {
-      if (response.status() >= 400) hostErrors.push(`${response.status()} ${response.url()}`)
-    })
-    await hostPage.waitForLoadState('domcontentloaded')
+    const { errors: hostErrors } = await openPluginHostWindow(scalpel)
     try {
       await expect
         .poll(() =>

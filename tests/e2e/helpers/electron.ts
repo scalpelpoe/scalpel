@@ -22,6 +22,43 @@ export interface ScalpelE2EOptions {
 
 const CONFIG_FILE = 'config.json'
 
+export interface PluginHostWindow {
+  page: Page
+  /** Page errors, console errors, and failed responses seen in the plugin host renderer. */
+  errors: string[]
+}
+
+/** Open a hidden overlay renderer, the window that activates installed plugins. The e2e app has
+ *  no game window to attach the real overlay to, so tests that need plugins running open this one. */
+export async function openPluginHostWindow(scalpel: ScalpelE2EApp): Promise<PluginHostWindow> {
+  const hostWindow = scalpel.app.waitForEvent('window')
+  await scalpel.app.evaluate(
+    async ({ BrowserWindow }, paths) => {
+      const win = new BrowserWindow({
+        show: false,
+        webPreferences: { preload: paths.preload, sandbox: false, contextIsolation: true },
+      })
+      ;(globalThis as unknown as Record<string, unknown>).__scalpelPluginE2EWindow = win
+      await win.loadFile(paths.html)
+    },
+    {
+      html: join(process.cwd(), 'out', 'renderer', 'index.html'),
+      preload: join(process.cwd(), 'out', 'preload', 'index.js'),
+    },
+  )
+  const page = await hostWindow
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  page.on('response', (response) => {
+    if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`)
+  })
+  await page.waitForLoadState('domcontentloaded')
+  return { page, errors }
+}
+
 export async function launchScalpelE2E(opts?: ScalpelE2EOptions): Promise<ScalpelE2EApp> {
   const userDataDir = await mkdtemp(join(tmpdir(), 'scalpel-e2e-'))
   try {
