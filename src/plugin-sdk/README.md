@@ -8,7 +8,9 @@ TypeScript SDK for building [Scalpel](https://github.com/scalpelpoe/scalpel) plu
 npm install --save-dev @scalpelpoe/plugin-sdk@0.11.0
 ```
 
-The renderer import remains host-provided: Scalpel serves it through `scalpel-internal://sdk.js`, while `dist/index.js` is a protective stub outside the app. The Node-only `scalpel-plugin` authoring CLI is distributed in the matching GitHub Release rather than npm:
+This package provides types. At runtime Scalpel supplies the real SDK through `scalpel-internal://sdk.js`; the package's own `dist/index.js` only throws if something runs it outside Scalpel.
+
+The `scalpel-plugin` build tool, which plugin services and native helpers require, is a tarball on the matching GitHub Release rather than an npm package:
 
 ```bash
 npm install --save-dev https://github.com/scalpelpoe/scalpel/releases/download/sdk-v0.11.0/scalpelpoe-plugin-tools-0.11.0.tgz
@@ -18,15 +20,13 @@ Pin `scalpelMinVersion` in your `manifest.json` to whatever Scalpel version firs
 
 ## Plugin authoring loop
 
-1. Install `@scalpelpoe/plugin-sdk@0.11.0`, the `plugin-tools` release tarball shown above, React, and React DOM. Run `npm install @bufbuild/protobuf@2.14.0` when using generated services.
+1. Install `@scalpelpoe/plugin-sdk@0.11.0`, React, and React DOM. Add the tools tarball shown above, and `@bufbuild/protobuf@2.14.0` if you use plugin services.
 2. Write `src/index.tsx` (see [Plugin entry shape](#plugin-entry-shape) below) and a `manifest.json` (schema in [PLUGINS.md](https://github.com/scalpelpoe/scalpel/blob/main/PLUGINS.md)).
-3. Run `scalpel-plugin pack`; service contracts and generated sources are configured under `scalpelPlugin` in `package.json`.
+3. Build into `dist/`: run `scalpel-plugin pack`, configured under `scalpelPlugin` in `package.json`, or use your own bundler (see [Build setup](#build-setup-for-plugin-authors)) for a plugin without services or a native helper.
 4. Attach every file under `dist/` to the matching GitHub release.
 5. Open a PR against [`scalpelpoe/scalpel-plugins-registry`](https://github.com/scalpelpoe/scalpel-plugins-registry) so Scalpel users can install you with one click.
 
 The reference plugin lives at [`scalpelpoe/scalpel-plugin-examples`](https://github.com/scalpelpoe/scalpel-plugin-examples).
-
-**Native security notice:** Native backends are executables built and supplied by plugin authors. Scalpel currently runs them as-is, without a sandbox, with its user permissions and any elevation. Checksums verify expected bytes and supervision manages process lifecycle; neither establishes safety or restricts system access. Authors are responsible for all native code, dependencies, build inputs, and artifacts they distribute, and users run them at their own risk. This temporary trust model remains in effect until a future native-plugin revision explicitly ships enforced containment.
 
 ## Plugin entry shape
 
@@ -143,7 +143,7 @@ npx scalpel-plugin pack
 
 It generates standard Protobuf-ES sources and descriptor sets, bundles the renderer, and packages native artifacts. See [`PLUGIN_SERVICES.md`](../../PLUGIN_SERVICES.md) for configuration and examples.
 
-Native backends are an **experimental RFC1 preview** and are author-supplied, unsandboxed executables. Use `createNativeServiceClient(ctx.native, Service)` instead of the raw byte API. Calls reject with a `PluginNativeCallError` carrying a machine-readable `code`. Read [`NATIVE_PLUGIN_RFC_1.md`](../../NATIVE_PLUGIN_RFC_1.md) for the normative trust model, wire protocol, fixed limits, lifecycle, Windows x64 support, checksum requirements, and non-goals before shipping one.
+Native helpers (experimental) are called with `createNativeServiceClient(ctx.native, Service)` rather than the raw byte API; failed calls reject with a `PluginNativeCallError` carrying a machine-readable `code`. They are not sandboxed: the executable runs with Scalpel's permissions, including administrator rights when Scalpel is elevated. Read [`NATIVE_PLUGIN_RFC_1.md`](../../NATIVE_PLUGIN_RFC_1.md), including its security model, before shipping one.
 
 For custom build pipelines, externalize the host SDK and React specifiers:
 

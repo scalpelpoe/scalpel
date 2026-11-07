@@ -24,6 +24,10 @@ In Settings > Developer, load the directories in provider, relay, consumer order
 
 ## Native Service
 
-`native-item-analyzer` demonstrates a private Rust sidecar in one plugin package. See its README for build and hotkey instructions.
+`native-item-analyzer` demonstrates a private Rust helper in one plugin package. See its README for build and hotkey instructions.
 
-The example executable is author-supplied native code. Scalpel currently runs native backends as-is, without a sandbox, with its user permissions. Checksums and supervision are integrity and lifecycle controls, not malware protection. Review and build the example yourself before loading it.
+Like any native helper, the example executable is not sandboxed and runs with Scalpel's permissions. Build it from source yourself before loading it. See the [security model](../NATIVE_PLUGIN_RFC_1.md#security-model).
+
+## Scalpel version
+
+The example manifests require Scalpel 1.1.0 or newer, the first release with plugin services. On an older build they stay installed but inactive, and Settings shows the version they need.

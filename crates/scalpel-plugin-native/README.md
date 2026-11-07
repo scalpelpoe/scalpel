@@ -2,9 +2,11 @@
 
 Rust helper for the [Scalpel Native Plugin RFC1](../../NATIVE_PLUGIN_RFC_1.md) stdio transport.
 
-**Experimental preview:** RFC1 and this crate can be replaced by a later protocol version. The crate is not published to crates.io. Pin the SDK release tag that contains the current RFC1 implementation:
+**Experimental preview:** RFC1 and this crate can be replaced by a later protocol version.
 
-**Security notice:** This crate provides framing and dispatch, not sandboxing, privilege reduction, malware detection, or safe execution. Scalpel runs the plugin author's executable as-is with its user permissions and any elevation. Authors are responsible for their native code, dependencies, build chain, and release artifacts; users run them at their own risk until a future native-plugin revision explicitly ships enforced containment.
+**Not a sandbox:** the crate handles framing and dispatch only. Scalpel runs your executable with its own permissions, including administrator rights when Scalpel is elevated, and you are responsible for what it does. See the [security model](../../NATIVE_PLUGIN_RFC_1.md#security-model).
+
+The crate is not published to crates.io. Pin the SDK release tag that contains the current RFC1 implementation:
 
 ```toml
 [dependencies]

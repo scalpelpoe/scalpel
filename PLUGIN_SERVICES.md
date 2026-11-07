@@ -1,21 +1,26 @@
 # Plugin Services
 
-Scalpel plugins can expose one public unary Protobuf service to declared plugin dependencies and can optionally own one supervised native sidecar. This is the practical overview for authors.
+Plugin services let plugins call each other. A plugin can **offer** one service, a set of request/response methods, and **use** the services of plugins it lists as dependencies. A plugin can also run its own **native helper**, a Windows x64 executable it calls the same way. Native helpers are an experimental preview.
 
-**Native RFC1 is an experimental preview.** [`NATIVE_PLUGIN_RFC_1.md`](NATIVE_PLUGIN_RFC_1.md) is the normative reference for native framing, handshake, method paths, limits, response rules, lifecycle, platform support, packaging integrity, security, and non-goals. If this overview and the RFC differ, follow the RFC.
+Plugins that don't need any of this keep working as before; see [Existing plugins keep working](PLUGINS.md#existing-plugins-keep-working). Read [`PLUGINS.md`](PLUGINS.md) first for the basics of writing a plugin.
 
-## Architecture
+## How it fits together
 
-- `.proto` files are the authoring source of truth.
-- Protobuf-ES generates TypeScript messages and typed service descriptors.
-- Releases include root-level binary `FileDescriptorSet` files named by `api.contract` or `nativeBackend.contract`.
-- Public plugin-to-plugin calls pass generated message objects through renderer-local structured cloning.
-- Native calls encode the method input to Protobuf bytes. The main process carries those bytes in RFC1's bounded stdio envelope.
-- Descriptor sets are generation, packaging, and integrity artifacts. The renderer and main process do not parse them for runtime dispatch or validate full schema equality.
+- You describe a service once, in a `.proto` file. That file is the source of truth.
+- `scalpel-plugin generate` turns it into TypeScript ([Protobuf-ES](https://github.com/bufbuild/protobuf-es)) plus a compiled descriptor file (`.binpb`) that ships next to `plugin.js`.
+- The provider calls `exposePluginService`. A consumer calls `createPluginServiceClient` for a required dependency, or `getPluginServiceClient` for an optional one; the latter returns `null` when the provider isn't available. The SDK derives method names and message types from the generated code, so plugin code never writes method strings or casts results.
+- Calls between plugins stay inside the renderer and pass message objects. Calls to a native helper are encoded to bytes and relayed to the helper process by Scalpel's main process.
+- Scalpel does not read `.binpb` files at runtime. They exist for building, packaging, and the registry's checksums.
 
-Only unary methods are supported. Public API dependencies use exact `major.minor.patch` matching. Providers activate before consumers, unavailable optional dependencies return `null`, and missing, incompatible, cyclic, or transitively unavailable required dependencies keep a plugin out of the runtime graph.
+## Rules
 
-## Install The Preview Toolchain
+- Methods are request/response only. Streaming is not supported.
+- A dependency names an exact API version (`major.minor.patch`). Bump the provider's `api.version` whenever a method or message changes: Scalpel cannot tell two different contracts with the same version apart.
+- The `service` in the provider's manifest must be the generated service's full name, and a consumer can only call that service's methods.
+- Providers activate before the plugins that use them.
+- If a required dependency is missing, has a different API version, is part of a cycle, or is itself unavailable, the plugin stays installed but inactive, and Settings shows why. An unavailable optional dependency only means its client is `null`.
+
+## Set up
 
 Node 22 or newer is required.
 
@@ -25,11 +30,11 @@ npm install --save-dev https://github.com/scalpelpoe/scalpel/releases/download/s
 npm install @bufbuild/protobuf@2.14.0
 ```
 
-The SDK runtime is supplied by Scalpel; the npm package provides declarations and a protective out-of-host stub. The tools tarball provides the Node-only `scalpel-plugin` CLI and its pinned Buf, Protobuf-ES, and esbuild dependencies.
+- `@scalpelpoe/plugin-sdk` provides types. Scalpel supplies the real SDK at runtime, and the package's own code only throws if something runs it outside Scalpel.
+- The tools tarball provides the `scalpel-plugin` command with pinned versions of Buf, Protobuf-ES, and esbuild.
+- `@bufbuild/protobuf` is the runtime the generated code imports, so it is a regular dependency.
 
-## TypeScript APIs
-
-Generated Protobuf-ES descriptors provide the method and payload types:
+## Offer and use a service
 
 ```ts
 import {
@@ -39,6 +44,7 @@ import {
 } from '@scalpelpoe/plugin-sdk'
 import { GreetingProvider } from './generated/greeting_pb'
 
+// In the provider plugin:
 export const provide: PluginActivate = (ctx) => {
   exposePluginService(ctx.plugins, GreetingProvider, {
     getLastSeenCharacter() {
@@ -52,21 +58,22 @@ export const provide: PluginActivate = (ctx) => {
   })
 }
 
+// In a consumer plugin that lists greeting-provider in its dependencies:
 export const consume: PluginActivate = (ctx) => {
   const characters = createPluginServiceClient(ctx.plugins, 'greeting-provider', GreetingProvider)
   void characters.getLastSeenCharacter()
 }
 ```
 
-`getPluginServiceClient` is the nullable form for an optional dependency. The SDK constructs canonical paths such as `/scalpel.examples.greeting.v1.GreetingProvider/GetLastSeenCharacter`; normal plugin code does not write method strings or cast results.
+Under the hood the SDK calls methods by their full path, such as `/scalpel.examples.greeting.v1.GreetingProvider/GetLastSeenCharacter`.
 
-The generated service name must match the provider manifest. A consumer must declare the provider and exact API version, and method paths must belong to that service. Providers must bump `api.version` whenever methods or message wire compatibility change because Scalpel cannot distinguish incompatible same-version descriptor bundles.
+**Overlay windows.** A plugin's pop-out overlay runs in its own renderer, where plugin services are not connected: `exposePluginService` does nothing, optional clients are `null`, and required clients reject every call, so activation still succeeds. Native helper calls work in both places.
 
-Public service calls are renderer-local. In a plugin's separate overlay renderer, `exposePluginService` is accepted as a no-op, optional dependency clients are `null`, and required dependency clients reject every call, so activation still succeeds there. The SDK binds native clients to their owning plugin in both renderer contexts. Plugins currently share renderer contexts, so this binding prevents unsupported or accidental cross-plugin calls through the SDK but is not a security boundary against malicious renderer code.
+**Isolation.** The SDK ties each plugin's native client to that plugin, so a well-behaved plugin can't call another plugin's helper by mistake. Plugins share one renderer, though, so this does not stop a malicious plugin.
 
-## Native Backends
+## Native backends
 
-Create a typed client from the generated native service:
+A native helper is declared under `nativeBackend` in the manifest and called with a typed client generated from its own `.proto`:
 
 ```ts
 import { createNativeServiceClient, type PluginActivate } from '@scalpelpoe/plugin-sdk'
@@ -78,39 +85,42 @@ const activate: PluginActivate = (ctx) => {
 }
 ```
 
-RFC1 supports one private service and one lazy process per plugin on Windows x64. The backend is built and supplied by the plugin author, then run as-is without a sandbox and with Scalpel's user permissions, including elevation. Checksums verify expected bytes and supervision manages lifecycle failures; neither establishes safety or restricts filesystem, network, process, or system access. Authors are responsible for what they distribute, and users run native plugins at their own risk. This temporary trust model remains in effect until a future native-plugin revision explicitly ships enforced containment. Read the [normative RFC](NATIVE_PLUGIN_RFC_1.md) before shipping one.
+- One helper per plugin, offering one private service, on Windows x64 only.
+- Scalpel starts the helper on the first call, not on activation, and reuses that one process. It stops the helper before changing the plugin's files and when Scalpel exits.
+- A failed call rejects with a `PluginNativeCallError` whose `code` comes from your helper or from Scalpel (for example `UNAVAILABLE` or `DEADLINE_EXCEEDED`).
 
-Rust workers can use the unpublished [`scalpel-plugin-native`](crates/scalpel-plugin-native) helper. Pin the SDK release tag rather than a branch:
+> **Native helpers are not sandboxed.** The executable is built and supplied by the plugin author and runs as-is with Scalpel's permissions, including administrator rights when Scalpel is elevated. It can use files, the network, and other processes. Checksums only prove the files are the ones published, not that they are safe. Authors are responsible for what they ship, and users install native plugins at their own risk. See the [security model](NATIVE_PLUGIN_RFC_1.md#security-model).
+
+Rust helpers can use the [`scalpel-plugin-native`](crates/scalpel-plugin-native) crate, which handles the protocol. It is not on crates.io; pin the SDK release tag:
 
 ```toml
 scalpel-plugin-native = { git = "https://github.com/scalpelpoe/scalpel.git", tag = "sdk-v0.11.0" }
 ```
 
-## Builder
+The wire protocol, limits, timeouts, and lifecycle are specified in [`NATIVE_PLUGIN_RFC_1.md`](NATIVE_PLUGIN_RFC_1.md). Where this page and the RFC differ, the RFC is correct.
 
-Configuration lives under `scalpelPlugin` in the plugin's `package.json`. See the checked-in examples for complete configurations.
+## The `scalpel-plugin` tool
 
-```text
-scalpel-plugin generate
-scalpel-plugin check
-scalpel-plugin build
-scalpel-plugin pack
-```
+The tool reads its configuration from `scalpelPlugin` in your plugin's `package.json`; the examples below have complete configurations. Pass `--project <dir>` to run it on another directory.
 
-- `generate` writes configured descriptor sets and Protobuf-ES TypeScript sources.
-- `check` regenerates in temporary storage and fails if descriptors, generated TypeScript, or the configured `plugin.js` are stale.
-- `build` generates contracts and creates the minified browser ESM `plugin.js`.
-- `pack` also builds the configured Cargo binary in release mode, takes the executable path from Cargo JSON artifact output, writes its SHA-256 into `dist/manifest.json`, and assembles root-level release files under `dist/`. Packing `win32-x64` requires a Windows x64 host.
+| Command | What it does |
+| --- | --- |
+| `scalpel-plugin generate` | Writes the descriptor files and TypeScript for your `.proto` files. |
+| `scalpel-plugin check` | Fails if generated files or `plugin.js` are out of date. Writes nothing; use it in CI. |
+| `scalpel-plugin build` | Runs `generate`, then bundles `plugin.js` as minified browser ESM. |
+| `scalpel-plugin pack` | Runs `build`, builds your Cargo helper in release mode, writes its SHA-256 into `dist/manifest.json`, and puts every release file in `dist/`. Packing for `win32-x64` needs a Windows x64 machine. |
 
-The CLI treats `.proto` files as sources and generated TypeScript, descriptor sets, and `plugin.js` as generated artifacts. Generated Rust remains exclusively in Cargo `OUT_DIR`. Choose whether to commit browser-side generated artifacts consistently for your repository; `check` can enforce that committed copies are current.
+`.proto` files are sources; the generated TypeScript, descriptor files, and `plugin.js` are build output. Generated Rust stays in Cargo's `OUT_DIR`. Whether you commit the generated browser files is up to you; `check` keeps committed copies honest.
 
 ## Examples
 
-- `plugin-service-examples/greeting-provider` exposes a public service.
-- `plugin-service-examples/greeting-relay` consumes that service and exposes another.
-- `plugin-service-examples/greeting-consumer` completes the provider-to-relay-to-consumer chain.
-- `plugin-service-examples/native-item-analyzer` sends generated Protobuf payloads through the supervised Rust sidecar.
+All in [`plugin-service-examples/`](plugin-service-examples). They require Scalpel 1.1.0 or newer.
 
-Run `npm run build:plugin-service-examples` for the public service examples and `npm run build:native-plugin-example` on Windows x64 for a loadable native package.
+- `greeting-provider` offers a service.
+- `greeting-relay` uses that service and offers its own.
+- `greeting-consumer` uses the relay, completing the provider → relay → consumer chain.
+- `native-item-analyzer` calls a Rust helper with generated Protobuf messages.
 
-The greeting provider's character result is a last-seen Client.txt heuristic, not authoritative current-character identity. Localized clients and party lines can differ, and no result is available until a matching newly followed line appears.
+Build the service examples with `npm run build:plugin-service-examples`, and the native one (on Windows x64) with `npm run build:native-plugin-example`.
+
+The greeting provider guesses the current character from the most recent matching line in Client.txt. It is a demonstration, not a reliable identity: party members' lines and localized clients can mislead it, and it knows nothing until a matching line appears.

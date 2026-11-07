@@ -2,7 +2,7 @@
 
 This example is an ordinary TypeScript plugin with a private Rust sidecar. Its action hotkey reads a hovered Path of Exile item and calls the generated `NativeItemAnalyzer` Protobuf service.
 
-**Security notice:** Scalpel runs this author-supplied executable as-is, without a sandbox, with its user permissions and any elevation. It can access files, the network, and other processes. Checksums and process supervision do not establish that it is safe. Review and build the source yourself before loading the example; do not disable antivirus to bypass a warning.
+**Not sandboxed:** the helper executable runs with Scalpel's permissions, including administrator rights when Scalpel is elevated. Build it from source yourself before loading the example, and don't disable antivirus to get past a warning. See the [security model](../../NATIVE_PLUGIN_RFC_1.md#security-model).
 
 Bind **Analyze hovered item** under Settings > Macros > Plugin Hotkeys. Hover an item in Path of Exile and press the hotkey: the plugin opens its popup, captures the item privately with `showOverlay: false` and `dispatch: false`, and displays the native result without a second click. The tab's **Analyze hovered item** button runs the same action for mouse access.
 
