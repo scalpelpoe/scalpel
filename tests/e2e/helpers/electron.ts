@@ -24,8 +24,16 @@ const CONFIG_FILE = 'config.json'
 
 export interface PluginHostWindow {
   page: Page
-  /** Page errors, console errors, and failed responses seen in the plugin host renderer. */
+  /** Page errors, console errors, and failed responses seen in the plugin host renderer. Failed requests to
+   *  remote http(s) URLs are left out (see isRemoteUrl). */
   errors: string[]
+}
+
+/** The overlay renderer fetches live data feeds (drop rates, prices) and falls back to bundled data when they
+ *  fail. Those sites can refuse CI runners (wraeclast.cards answers GitHub's with 403), which says nothing about
+ *  plugins. Failures on scalpel-plugin://, scalpel-internal:// and file:// URLs are still reported. */
+function isRemoteUrl(url: string): boolean {
+  return url.startsWith('https://') || url.startsWith('http://')
 }
 
 /** Open a hidden overlay renderer, the window that activates installed plugins. The e2e app has
@@ -50,10 +58,13 @@ export async function openPluginHostWindow(scalpel: ScalpelE2EApp): Promise<Plug
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   page.on('console', (message) => {
-    if (message.type() === 'error') errors.push(message.text())
+    if (message.type() !== 'error') return
+    // Chromium reports a failed resource load with the resource's URL as the message location.
+    if (message.text().startsWith('Failed to load resource') && isRemoteUrl(message.location().url)) return
+    errors.push(message.text())
   })
   page.on('response', (response) => {
-    if (response.status() >= 400) errors.push(`${response.status()} ${response.url()}`)
+    if (response.status() >= 400 && !isRemoteUrl(response.url())) errors.push(`${response.status()} ${response.url()}`)
   })
   await page.waitForLoadState('domcontentloaded')
   return { page, errors }
