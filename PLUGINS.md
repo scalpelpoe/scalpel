@@ -1,6 +1,6 @@
 # Writing Scalpel plugins
 
-Scalpel supports third-party plugins that add tabs, overlays, and hotkeys to the overlay. A plugin is a bundled JavaScript file written against a typed SDK, published from the author's GitHub repository, and listed in a curated registry. Plugins can also offer services to other plugins, and, as an experimental preview, ship one Windows x64 helper executable. This document is for plugin authors.
+Scalpel supports third-party plugins that add tabs, overlays, and hotkeys to the overlay. A plugin is a bundled JavaScript file written against a typed SDK, published from the author's GitHub repository, and listed in a curated registry. As an experimental preview, plugins can also offer services to other plugins and ship one Windows x64 helper executable. This document is for plugin authors.
 
 A complete reference plugin that exercises every SDK component lives at [`scalpelpoe/scalpel-plugin-examples`](https://github.com/scalpelpoe/scalpel-plugin-examples). Read it alongside this doc.
 
@@ -824,8 +824,8 @@ Three more fields are needed only when your plugin talks to other plugins or shi
 }
 ```
 
-- `api` is the one service your plugin offers to other plugins. `contract` is the compiled Protobuf descriptor file shipped next to `plugin.js`; `service` is the service's full Protobuf name. Bump `version` whenever its methods or messages change.
-- `dependencies` lists the plugins whose services you call, each pinned to an exact `apiVersion`. Add `"optional": true` for one you can run without. Scalpel activates providers before the plugins that use them.
+- `api` (experimental) is the one service your plugin offers to other plugins. `contract` is the compiled Protobuf descriptor file shipped next to `plugin.js`; `service` is the service's full Protobuf name. Bump the minor `version` for additions and the major for breaking changes.
+- `dependencies` (experimental) lists the plugins whose services you call, each with the lowest compatible `apiVersion` you need; any provider API with the same major version at or above it is accepted. Add `"optional": true` for one you can run without. Scalpel activates providers before the plugins that use them.
 - `nativeBackend` (experimental) declares your own helper executable. Only `win32-x64` is supported, and the file must be an `.exe`. Registry installs of native plugins work only from Scalpel's curated registry, not a self-hosted one. Native helpers are [not sandboxed](NATIVE_PLUGIN_RFC_1.md#security-model).
 - Every file a manifest names sits next to `manifest.json`; subdirectories are not allowed.
 

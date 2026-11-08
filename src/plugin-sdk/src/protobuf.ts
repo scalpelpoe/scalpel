@@ -30,7 +30,8 @@ export type PluginServiceImplementation<S extends DescService> = {
   [P in keyof S['method']]: UnaryImplementationMethod<S['method'][P]>
 }
 
-/** Expose a generated unary Protobuf service over Scalpel's object transport. */
+/** Expose a generated unary Protobuf service over Scalpel's object transport.
+ * @experimental Plugin services may change in a later SDK release. */
 export function exposePluginService<S extends DescService>(
   plugins: PluginCommunicationApi,
   service: S,
@@ -55,7 +56,8 @@ export function exposePluginService<S extends DescService>(
   })
 }
 
-/** Return a typed client for an optional declared plugin dependency. */
+/** Return a typed client for an optional declared plugin dependency.
+ * @experimental Plugin services may change in a later SDK release. */
 export function getPluginServiceClient<S extends DescService>(
   plugins: PluginCommunicationApi,
   pluginId: string,
@@ -66,7 +68,8 @@ export function getPluginServiceClient<S extends DescService>(
   return createServiceClient(service, async (path, _method, request) => transport.call(path, request))
 }
 
-/** Return a typed client for a required declared plugin dependency. */
+/** Return a typed client for a required declared plugin dependency.
+ * @experimental Plugin services may change in a later SDK release. */
 export function createPluginServiceClient<S extends DescService>(
   plugins: PluginCommunicationApi,
   pluginId: string,
@@ -77,7 +80,8 @@ export function createPluginServiceClient<S extends DescService>(
   return client
 }
 
-/** Return a typed client that serializes a generated service over the owning native backend. */
+/** Return a typed client that serializes a generated service over the owning native backend.
+ * @experimental Native backends (RFC1) may be replaced by a later protocol version. */
 export function createNativeServiceClient<S extends DescService>(
   native: PluginNativeBackendApi,
   service: S,

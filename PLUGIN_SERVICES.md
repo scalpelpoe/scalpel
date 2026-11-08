@@ -1,6 +1,6 @@
 # Plugin Services
 
-Plugin services let plugins call each other. A plugin can **offer** one service, a set of request/response methods, and **use** the services of plugins it lists as dependencies. A plugin can also run its own **native helper**, a Windows x64 executable it calls the same way. Native helpers are an experimental preview.
+Plugin services let plugins call each other. A plugin can **offer** one service, a set of request/response methods, and **use** the services of plugins it lists as dependencies. A plugin can also run its own **native helper**, a Windows x64 executable it calls the same way. Both are an experimental preview: `ctx.plugins`, `ctx.native`, and the `api`, `dependencies`, and `nativeBackend` manifest fields can change in a later SDK release.
 
 Plugins that don't need any of this keep working as before; see [Existing plugins keep working](PLUGINS.md#existing-plugins-keep-working). Read [`PLUGINS.md`](PLUGINS.md) first for the basics of writing a plugin.
 
@@ -15,10 +15,11 @@ Plugins that don't need any of this keep working as before; see [Existing plugin
 ## Rules
 
 - Methods are request/response only. Streaming is not supported.
-- A dependency names an exact API version (`major.minor.patch`). Bump the provider's `api.version` whenever a method or message changes: Scalpel cannot tell two different contracts with the same version apart.
+- API versions are `major.minor.patch` and match like a caret range: a dependency on `1.2.0` accepts any provider API from `1.2.0` up to, but not including, `2.0.0` (a `0.y.z` dependency stays within `0.y`). Declare the lowest version that has what you call.
+- Providers bump the minor version for additions (new methods or new fields) and the major version for anything that breaks an existing caller, such as removing or renaming a method, field, or the service itself. Scalpel cannot tell two different contracts with the same version apart, and it refuses an update that renames a service while an installed consumer's dependency would still accept the new version.
 - The `service` in the provider's manifest must be the generated service's full name, and a consumer can only call that service's methods.
 - Providers activate before the plugins that use them.
-- If a required dependency is missing, has a different API version, is part of a cycle, or is itself unavailable, the plugin stays installed but inactive, and Settings shows why. An unavailable optional dependency only means its client is `null`.
+- If a required dependency is missing, has an incompatible API version, is part of a cycle, or is itself unavailable, the plugin stays installed but inactive, and Settings shows why. An unavailable optional dependency only means its client is `null`.
 
 ## Set up
 

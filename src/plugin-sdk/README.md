@@ -141,7 +141,7 @@ npx scalpel-plugin build
 npx scalpel-plugin pack
 ```
 
-It generates standard Protobuf-ES sources and descriptor sets, bundles the renderer, and packages native artifacts. See [`PLUGIN_SERVICES.md`](../../PLUGIN_SERVICES.md) for configuration and examples.
+It generates standard Protobuf-ES sources and descriptor sets, bundles the renderer, and packages native artifacts. See [`PLUGIN_SERVICES.md`](../../PLUGIN_SERVICES.md) for configuration and examples. Plugin services (`ctx.plugins` and the `api` and `dependencies` manifest fields) are an experimental preview and may change in a later SDK release.
 
 Native helpers (experimental) are called with `createNativeServiceClient(ctx.native, Service)` rather than the raw byte API; failed calls reject with a `PluginNativeCallError` carrying a machine-readable `code`. They are not sandboxed: the executable runs with Scalpel's permissions, including administrator rights when Scalpel is elevated. Read [`NATIVE_PLUGIN_RFC_1.md`](../../NATIVE_PLUGIN_RFC_1.md), including its security model, before shipping one.
 

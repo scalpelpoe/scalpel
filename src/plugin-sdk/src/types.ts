@@ -16,7 +16,8 @@ export interface PluginManifest {
   /** Absolute URL of a small icon shown in the Plugins settings store rows.
    *  PNG or SVG. The same URL the registry entry advertises pre-install. */
   iconUrl?: string
-  /** Public API exposed by this plugin's renderer entry point. */
+  /** Public API exposed by this plugin's renderer entry point.
+   * @experimental Plugin services may change in a later SDK release. */
   api?: {
     version: string
     /** Root-level Protobuf FileDescriptorSet bundled with the plugin release. */
@@ -24,11 +25,13 @@ export interface PluginManifest {
     /** Fully qualified unary Protobuf service exposed by this plugin. */
     service: string
   }
-  /** Explicit plugin API dependencies. No provider discovery is performed. */
+  /** Explicit plugin API dependencies. No provider discovery is performed.
+   * @experimental Plugin services may change in a later SDK release. */
   dependencies?: PluginDependency[]
   /**
    * Optional private executable supplied by the plugin author. Scalpel owns its
    * lifecycle but runs it unsandboxed with Scalpel's user permissions.
+   * @experimental Native backends (RFC1) may be replaced by a later protocol version.
    */
   nativeBackend?: {
     protocolVersion: 1
@@ -48,8 +51,11 @@ export interface PluginManifest {
   }
 }
 
+/** @experimental Plugin services may change in a later SDK release. */
 export interface PluginDependency {
   pluginId: string
+  /** Lowest compatible provider API version (`major.minor.patch`). Matches like a caret
+   *  range: `1.2.0` accepts `>=1.2.0 <2.0.0`, and `0.2.0` accepts `>=0.2.0 <0.3.0`. */
   apiVersion: string
   optional?: boolean
 }
@@ -63,6 +69,7 @@ export interface PluginApiClient {
   call<TResult = unknown, TParams = unknown>(method: string, params?: TParams): Promise<TResult>
 }
 
+/** @experimental Plugin services may change in a later SDK release. */
 export interface PluginCommunicationApi {
   /** Expose the API declared by this plugin's manifest. Must be called during activation. */
   expose(serviceTypeName: string, handler: PluginApiHandler): void
@@ -77,6 +84,7 @@ export interface PluginNativeCallError extends Error {
   readonly code: string
 }
 
+/** @experimental Native backends (RFC1) may be replaced by a later protocol version. */
 export interface PluginNativeBackendApi {
   /**
    * Call this plugin's declared, author-supplied, unsandboxed native backend with a Protobuf payload.
@@ -284,7 +292,9 @@ export interface MediaApi {
 export interface ScalpelPluginContext {
   readonly pluginId: string
   readonly pluginVersion: string
+  /** @experimental Plugin services may change in a later SDK release. */
   readonly plugins: PluginCommunicationApi
+  /** @experimental Native backends (RFC1) may be replaced by a later protocol version. */
   readonly native: PluginNativeBackendApi
 
   getPoeVersion(): 1 | 2
