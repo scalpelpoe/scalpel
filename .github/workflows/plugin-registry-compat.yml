@@ -1,0 +1,31 @@
+name: Plugin Registry Compatibility
+
+# Checks every plugin in the live curated registry against this branch's plugin host:
+# downloads each released manifest.json and plugin.js, verifies the registry's sha256 pins,
+# and compares the registry, install, and load gates with Scalpel 1.0.5. Plugin code is
+# hashed, never executed. The same checks run offline in `npm test` against a snapshot.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-registry:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts --no-audit --no-fund
+
+      - name: Check published plugins
+        run: npm run verify:plugin-registry

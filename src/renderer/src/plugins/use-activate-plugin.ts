@@ -7,6 +7,8 @@ import type {
 } from '../../../plugin-sdk/src/types'
 import type { PoeItem, Zone } from '@shared/types'
 import { importPluginModule } from './import-plugin-module'
+import { callNativeBackend } from './native-call'
+import { createSecondaryPluginCommunicationApi } from './secondary-plugin-communication'
 import { resolveLeagueOptions } from '@renderer/shared/league-options'
 
 export interface ActivatedPlugin {
@@ -24,6 +26,7 @@ export function useActivatePlugin(
   // Import + activate the plugin module once, in THIS window's process.
   useEffect(() => {
     let cancelled = false
+    let activationTeardown: (() => void) | null = null
     let latestItem: PoeItem | null = null
     let latestZone: Zone | null = null
     const unsubItem = window.api.onOverlayData((d) => {
@@ -33,8 +36,20 @@ export function useActivatePlugin(
       latestZone = z
     })
     void (async () => {
-      const entry = await window.api.getInstalledPlugin(pluginId)
-      if (cancelled || !entry) return
+      const getLoadable = window.api.getLoadablePlugin ?? window.api.getInstalledPlugin
+      const entry = await getLoadable(pluginId)
+      if (cancelled) return
+      if (!entry) {
+        // Mid-update (main blocks the plugin while its files change and reloads
+        // this pop-out afterwards), unavailable, or gone: say which, instead of
+        // rendering empty overlay chrome.
+        const installed = await window.api.getInstalledPlugin(pluginId).catch(() => null)
+        if (cancelled) return
+        if (!installed) setError('plugin is not installed')
+        else if (installed.availability.status === 'unavailable') setError(installed.availability.reason.message)
+        else setError('This plugin is being updated. Reopen this window in a moment.')
+        return
+      }
       const state = await window.api.getOverlayState().catch(() => null)
       const poeVersion: 1 | 2 = (state?.poeVersion as 1 | 2) ?? 1
       const settings = await window.api.getSettings().catch(() => null)
@@ -47,6 +62,10 @@ export function useActivatePlugin(
       const ctx: ScalpelPluginContext = {
         pluginId,
         pluginVersion: entry.manifest.version,
+        plugins: createSecondaryPluginCommunicationApi(entry.manifest),
+        native: {
+          call: (method, payload) => callNativeBackend(pluginId, method, payload),
+        },
         getPoeVersion: () => poeVersion,
         getLeague: () => league,
         getLeagues: async (version) =>
@@ -137,7 +156,11 @@ export function useActivatePlugin(
       // persistent (hidden, not destroyed, on close), so they correctly survive
       // show/hide. We do not collect them here.
       try {
-        await mod.default(ctx)
+        const teardown = await mod.default(ctx)
+        if (typeof teardown === 'function') {
+          if (cancelled) teardown()
+          else activationTeardown = teardown
+        }
       } catch (err) {
         if (!cancelled) setError(err instanceof Error ? err.message : String(err))
         return
@@ -148,6 +171,11 @@ export function useActivatePlugin(
     })()
     return () => {
       cancelled = true
+      try {
+        activationTeardown?.()
+      } catch {
+        // A plugin teardown must not prevent host subscriptions from closing.
+      }
       unsubItem()
       unsubZone()
     }

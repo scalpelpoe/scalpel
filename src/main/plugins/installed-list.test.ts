@@ -21,6 +21,11 @@ vi.mock('fs', () => ({
   writeFileSync: (p: string, data: string) => {
     mockFs.files.set(p, data)
   },
+  renameSync: (from: string, to: string) => {
+    mockFs.files.set(to, mockFs.files.get(from)!)
+    mockFs.files.delete(from)
+  },
+  rmSync: (p: string) => mockFs.files.delete(p),
   mkdirSync: () => {},
 }))
 

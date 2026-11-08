@@ -1,0 +1,33 @@
+# @scalpelpoe/plugin-tools
+
+Build and packaging tools for [Scalpel](https://github.com/scalpelpoe/scalpel) plugins. The package provides the `scalpel-plugin` command for generating Protobuf contracts, checking generated files, bundling renderer code, and packaging native artifacts.
+
+## Install
+
+```bash
+npm install --save-dev https://github.com/scalpelpoe/scalpel/releases/download/sdk-v0.11.0/scalpelpoe-plugin-tools-0.11.0.tgz
+```
+
+Node 22 or newer is required. This RFC preview package is a tarball attached to the `sdk-v0.11.0` GitHub Release; it is not published to npm. Install [`@scalpelpoe/plugin-sdk@0.11.0`](https://www.npmjs.com/package/@scalpelpoe/plugin-sdk/v/0.11.0) separately for plugin types and renderer APIs. Plugins that use generated Protobuf services also need `@bufbuild/protobuf@2.14.0` as a project dependency.
+
+## Commands
+
+```bash
+npx scalpel-plugin generate
+npx scalpel-plugin check
+npx scalpel-plugin build
+npx scalpel-plugin pack
+```
+
+- `generate` writes descriptor sets and Protobuf-ES TypeScript sources configured by `scalpelPlugin.contracts`.
+- `check` verifies generated contracts and `plugin.js` are current without writing them.
+- `build` generates contracts and writes a minified browser ESM bundle.
+- `pack` builds the plugin, packages its manifest and contracts under `dist/`, and includes a configured native executable.
+
+All commands read `scalpelPlugin` from the target project's `package.json`. Use `--project <path>` to target a directory other than the current working directory.
+
+For a configured native backend, `pack` runs Cargo release build, finds the named binary through Cargo's JSON artifact output, computes its lowercase SHA-256, and writes that checksum into `dist/manifest.json`. The current `win32-x64` target must be packed on Windows x64.
+
+**Native helpers are not sandboxed.** The packed executable runs with Scalpel's permissions, including administrator rights when Scalpel is elevated, and you are responsible for everything you ship in it. The checksum `pack` writes only proves the files are the ones you packed, not that they are safe. See the [security model](https://github.com/scalpelpoe/scalpel/blob/main/NATIVE_PLUGIN_RFC_1.md#security-model).
+
+The CLI leaves `@scalpelpoe/plugin-sdk`, React, and React DOM out of the bundle because Scalpel provides them at runtime. Configuration and examples are in [PLUGIN_SERVICES.md](https://github.com/scalpelpoe/scalpel/blob/main/PLUGIN_SERVICES.md). Native helpers are an experimental preview specified by [NATIVE_PLUGIN_RFC_1.md](https://github.com/scalpelpoe/scalpel/blob/main/NATIVE_PLUGIN_RFC_1.md).

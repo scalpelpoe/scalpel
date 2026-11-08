@@ -55,8 +55,12 @@ export function sendCurrentZoneTo(win: BrowserWindow): void {
 /** Wire a window to receive `client-log:line` IPCs for every raw Client.txt
  *  line, gated on at least one active subscriber (see tail-buffer ref-count).
  *  Mirrors forwardZoneChangesTo. */
-export function forwardLogLinesTo(getWin: () => BrowserWindow | null): void {
+export function forwardLogLinesTo(getWin: () => BrowserWindow | null): () => void {
   logLineWinGetters.push(getWin)
+  return () => {
+    const index = logLineWinGetters.indexOf(getWin)
+    if (index !== -1) logLineWinGetters.splice(index, 1)
+  }
 }
 
 function emitLogLine(line: string): void {

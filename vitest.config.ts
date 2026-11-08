@@ -9,6 +9,7 @@ export default defineConfig({
       '@shared': resolve(__dirname, 'src/shared'),
       '@renderer': resolve(__dirname, 'src/renderer/src'),
       '@main': resolve(__dirname, 'src/main'),
+      '@scalpelpoe/plugin-sdk': resolve(__dirname, 'src/plugin-sdk/src/index.ts'),
     },
   },
   test: {
@@ -20,6 +21,7 @@ export default defineConfig({
       'packages/stream-contract/src/**/*.test.ts',
       'packages/stream-viewer/src/**/*.test.ts',
       'packages/stream-viewer/src/**/*.test.tsx',
+      'plugin-service-examples/**/*.test.ts',
     ],
     exclude: ['node_modules', 'out', 'dist'],
     passWithNoTests: true,

@@ -1,0 +1,18 @@
+{
+  "name": "@scalpel-examples/greeting-consumer",
+  "private": true,
+  "type": "module",
+  "scalpelPlugin": {
+    "manifest": "manifest.json",
+    "entry": "src/plugin.ts",
+    "bundle": "plugin.js",
+    "outDir": "dist",
+    "contracts": [
+      {
+        "input": "../greeting-relay/api.binpb",
+        "generated": "src/generated",
+        "service": "scalpel.examples.greeting.relay.v1.GreetingRelay"
+      }
+    ]
+  }
+}

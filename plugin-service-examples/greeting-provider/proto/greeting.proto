@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package scalpel.examples.greeting.v1;
+
+service GreetingProvider {
+  rpc GetLastSeenCharacter(GetLastSeenCharacterRequest) returns (GetLastSeenCharacterResponse);
+}
+
+message GetLastSeenCharacterRequest {}
+
+message GetLastSeenCharacterResponse {
+  oneof result {
+    LastSeenCharacter character = 1;
+    CharacterUnavailable unavailable = 2;
+  }
+}
+
+message LastSeenCharacter {
+  string name = 1;
+  CharacterObservationSource source = 2;
+  CharacterObservationKind kind = 3;
+  string character_class = 4;
+  uint32 level = 5;
+}
+
+message CharacterUnavailable {
+  CharacterUnavailableReason reason = 1;
+  string message = 2;
+}
+
+enum CharacterObservationSource {
+  CHARACTER_OBSERVATION_SOURCE_UNSPECIFIED = 0;
+  CHARACTER_OBSERVATION_SOURCE_RECENT_LOG_LINES = 1;
+  CHARACTER_OBSERVATION_SOURCE_LIVE_LOG_LINE = 2;
+}
+
+enum CharacterObservationKind {
+  CHARACTER_OBSERVATION_KIND_UNSPECIFIED = 0;
+  CHARACTER_OBSERVATION_KIND_DEATH = 1;
+  CHARACTER_OBSERVATION_KIND_LEVEL_UP = 2;
+}
+
+enum CharacterUnavailableReason {
+  CHARACTER_UNAVAILABLE_REASON_UNSPECIFIED = 0;
+  CHARACTER_UNAVAILABLE_REASON_INITIALIZING = 1;
+  CHARACTER_UNAVAILABLE_REASON_NO_MATCHING_LOG_LINE = 2;
+}

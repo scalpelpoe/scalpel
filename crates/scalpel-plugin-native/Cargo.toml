@@ -1,0 +1,13 @@
+[package]
+name = "scalpel-plugin-native"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+description = "Native sidecar transport runtime for Scalpel plugins"
+
+[dependencies]
+prost = "0.14"
+
+[build-dependencies]
+prost-build = "0.14"
+protoc-bin-vendored = "3"

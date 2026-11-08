@@ -8,6 +8,7 @@ export interface PluginManifest {
   name: string
   description: string
   author: string
+  /** Supported Scalpel version range (for example, ">=1.2.0 <2.0.0" or "^1.2.0"). */
   scalpelMinVersion: string
   homepage?: string
   poeVersions?: (1 | 2)[]
@@ -15,6 +16,82 @@ export interface PluginManifest {
   /** Absolute URL of a small icon shown in the Plugins settings store rows.
    *  PNG or SVG. The same URL the registry entry advertises pre-install. */
   iconUrl?: string
+  /** Public API exposed by this plugin's renderer entry point.
+   * @experimental Plugin services may change in a later SDK release. */
+  api?: {
+    version: string
+    /** Root-level Protobuf FileDescriptorSet bundled with the plugin release. */
+    contract: string
+    /** Fully qualified unary Protobuf service exposed by this plugin. */
+    service: string
+  }
+  /** Explicit plugin API dependencies. No provider discovery is performed.
+   * @experimental Plugin services may change in a later SDK release. */
+  dependencies?: PluginDependency[]
+  /**
+   * Optional private executable supplied by the plugin author. Scalpel owns its
+   * lifecycle but runs it unsandboxed with Scalpel's user permissions.
+   * @experimental Native backends (RFC1) may be replaced by a later protocol version.
+   */
+  nativeBackend?: {
+    protocolVersion: 1
+    /** Root-level Protobuf FileDescriptorSet describing the private worker API. */
+    contract: string
+    /** Fully qualified unary Protobuf service implemented by the worker. */
+    service: string
+    targets: {
+      /** The initial native backend slice supports Scalpel's Windows x64 build. */
+      'win32-x64'?: {
+        /** Root-level executable shipped with the plugin release. */
+        file: string
+        /** Lowercase SHA-256 for byte integrity only; it does not establish safety. */
+        sha256: string
+      }
+    }
+  }
+}
+
+/** @experimental Plugin services may change in a later SDK release. */
+export interface PluginDependency {
+  pluginId: string
+  /** Lowest compatible provider API version (`major.minor.patch`). Matches like a caret
+   *  range: `1.2.0` accepts `>=1.2.0 <2.0.0`, and `0.2.0` accepts `>=0.2.0 <0.3.0`. */
+  apiVersion: string
+  optional?: boolean
+}
+
+export type PluginApiHandler = (method: string, params: unknown) => unknown | Promise<unknown>
+
+export interface PluginApiClient {
+  readonly pluginId: string
+  readonly apiVersion: string
+  readonly serviceTypeName: string
+  call<TResult = unknown, TParams = unknown>(method: string, params?: TParams): Promise<TResult>
+}
+
+/** @experimental Plugin services may change in a later SDK release. */
+export interface PluginCommunicationApi {
+  /** Expose the API declared by this plugin's manifest. Must be called during activation. */
+  expose(serviceTypeName: string, handler: PluginApiHandler): void
+  /** Get a client for an explicitly declared dependency. */
+  get(pluginId: string, serviceTypeName: string): PluginApiClient | null
+}
+
+/** Rejection type of PluginNativeBackendApi.call. `code` is the worker's CallError code, or one of the host codes
+ *  UNAVAILABLE, DEADLINE_EXCEEDED, INVALID_ARGUMENT, RESOURCE_EXHAUSTED, FAILED_PRECONDITION, INTERNAL. */
+export interface PluginNativeCallError extends Error {
+  readonly name: 'NativeCallError'
+  readonly code: string
+}
+
+/** @experimental Native backends (RFC1) may be replaced by a later protocol version. */
+export interface PluginNativeBackendApi {
+  /**
+   * Call this plugin's declared, author-supplied, unsandboxed native backend with a Protobuf payload.
+   * Rejects with a {@link PluginNativeCallError} - an Error whose `name` is 'NativeCallError' and whose
+   * `code` identifies the failure.
+   */
+  call(method: string, payload: Uint8Array): Promise<Uint8Array>
 }
 
 /** Optional cleanup returned from activate(); the host calls it when the plugin
@@ -215,6 +292,10 @@ export interface MediaApi {
 export interface ScalpelPluginContext {
   readonly pluginId: string
   readonly pluginVersion: string
+  /** @experimental Plugin services may change in a later SDK release. */
+  readonly plugins: PluginCommunicationApi
+  /** @experimental Native backends (RFC1) may be replaced by a later protocol version. */
+  readonly native: PluginNativeBackendApi
 
   getPoeVersion(): 1 | 2
   getLeague(): string

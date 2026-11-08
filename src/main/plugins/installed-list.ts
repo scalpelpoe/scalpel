@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname } from 'node:path'
 import { installedJsonPath } from './paths'
 
@@ -21,7 +21,13 @@ export function readInstalledIds(): string[] {
 export function writeInstalledIds(ids: string[]): void {
   const p = installedJsonPath()
   mkdirSync(dirname(p), { recursive: true })
-  writeFileSync(p, JSON.stringify(ids))
+  const temporary = `${p}.tmp`
+  try {
+    writeFileSync(temporary, JSON.stringify(ids))
+    renameSync(temporary, p)
+  } finally {
+    rmSync(temporary, { force: true })
+  }
 }
 
 /** Add an id if not already present. Returns true if the list was modified. */
