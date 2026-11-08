@@ -4,6 +4,7 @@ import type {
   PluginCommunicationApi,
   PluginManifest,
 } from '../../../plugin-sdk/src/types'
+import { apiVersionSatisfies } from '@shared/plugin-dependencies'
 
 interface Provider {
   version: string
@@ -48,7 +49,7 @@ export class PluginCommunicationRuntime {
           throw new Error(`[plugin:${manifest.id}] dependency "${pluginId}" is not declared`)
         }
         const provider = this.providers.get(pluginId)
-        if (!provider || provider.version !== dependency.apiVersion) {
+        if (!provider || !apiVersionSatisfies(dependency.apiVersion, provider.version)) {
           if (dependency.optional) return null
           throw new Error(`[plugin:${manifest.id}] required plugin API "${pluginId}" is unavailable`)
         }
@@ -67,7 +68,7 @@ export class PluginCommunicationRuntime {
     for (const dependency of manifest.dependencies ?? []) {
       if (dependency.optional) continue
       const provider = this.providers.get(dependency.pluginId)
-      if (!provider || provider.version !== dependency.apiVersion) {
+      if (!provider || !apiVersionSatisfies(dependency.apiVersion, provider.version)) {
         throw new Error(`[plugin:${manifest.id}] required plugin API "${dependency.pluginId}" is unavailable`)
       }
     }

@@ -1,5 +1,5 @@
 import type { PluginManifest } from '../../plugin-sdk/src/types'
-import { resolvePluginDependencies } from '@shared/plugin-dependencies'
+import { apiVersionSatisfies, resolvePluginDependencies } from '@shared/plugin-dependencies'
 
 /** Validate the graph that would exist after replacing or removing one plugin. */
 export function validateDependencyMutation(
@@ -8,16 +8,22 @@ export function validateDependencyMutation(
   replacement: PluginManifest | null,
 ): string | null {
   const previous = installed.find((manifest) => manifest.id === pluginId)
+  const replacementApi = replacement?.api
+  // Consumers name the service at runtime, not in their manifest, so a service
+  // rename that their declared API version still accepts would break them silently.
   if (
     previous?.api &&
-    replacement?.api &&
-    previous.api.version === replacement.api.version &&
-    previous.api.service !== replacement.api.service &&
+    replacementApi &&
+    previous.api.service !== replacementApi.service &&
     installed.some(
-      (manifest) => manifest.id !== pluginId && manifest.dependencies?.some((dep) => dep.pluginId === pluginId),
+      (manifest) =>
+        manifest.id !== pluginId &&
+        manifest.dependencies?.some(
+          (dep) => dep.pluginId === pluginId && apiVersionSatisfies(dep.apiVersion, replacementApi.version),
+        ),
     )
   ) {
-    return `plugin "${pluginId}" cannot change service without changing its API version`
+    return `plugin "${pluginId}" cannot change service without a breaking API version change`
   }
 
   const next = new Map(installed.map((manifest) => [manifest.id, manifest]))
@@ -63,7 +69,7 @@ export function validateDependencyMutation(
     for (const dependency of manifest.dependencies ?? []) {
       if (dependency.optional) continue
       const provider = next.get(dependency.pluginId)
-      if (!provider || provider.api?.version !== dependency.apiVersion) continue
+      if (!provider || !apiVersionSatisfies(dependency.apiVersion, provider.api?.version)) continue
       const consumerGames = manifest.poeVersions ?? [1, 2]
       const providerGames = new Set(provider.poeVersions ?? [1, 2])
       if (consumerGames.some((version) => !providerGames.has(version))) {

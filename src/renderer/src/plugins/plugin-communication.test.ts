@@ -41,6 +41,31 @@ describe('PluginCommunicationRuntime', () => {
     expect(handler).toHaveBeenCalledWith('/example.v1.Provider/Echo', request)
   })
 
+  it('serves a consumer from a newer same-major provider but not from another major', async () => {
+    const runtime = new PluginCommunicationRuntime()
+    runtime
+      .createApi(
+        manifest('provider', {
+          api: { version: '1.3.0', contract: 'api.binpb', service: 'example.v1.Provider' },
+        }),
+      )
+      .expose('example.v1.Provider', () => 'ok')
+    const compatible = runtime.createApi(
+      manifest('consumer', {
+        dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0' }],
+      }),
+    )
+    const nextMajor = manifest('next-consumer', {
+      dependencies: [{ pluginId: 'provider', apiVersion: '2.0.0' }],
+    })
+
+    await expect(compatible.get('provider', 'example.v1.Provider')!.call('/example.v1.Provider/Echo')).resolves.toBe(
+      'ok',
+    )
+    expect(() => runtime.assertDependenciesAvailable(nextMajor)).toThrow(/unavailable/)
+    expect(() => runtime.createApi(nextMajor).get('provider', 'example.v1.Provider')).toThrow(/unavailable/)
+  })
+
   it('rejects undeclared access and undeclared providers', () => {
     const runtime = new PluginCommunicationRuntime()
     expect(() => runtime.createApi(manifest('consumer')).get('provider', 'example.v1.Provider')).toThrow(/not declared/)

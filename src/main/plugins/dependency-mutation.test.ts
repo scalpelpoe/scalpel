@@ -16,7 +16,7 @@ const manifest = (id: string, extra: Partial<PluginManifest> = {}): PluginManife
 describe('validateDependencyMutation', () => {
   it('ignores unrelated plugins that were already unsatisfied', () => {
     const orphan = manifest('consumer', {
-      dependencies: [{ pluginId: 'provider', apiVersion: 'v1' }],
+      dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0' }],
     })
     const unrelated = manifest('unrelated')
     const incoming = manifest('foo')
@@ -29,13 +29,13 @@ describe('validateDependencyMutation', () => {
   })
 
   it('still validates transitive dependents of the mutated plugin', () => {
-    const provider = manifest('provider', { api: { version: 'v1', contract: 'api.binpb', service: 'demo.Api' } })
+    const provider = manifest('provider', { api: { version: '1.0.0', contract: 'api.binpb', service: 'demo.Api' } })
     const relay = manifest('relay', {
-      api: { version: 'v1', contract: 'api.binpb', service: 'demo.Relay' },
-      dependencies: [{ pluginId: 'provider', apiVersion: 'v1' }],
+      api: { version: '1.0.0', contract: 'api.binpb', service: 'demo.Relay' },
+      dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0' }],
     })
     const consumer = manifest('consumer', {
-      dependencies: [{ pluginId: 'relay', apiVersion: 'v1' }],
+      dependencies: [{ pluginId: 'relay', apiVersion: '1.0.0' }],
     })
 
     expect(validateDependencyMutation([provider, relay, consumer], 'provider', null)).toMatch(
@@ -45,11 +45,11 @@ describe('validateDependencyMutation', () => {
 
   it('rejects a new consumer of a transitively unavailable provider', () => {
     const provider = manifest('provider', {
-      api: { version: 'v1', contract: 'api.binpb', service: 'demo.Api' },
-      dependencies: [{ pluginId: 'missing', apiVersion: 'v1' }],
+      api: { version: '1.0.0', contract: 'api.binpb', service: 'demo.Api' },
+      dependencies: [{ pluginId: 'missing', apiVersion: '1.0.0' }],
     })
     const consumer = manifest('consumer', {
-      dependencies: [{ pluginId: 'provider', apiVersion: 'v1' }],
+      dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0' }],
     })
 
     expect(validateDependencyMutation([provider], 'consumer', consumer)).toMatch(
@@ -58,9 +58,9 @@ describe('validateDependencyMutation', () => {
   })
 
   it('rejects uninstalling a required provider', () => {
-    const provider = manifest('provider', { api: { version: 'v1', contract: 'api.binpb', service: 'demo.Api' } })
+    const provider = manifest('provider', { api: { version: '1.0.0', contract: 'api.binpb', service: 'demo.Api' } })
     const consumer = manifest('consumer', {
-      dependencies: [{ pluginId: 'provider', apiVersion: 'v1' }],
+      dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0' }],
     })
 
     expect(validateDependencyMutation([provider, consumer], 'provider', null)).toMatch(
@@ -69,21 +69,21 @@ describe('validateDependencyMutation', () => {
   })
 
   it('rejects an update that changes an API required by an installed consumer', () => {
-    const provider = manifest('provider', { api: { version: 'v1', contract: 'api.binpb', service: 'demo.Api' } })
+    const provider = manifest('provider', { api: { version: '1.0.0', contract: 'api.binpb', service: 'demo.Api' } })
     const consumer = manifest('consumer', {
-      dependencies: [{ pluginId: 'provider', apiVersion: 'v1' }],
+      dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0' }],
     })
     const incompatible = manifest('provider', {
       version: '2.0.0',
-      api: { version: 'v2', contract: 'api.binpb', service: 'demo.Api' },
+      api: { version: '2.0.0', contract: 'api.binpb', service: 'demo.Api' },
     })
 
-    expect(validateDependencyMutation([provider, consumer], 'provider', incompatible)).toMatch(/requires API v1/)
+    expect(validateDependencyMutation([provider, consumer], 'provider', incompatible)).toMatch(/requires API 1\.0\.0/)
   })
 
   it('accepts optional missing dependencies', () => {
     const consumer = manifest('consumer', {
-      dependencies: [{ pluginId: 'provider', apiVersion: 'v1', optional: true }],
+      dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0', optional: true }],
     })
 
     expect(validateDependencyMutation([], 'consumer', consumer)).toBeNull()
@@ -102,6 +102,34 @@ describe('validateDependencyMutation', () => {
     expect(validateDependencyMutation([provider], 'consumer', consumer)).toMatch(/unsupported PoE version/)
   })
 
+  it('accepts a compatible minor API update for an installed consumer', () => {
+    const provider = manifest('provider', { api: { version: '1.0.0', contract: 'api.binpb', service: 'demo.Api' } })
+    const consumer = manifest('consumer', {
+      dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0' }],
+    })
+    const minor = manifest('provider', {
+      version: '1.1.0',
+      api: { version: '1.1.0', contract: 'api.binpb', service: 'demo.Api' },
+    })
+
+    expect(validateDependencyMutation([provider, consumer], 'provider', minor)).toBeNull()
+  })
+
+  it('rejects renaming a consumed service in a compatible API version', () => {
+    const provider = manifest('provider', { api: { version: '1.0.0', contract: 'api.binpb', service: 'demo.Api' } })
+    const consumer = manifest('consumer', {
+      dependencies: [{ pluginId: 'provider', apiVersion: '1.0.0' }],
+    })
+    const renamed = manifest('provider', {
+      version: '1.1.0',
+      api: { version: '1.1.0', contract: 'api.binpb', service: 'demo.OtherApi' },
+    })
+
+    expect(validateDependencyMutation([provider, consumer], 'provider', renamed)).toMatch(
+      /cannot change service without a breaking API version change/,
+    )
+  })
+
   it('rejects changing a consumed service without changing its API version', () => {
     const provider = manifest('provider', {
       api: { version: '1.0.0', contract: 'api.binpb', service: 'demo.Api' },
@@ -115,7 +143,7 @@ describe('validateDependencyMutation', () => {
     })
 
     expect(validateDependencyMutation([provider, consumer], 'provider', replacement)).toMatch(
-      /cannot change service without changing its API version/,
+      /cannot change service without a breaking API version change/,
     )
   })
 })

@@ -1,4 +1,12 @@
 import type { PluginManifest } from '../plugin-sdk/src/types'
+import { versionMatches } from './version-match'
+
+/** Whether a provider's API version satisfies a declared dependency. Plugin APIs use
+ *  caret semantics: a dependency on `1.2.0` accepts any provider `>=1.2.0 <2.0.0`, and a
+ *  `0.y.z` dependency stays within `0.y`. */
+export function apiVersionSatisfies(required: string, provided: string | null | undefined): boolean {
+  return typeof provided === 'string' && versionMatches(`^${required}`, provided)
+}
 
 export interface PluginLoadEntry {
   manifest: PluginManifest
@@ -82,7 +90,7 @@ export function resolvePluginDependencies<T extends { manifest: PluginManifest }
         break
       }
       const installedApiVersion = provider.manifest.api?.version ?? null
-      if (installedApiVersion !== dependency.apiVersion) {
+      if (!apiVersionSatisfies(dependency.apiVersion, installedApiVersion)) {
         availability.set(entry.manifest.id, {
           status: 'unavailable',
           reason: {
@@ -90,7 +98,7 @@ export function resolvePluginDependencies<T extends { manifest: PluginManifest }
             dependencyId: dependency.pluginId,
             requiredApiVersion: dependency.apiVersion,
             installedApiVersion,
-            message: `plugin "${dependency.pluginId}" does not provide API version ${dependency.apiVersion}`,
+            message: `plugin "${dependency.pluginId}" does not provide an API compatible with ${dependency.apiVersion} (${installedApiVersion ? `provides ${installedApiVersion}` : 'it provides no API'})`,
           },
         })
         break
@@ -127,7 +135,9 @@ export function resolvePluginDependencies<T extends { manifest: PluginManifest }
     for (const dependency of entry?.manifest.dependencies ?? []) {
       if (dependency.optional) continue
       const provider = byId.get(dependency.pluginId)
-      if (provider?.manifest.api?.version === dependency.apiVersion) findCycles(provider.manifest.id)
+      if (provider && apiVersionSatisfies(dependency.apiVersion, provider.manifest.api?.version)) {
+        findCycles(provider.manifest.id)
+      }
     }
     stack.pop()
     visitState.set(id, 2)
@@ -146,7 +156,7 @@ export function resolvePluginDependencies<T extends { manifest: PluginManifest }
     for (const dependency of entry?.manifest.dependencies ?? []) {
       if (dependency.optional) continue
       const provider = byId.get(dependency.pluginId)
-      if (!provider || provider.manifest.api?.version !== dependency.apiVersion) continue
+      if (!provider || !apiVersionSatisfies(dependency.apiVersion, provider.manifest.api?.version)) continue
       const providerAvailability = resolveAvailability(provider.manifest.id)
       if (providerAvailability.status === 'unavailable') {
         const result: PluginAvailability = {
@@ -179,7 +189,8 @@ export function resolvePluginDependencies<T extends { manifest: PluginManifest }
     for (const dependency of entry.manifest.dependencies ?? []) {
       const provider = byId.get(dependency.pluginId)
       if (
-        provider?.manifest.api?.version === dependency.apiVersion &&
+        provider &&
+        apiVersionSatisfies(dependency.apiVersion, provider.manifest.api?.version) &&
         availability.get(provider.manifest.id)?.status === 'available'
       ) {
         addAvailable(provider)
