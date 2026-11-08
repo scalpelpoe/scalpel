@@ -139,7 +139,7 @@ The worker must return exactly one frame with the same request ID:
 
 Response kinds are correlated with request kinds. An initialize request accepts only `InitializeResponse`; a call accepts only `CallResponse` or `CallError`. A valid body of the wrong kind is still a protocol failure.
 
-Unknown request IDs, duplicate responses, malformed Protobuf, invalid frame lengths, response-kind mismatches, and invalid handshakes terminate the worker and reject pending calls.
+Unknown request IDs (other than a late reply to a call that already timed out), duplicate responses, malformed Protobuf, invalid frame lengths, response-kind mismatches, and invalid handshakes terminate the worker and reject pending calls.
 
 ## Fixed Host Limits
 
@@ -149,10 +149,13 @@ RFC1 host limits are:
 | --- | ---: | --- |
 | Encoded frame payload | 1 MiB | Host rejects an oversized request; the Rust helper answers an oversized reply with `RESOURCE_EXHAUSTED`; a malformed or oversized inbound frame terminates the worker |
 | In-flight requests per process | 32 | Reject an additional call |
-| Call and handshake timeout | 10 seconds | Reject the request and terminate the worker |
+| Call and handshake timeout | 10 seconds | Reject only that call with `DEADLINE_EXCEEDED`; a timed-out handshake terminates the worker |
+| Worker silence while calls are outstanding | 10 seconds | Terminate the worker and reject pending calls with `UNAVAILABLE` |
 | Queued framed stdin while backpressured | 4 MiB | Reject the call that would exceed the queue |
 | Retained stderr diagnostics | last 8 KiB | Append to an unexpected-exit error |
 | Restart cooldown after failure | 5 seconds | Reject calls instead of immediately respawning |
+
+Call deadlines start when the host queues the call, so a call waiting behind others in a sequential worker can time out before the worker reaches it. The worker still owes a reply to a call that reached it: that reply is discarded when it arrives, and the call keeps its in-flight slot until then. A worker that sends no frame for 10 seconds while it has outstanding calls is treated as hung and terminated.
 
 The in-flight count includes the initialization request while startup is pending. The queue limit includes each queued frame's four-byte length prefix.
 

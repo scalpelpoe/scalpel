@@ -325,7 +325,23 @@ describe('PluginNativeBackendManager', () => {
     expect(child.kill).toHaveBeenCalledWith('SIGKILL')
   })
 
-  it('does not relabel bystander calls as DEADLINE_EXCEEDED when another call times out', async () => {
+  it('kills a worker that never answers the handshake and enters the restart cooldown', async () => {
+    vi.useFakeTimers()
+    const child = new FakeChild(() => {})
+    const spawnBackend = vi.fn(() => child.asChildProcess())
+    const manager = new PluginNativeBackendManager(() => backendFile(), spawnBackend)
+
+    const call = manager.call('native-demo', METHOD, new Uint8Array())
+    const rejection = expect(call).rejects.toMatchObject({ name: 'NativeCallError', code: 'DEADLINE_EXCEEDED' })
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    await rejection
+    expect(child.kill).toHaveBeenCalledWith('SIGKILL')
+    await expect(manager.call('native-demo', METHOD, new Uint8Array())).rejects.toThrow(/restart cooldown/)
+    expect(spawnBackend).toHaveBeenCalledOnce()
+  })
+
+  it('does not relabel bystander calls as DEADLINE_EXCEEDED when a stalled worker is killed', async () => {
     vi.useFakeTimers()
     const child = new FakeChild((request, process) => {
       if (request.body.case === 'initializeRequest') process.initialize(request)
@@ -336,12 +352,15 @@ describe('PluginNativeBackendManager', () => {
     )
 
     const first = manager.call('native-demo', METHOD, new Uint8Array())
-    const second = manager.call('native-demo', METHOD, new Uint8Array())
     const firstRejection = expect(first).rejects.toThrow(/timed out/)
-    const secondRejection = expect(second).rejects.toThrow(/timed out/)
     await Promise.resolve()
     await Promise.resolve()
-    await vi.advanceTimersByTimeAsync(10_000)
+    await vi.advanceTimersByTimeAsync(5_000)
+    // Sent halfway through the stall: its own deadline has not passed when the
+    // silent worker is killed, so it fails as UNAVAILABLE.
+    const second = manager.call('native-demo', METHOD, new Uint8Array())
+    const secondRejection = expect(second).rejects.toThrow(/stopped responding/)
+    await vi.advanceTimersByTimeAsync(5_000)
     const third = manager.call('native-demo', METHOD, new Uint8Array())
     const thirdRejection = expect(third).rejects.toMatchObject({ name: 'NativeCallError', code: 'UNAVAILABLE' })
 
@@ -357,6 +376,55 @@ describe('PluginNativeBackendManager', () => {
       secondCode = (error as { code: string }).code
     })
     expect([firstCode, secondCode].sort()).toEqual(['DEADLINE_EXCEEDED', 'UNAVAILABLE'])
+  })
+
+  it('keeps a slow sequential worker alive when queued calls outlive their deadline', async () => {
+    vi.useFakeTimers()
+    // Mirrors the Rust crate's serve loop: one call at a time, 4s each.
+    const queue: NativeFrame[] = []
+    let busy = false
+    const child = new FakeChild((request, process) => {
+      if (request.body.case === 'initializeRequest') {
+        process.initialize(request)
+        return
+      }
+      queue.push(request)
+      const next = (): void => {
+        const current = queue.shift()
+        busy = current !== undefined
+        if (!current) return
+        setTimeout(() => {
+          if (current.body.case === 'callRequest') process.callResult(current, current.body.value.payload)
+          next()
+        }, 4_000)
+      }
+      if (!busy) next()
+    })
+    const spawnBackend = vi.fn(() => child.asChildProcess())
+    const manager = new PluginNativeBackendManager(() => backendFile(), spawnBackend)
+
+    const settled = Promise.allSettled(
+      [1, 2, 3, 4].map((value) => manager.call('native-demo', METHOD, Uint8Array.of(value))),
+    )
+    await vi.advanceTimersByTimeAsync(16_000)
+    const results = await settled
+
+    expect(results.slice(0, 2)).toEqual([
+      { status: 'fulfilled', value: Uint8Array.of(1) },
+      { status: 'fulfilled', value: Uint8Array.of(2) },
+    ])
+    for (const result of results.slice(2)) {
+      expect(result).toMatchObject({
+        status: 'rejected',
+        reason: { name: 'NativeCallError', code: 'DEADLINE_EXCEEDED' },
+      })
+    }
+    // The late replies to calls 3 and 4 were discarded, and the same worker keeps serving.
+    const fifth = manager.call('native-demo', METHOD, Uint8Array.of(5))
+    await vi.advanceTimersByTimeAsync(4_000)
+    await expect(fifth).resolves.toEqual(Uint8Array.of(5))
+    expect(spawnBackend).toHaveBeenCalledOnce()
+    expect(child.kill).not.toHaveBeenCalled()
   })
 
   it('prevents immediate respawn after a worker failure', async () => {

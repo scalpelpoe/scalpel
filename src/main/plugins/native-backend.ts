@@ -198,6 +198,10 @@ export class PluginNativeBackendManager {
 class NativeBackendProcess {
   readonly ready: Promise<void>
   private readonly pending = new Map<number, PendingCall>()
+  /** Calls that hit their deadline after reaching the worker. The worker still owes
+   * a reply, which is discarded when it arrives; until then they hold an in-flight slot. */
+  private readonly abandoned = new Set<number>()
+  private stallTimer: NodeJS.Timeout | null = null
   private nextId = 1
   private stdoutBuffer: Buffer<ArrayBufferLike> = Buffer.alloc(0)
   private stderr = ''
@@ -344,7 +348,7 @@ class NativeBackendProcess {
     if (this.stopped) {
       return Promise.reject(this.terminalError ?? nativeError('native backend is unavailable', 'UNAVAILABLE'))
     }
-    if (this.pending.size >= MAX_IN_FLIGHT)
+    if (this.pending.size + this.abandoned.size >= MAX_IN_FLIGHT)
       return Promise.reject(nativeError('native backend has too many in-flight calls', 'RESOURCE_EXHAUSTED'))
     const id = requestId ?? this.nextId++
     const payload = toBinary(NativeFrameSchema, create(NativeFrameSchema, { requestId: id, body }))
@@ -355,19 +359,29 @@ class NativeBackendProcess {
     frame.writeUInt32LE(payload.byteLength, 0)
     frame.set(payload, 4)
     return new Promise((resolve, reject) => {
+      // A deadline rejects only this call. A sequential worker working through a
+      // backlog is slow, not broken, so killing it would also fail every queued call;
+      // watchForStall kills a worker that stops producing output instead.
       const timer = setTimeout(() => {
         this.pending.delete(id)
-        reject(nativeError(`native backend call "${label}" timed out`, 'DEADLINE_EXCEEDED'))
-        this.fail(nativeError(`native backend call "${label}" timed out`, 'UNAVAILABLE'))
-      }, CALL_TIMEOUT_MS)
-      this.pending.set(id, { resolve, reject, timer, responseCase })
-      if (this.writeBlocked) {
-        if (this.queuedWriteBytes + frame.byteLength > MAX_QUEUED_STDIN_BYTES) {
-          clearTimeout(timer)
-          this.pending.delete(id)
-          reject(nativeError('native backend stdin queue is full', 'RESOURCE_EXHAUSTED'))
-          return
+        const queued = this.queuedWrites.findIndex((entry) => entry.id === id)
+        if (queued === -1) {
+          this.abandoned.add(id)
+        } else {
+          this.queuedWriteBytes -= this.queuedWrites[queued].frame.byteLength
+          this.queuedWrites.splice(queued, 1)
         }
+        reject(nativeError(`native backend call "${label}" timed out`, 'DEADLINE_EXCEEDED'))
+        this.watchForStall(false)
+      }, CALL_TIMEOUT_MS)
+      if (this.writeBlocked && this.queuedWriteBytes + frame.byteLength > MAX_QUEUED_STDIN_BYTES) {
+        clearTimeout(timer)
+        reject(nativeError('native backend stdin queue is full', 'RESOURCE_EXHAUSTED'))
+        return
+      }
+      this.pending.set(id, { resolve, reject, timer, responseCase })
+      this.watchForStall(false)
+      if (this.writeBlocked) {
         this.queuedWrites.push({ id, frame })
         this.queuedWriteBytes += frame.byteLength
       } else {
@@ -422,11 +436,17 @@ class NativeBackendProcess {
     }
     const pending = this.pending.get(response.requestId)
     if (!pending) {
+      if (this.abandoned.delete(response.requestId)) {
+        // A late reply to a call that already hit its deadline.
+        this.watchForStall(true)
+        return
+      }
       this.fail(nativeError(`native backend responded with unknown request id ${response.requestId}`, 'UNAVAILABLE'))
       return
     }
     clearTimeout(pending.timer)
     this.pending.delete(response.requestId)
+    this.watchForStall(true)
     const validResponse =
       response.body.case === pending.responseCase ||
       (pending.responseCase === 'callResponse' && response.body.case === 'callError')
@@ -463,7 +483,27 @@ class NativeBackendProcess {
     if (!this.exitConfirmed) this.child.kill('SIGKILL')
   }
 
+  /** Kills a worker that holds outstanding calls but produces no reply for a full
+   * call timeout. `progressed` restarts the clock because the worker just replied. */
+  private watchForStall(progressed: boolean): void {
+    const outstanding = this.pending.size + this.abandoned.size
+    if (this.stallTimer && (progressed || outstanding === 0)) {
+      clearTimeout(this.stallTimer)
+      this.stallTimer = null
+    }
+    if (this.stallTimer || outstanding === 0 || this.stopped) return
+    this.stallTimer = setTimeout(() => {
+      this.stallTimer = null
+      this.fail(nativeError('native backend stopped responding', 'UNAVAILABLE'))
+    }, CALL_TIMEOUT_MS)
+  }
+
   private rejectPending(error: Error): void {
+    if (this.stallTimer) {
+      clearTimeout(this.stallTimer)
+      this.stallTimer = null
+    }
+    this.abandoned.clear()
     for (const pending of this.pending.values()) {
       clearTimeout(pending.timer)
       pending.reject(error)
