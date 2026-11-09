@@ -20,6 +20,11 @@ const STASH_SCROLL_MODIFIER_OPTIONS = [
   { value: 'Alt', label: 'Alt +' },
 ] as const
 
+const WHEEL_CLICK_TOGGLE_KEY_OPTIONS = [
+  { value: 'CapsLock', label: 'Caps Lock' },
+  { value: 'ScrollLock', label: 'Scroll Lock' },
+] as const
+
 /** Build a sorted list of saved regex presets for the hotkey dropdown.
  *  Each entry includes the preset's name (or a fallback from tags) and its id. */
 function getPresetOptions(presets: RegexPreset[]): Array<{ id: string; label: string }> {
@@ -449,6 +454,27 @@ export function MacrosTab({ settings, update, updateMany, tryHotkey }: Props): J
           />
         )}
       </div>
+      {/* Windows only: the main process swallows the wheel with a low-level mouse hook. */}
+      {settings.platform === 'win32' && (
+        <div className="mt-[10px]">
+          <div className={settings.wheelClickEnabled ? 'grid grid-cols-2 gap-x-2 gap-y-[10px]' : ''}>
+            <SettingToggleBox
+              label={m.settings_mac_wheel_click()}
+              checked={settings.wheelClickEnabled ?? false}
+              onChange={(val) => update('wheelClickEnabled', val)}
+            />
+            {settings.wheelClickEnabled && (
+              <SettingSelectBox
+                label={m.settings_mac_wheel_click_toggle_key()}
+                value={settings.wheelClickToggleKey ?? 'CapsLock'}
+                options={WHEEL_CLICK_TOGGLE_KEY_OPTIONS}
+                onChange={(v) => update('wheelClickToggleKey', v)}
+              />
+            )}
+          </div>
+          <p className="text-[11px] text-text-dim mt-1">{m.settings_mac_wheel_click_hint()}</p>
+        </div>
+      )}
     </>
   )
 }

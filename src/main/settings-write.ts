@@ -15,6 +15,8 @@ import {
   refreshScopedHotkeys,
   setStashScrollEnabled,
   setStashScrollModifier,
+  setWheelClickEnabled,
+  setWheelClickToggleKey,
 } from './hotkeys'
 import { applyPinnedZoneEnabled, getPinnedZoneOverlay } from './pinned-zone'
 import { getRadialMenuOverlay } from './radial-menu'
@@ -99,6 +101,10 @@ function sideEffect(setting: ProfileChangedSetting, prevAppSettings?: AppSetting
     setStashScrollEnabled(value as boolean)
   } else if (key === 'stashScrollModifier') {
     setStashScrollModifier(value as NonNullable<AppSettings['stashScrollModifier']>)
+  } else if (key === 'wheelClickEnabled') {
+    setWheelClickEnabled(value === true)
+  } else if (key === 'wheelClickToggleKey') {
+    setWheelClickToggleKey(value)
   } else if (key === 'openSide') {
     setOpenSide(value as AppSettings['openSide'])
   } else if (key === 'updateChannel') {

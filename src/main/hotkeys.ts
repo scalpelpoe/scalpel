@@ -16,6 +16,14 @@ import { focusGameWindow, isTypingInOverlay, setOverlayVisibilityListener } from
 import { hyprlandInputAllowed, hyprlandOverlayActive } from './hyprland'
 import { advancedCopyTracker } from './trade/advanced-copy'
 import { hideFocusedOrAnyVisibleSecondaryOverlay, isAnyScalpelBrowserWindowFocused } from './windowing'
+import {
+  getWheelClickDiagnostics,
+  setWheelClickEnabled,
+  setWheelClickToggleKey,
+  stopWheelClick,
+  wheelClickOwnsWheel,
+} from './wheel-click'
+export { setWheelClickEnabled, setWheelClickToggleKey }
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -295,6 +303,10 @@ export function startHotkeyListener(handler: () => void): void {
       const modHeld =
         stashScrollModifier === 'Ctrl' ? e.ctrlKey : stashScrollModifier === 'Shift' ? e.shiftKey : e.altKey
       if (!stashScrollEnabled || !modHeld || !OverlayController.targetHasFocus || !hyprlandInputAllowed()) return
+      // Lock-key wheel-click mode owns the wheel: that scroll became a click,
+      // so don't also flip stash tabs. (uiohook may sit ahead of the swallowing
+      // hook in the chain and still see the event.)
+      if (wheelClickOwnsWheel()) return
       const tb = OverlayController.targetBounds
       if (!tb?.width) return
       // Only act when cursor is inside the PoE window but outside the stash grid area
@@ -917,6 +929,9 @@ function restoreModifiers(snapshot: ModSnapshot): void {
 }
 
 export function stopHotkeyListener(): void {
+  // Signal the wheel-click hook thread first: it exits on its own within one
+  // timer tick, so worker teardown at process exit never waits on GetMessageW.
+  stopWheelClick()
   if (hookStarted) {
     // Breadcrumbs bracket the uiohook worker-thread join (uiohook_worker.c:
     // uv_thread_join). If the log shows "calling" with no "returned", the join
@@ -1136,6 +1151,7 @@ function getHotkeyDiagnostics(): Record<string, unknown> {
     failedScopedRegistrations,
     stashScrollEnabled,
     stashScrollModifier,
+    wheelClick: getWheelClickDiagnostics(),
     // 'alt' means this client only yields advanced item text with Alt held (#560).
     advancedCopyState: advancedCopyTracker.state(),
     lastHookStartError,
