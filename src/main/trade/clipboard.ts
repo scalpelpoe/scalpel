@@ -140,6 +140,12 @@ const RUNE_SUFFIX = /\s*\((?:rune|added rune)\)\s*$/i
 // Display-only prefix on a vestigial item's base-type line ("Vestigial Simple Robe").
 const VESTIGIAL_PREFIX = /^Vestigial\s+/
 
+// Display-only tier prefix on a 3.30 Viscera name ("Lesser Pocked Leg", "Greater
+// Flaming Goat Hoof"). The base is the bare name: that is what the trade type list
+// carries (the prefixed form answers "Unknown item base type") and what item
+// filters name (BaseType == "Pocked Leg").
+const VISCERA_TIER_PREFIX = /^(?:Lesser|Greater)\s+/
+
 // Name prefix on a foulborn unique ("Foulborn Headhunter").
 const FOULBORN_PREFIX = /^Foulborn\s+/i
 
@@ -225,15 +231,17 @@ export function parseItemText(rawText: string): PoeItem | null {
   const itemClassLine = headerLines.find((l) => l.startsWith('Item Class:'))
   const rarityLine = headerLines.find((l) => l.startsWith('Rarity:'))
 
-  if (!itemClassLine || !rarityLine) return null
+  if (!itemClassLine) return null
 
   // Normalize variant class names to canonical forms
   const rawItemClass = itemClassLine.replace('Item Class:', '').trim()
   const itemClass = rawItemClass === 'DivinationCard' ? 'Divination Cards' : rawItemClass
-  const rarity = rarityLine.replace('Rarity:', '').trim() as ItemRarity
+  // 3.30 Viscera print no Rarity line at all: the name follows the class line
+  // directly. Trade lists them as rarity Normal, so that is what they parse as.
+  const rarity = (rarityLine ? rarityLine.replace('Rarity:', '').trim() : 'Normal') as ItemRarity
 
   // Name and base type follow rarity
-  const afterRarity = headerLines.slice(headerLines.indexOf(rarityLine) + 1)
+  const afterRarity = headerLines.slice(headerLines.indexOf(rarityLine ?? itemClassLine) + 1)
   const name = afterRarity[0] ?? ''
   // PoE2 uncut gems inline the gem level in the name: "Uncut Skill Gem (Level 20)".
   // Keep the suffix on `name` (bulk-exchange IDs are per-level, so we need the
@@ -287,6 +295,7 @@ export function parseItemText(rawText: string): PoeItem | null {
       rawBaseType
         .replace(/^Synthesised /, '')
         .replace(VESTIGIAL_PREFIX, '')
+        .replace(itemClass === 'Viscera' ? VISCERA_TIER_PREFIX : /(?:)/, '')
         .replace(keepBlight ? /(?:)/ : /^Blighted /i, '')
         .replace(keepBlight ? /(?:)/ : /^Blight-[Rr]avaged /i, ''),
       rarity as ItemRarity,
@@ -743,6 +752,14 @@ export function parseItemText(rawText: string): PoeItem | null {
         }
       }
     }
+  }
+
+  // A Viscera's roll is an implicit (trade indexes it on implicit.* ids), but a
+  // plain copy prints it bare, with no "(implicit)" suffix and no header, so the
+  // section scan above filed it as an explicit.
+  if (itemClass === 'Viscera' && explicits.length > 0) {
+    implicits.push(...explicits)
+    explicits.length = 0
   }
 
   const itemSize = getItemSizes()[itemClass]

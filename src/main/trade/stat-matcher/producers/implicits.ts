@@ -86,7 +86,11 @@ export function processImplicits(ctx: MatchContext): StatFilter[] {
           isTablet ||
           // A vestigial item's implicit replaces the base implicit and is the
           // item's defining mod, so it is what buyers filter on.
-          !!itemInfo?.vestigial,
+          !!itemInfo?.vestigial ||
+          // A 3.30 Viscera has nothing but its implicit, and the roll is the only
+          // thing separating a Lesser part from a Greater one: trade files every
+          // tier under the same bare type.
+          itemInfo?.itemClass === 'Viscera',
         type: 'implicit',
         option: matched.option,
         aggregated: matched.aggregated,

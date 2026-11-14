@@ -113,6 +113,51 @@ describe('buildTradeQuery', () => {
   }
 })
 
+// 3.30 Viscera: trade indexes every tier of a part under the bare base ("Pocked
+// Leg") and answers "Unknown item base type" to the prefixed name, and the roll
+// lives on an implicit.* id.
+describe('buildTradeQuery: PoE1 Viscera', () => {
+  const lesserPockedLeg = [
+    'Item Class: Viscera',
+    'Lesser Pocked Leg',
+    '--------',
+    'Lower Limb',
+    '--------',
+    'Item Level: 34',
+    '--------',
+    '{ Implicit Modifier }',
+    '25(20-30)% increased Armour from Equipped Helmet and Gloves',
+    '--------',
+    'Take this to the Wickerman in a town or hideout to attach it.',
+  ].join('\n')
+
+  beforeEach(() => {
+    setPoeVersion(1)
+    _setStatEntriesForTests([
+      {
+        id: 'implicit.stat_791154540',
+        text: '#% increased Armour from Equipped Helmet and Gloves',
+        type: 'implicit',
+      },
+    ])
+  })
+
+  it('searches the bare base type with the roll as an implicit stat', () => {
+    const { item, filters } = filtersFor(lesserPockedLeg)
+    const { body } = buildTradeQuery(tradeItemFromPoeItem(item), filters, { loggedIn: false })
+    const query = body.query as {
+      type?: unknown
+      stats: Array<{ filters?: Array<{ id: string; value?: { min?: number } }> }>
+    }
+
+    expect(query.type).toBe('Pocked Leg')
+    const statFilters = query.stats.flatMap((g) => g.filters ?? [])
+    expect(statFilters.map((f) => f.id)).toEqual(['implicit.stat_791154540'])
+    // On by default, at the rolled value like every other implicit chip.
+    expect(statFilters[0].value?.min).toBe(25)
+  })
+})
+
 describe('item-info mapping', () => {
   it('maps parsed item fields into the item info and defences', () => {
     const ring = parseItemText(ringText)!

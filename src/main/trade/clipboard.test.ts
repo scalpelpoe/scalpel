@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { endgameAreaLevel } from '@shared/poe-item'
+import { findMatchingBlocks } from '../filter/matcher'
+import { parseFilterFile } from '../filter/parser'
 import { getPoeVersion } from '../game-state'
 import { parseItemText } from './clipboard'
 
@@ -2665,6 +2667,112 @@ describe('parseItemText', () => {
       const item = parseItemText(text)!
       expect(item.runes).toEqual(['+9 to Dexterity'])
       expect(item.explicits).toEqual(['+48 to Evasion Rating', '+34% to all Elemental Resistances'])
+    })
+  })
+
+  // 3.30 Viscera (Wickerman body parts). The copy text carries no "Rarity:" line
+  // at all, the roll is an implicit with no "(implicit)" suffix, and low/high
+  // tiers print a "Lesser"/"Greater" display prefix that neither the trade type
+  // list nor item filters (BaseType == "Pocked Leg") include.
+  describe('3.30 Viscera', () => {
+    // In-game Ctrl+C (advanced format).
+    const lesserPockedLeg = [
+      'Item Class: Viscera',
+      'Lesser Pocked Leg',
+      '--------',
+      'Lower Limb',
+      '--------',
+      'Item Level: 34',
+      '--------',
+      '{ Implicit Modifier }',
+      '25(20-30)% increased Armour from Equipped Helmet and Gloves',
+      '--------',
+      'Take this to the Wickerman in a town or hideout to attach it.',
+    ].join('\n')
+
+    // Plain format, as a trade listing's copy text prints it.
+    const greaterGoatHoof = [
+      'Item Class: Viscera',
+      'Greater Flaming Goat Hoof',
+      '--------',
+      'Lower Limb',
+      '--------',
+      'Item Level: 81',
+      '--------',
+      '1% increased Fire Damage per 20 Strength',
+      '--------',
+      'Take this to the Wickerman in a town or hideout to attach it.',
+      '--------',
+      'Note: ~b/o 1 mirror',
+    ].join('\n')
+
+    const solarShield = [
+      'Item Class: Viscera',
+      'Solar Shield',
+      '--------',
+      'Upper Limb',
+      '--------',
+      'Item Level: 60',
+      '--------',
+      '{ Implicit Modifier }',
+      '5(5-6)% of Physical Damage from Hits taken as Fire Damage',
+      '--------',
+      'Take this to the Wickerman in a town or hideout to attach it.',
+    ].join('\n')
+
+    it('parses an item that has no Rarity line as Normal', () => {
+      const item = parseItemText(solarShield)!
+
+      expect(item).not.toBeNull()
+      expect(item.itemClass).toBe('Viscera')
+      expect(item.rarity).toBe('Normal')
+      expect(item.name).toBe('Solar Shield')
+      expect(item.baseType).toBe('Solar Shield')
+      expect(item.itemLevel).toBe(60)
+    })
+
+    it('keeps the tier prefix on the name and drops it from the base type', () => {
+      const lesser = parseItemText(lesserPockedLeg)!
+      expect(lesser.name).toBe('Lesser Pocked Leg')
+      expect(lesser.baseType).toBe('Pocked Leg')
+
+      const greater = parseItemText(greaterGoatHoof)!
+      expect(greater.name).toBe('Greater Flaming Goat Hoof')
+      expect(greater.baseType).toBe('Flaming Goat Hoof')
+    })
+
+    it('reads the roll as an implicit in the advanced format', () => {
+      const item = parseItemText(lesserPockedLeg)!
+
+      expect(item.implicits).toEqual(['25% increased Armour from Equipped Helmet and Gloves'])
+      expect(item.explicits).toEqual([])
+    })
+
+    it('reads the roll as an implicit in the plain format and skips the description', () => {
+      const item = parseItemText(greaterGoatHoof)!
+
+      expect(item.implicits).toEqual(['1% increased Fire Damage per 20 Strength'])
+      expect(item.explicits).toEqual([])
+    })
+
+    it('lands on the filter block that names the base without its tier prefix', () => {
+      const filter = parseFilterFile(
+        'viscera.filter',
+        [
+          'Show # $type->viscera $tier->t4',
+          '\tClass == "Viscera"',
+          '\tBaseType == "Pocked Arm" "Pocked Leg" "Solar Shield"',
+          '\tSetFontSize 45',
+          '',
+          'Show # $type->viscera $tier->restex',
+          '\tClass == "Viscera"',
+          '\tSetFontSize 40',
+        ].join('\n'),
+      )
+
+      const match = findMatchingBlocks(filter, parseItemText(lesserPockedLeg)!).find((m) => m.isFirstMatch)
+
+      expect(match?.block.tierTag?.tier).toBe('t4')
     })
   })
 })
