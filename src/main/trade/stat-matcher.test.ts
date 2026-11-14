@@ -1366,6 +1366,34 @@ describe('matchItemMods', () => {
       expect(moreScarabs.enabled).toBe(true)
     })
 
+    // 3.30: map mods roll "Atlas Drops" (trade key map_bonus). The Item Quantity
+    // line that remains is the quality bonus alone, so it stops being the chip
+    // that prices the map.
+    it('prices a 3.30 map on Atlas Drops and leaves quality-only Quantity opt-in', () => {
+      const filters = matchItemMods(
+        [],
+        [],
+        undefined,
+        makeItemInfo({
+          itemClass: 'Maps',
+          rarity: 'Rare',
+          sockets: '',
+          mapQuantity: 20,
+          mapDropChance: 65,
+        }),
+      )
+      const atlasDrops = filters.find((f) => f.id === 'map.map_bonus')!
+      expect(atlasDrops.text).toBe('Atlas Drops: +65%')
+      expect(atlasDrops.value).toBe(65)
+      expect(atlasDrops.min).toBe(58) // floor(65 * 0.9)
+      expect(atlasDrops.enabled).toBe(true)
+      expect(atlasDrops.type).toBe('map')
+
+      const quantityChip = filters.find((f) => f.id === 'map.map_iiq')!
+      expect(quantityChip.value).toBe(20)
+      expect(quantityChip.enabled).toBe(false)
+    })
+
     it('generates map reward chip', () => {
       const filters = matchItemMods(
         [],
@@ -3969,6 +3997,52 @@ Note: ~b/o 1 divine`)
         makeItemInfo({ rarity: 'Rare', itemClass: 'Helmets' }),
       )
       expect(filters.find((f) => f.id === 'pseudo.pseudo_total_chaos_resistance')).toBeUndefined()
+    })
+
+    // 3.30 reworded every "Nearby Enemies have" stat to "Enemies within N metres
+    // have", on the same ids, which slipped past an exclusion keyed on the two
+    // words being adjacent.
+    it('3.30 "within 6 metres" wording is still excluded from Total Elemental Resistance', () => {
+      _setStatEntriesForTests([
+        {
+          id: 'explicit.stat_3914021960',
+          text: 'Enemies within 6 metres have +#% to Fire Resistance',
+          type: 'explicit',
+        },
+        { id: 'explicit.stat_4220027924', text: '#% to Cold Resistance', type: 'explicit' },
+      ])
+      const filters = matchItemMods(
+        ['Enemies within 6 metres have -9% to Fire Resistance', '+36% to Cold Resistance'],
+        [],
+        undefined,
+        makeItemInfo({ rarity: 'Rare', itemClass: 'Helmets' }),
+      )
+      const pseudo = filters.find((f) => f.id === 'pseudo.pseudo_total_elemental_resistance')
+      expect(pseudo?.value).toBe(36)
+    })
+
+    it('3.30 "within 6 metres" chaos and all-resistance debuffs feed no resistance pseudo', () => {
+      _setStatEntriesForTests([
+        {
+          id: 'explicit.stat_1902595112',
+          text: 'Enemies within 6 metres have +#% to Chaos Resistance',
+          type: 'explicit',
+        },
+        {
+          id: 'explicit.stat_668145148',
+          text: 'Enemies within 6 metres have #% to all Resistances',
+          type: 'explicit',
+        },
+      ])
+      const filters = matchItemMods(
+        ['Enemies within 6 metres have -9% to Chaos Resistance', 'Enemies within 6 metres have -5% to all Resistances'],
+        [],
+        undefined,
+        makeItemInfo({ rarity: 'Rare', itemClass: 'Helmets' }),
+      )
+      expect(filters.find((f) => f.id === 'pseudo.pseudo_total_chaos_resistance')).toBeUndefined()
+      expect(filters.find((f) => f.id === 'pseudo.pseudo_total_elemental_resistance')).toBeUndefined()
+      expect(filters.find((f) => f.id === 'pseudo.pseudo_total_resistance')).toBeUndefined()
     })
 
     it('unique enemy presence implicit still contributes to Total Elemental Resistance', () => {

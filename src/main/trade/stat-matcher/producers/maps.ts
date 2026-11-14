@@ -64,6 +64,20 @@ export function buildMapFilters(
   const out: StatFilter[] = []
 
   if (itemInfo && itemInfo.itemClass === 'Maps' && itemInfo.rarity === 'Rare') {
+    // 3.30 moved what map mods add from Item Quantity to Atlas Drops (map_bonus,
+    // the key PoE2 waystones already use). A map that prints an Atlas Drops line
+    // keeps an Item Quantity line too, but it is the quality bonus alone, so it
+    // drops to opt-in rather than pricing the map on its chisels.
+    if (itemInfo.mapDropChance)
+      out.push({
+        id: 'map.map_bonus',
+        text: `Atlas Drops: +${itemInfo.mapDropChance}%`,
+        value: itemInfo.mapDropChance,
+        min: MAP_MIN(itemInfo.mapDropChance, pct),
+        max: null,
+        enabled: true,
+        type: 'map',
+      })
     if (itemInfo.mapQuantity)
       out.push({
         id: 'map.map_iiq',
@@ -71,7 +85,7 @@ export function buildMapFilters(
         value: itemInfo.mapQuantity,
         min: MAP_MIN(itemInfo.mapQuantity, pct),
         max: null,
-        enabled: true,
+        enabled: !itemInfo.mapDropChance,
         type: 'map',
       })
     if (itemInfo.mapRarity)

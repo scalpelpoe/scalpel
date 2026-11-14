@@ -184,11 +184,14 @@ function buildPseudoMap(): void {
     // and its cold/lightning/chaos twins) is an enemy debuff, not player
     // resistance. The catalog text prints "+#%" even though the rolled value is
     // negative, so folding it in both understated the pseudo total and filtered
-    // on resistance the item does not grant (#544). Pattern is "Enemies have"
-    // rather than a bare "Enem" -- "While a Unique Enemy is in your Presence,
-    // +#% to <Ele> Resistance" IS genuine player resistance and must keep
-    // contributing.
-    if (/\bEnemies have\b/i.test(entry.text) && /\bResistances?\b/i.test(entry.text)) continue
+    // on resistance the item does not grant (#544). 3.30 reworded these to
+    // "Enemies within 6 metres have +#% to <Ele> Resistance", so the two words
+    // are no longer adjacent; "Enemies Withered by you have" and "Enemies
+    // affected by your Spider's Webs have" are the same shape. Pattern is
+    // "Enemies ... have" within one clause rather than a bare "Enem" -- "While a
+    // Unique Enemy is in your Presence, +#% to <Ele> Resistance" IS genuine
+    // player resistance and must keep contributing.
+    if (/\bEnemies\b[^,\n]*\bhave\b/i.test(entry.text) && /\bResistances?\b/i.test(entry.text)) continue
     // PoE1: "Passive Skills in Radius also grant +#% to Chaos Resistance" (The
     // Light of Meaning) and "Added Small Passive Skills also grant: +#% to
     // Chaos Resistance" (cluster jewels) put the stat on tree passives, not on

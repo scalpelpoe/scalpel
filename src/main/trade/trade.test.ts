@@ -2640,31 +2640,48 @@ describe('isBulkExchangeItem (PoE2 slug-gated routing)', () => {
     expect(isBulkExchangeItem('Vault Keys', 'Azmeri Reliquary Key', 'Azmeri Reliquary Key', 'Normal')).toBe(true)
   })
 
-  it('routes the 3.27 Trarthan scarabs to bulk with live exchange ids', () => {
+  it('routes the 3.30 Threads and their companions to bulk with live exchange ids', () => {
     setPoeVersion(1)
-    const scarabs: Array<[string, string]> = [
-      ['Trarthan Scarab', 'trarthan-scarab'],
-      ['Trarthan Scarab of Infamy', 'trarthan-scarab-of-infamy'],
-      ['Trarthan Scarab of Renown', 'trarthan-scarab-of-renown'],
-      ['Trarthan Scarab of Surprising Alliances', 'trarthan-scarab-of-surprising-alliances'],
+    // 3.30 replaced scarabs with Threads. Ids are GGG's own, from the live
+    // /api/trade/data/static list on launch day.
+    const added: Array<[string, string]> = [
+      ['Abyss Thread', 'abyss-thread'],
+      ['Incursion Thread', 'incursion-thread'],
+      ['Frayed Thread', 'frayed-thread'],
+      ["Maven's Chisel of Threads", 'mavens-chisel-of-threads'],
+      ['Threaded Delirium Orb', 'threaded-delirium-orb'],
+      ['Royal Visage', 'royal-visage'],
+      ['Soul Core of Might', 'soul-core-of-might'],
+      ['Cryptic Astrolabe', 'cryptic-astrolabe'],
+      ['Allflame Ember of the Divine', 'allflame-ember-of-the-divine'],
     ]
-    for (const [name, id] of scarabs) {
+    for (const [name, id] of added) {
       expect(getBulkExchangeId(name, name)).toBe(id)
-      expect(isBulkExchangeItem('Scarabs', name, name, 'Currency')).toBe(true)
+      expect(isBulkExchangeItem('Stackable Currency', name, name, 'Currency')).toBe(true)
     }
   })
 
-  it('tracks the 3.27 scarab rework renames and removals', () => {
+  it('sends what 3.30 delisted from the exchange to regular search', () => {
     setPoeVersion(1)
-    // Emptiness was renamed Descending and got a fresh id -- the old id is
-    // delisted, and a delisted id silently blanks the exchange query (#471).
-    expect(getBulkExchangeId('Abyss Scarab of Descending', 'Abyss Scarab of Descending')).toBe(
-      'abyss-scarab-of-descending',
-    )
-    // Harbinger scarabs left the game (and the exchange list) in 3.27, so they
-    // must fall back to regular search where legacy listings still exist.
-    expect(getBulkExchangeId('Harbinger Scarab', 'Harbinger Scarab')).toBeNull()
-    expect(isBulkExchangeItem('Scarabs', 'Harbinger Scarab', 'Harbinger Scarab', 'Currency')).toBe(false)
+    // A delisted id silently blanks the exchange query (#471), so everything the
+    // live list dropped must lose its slug: every scarab, the Sacrifice and
+    // Mortal fragments, the Ducats, the three rotated-out Astrolabes.
+    for (const name of [
+      'Abyss Scarab of Descending',
+      'Trarthan Scarab',
+      'Harbinger Scarab',
+      'Sacrifice at Dusk',
+      'Mortal Hope',
+      'Mortal Set',
+      "Merrick's Ducat",
+      'Skittering Delirium Orb',
+      'Templar Astrolabe',
+    ]) {
+      expect(getBulkExchangeId(name, name)).toBeNull()
+      expect(isBulkExchangeItem('Stackable Currency', name, name, 'Currency')).toBe(false)
+    }
+    // Mortal Hope's old slug now belongs to the divination card.
+    expect(getBulkExchangeId('Hope', 'Hope')).toBe('hope')
   })
 
   it('does NOT route a Rare item whose generated title collides with a currency name (#501)', () => {

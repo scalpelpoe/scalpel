@@ -190,8 +190,15 @@ export function readItemFromClipboard(): PoeItem | null {
   return parseItemText(text)
 }
 
-export function parseItemText(text: string): PoeItem | null {
-  if (!text?.includes('--------')) return null
+/** PoE1 3.30 prints a zero-width space in front of keyworded effect names
+ *  ("Grants Level 15 <U+200B>Blood Offering"). It is invisible, the trade stat
+ *  text has none, and `\s` does not cover it, so a line that keeps it matches no
+ *  stat. Built from the code point so the source carries no invisible glyph. */
+const ZERO_WIDTH_SPACE = String.fromCharCode(0x200b)
+
+export function parseItemText(rawText: string): PoeItem | null {
+  if (!rawText?.includes('--------')) return null
+  const text = rawText.split(ZERO_WIDTH_SPACE).join('')
 
   const sections = text.split('--------').map((s) => s.trim())
   if (sections.length < 2) return null
@@ -329,7 +336,10 @@ export function parseItemText(text: string): PoeItem | null {
   const mapPackSize = extractNum(allLines, 'Monster Pack Size:') ?? extractNum(allLines, 'Pack Size:')
   // PoE2 waystone-only property lines.
   const mapRevives = extractNum(allLines, 'Revives Available:')
-  const mapDropChance = extractNum(allLines, 'Waystone Drop Chance:')
+  // Trade key map_bonus in both games: PoE2 waystones print "Waystone Drop
+  // Chance:", and PoE1 maps print "Atlas Drops:" since 3.30 moved map-mod
+  // quantity there (the "Item Quantity:" line above is then quality alone).
+  const mapDropChance = extractNum(allLines, 'Waystone Drop Chance:') ?? extractNum(allLines, 'Atlas Drops:')
   const mapGold = extractNum(allLines, 'Gold Found:')
   // GGG relabeled these waystone properties: "Magic Monsters" -> "Monster Effectiveness",
   // "Rare Monsters" -> "Monster Rarity" (trade keys map_magic_monsters / map_rare_monsters

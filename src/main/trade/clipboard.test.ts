@@ -1214,6 +1214,64 @@ describe('parseItemText', () => {
   })
 
   // ---------------------------------------------------------------------------
+  // PoE1 3.30 item text
+  // ---------------------------------------------------------------------------
+
+  describe('3.30 item text', () => {
+    // Copy text of a Standard listing after 3.30: map mods now roll "Atlas Drops",
+    // and the old "Item Quantity" line is left carrying only the quality bonus.
+    it('reads Atlas Drops separately from the quality-only Item Quantity line', () => {
+      const text = [
+        'Item Class: Maps',
+        'Rarity: Rare',
+        'Evil Reaches',
+        'Map (Tier 16)',
+        '--------',
+        'Item Quantity: +20% (augmented)',
+        'Atlas Drops: +65% (augmented)',
+        'Item Rarity: +39% (augmented)',
+        'Monster Pack Size: +25% (augmented)',
+        'Quality (Quantity): +20% (augmented)',
+        '--------',
+        'Item Level: 84',
+        '--------',
+        'Monsters reflect 18% of Elemental Damage',
+      ].join('\n')
+
+      const item = parseItemText(text)!
+
+      expect(item.mapDropChance).toBe(65)
+      expect(item.mapQuantity).toBe(20)
+      expect(item.mapRarity).toBe(39)
+      expect(item.mapPackSize).toBe(25)
+    })
+
+    // 3.30 prints a zero-width space (U+200B) in front of keyworded effect names.
+    // The trade stat text has none, so a line that keeps it matches nothing.
+    it('drops the zero-width space printed before keyworded effect names', () => {
+      const zwsp = String.fromCharCode(0x200b)
+      const text = [
+        'Item Class: Body Armours',
+        'Rarity: Unique',
+        'Test Vessel',
+        'Sacrificial Garb',
+        '--------',
+        'Item Level: 84',
+        '--------',
+        `Grants Level 15 ${zwsp}Blood Offering`,
+        `Socketed Gems are Supported by Level 30 ${zwsp}Generosity Support`,
+        '+62 to maximum Life',
+      ].join('\n')
+
+      const item = parseItemText(text)!
+
+      expect(item.explicits).toContain('Grants Level 15 Blood Offering')
+      expect(item.explicits).toContain('Socketed Gems are Supported by Level 30 Generosity Support')
+      expect(JSON.stringify(item)).not.toContain(zwsp)
+    })
+  })
+
+  // ---------------------------------------------------------------------------
   // Charts (PoE1 Allflame league)
   // ---------------------------------------------------------------------------
 

@@ -139,6 +139,8 @@ export interface PoeItem {
   mapMoreDivCards?: number
   mapReward?: string
   mapRevives?: number
+  /** Trade key map_bonus: "Waystone Drop Chance" on PoE2 waystones, "Atlas Drops"
+   *  on PoE1 maps (3.30+). */
   mapDropChance?: number
   mapGold?: number
   mapMagicMonsters?: number

@@ -147,12 +147,20 @@ export async function refreshLeagues(
     fallback: readonly string[],
     version: 1 | 2,
   ): void => {
-    const list = fetched ?? fallback.slice()
     const prevList = store.get(listKey) ?? []
+    // A failed fetch keeps the list the last good fetch stored; the bundled
+    // fallback only seeds a store that has never had one. The bundle is as old
+    // as the installed build, so on league-launch day it still names the league
+    // that just ended.
+    const list = fetched ?? (prevList.length > 0 ? prevList : fallback.slice())
     if (JSON.stringify(prevList) !== JSON.stringify(list)) {
       store.set(listKey, list)
       changed.push(listKey)
     }
+    // Only a live list is evidence that a league has rotated out. Migrating
+    // against the stale fallback moved profiles already on the new league back
+    // onto the previous one.
+    if (!fetched) return
     const profileChanges = migrateProfileLeagues(store, version, list)
     for (const change of profileChanges) {
       if (!changed.includes(change.key)) changed.push(change.key)

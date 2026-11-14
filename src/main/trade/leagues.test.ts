@@ -260,6 +260,50 @@ describe('refreshLeagues', () => {
     expect(list.length).toBeGreaterThan(0)
   })
 
+  // The bundled list is only as new as the installed build. On league-launch day
+  // it still names the previous league, so letting a failed fetch fall back to it
+  // dragged a profile already on the new league back onto the dead one.
+  it('keeps the last fetched list and the profile league when a later fetch fails', async () => {
+    const profiles = initProfileStore(mkdtempSync(join(tmpdir(), 'scalpel-league-profiles-')))
+    const poe1 = { ...profiles.createDefault(1), league: 'League After The Bundle' }
+    profiles.saveProfile(poe1)
+    const fetchedEarlier = ['League After The Bundle', 'Hardcore League After The Bundle', 'Standard', 'Hardcore']
+    const store = makeFakeStore({
+      [ACTIVE_PROFILE_ID_KEY]: poe1.id,
+      [LAST_PROFILE_ID_POE1_KEY]: poe1.id,
+      poeVersion: 1,
+      leaguesPoe1: fetchedEarlier,
+      leaguesPoe2: [],
+    })
+    const fetcher = async (): Promise<string[] | null> => null
+
+    const changed = await refreshLeagues(store, fetcher)
+
+    expect(store.get('leaguesPoe1')).toEqual(fetchedEarlier)
+    expect(profiles.getProfile(poe1.id)?.league).toBe('League After The Bundle')
+    expect(changed).not.toContain('leaguesPoe1')
+    expect(changed).not.toContain('activeProfile')
+  })
+
+  it('does not migrate a profile against the bundled fallback on a first-run fetch failure', async () => {
+    const profiles = initProfileStore(mkdtempSync(join(tmpdir(), 'scalpel-league-profiles-')))
+    const poe1 = { ...profiles.createDefault(1), league: 'League After The Bundle' }
+    profiles.saveProfile(poe1)
+    const store = makeFakeStore({
+      [ACTIVE_PROFILE_ID_KEY]: poe1.id,
+      [LAST_PROFILE_ID_POE1_KEY]: poe1.id,
+      poeVersion: 1,
+      leaguesPoe1: [],
+      leaguesPoe2: [],
+    })
+    const fetcher = async (): Promise<string[] | null> => null
+
+    const changed = await refreshLeagues(store, fetcher)
+
+    expect(profiles.getProfile(poe1.id)?.league).toBe('League After The Bundle')
+    expect(changed).not.toContain('activeProfile')
+  })
+
   it('does not re-persist the list or rewrite the league when nothing changed', async () => {
     const profiles = initProfileStore(mkdtempSync(join(tmpdir(), 'scalpel-league-profiles-')))
     const poe1 = { ...profiles.createDefault(1), league: 'Mirage' }

@@ -1,8 +1,8 @@
 {
   "ninjaLeagues": {
     "poe1": {
-      "Allflame": "allflame",
-      "Hardcore Allflame": "allflamehc",
+      "Covens": "covens",
+      "Hardcore Covens": "covenshc",
       "Standard": "standard",
       "Hardcore": "hardcore"
     },

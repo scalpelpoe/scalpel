@@ -57,7 +57,7 @@ describe('new profile league default', () => {
 
   it('uses the bundled list when no refresh has landed yet', () => {
     const profiles = setupProfiles()
-    expect(profiles.createDefault(1).league).toBe('Allflame')
+    expect(profiles.createDefault(1).league).toBe('Covens')
     expect(profiles.createDefault(2).league).toBe('Runes of Aldur')
   })
 
