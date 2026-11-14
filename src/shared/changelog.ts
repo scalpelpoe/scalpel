@@ -1,5 +1,16 @@
 export const CHANGELOG: { version: string; notes: string[] }[] = [
   {
+    version: '1.0.6',
+    notes: [
+      'Updated PoE1 for the 3.30 Covens league.',
+      'PoE1 rare map price checks now search "Atlas Drops" by default.',
+      'Added price checks for 3.30 Viscera items.',
+      'Refreshed the PoE1 bulk exchange items for 3.30.',
+      'Fixed "Enemies within 6 metres have" resistance mods counting toward your total resistance.',
+      "Fixed the league switching back to last league's when Scalpel couldn't load the league list.",
+    ],
+  },
+  {
     version: '1.0.5',
     notes: [
       'Added Scalpel Stream, a new PoE2 settings tab that shows your gear and lets viewers price check it.',
