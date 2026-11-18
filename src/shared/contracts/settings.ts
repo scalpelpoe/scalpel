@@ -63,6 +63,8 @@ export interface AppSettings {
   appMacros: Array<{ action: string; hotkey: string; tag?: string; presetId?: string; scope?: MacroScope }>
   stashScrollEnabled: boolean
   stashScrollModifier?: 'Ctrl' | 'Shift' | 'Alt'
+  wheelClickEnabled?: boolean
+  wheelClickToggleKey?: 'CapsLock' | 'ScrollLock'
   poeVersion: GameVariant
   regexPresetsPoe1: RegexPreset[]
   regexPresetsPoe2: RegexPreset[]

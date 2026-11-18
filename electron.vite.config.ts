@@ -20,6 +20,10 @@ export default defineConfig({
           // utilityProcess child hosting the SMTC natives; forked by
           // handlers/plugin-media.ts (WinRT must stay off the main thread).
           'media-host': resolve(__dirname, 'src/main/handlers/media-host.ts'),
+          // worker_thread owning the CapsLock wheel->click mouse hook; started
+          // by wheel-click.ts (a blocking Win32 message loop can't share the
+          // main thread).
+          'wheel-click-worker': resolve(__dirname, 'src/main/wheel-click-worker.ts'),
         },
       },
     },
