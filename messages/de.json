@@ -124,7 +124,7 @@
   "settings_mac_modifier_key": "Modifikatortaste",
   "settings_mac_wheel_click": "Scrollen, um zu klicken",
   "settings_mac_wheel_click_toggle_key": "Aktivierungstaste",
-  "settings_mac_wheel_click_hint": "Wenn die Umschaltfunktion aktiviert ist, fungiert das Mausrad als Linksklick. Halte die Strg-Taste gedrückt, während du scrollst, um Gegenstände schneller in dein Lager zu übertragen.",
+  "settings_mac_wheel_click_hint": "Solange die Aktivierungstaste eingeschaltet ist (deshalb wird die Feststelltaste empfohlen), kannst du mit dem Mausrad einen Linksklick ausführen.",
   "settings_radial_title": "Radialmenü",
   "settings_radial_hotkey": "Radialmenü-Tastenkürzel",
   "settings_radial_size": "Menügröße",

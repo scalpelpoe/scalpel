@@ -124,7 +124,7 @@
   "settings_mac_modifier_key": "Tecla modificadora",
   "settings_mac_wheel_click": "Desplázate para hacer clic",
   "settings_mac_wheel_click_toggle_key": "Tecla de activación",
-  "settings_mac_wheel_click_hint": "Cuando la tecla de activación está activada, la rueda de desplazamiento de tu ratón funciona como un clic izquierdo. Mantén presionada la tecla Ctrl mientras desplazas la rueda para vaciar el inventario más rápidamente.",
+  "settings_mac_wheel_click_hint": "Mientras la tecla de activación esté activada (por eso se recomienda Bloq Mayús), puedes usar la rueda del ratón para hacer clic izquierdo.",
   "settings_radial_title": "Menú radial",
   "settings_radial_hotkey": "Tecla de menú radial",
   "settings_radial_size": "Tamaño del menú",
