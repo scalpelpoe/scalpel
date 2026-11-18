@@ -9,6 +9,11 @@
  *
  * Emits a compact, interned dataset: a global deduped `mods` array plus a
  * `bases` map of displayBaseType -> group -> ascending tier-index list.
+ * `weights` runs parallel to `pools`: weights[p][group][i] is the spawn weight of
+ * pools[p][group][i] on that pool's bases. It is the value mods_by_base already
+ * resolves per base tag-combo (spawn_weights matched against the base's tags);
+ * generation_weights multipliers (influence/fossil-style) are not applied. Data only,
+ * nothing in the app reads it yet; kept for plugins (rarity, crafting odds).
  *
  * For PoE2 it also emits stream-tiers-poe2.json: the same compact shape for the mods
  * the price-check dataset leaves out (flask/charm pools, rune-influence and abyss
@@ -76,22 +81,22 @@ function buildCompact(modsByBase, mods, baseItems, opts = {}) {
       const entry = modsByBase[cls][combo]
       // Flatten every family (prefix, suffix, influence/delve/etc.) into one
       // group -> [modId] map; group names are disjoint across families.
+      // The gate value is the mod's spawn weight on this tag-combo.
       const groupToIds = {}
       for (const family of Object.keys(entry.mods || {})) {
         for (const group of Object.keys(entry.mods[family])) {
-          const ids = Object.keys(entry.mods[family][group])
           if (!groupToIds[group]) groupToIds[group] = []
-          groupToIds[group].push(...ids)
+          for (const [id, weight] of Object.entries(entry.mods[family][group])) groupToIds[group].push([id, weight])
         }
       }
       // Resolve to compact indices, drop excluded mods, order ascending by req level.
       const compactGroups = {}
       for (const group of Object.keys(groupToIds)) {
-        const indices = groupToIds[group]
-          .map(internMod)
-          .filter((i) => i >= 0)
-          .sort((a, b) => outMods[a].l - outMods[b].l)
-        if (indices.length > 0) compactGroups[group] = indices
+        const entries = groupToIds[group]
+          .map(([id, w]) => [internMod(id), typeof w === 'number' ? w : 0])
+          .filter(([i]) => i >= 0)
+          .sort((a, b) => outMods[a[0]].l - outMods[b[0]].l)
+        if (entries.length > 0) compactGroups[group] = entries
       }
       if (Object.keys(compactGroups).length === 0) continue
       for (const metaPath of entry.bases || []) {
@@ -103,8 +108,10 @@ function buildCompact(modsByBase, mods, baseItems, opts = {}) {
   }
 
   // Intern identical pools: most bases share an identical group-map, so store the
-  // distinct maps once in `pools` and point each base at its pool index.
+  // distinct maps once in `pools` and point each base at its pool index. Weights are
+  // part of the key, so bases with the same mods but different odds stay apart.
   const pools = []
+  const weights = []
   const poolKey = new Map()
   const bases = {}
   for (const name of Object.keys(baseMaps)) {
@@ -115,13 +122,20 @@ function buildCompact(modsByBase, mods, baseItems, opts = {}) {
     let idx = poolKey.get(key)
     if (idx === undefined) {
       idx = pools.length
-      pools.push(canon)
+      const pool = {}
+      const poolWeights = {}
+      for (const g of Object.keys(canon)) {
+        pool[g] = canon[g].map((e) => e[0])
+        poolWeights[g] = canon[g].map((e) => e[1])
+      }
+      pools.push(pool)
+      weights.push(poolWeights)
       poolKey.set(key, idx)
     }
     bases[name] = idx
   }
 
-  return { schemaVersion: SCHEMA_VERSION, mods: outMods, pools, bases }
+  return { schemaVersion: SCHEMA_VERSION, mods: outMods, pools, weights, bases }
 }
 
 /** Rune-granted influence mods ("Can roll Marksman modifiers"): the tag only exists
@@ -325,6 +339,45 @@ function sha256(str) {
   return crypto.createHash('sha256').update(str).digest('hex')
 }
 
+/** Above this share of text-less item mods, treat the upstream build as broken. PoE1
+ *  normally sits near 4% (legacy/unused mods); PoE2 went to 100% in Nov 2026. */
+const MAX_NULL_TEXT_RATIO = 0.25
+
+/** A rebuilt desecrated dataset smaller than this share of the committed one is a
+ *  broken upstream, not a real removal. */
+const MIN_DESECRATED_RATIO = 0.5
+
+/**
+ * Throw when upstream mods.json looks broken. A null `text` on every mod blanks tier
+ * text and empties the desecrated dataset; the failed step stops the daily cron before
+ * it opens a PR that would ship that to clients through the remote override.
+ */
+function assertUpstreamSane(game, mods) {
+  let total = 0
+  let missing = 0
+  for (const m of Object.values(mods)) {
+    if (!m || m.domain !== 'item' || !m.stats || m.stats.length === 0) continue
+    total++
+    if (!m.text) missing++
+  }
+  if (total === 0) throw new Error(`${game}: upstream mods.json has no item-domain mods`)
+  if (missing / total > MAX_NULL_TEXT_RATIO) {
+    throw new Error(
+      `${game}: ${missing}/${total} item mods have no text upstream; RePoE-fork looks broken, refusing to write tier data`,
+    )
+  }
+}
+
+/** Throw when the rebuilt desecrated dataset collapsed relative to the committed one. */
+function assertDesecratedSane(next, existing) {
+  if (!existing) return
+  const before = existing.mods.length
+  const after = next.mods.length
+  if (before > 0 && after < before * MIN_DESECRATED_RATIO) {
+    throw new Error(`poe2: desecrated mods dropped ${before} -> ${after}; refusing to write tier data`)
+  }
+}
+
 function httpGet(url, etag) {
   return new Promise((resolve, reject) => {
     const headers = { 'User-Agent': 'Scalpel-TierData' }
@@ -369,6 +422,14 @@ async function main() {
   const perGameHash = {}
   let anyChange = false
 
+  const outPathFor = (game) => path.join(OUT_DIR, `tiers-${game}.json`)
+  const desecPath = path.join(OUT_DIR, 'desecrated-poe2.json')
+  const sourcesPath = path.join(OUT_DIR, 'mod-sources-poe1.json')
+  const streamPath = path.join(OUT_DIR, 'stream-tiers-poe2.json')
+
+  // Phase 1: fetch and sanity-check every game before writing anything, so a broken
+  // upstream for one game can't leave the other half-written.
+  const pending = [] // [game, fetched]
   for (const [game, base] of Object.entries(SOURCES)) {
     const files = ['mods_by_base.json', 'mods.json', 'base_items.json']
     const fetched = {}
@@ -384,10 +445,7 @@ async function main() {
       fetched[f] = JSON.parse(r.body)
       meta.etags[key] = r.etag
     }
-    const outPath = path.join(OUT_DIR, `tiers-${game}.json`)
-    const desecPath = path.join(OUT_DIR, 'desecrated-poe2.json')
-    const sourcesPath = path.join(OUT_DIR, 'mod-sources-poe1.json')
-    const streamPath = path.join(OUT_DIR, 'stream-tiers-poe2.json')
+    const outPath = outPathFor(game)
     if (
       !gameChanged &&
       fs.existsSync(outPath) &&
@@ -405,6 +463,17 @@ async function main() {
         meta.etags[`${game}/${f}`] = r.etag
       }
     }
+    assertUpstreamSane(game, fetched['mods.json'])
+    if (game === 'poe2') {
+      const existing = fs.existsSync(desecPath) ? JSON.parse(fs.readFileSync(desecPath, 'utf8')) : null
+      assertDesecratedSane(buildDesecrated(fetched['mods.json']), existing)
+    }
+    pending.push([game, fetched])
+  }
+
+  // Phase 2: build and write.
+  for (const [game, fetched] of pending) {
+    const outPath = outPathFor(game)
     const compact = buildCompact(fetched['mods_by_base.json'], fetched['mods.json'], fetched['base_items.json'])
     if (game === 'poe1') {
       const srcJson = `${JSON.stringify(buildModSources(fetched['mods_by_base.json'], fetched['mods.json']), null, 2)}\n`
@@ -416,7 +485,8 @@ async function main() {
       }
     }
     if (game === 'poe2') {
-      const desecJson = `${JSON.stringify(buildDesecrated(fetched['mods.json']))}\n`
+      const desec = buildDesecrated(fetched['mods.json'])
+      const desecJson = `${JSON.stringify(desec)}\n`
       const desecExisting = fs.existsSync(desecPath) ? fs.readFileSync(desecPath, 'utf8') : null
       if (desecJson !== desecExisting) {
         fs.writeFileSync(desecPath, desecJson, 'utf8')
@@ -474,6 +544,8 @@ if (require.main === module) {
 }
 
 module.exports = {
+  assertDesecratedSane,
+  assertUpstreamSane,
   buildCompact,
   buildDesecrated,
   buildModSources,

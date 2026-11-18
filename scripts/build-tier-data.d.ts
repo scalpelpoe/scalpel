@@ -14,6 +14,8 @@ export interface CompactDataset {
   schemaVersion: number
   mods: CompactMod[]
   pools: Array<Record<string, number[]>>
+  /** Parallel to `pools`: spawn weight of each pooled mod on that pool's bases. */
+  weights: Array<Record<string, number[]>>
   bases: Record<string, number>
 }
 
@@ -69,6 +71,10 @@ export declare function buildModSources(
 ): ModSourceDataset
 
 export declare function familyToSource(family: string): string | null
+
+export declare function assertUpstreamSane(game: string, mods: Record<string, unknown>): void
+
+export declare function assertDesecratedSane(next: DesecratedDataset, existing: DesecratedDataset | null): void
 
 export declare function sha256(str: string): string
 

@@ -3,6 +3,8 @@ import { resolve } from 'node:path'
 import { describe, it, expect, test } from 'vitest'
 // CJS module; import its pure exports.
 import {
+  assertDesecratedSane,
+  assertUpstreamSane,
   buildCompact,
   buildDesecrated,
   buildModSources,
@@ -91,6 +93,35 @@ describe('buildCompact', () => {
     expect(lifeTiers[0].s).toEqual([['base_maximum_life', 3, 9]])
     // Fire resistance present as a separate group
     expect(ironRing.FireResistance.map((i) => out.mods[i].l)).toEqual([1, 12])
+  })
+
+  it('emits spawn weights parallel to pools, splitting pools whose weights differ', () => {
+    const twoRings = {
+      Rings: {
+        ...mbb.Rings,
+        'unset_ring,ring,default': {
+          bases: ['Metadata/Items/Rings/Ring2'],
+          mods: {
+            prefix: { IncreasedLife: { IncreasedLife1: 500, IncreasedLife2: 0 } },
+            suffix: { FireResistance: { FireResist1: 1, FireResist2: 12 } },
+          },
+          conditional_mods: null,
+        },
+      },
+    }
+    const out = buildCompact(twoRings, mods, {
+      ...baseItems,
+      'Metadata/Items/Rings/Ring2': { name: 'Unset Ring', tags: ['unset_ring', 'ring', 'default'], item_class: 'Ring' },
+    })
+    expect(out.weights).toHaveLength(out.pools.length)
+    const iron = out.bases['Iron Ring']
+    const unset = out.bases['Unset Ring']
+    expect(unset).not.toBe(iron)
+    // Same mod indices, each ladder's weights follow its ascending order.
+    expect(out.pools[unset]).toEqual(out.pools[iron])
+    expect(out.weights[iron].IncreasedLife).toEqual([1, 6])
+    expect(out.weights[unset].IncreasedLife).toEqual([500, 0])
+    expect(out.weights[iron].FireResistance).toEqual([1, 12])
   })
 
   it('excludes non-item-domain mods', () => {
@@ -378,4 +409,37 @@ test('familyToSource maps GGG internal conqueror names to their display names', 
   expect(familyToSource('delve_prefix')).toBe('delve')
   expect(familyToSource('prefix')).toBeNull()
   expect(familyToSource('searing_exarch_implicit')).toBeNull()
+})
+
+describe('upstream sanity gates', () => {
+  const itemMod = (text: string | null) => ({ domain: 'item', stats: [{ id: 'x', min: 1, max: 2 }], text })
+
+  it('passes the normal few text-less legacy mods', () => {
+    const mods = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`M${i}`, itemMod(i < 2 ? null : 'text')]))
+    expect(() => assertUpstreamSane('poe1', mods)).not.toThrow()
+  })
+
+  it('throws when upstream ships null text on most item mods', () => {
+    const mods = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [`M${i}`, itemMod(null)]))
+    expect(() => assertUpstreamSane('poe2', mods)).toThrow(/no text upstream/)
+  })
+
+  it('ignores non-item and stat-less mods when counting', () => {
+    const mods = {
+      A: itemMod('ok'),
+      B: { domain: 'monster', stats: [], text: null },
+      C: { domain: 'item', stats: [], text: null },
+    }
+    expect(() => assertUpstreamSane('poe1', mods)).not.toThrow()
+  })
+
+  it('throws when the desecrated dataset collapses, but not on small shifts or first build', () => {
+    const ds = (n: number) => ({
+      schemaVersion: 1,
+      mods: Array.from({ length: n }, (_, i) => ({ key: `K${i}`, tiers: [] })),
+    })
+    expect(() => assertDesecratedSane(ds(0), ds(271))).toThrow(/271 -> 0/)
+    expect(() => assertDesecratedSane(ds(260), ds(271))).not.toThrow()
+    expect(() => assertDesecratedSane(ds(0), null)).not.toThrow()
+  })
 })

@@ -36,6 +36,10 @@ export interface TierDataset {
   mods: Array<{ n: string; l: number; g: string; s: Array<[string, number, number]>; t: string }>
   /** Deduped group-maps: group -> ascending tier-index list (into `mods`). */
   pools: Array<Record<string, number[]>>
+  /** Parallel to `pools`: weights[p][group][i] is the spawn weight of pools[p][group][i]
+   *  on that pool's bases (RePoE mods_by_base, resolved per base tags; generation_weights
+   *  not applied). Data only, unused by the app; optional because older remote copies lack it. */
+  weights?: Array<Record<string, number[]>>
   /** Base display name -> index into `pools`. */
   bases: Record<string, number>
 }
