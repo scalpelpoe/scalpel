@@ -52,12 +52,13 @@ describe('takeNotches', () => {
     expect(acc.carry).toBe(80)
   })
 
-  it('splits a coalesced multi-notch event into several clicks', () => {
-    expect(takeNotches(fresh(), WHEEL_DELTA * 3, 10)).toBe(3)
-  })
-
-  it('caps clicks for a single event', () => {
-    expect(takeNotches(fresh(), WHEEL_DELTA * 50, 10)).toBe(MAX_CLICKS_PER_EVENT)
+  it('gives a coalesced multi-notch event exactly one click and drops the rest', () => {
+    const acc = fresh()
+    expect(MAX_CLICKS_PER_EVENT).toBe(1)
+    expect(takeNotches(acc, WHEEL_DELTA * 3, 10)).toBe(1)
+    expect(acc.carry).toBe(0)
+    expect(takeNotches(acc, WHEEL_DELTA * 50 + 30, 20)).toBe(1)
+    expect(acc.carry).toBe(30)
   })
 
   it('drops a stale partial notch after the idle window', () => {

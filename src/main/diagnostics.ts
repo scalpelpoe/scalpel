@@ -212,6 +212,8 @@ function settingsSummary(): Record<string, unknown> {
     openSide: s.openSide,
     stashScrollEnabled: s.stashScrollEnabled,
     stashScrollModifier: s.stashScrollModifier,
+    wheelClickEnabled: s.wheelClickEnabled,
+    wheelClickToggleKey: s.wheelClickToggleKey,
     cheatSheetsCategories: profile?.cheatSheets?.categories?.length ?? 0,
   }
 }

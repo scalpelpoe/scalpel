@@ -25,9 +25,11 @@ export const SLOT = {
   CLICKS: 9,
   /** Virtual-key code of the lock key whose toggle state arms the feature (main writes). */
   TOGGLE_VK: 10,
+  /** 1 while the WH_MOUSE_LL hook is installed (worker writes). */
+  HOOKED: 11,
 } as const
 
-export const SLOT_COUNT = 11
+export const SLOT_COUNT = 12
 
 export type WheelClickToggleKey = 'CapsLock' | 'ScrollLock'
 
@@ -62,9 +64,10 @@ export const WHEEL_DELTA = 120
 export const ACCUMULATOR_IDLE_MS = 1000
 
 /** Upper bound on clicks emitted for a single wheel event. A free-spinning
- *  wheel can coalesce several notches into one event; a corrupt delta must not
- *  turn into a click storm. */
-export const MAX_CLICKS_PER_EVENT = 5
+ *  wheel can coalesce several notches into one event; those extra notches are
+ *  dropped so one input event never produces more than one game action (GGG's
+ *  one-action-per-input rule). */
+export const MAX_CLICKS_PER_EVENT = 1
 
 export interface NotchAccumulator {
   /** Absolute wheel delta carried over from earlier events, always < WHEEL_DELTA. */
@@ -82,6 +85,7 @@ export function takeNotches(acc: NotchAccumulator, delta: number, now: number): 
   const total = acc.carry + Math.abs(delta)
   const notches = Math.floor(total / WHEEL_DELTA)
   acc.carry = total - notches * WHEEL_DELTA
+  // Notches past the cap are discarded, not banked for later events.
   return Math.min(notches, MAX_CLICKS_PER_EVENT)
 }
 

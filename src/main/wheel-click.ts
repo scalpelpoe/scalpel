@@ -97,7 +97,7 @@ function stopWorker(): void {
   if (!running) return
   const { state } = running
   // Gate off first so nothing is swallowed while the thread winds down (it
-  // notices STOP on its next timer tick, <=250ms).
+  // notices STOP on its next timer tick, <=100ms).
   Atomics.store(state, SLOT.ACTIVE, 0)
   Atomics.store(state, SLOT.STOP, 1)
   // A re-enable before it exits gets a fresh worker + buffer; the old one
@@ -130,11 +130,18 @@ export function stopWheelClick(): void {
 }
 
 /** True when the hook is currently turning wheel events into clicks, so other
- *  wheel consumers (stash tab scrolling) should stand down. */
+ *  wheel consumers (stash tab scrolling) should stand down.
+ *  TOGGLE_ON is the lock state as of the last wheel event the hook saw. The
+ *  hook is (re)installed on every focus gain, after uiohook's, so it runs first
+ *  and has already refreshed TOGGLE_ON by the time uiohook sees the event. */
 export function wheelClickOwnsWheel(): boolean {
   if (!running) return false
   const { state } = running
-  return Atomics.load(state, SLOT.ACTIVE) === 1 && Atomics.load(state, SLOT.TOGGLE_ON) === 1
+  return (
+    Atomics.load(state, SLOT.ACTIVE) === 1 &&
+    Atomics.load(state, SLOT.HOOKED) === 1 &&
+    Atomics.load(state, SLOT.TOGGLE_ON) === 1
+  )
 }
 
 export function getWheelClickDiagnostics(): Record<string, unknown> {
@@ -147,6 +154,7 @@ export function getWheelClickDiagnostics(): Record<string, unknown> {
     status: state ? Atomics.load(state, SLOT.STATUS) : null,
     statusRunning: state ? Atomics.load(state, SLOT.STATUS) === STATUS.RUNNING : false,
     active: state ? Atomics.load(state, SLOT.ACTIVE) === 1 : false,
+    hooked: state ? Atomics.load(state, SLOT.HOOKED) === 1 : false,
     converted: state ? Atomics.load(state, SLOT.CONVERTED) : 0,
     clicks: state ? Atomics.load(state, SLOT.CLICKS) : 0,
     lastError,

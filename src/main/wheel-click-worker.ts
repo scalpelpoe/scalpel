@@ -13,7 +13,13 @@
 //
 // This thread blocks inside GetMessageW for its whole life, so it never
 // services postMessage. All coordination goes through the SharedArrayBuffer in
-// workerData (see SLOT), and a 250ms thread timer wakes the loop to notice STOP.
+// workerData (see SLOT), and a thread timer wakes the loop to notice STOP and
+// ACTIVE changes.
+//
+// The hook is only installed while ACTIVE (feature on + game focused). A
+// WH_MOUSE_LL hook sees every mouse move on the system, so leaving it in place
+// while PoE is in the background would put a JS round trip on every desktop
+// cursor move for nothing.
 import { parentPort, workerData } from 'node:worker_threads'
 import koffi from 'koffi'
 import {
@@ -40,7 +46,9 @@ const MOUSEEVENTF_RIGHTDOWN = 0x0008
 const MOUSEEVENTF_RIGHTUP = 0x0010
 /** Tags our injected clicks so they're identifiable in a hook/debugger. */
 const SCALPEL_EXTRA_INFO = 0x5c41
-const STOP_POLL_MS = 250
+/** Timer tick: bounds STOP latency and how long after PoE gains focus the
+ *  hook goes in. */
+const POLL_MS = 100
 
 const state = new Int32Array(workerData.buffer as SharedArrayBuffer)
 
@@ -179,6 +187,7 @@ function run(): void {
     Atomics.add(state, SLOT.CLICKS, Math.floor(sent / 2))
   }
 
+  let hook: unknown = null
   const proc = koffi.register((nCode: number, wParam: number, lParam: unknown) => {
     if (nCode === HC_ACTION && Number(wParam) === WM_MOUSEWHEEL) {
       try {
@@ -190,15 +199,32 @@ function run(): void {
     return CallNextHookEx(null, nCode, wParam, lParam)
   }, koffi.pointer(HookProc))
 
-  const hook = SetWindowsHookExW(WH_MOUSE_LL, proc, GetModuleHandleW(null), 0)
-  if (!hook) {
-    koffi.unregister(proc)
-    throw new Error('SetWindowsHookExW(WH_MOUSE_LL) failed')
+  const hModule = GetModuleHandleW(null)
+  /** Install the hook while ACTIVE, remove it otherwise. */
+  function syncHook(): void {
+    const want = Atomics.load(state, SLOT.ACTIVE) === 1
+    if (want && !hook) {
+      hook = SetWindowsHookExW(WH_MOUSE_LL, proc, hModule, 0)
+      if (!hook) throw new Error('SetWindowsHookExW(WH_MOUSE_LL) failed')
+      // A stale partial notch from the last focus stint must not complete here.
+      acc.carry = 0
+    } else if (!want && hook) {
+      UnhookWindowsHookEx(hook)
+      hook = null
+      Atomics.store(state, SLOT.TOGGLE_ON, 0)
+    }
+    Atomics.store(state, SLOT.HOOKED, hook ? 1 : 0)
   }
-  const timer = SetTimer(null, 0, STOP_POLL_MS, null)
-  Atomics.store(state, SLOT.STATUS, STATUS.RUNNING)
+
+  const timer = SetTimer(null, 0, POLL_MS, null)
+  if (!timer) {
+    koffi.unregister(proc)
+    throw new Error('SetTimer failed')
+  }
 
   try {
+    syncHook()
+    Atomics.store(state, SLOT.STATUS, STATUS.RUNNING)
     const msg: { message?: number; wParam?: number } = {}
     while (Atomics.load(state, SLOT.STOP) !== 1) {
       const r = GetMessageW(msg, null, 0, 0) as number
@@ -207,12 +233,13 @@ function run(): void {
         // Re-check at injection time: focus may have left PoE in between.
         if (Atomics.load(state, SLOT.ACTIVE) === 1) sendClicks(Number(msg.wParam))
       } else if (msg.message === WM_TIMER) {
-        // Wake-up only; the loop condition checks STOP.
+        syncHook()
       }
     }
   } finally {
-    if (timer) KillTimer(null, timer)
-    UnhookWindowsHookEx(hook)
+    KillTimer(null, timer)
+    if (hook) UnhookWindowsHookEx(hook)
+    Atomics.store(state, SLOT.HOOKED, 0)
     koffi.unregister(proc)
   }
 }
