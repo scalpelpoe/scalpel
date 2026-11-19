@@ -18,6 +18,7 @@ export type {
   PricesApi,
   RegisterHotkeyOptions,
   RegisterOverlayOptions,
+  RegisterPriceCheckActionOptions,
   RegisterTabOptions,
   ScalpelPluginContext,
 } from './types'

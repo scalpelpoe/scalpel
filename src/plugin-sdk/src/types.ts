@@ -104,6 +104,16 @@ export interface PluginStorage {
   keys(): Promise<string[]>
 }
 
+export interface RegisterPriceCheckActionOptions {
+  /** Short button text and a descriptive tooltip. */
+  label: string
+  title: string
+  /** Pure, synchronous filter. Omit to show the button for every item. */
+  isVisible?: (item: PoeItem, poeVersion: 1 | 2) => boolean
+  /** Called with the item displayed when the user clicks. */
+  run: (item: PoeItem, poeVersion: 1 | 2) => void | Promise<void>
+}
+
 export interface RegisterHotkeyOptions {
   /** Shown in the app-macro settings list (e.g. "Quick check"). */
   label: string
@@ -253,6 +263,9 @@ export interface ScalpelPluginContext {
   getRecentLogLines(count?: number): Promise<string[]>
 
   registerTab(opts: RegisterTabOptions): void
+
+  /** Register one item-header button during activation. Works independently of tabs and hotkeys. */
+  registerPriceCheckAction(opts: RegisterPriceCheckActionOptions): void
 
   /**
    * Exposes a hotkey slot to Scalpel's app-macro settings. The plugin doesn't

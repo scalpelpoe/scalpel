@@ -15,6 +15,7 @@
     "outDir": "dist",
     "types": [],
     "paths": {
+      "@scalpel/stream-contract": ["../../packages/stream-contract/src/index.ts"],
       "@shared/*": ["../shared/*"],
       "@main/*": ["../main/*"],
       "@renderer/*": ["../renderer/src/*"]

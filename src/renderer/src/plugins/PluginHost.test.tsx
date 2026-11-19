@@ -2,6 +2,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, waitFor, act } from '@testing-library/react'
+import { useState } from 'react'
+import type { PoeItem } from '@shared/types'
+import { ItemHeader } from '../features/price-check/ItemHeader'
+import { usePriceCheckActions } from './use-price-check-actions'
+import type { RegisteredPriceCheckAction } from './types'
 import type { PluginManifest } from '../../../plugin-sdk/src/types'
 import type { ScalpelPluginContext } from '../../../plugin-sdk/src/types'
 
@@ -18,6 +23,7 @@ const manifest: PluginManifest = {
 const installedList: Array<{ manifest: PluginManifest; entryUrl: string }> = []
 
 let pluginMacroListener: ((action: string) => void) | null = null
+const importFixture = vi.fn<(url: string) => Promise<unknown>>()
 
 beforeEach(() => {
   installedList.length = 0
@@ -46,10 +52,155 @@ beforeEach(() => {
     onPluginUpdated: vi.fn(() => () => {}),
   }
   // mock the dynamic import that the host will perform
-  ;(window as unknown as { __pluginImport: (u: string) => Promise<unknown> }).__pluginImport = vi.fn()
+  Object.assign(window, { __pluginImport: importFixture.mockReset() })
 })
 
 describe('PluginHost', () => {
+  it('keeps standalone item buttons bound to the displayed item and the active plugin instance', async () => {
+    const entry = (id: string, entryUrl = id) => ({ manifest: { ...manifest, id }, entryUrl })
+    installedList.push(entry('inspect'), entry('bookmark'))
+    const inspect = vi.fn()
+    const bookmark = vi.fn()
+    const updated = vi.fn().mockRejectedValue(new Error('storage unavailable'))
+    const onError = vi.fn()
+    importFixture.mockImplementation(async (url) => ({
+      default: (ctx: ScalpelPluginContext) => {
+        if (url === 'inspect') {
+          ctx.registerPriceCheckAction({
+            label: 'Inspect',
+            title: 'Inspect rings',
+            isVisible: (item) => item.itemClass === 'Rings',
+            run: inspect,
+          })
+        } else {
+          ctx.registerPriceCheckAction({
+            label: 'Save',
+            title: 'Save item',
+            run: url === 'bookmark' ? bookmark : updated,
+          })
+        }
+      },
+    }))
+    const { PluginHost } = await import('./PluginHost')
+    const ring = { name: 'A', itemClass: 'Rings' } as PoeItem
+    const map = { name: 'B', itemClass: 'Maps' } as PoeItem
+    function Overlay({ item, version }: { item: PoeItem; version: 1 | 2 }): JSX.Element {
+      const [actions, setActions] = useState<RegisteredPriceCheckAction[]>([])
+      const buttons = usePriceCheckActions(actions, item, version, onError)
+      return (
+        <>
+          <PluginHost
+            ready
+            poeVersion={version}
+            league="Standard"
+            currentItem={null}
+            currentZone={null}
+            onSubscribeCurrentItem={() => () => {}}
+            onSubscribeCurrentZone={() => () => {}}
+            onSubscribeLeagueChange={() => () => {}}
+            onOpenExternal={() => {}}
+            onTabsChange={() => {}}
+            onOpenPluginTab={() => {}}
+            onCopyAndEvaluateItem={async () => null}
+            onPriceCheckActionsChange={setActions}
+            onPluginError={onError}
+          />
+          <ItemHeader
+            heroName={item.name}
+            baseType={item.name}
+            heroIcon={null}
+            isDivCard={false}
+            color="#fff"
+            onOpenPoeDb={() => {}}
+            pluginButtons={buttons}
+          />
+        </>
+      )
+    }
+    const ui = render(<Overlay item={ring} version={1} />)
+    const button = (name: string) => ui.getByRole('button', { name })
+    await ui.findByRole('button', { name: 'Save' })
+    expect(ui.getAllByRole('button').map((b) => b.textContent)).toEqual(['PoEDB', 'Inspect', 'Save'])
+    button('Inspect').click()
+    button('Save').click()
+    expect(inspect).toHaveBeenCalledWith(ring, 1)
+    expect(bookmark).toHaveBeenCalledWith(ring, 1)
+    expect(window.api.pluginRegisterTab).not.toHaveBeenCalled()
+
+    ui.rerender(<Overlay item={map} version={2} />)
+    expect(ui.queryByRole('button', { name: 'Inspect' })).toBeNull()
+    const update = vi.mocked(window.api.onPluginUpdated).mock.calls[0][0]
+    const uninstall = vi.mocked(window.api.onPluginUninstalled).mock.calls[0][0]
+    await act(async () => {
+      await update(entry('bookmark', 'new-version'))
+    })
+    button('Save').click()
+    await waitFor(() => expect(onError).toHaveBeenCalledWith('bookmark', new Error('storage unavailable')))
+    expect(updated).toHaveBeenCalledWith(map, 2)
+    expect(bookmark).toHaveBeenCalledTimes(1)
+    act(() => uninstall('bookmark'))
+    ui.rerender(<Overlay item={ring} version={2} />)
+    expect(ui.queryByRole('button', { name: 'Save' })).toBeNull()
+    button('Inspect').click()
+    expect(inspect).toHaveBeenLastCalledWith(ring, 2)
+  })
+
+  it('publishes no partial, duplicate, or already unloaded registration', async () => {
+    const onActions = vi.fn()
+    const onError = vi.fn()
+    let finish!: () => void
+    const activation = new Promise<void>((resolve) => {
+      finish = resolve
+    })
+    const pending = vi.fn(async (ctx: ScalpelPluginContext) => {
+      ctx.registerPriceCheckAction({ label: 'Wait', title: 'Wait for activation', run: vi.fn() })
+      await activation
+    })
+    installedList.push(
+      { manifest, entryUrl: 'duplicate' },
+      { manifest: { ...manifest, id: 'pending' }, entryUrl: 'pending' },
+    )
+    importFixture.mockImplementation(async (url) => ({
+      default:
+        url === 'pending'
+          ? pending
+          : (ctx: ScalpelPluginContext) => {
+              const action = { label: 'Mark', title: 'Mark item', run: vi.fn() }
+              ctx.registerPriceCheckAction(action)
+              ctx.registerPriceCheckAction(action)
+            },
+    }))
+    const { PluginHost } = await import('./PluginHost')
+    render(
+      <PluginHost
+        ready
+        poeVersion={1}
+        league="Standard"
+        currentItem={null}
+        currentZone={null}
+        onSubscribeCurrentItem={() => () => {}}
+        onSubscribeCurrentZone={() => () => {}}
+        onSubscribeLeagueChange={() => () => {}}
+        onOpenExternal={() => {}}
+        onTabsChange={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
+        onPriceCheckActionsChange={onActions}
+        onPluginError={onError}
+      />,
+    )
+    await waitFor(() => expect(pending).toHaveBeenCalledOnce())
+    expect(onError).toHaveBeenCalledWith(
+      'hello',
+      expect.objectContaining({ message: expect.stringContaining('already called') }),
+    )
+    await act(async () => {
+      vi.mocked(window.api.onPluginUninstalled).mock.calls[0][0]('pending')
+      finish()
+    })
+    expect(onActions.mock.calls.every(([actions]) => actions.length === 0)).toBe(true)
+  })
+
   it('renders no tabs when there are no installed plugins', async () => {
     const { PluginHost } = await import('./PluginHost')
     const onTabsChange = vi.fn()

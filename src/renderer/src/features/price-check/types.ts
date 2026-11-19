@@ -1,4 +1,5 @@
 import type { PoeItem, PriceInfo } from '@shared/types'
+import type { PriceCheckButton } from '../../plugins/use-price-check-actions'
 import type { ModTier } from '@shared/data/tiers/types'
 import type { ModSource } from '@shared/data/tiers/mod-sources'
 
@@ -77,6 +78,7 @@ export interface PriceCheckProps {
   learnedDecisions: Record<string, boolean>
   onClose: () => void
   onOpenWiki?: () => void
+  pluginButtons?: PriceCheckButton[]
   onOpenPoeDb?: () => void
   onOpenNinja?: () => void
 }

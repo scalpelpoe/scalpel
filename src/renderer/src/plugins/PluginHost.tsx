@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PoeItem, Zone } from '@shared/types'
 import type { PluginActivate, PluginManifest } from '../../../plugin-sdk/src/types'
 import { createPluginContext } from './context'
+import type { RegisteredPriceCheckAction } from './types'
 import { resolveLeagueOptions } from '@renderer/shared/league-options'
 import { importPluginModule } from './import-plugin-module'
 
@@ -28,6 +29,7 @@ export interface PluginHostProps {
   onSubscribeLeagueChange: (h: (l: string) => void) => () => void
   onOpenExternal: (url: string) => void
   onTabsChange: (tabs: RegisteredTab[]) => void
+  onPriceCheckActionsChange?: (actions: RegisteredPriceCheckAction[]) => void
   onOpenPluginTab: (pluginId: string) => void
   onCopyAndEvaluateItem: (opts?: { showOverlay?: boolean; dispatch?: boolean }) => Promise<PoeItem | null>
   onPluginError?: (id: string, error: Error) => void
@@ -36,6 +38,7 @@ export interface PluginHostProps {
 
 export function PluginHost(props: PluginHostProps): JSX.Element | null {
   const [tabs, setTabs] = useState<RegisteredTab[]>([])
+  const [priceCheckActions, setPriceCheckActions] = useState<RegisteredPriceCheckAction[]>([])
   const loadedRef = useRef(false)
   const pluginHotkeyHandlersRef = useRef<Map<string, () => void>>(new Map())
   const pendingOverlayRef = useRef<Map<string, { title: string; icon?: string; mode?: 'window' | 'annotation' }>>(
@@ -80,6 +83,10 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     props.onTabsChange(tabs)
   }, [tabs, props.onTabsChange])
 
+  useEffect(() => {
+    props.onPriceCheckActionsChange?.(priceCheckActions)
+  }, [priceCheckActions, props.onPriceCheckActionsChange])
+
   // Extracted per-plugin load logic used by both the initial-load loop and the
   // hot-install event handler. Wrapped in useCallback([]) so identity is stable
   // across renders; all prop callbacks are read through refs.
@@ -87,8 +94,13 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     const m = entry.manifest
     if (m.poeVersions && !m.poeVersions.includes(poeVersionRef.current)) return
     const disposers: Array<() => void> = []
+    // The disposer list also identifies this activation across async import/activate and hot reload.
+    pluginDisposersRef.current.set(m.id, disposers)
+    let priceCheckAction: RegisteredPriceCheckAction | undefined
+    let activating = true
     try {
       const mod = (await importPluginModule(entry.entryUrl)) as { default: PluginActivate }
+      if (pluginDisposersRef.current.get(m.id) !== disposers) return
       if (typeof mod.default !== 'function') {
         throw new Error('plugin module has no default export function')
       }
@@ -149,6 +161,19 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
             return u
           },
         },
+        registerPriceCheckAction: ({ label, title, run, isVisible }) => {
+          if (!activating) throw new Error(`[plugin:${m.id}] registerPriceCheckAction must be called during activation`)
+          if (priceCheckAction) throw new Error(`[plugin:${m.id}] registerPriceCheckAction already called`)
+          if (
+            !label?.trim() ||
+            !title?.trim() ||
+            typeof run !== 'function' ||
+            (isVisible !== undefined && typeof isVisible !== 'function')
+          ) {
+            throw new Error(`[plugin:${m.id}] Invalid price-check action`)
+          }
+          priceCheckAction = { pluginId: m.id, label, title, run, isVisible }
+        },
         registerTab: (pluginId, opts) => {
           setTabs((prev) => {
             if (prev.find((t) => t.pluginId === pluginId)) return prev
@@ -199,26 +224,36 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
           previous: () => window.api.pluginMediaCommand('previous'),
         },
       })
-      pluginDisposersRef.current.set(m.id, disposers)
       // PluginActivate may be async and may return a teardown fn (host runtime
       // honors it regardless of the SDK's published type; see the SDK task).
       const teardown = await mod.default(ctx)
+      if (pluginDisposersRef.current.get(m.id) !== disposers) {
+        if (typeof teardown === 'function') teardown()
+        return
+      }
+      if (priceCheckAction) {
+        const action = priceCheckAction
+        setPriceCheckActions((prev) => [...prev.filter((a) => a.pluginId !== m.id), action])
+      }
       if (typeof teardown === 'function') {
         pluginTeardownRef.current.set(m.id, teardown as () => void)
       }
     } catch (err) {
       // activate() may have subscribed before throwing; dispose what it set up
       // so a failed load does not leak subscriptions.
-      for (const dispose of disposers) {
+      for (const dispose of disposers.splice(0)) {
         try {
           dispose()
         } catch {
           // ignore: one bad unsubscribe must not block the rest
         }
       }
+      if (pluginDisposersRef.current.get(m.id) !== disposers) return
       pluginDisposersRef.current.delete(m.id)
       pluginTeardownRef.current.delete(m.id)
       onPluginErrorRef.current?.(m.id, err instanceof Error ? err : new Error(String(err)))
+    } finally {
+      activating = false
     }
   }, [])
 
@@ -237,7 +272,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
     }
     const disposers = pluginDisposersRef.current.get(pluginId)
     if (disposers) {
-      for (const dispose of disposers) {
+      for (const dispose of disposers.splice(0)) {
         try {
           dispose()
         } catch {
@@ -247,6 +282,7 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
       pluginDisposersRef.current.delete(pluginId)
     }
     setTabs((prev) => prev.filter((t) => t.pluginId !== pluginId))
+    setPriceCheckActions((prev) => prev.filter((a) => a.pluginId !== pluginId))
     pluginHotkeyHandlersRef.current.delete(pluginId)
     pendingOverlayRef.current.delete(pluginId)
     void window.api.pluginUnregisterHotkey(pluginId)

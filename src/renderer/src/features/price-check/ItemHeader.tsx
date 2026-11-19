@@ -1,4 +1,5 @@
 import type { PriceInfo } from '@shared/types'
+import type { PriceCheckButton } from '../../plugins/use-price-check-actions'
 import { getGameFeatures } from '@shared/game-features'
 import { usePoeVersion } from '../../shared/poe-version-context'
 import { IconGlow } from '../../shared/IconGlow'
@@ -24,6 +25,7 @@ export function ItemHeader({
   areaLevel,
   heistJobs,
   onOpenWiki,
+  pluginButtons = [],
   onOpenPoeDb,
   onOpenNinja,
 }: {
@@ -41,6 +43,7 @@ export function ItemHeader({
   areaLevel?: number
   heistJobs?: Array<{ skill: string; level: number }>
   onOpenWiki?: () => void
+  pluginButtons?: PriceCheckButton[]
   onOpenPoeDb?: () => void
   onOpenNinja?: () => void
 }): JSX.Element {
@@ -84,7 +87,7 @@ export function ItemHeader({
           </div>
         )}
       </div>
-      <div className="flex flex-col gap-1 items-end shrink-0">
+      <div className={`flex flex-col gap-1 items-end shrink-0${pluginButtons.length ? ' max-w-[65%]' : ''}`}>
         {/* Dust + Ninja price + stack pricing chips */}
         {(showPrice || showDust) && (
           <div className="flex items-center gap-1 flex-wrap justify-end">
@@ -122,15 +125,18 @@ export function ItemHeader({
           </div>
         )}
         {/* Exchange rate row -- "Open in" chip sits to the left of the chaos/divine rate */}
-        <div className="flex items-center gap-1 justify-end">
-          {(onOpenWiki || onOpenPoeDb || onOpenNinja) && (
-            <InfoChip className="!px-[3px]">
+        <div className="flex max-w-full flex-wrap items-center gap-1 justify-end">
+          {(onOpenWiki || onOpenPoeDb || onOpenNinja || pluginButtons.length > 0) && (
+            <InfoChip className="!px-[3px] max-w-full flex-wrap justify-end [&>button]:max-w-full [&>button]:truncate">
               {onOpenWiki && (
                 <ExternalLinkButton label="Wiki" title="Open the wiki page in your browser" onClick={onOpenWiki} />
               )}
               {onOpenPoeDb && (
                 <ExternalLinkButton label="PoEDB" title="Open the PoEDB page in your browser" onClick={onOpenPoeDb} />
               )}
+              {pluginButtons.map(({ pluginId, ...button }) => (
+                <ExternalLinkButton key={pluginId} {...button} />
+              ))}
               {onOpenNinja && (
                 <ExternalLinkButton
                   label="Ninja"
