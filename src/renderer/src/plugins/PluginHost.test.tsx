@@ -724,6 +724,67 @@ describe('PluginHost', () => {
     })
   })
 
+  it.each([
+    'uninstall',
+    'reload',
+  ] as const)('ignores a late subscription from an activation after %s', async (operation) => {
+    const onOldItem = vi.fn()
+    const onNewItem = vi.fn()
+    const teardown = vi.fn()
+    let resume!: () => void
+    const pause = new Promise<void>((resolve) => {
+      resume = resolve
+    })
+    const activateOld = vi.fn(async (ctx: ScalpelPluginContext) => {
+      await pause
+      ctx.onCurrentItem(onOldItem)
+      return teardown
+    })
+    installedList.push({ manifest, entryUrl: 'old' })
+    importFixture.mockResolvedValueOnce({ default: activateOld }).mockResolvedValueOnce({
+      default: (ctx: ScalpelPluginContext) => {
+        ctx.onCurrentItem(onNewItem)
+      },
+    })
+    const listeners = new Set<(item: PoeItem) => void>()
+    const { PluginHost } = await import('./PluginHost')
+    render(
+      <PluginHost
+        ready
+        poeVersion={1}
+        league="Standard"
+        currentItem={null}
+        currentZone={null}
+        onSubscribeCurrentItem={(handler) => {
+          listeners.add(handler)
+          return () => {
+            listeners.delete(handler)
+          }
+        }}
+        onSubscribeCurrentZone={() => () => {}}
+        onSubscribeLeagueChange={() => () => {}}
+        onOpenExternal={() => {}}
+        onTabsChange={() => {}}
+        onOpenPluginTab={() => {}}
+        onCopyAndEvaluateItem={async () => null}
+      />,
+    )
+    await waitFor(() => expect(activateOld).toHaveBeenCalledOnce())
+    await act(async () => {
+      if (operation === 'reload') {
+        await vi.mocked(window.api.onPluginUpdated).mock.calls[0][0]({ manifest, entryUrl: 'new' })
+      } else {
+        vi.mocked(window.api.onPluginUninstalled).mock.calls[0][0](manifest.id)
+      }
+      resume()
+    })
+    expect(teardown).toHaveBeenCalledOnce()
+    const item = { itemClass: 'Rings' } as PoeItem
+    for (const listener of listeners) listener(item)
+    expect(onOldItem).not.toHaveBeenCalled()
+    if (operation === 'reload') expect(onNewItem).toHaveBeenCalledExactlyOnceWith(item)
+  })
+
   it('disposes subscriptions made before activate throws', async () => {
     const unsub = vi.fn()
     const activate = vi.fn((ctx: ScalpelPluginContext) => {
