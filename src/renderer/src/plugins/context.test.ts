@@ -19,6 +19,7 @@ const baseDeps = () => ({
   getRecentLogLines: async () => [],
   openExternal: vi.fn(),
   registerTab: vi.fn(),
+  registerPriceCheckAction: vi.fn(),
   registerHotkey: vi.fn(),
   openTab: vi.fn(),
   copyAndEvaluateItem: vi.fn(async () => null),

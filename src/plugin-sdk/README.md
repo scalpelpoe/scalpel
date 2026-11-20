@@ -43,7 +43,7 @@ export default async function activate(ctx: ScalpelPluginContext): Promise<void>
 
 ## What's exported
 
-**Types:** `ScalpelPluginContext`, `PluginActivate`, `PluginManifest`, `RegisterTabOptions`, `RegisterHotkeyOptions`, `RegisterOverlayOptions`, `PluginStorage`.
+**Types:** `ScalpelPluginContext`, `PluginActivate`, `PluginManifest`, `RegisterTabOptions`, `RegisterHotkeyOptions`, `RegisterOverlayOptions`, `RegisterPriceCheckActionOptions`, `PluginStorage`.
 
 **Item helpers:** `isClusterJewel`, `isSkillGem`, `SKILL_GEM_CLASSES`, `defaultPoeItem`.
 

@@ -1,4 +1,9 @@
 import type { PoeItem, Zone } from '@shared/types'
+import type { RegisterPriceCheckActionOptions } from '../../../plugin-sdk/src/types'
+
+export interface RegisteredPriceCheckAction extends RegisterPriceCheckActionOptions {
+  pluginId: string
+}
 
 export type PluginContextFactoryDeps = {
   pluginId: string
@@ -45,6 +50,7 @@ export type PluginContextFactoryDeps = {
     },
   ) => void
   registerHotkey: (pluginId: string, opts: { label: string }, handler: () => void) => void
+  registerPriceCheckAction: (opts: RegisterPriceCheckActionOptions) => void
   openTab: (pluginId: string) => void
   copyAndEvaluateItem: (opts?: {
     showOverlay?: boolean
