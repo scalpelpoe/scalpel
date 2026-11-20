@@ -1,0 +1,447 @@
+{
+  "source": "https://raw.githubusercontent.com/scalpelpoe/scalpel-plugins-registry/main/registry.json",
+  "capturedAt": "2026-11-07",
+  "note": "Captured by `npm run verify:plugin-registry -- --update`. Manifests are the released manifest.json of each latestVersion.",
+  "registry": {
+    "schemaVersion": 1,
+    "plugins": [
+      {
+        "id": "currency-exchange",
+        "featured": true,
+        "name": "Currency Exchange Rates",
+        "author": "scalpelpoe",
+        "description": "Easily monitor exchange rates for currency. Pretty straightforward.",
+        "repo": "scalpelpoe/scalpel-currency-exchange",
+        "latestVersion": "1.4.0",
+        "sha256": "8e93fbb6542d3ebfdf10e2da4718b9a7a586b59b804ddb893b53b92b942c7f7f",
+        "scalpelMinVersion": ">=0.9.13-rc3",
+        "poeVersions": [
+          1,
+          2
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/scalpelpoe/scalpel-currency-exchange/main/icon.png",
+        "homepage": "https://github.com/scalpelpoe/scalpel-currency-exchange"
+      },
+      {
+        "id": "poe-event-log",
+        "name": "PoE Event Log",
+        "author": "scalpelpoe",
+        "description": "A clean, filterable feed of in-game events (zones, levels, deaths, whispers, trade) parsed live from the PoE client log, in a pop-out overlay window.",
+        "repo": "scalpelpoe/poe-event-log",
+        "latestVersion": "1.0.0",
+        "sha256": "3c85562932eb3e86deb8b3ef78ef6ed2ba405eec65ef251dc6a613b06057a66d",
+        "scalpelMinVersion": ">=0.9.9",
+        "iconUrl": "https://raw.githubusercontent.com/scalpelpoe/poe-event-log/main/icon.png",
+        "homepage": "https://github.com/scalpelpoe/poe-event-log",
+        "screenshots": [
+          "https://raw.githubusercontent.com/scalpelpoe/poe-event-log/main/screenshots/event-log.png"
+        ]
+      },
+      {
+        "id": "scalpel-importer",
+        "name": "Scalpel Importer",
+        "author": "juddisjudd",
+        "description": "Import PoBs, pobb.in links, and official Path of Exile .build files directly inside Scalpel.",
+        "repo": "juddisjudd/scalpel-importer",
+        "latestVersion": "1.0.0",
+        "sha256": "35a3fc57ea44cb3857273d6a8a9ac6d89c8a91a3ba3941fbd80e9a75d98fa71f",
+        "scalpelMinVersion": ">=0.9.9",
+        "poeVersions": [
+          1,
+          2
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/juddisjudd/scalpel-importer/main/resources/icon.png",
+        "homepage": "https://github.com/juddisjudd/scalpel-importer"
+      },
+      {
+        "id": "ini-editor",
+        "name": ".ini Editor",
+        "author": "scalpelpoe",
+        "description": "Edit your production_Config.ini. If you dare.",
+        "repo": "scalpelpoe/scalpel-ini-editor",
+        "latestVersion": "1.0.0",
+        "sha256": "e4e66b8e6a313a5999c6e1250a34cfc69013ec82b917424e8662b57748daaab9",
+        "scalpelMinVersion": ">=0.9.12",
+        "poeVersions": [
+          1,
+          2
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/scalpelpoe/scalpel-ini-editor/main/icon.svg",
+        "homepage": "https://github.com/scalpelpoe/scalpel-ini-editor"
+      },
+      {
+        "id": "plugin-examples",
+        "name": "Plugin Examples",
+        "author": "scalpelpoe",
+        "description": "Showcase of every visual component the Scalpel plugin SDK ships, plus a hotkey to copy and inspect the hovered item.",
+        "repo": "scalpelpoe/scalpel-plugin-examples",
+        "latestVersion": "1.0.2",
+        "sha256": "a1d80812ed84b7e2c189ef15238686dcd7c2b5505012eadb5f819a6406d458c0",
+        "scalpelMinVersion": ">=0.0.0",
+        "iconUrl": "https://raw.githubusercontent.com/scalpelpoe/scalpel/main/resources/icon.png",
+        "homepage": "https://github.com/scalpelpoe/scalpel-plugin-examples",
+        "screenshots": [
+          "https://raw.githubusercontent.com/scalpelpoe/scalpel-plugin-examples/master/screenshots/screenshot-1.png",
+          "https://raw.githubusercontent.com/scalpelpoe/scalpel-plugin-examples/master/screenshots/screenshot-2.png"
+        ]
+      },
+      {
+        "id": "well-tiers",
+        "featured": true,
+        "name": "Scalpel OCR",
+        "author": "scalpelpoe",
+        "description": "OCR hotkey for Well of Souls affix tiers and Runeshape Combinations reward pricing (layout row detection + per-row masked OCR)",
+        "repo": "scalpelpoe/scalpel-well-tiers",
+        "latestVersion": "1.2.1",
+        "sha256": "aa45dca5ca5e4485c2b31b815f2d578a15c9695c7d743f218f77ff09d1abb6b5",
+        "scalpelMinVersion": ">=0.9.16-rc1",
+        "poeVersions": [
+          2
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/scalpelpoe/scalpel-well-tiers/master/assets/icon.png",
+        "homepage": "https://github.com/scalpelpoe/scalpel-well-tiers",
+        "screenshots": [
+          "https://raw.githubusercontent.com/scalpelpoe/scalpel-well-tiers/master/assets/ss1.png"
+        ]
+      },
+      {
+        "id": "loot-tracker",
+        "name": "Loot Tracker",
+        "author": "cccarv82",
+        "description": "Track loot per session and map. Live value via poe.ninja, drops/hour, top items, export to JSON/CSV.",
+        "repo": "cccarv82/scalpel-loot-tracker",
+        "latestVersion": "0.1.2",
+        "sha256": "a2c6c36d5be359b79ec9eecf85b702bcef18b4968a3d6c5cb1541cfdbdd814d1",
+        "scalpelMinVersion": ">=0.9.13",
+        "poeVersions": [
+          1,
+          2
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/cccarv82/scalpel-loot-tracker/main/icon.svg",
+        "homepage": "https://github.com/cccarv82/scalpel-loot-tracker"
+      },
+      {
+        "id": "cluster-back",
+        "featured": true,
+        "name": "Cluster Back",
+        "author": "scalpelpoe",
+        "description": "Large Cluster Jewel finder for PoE1. Pick some desired notables, then find and search trade for options that put a trash notable in back.",
+        "repo": "scalpelpoe/scalpel-cluster-back",
+        "latestVersion": "1.1.1",
+        "sha256": "7676031eeb83ce2c62ea2b8fe972b586e1b0428580f6c6d089f847b4a22b93e9",
+        "scalpelMinVersion": ">=0.9.13-rc3",
+        "poeVersions": [
+          1
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/scalpelpoe/scalpel-cluster-back/main/icon.png",
+        "homepage": "https://github.com/scalpelpoe/scalpel-cluster-back"
+      },
+      {
+        "id": "map-mod-check",
+        "name": "Map Mod Check",
+        "author": "BurtonCameron",
+        "description": "Hover a map, press a hotkey, and get a Good / Warn / Bad verdict beside your cursor, pre-flagged by Scalpel's map-mod danger scale.",
+        "repo": "BurtonCameron/Scalple-MapModCheck",
+        "latestVersion": "2.0.0",
+        "sha256": "b35862831e7c1882bdc4b298a3ecbde9c8f6b6ffd448fce66e0ef73da8122a1a",
+        "scalpelMinVersion": ">=1.0.2",
+        "poeVersions": [
+          1
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/BurtonCameron/Scalple-MapModCheck/main/icon.svg",
+        "homepage": "https://github.com/BurtonCameron/Scalple-MapModCheck"
+      },
+      {
+        "id": "hideout-hunter",
+        "name": "Hideout Hunter",
+        "author": "xmopi",
+        "description": "Makes finding rare hideouts easy by letting you know if a map you entered spawned a hideout.",
+        "repo": "xmopi/hideout-hunter",
+        "latestVersion": "1.0.0",
+        "sha256": "d54d86ac88813a479788b38223c5d4ff7dfb91679df6d5109b2f7b96ceb6b2c5",
+        "scalpelMinVersion": ">=0.9.13",
+        "poeVersions": [
+          1
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/xmopi/hideout-hunter/refs/heads/main/icon.svg",
+        "homepage": "https://github.com/xmopi/hideout-hunter"
+      },
+      {
+        "id": "calculator",
+        "featured": true,
+        "name": "Calculator",
+        "author": "scalpelpoe",
+        "description": "A calculator. Like, to do math with. For currency exchange math. Or whatever else.",
+        "repo": "scalpelpoe/scalpel-calculator",
+        "latestVersion": "1.0.0",
+        "sha256": "37a85f6bf1ef363ecb6d7305366d8a43d7f6535ae12ad1571512b91e901837c6",
+        "scalpelMinVersion": ">=1.0.3-rc1",
+        "poeVersions": [
+          1,
+          2
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/scalpelpoe/scalpel-calculator/main/icon.png",
+        "screenshots": [
+          "https://raw.githubusercontent.com/scalpelpoe/scalpel-calculator/main/screenshots/currency-exchange.png"
+        ],
+        "homepage": "https://github.com/scalpelpoe/scalpel-calculator"
+      },
+      {
+        "id": "scalpel-quest-tracker",
+        "name": "Scalpel Quest Tracker",
+        "author": "eniner",
+        "description": "PoE2 campaign checklist with leveling, endgame, and crafting guides — zone follow, progress export, and Waystone-style UI.",
+        "repo": "eniner/scalpel-quest-tracker",
+        "latestVersion": "1.3.2",
+        "sha256": "f6c41768346bcc27a978c1d7133ffef11501575395bd23983caa9414b3678ab6",
+        "scalpelMinVersion": ">=0.9.16-rc1",
+        "poeVersions": [
+          2
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/eniner/scalpel-quest-tracker/main/icon.svg",
+        "homepage": "https://github.com/eniner/scalpel-quest-tracker"
+      },
+      {
+        "id": "scalpel-dps",
+        "name": "Scalpel DPS",
+        "author": "eniner",
+        "description": "PoB-style weapon compare for PoE1 and PoE2 — Ctrl+C import, attack and spell DPS, dual-slot deltas.",
+        "repo": "eniner/scalpel-dps",
+        "latestVersion": "1.3.4",
+        "sha256": "9851bdd542f48224f5948c4c10d95b9a8120478f87d64ac46d76918a7a3c6b4a",
+        "scalpelMinVersion": ">=0.9.16-rc1",
+        "poeVersions": [
+          1,
+          2
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/eniner/scalpel-dps/main/icon.svg",
+        "homepage": "https://github.com/eniner/scalpel-dps"
+      },
+      {
+        "id": "now-playing",
+        "name": "Now Playing",
+        "author": "scalpelpoe",
+        "description": "Windows Only. See and control what's playing - Spotify, YouTube, or most media players. Album art, track details, play/pause and skip.",
+        "repo": "scalpelpoe/scalpel-now-playing",
+        "latestVersion": "1.0.1",
+        "sha256": "44a55ddf53e9bb66f930500767be83a206961f78bcdbdbae24f5c0efdc5b560c",
+        "scalpelMinVersion": ">=1.0.4-rc1",
+        "poeVersions": [
+          1,
+          2
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/scalpelpoe/scalpel-now-playing/main/icon.svg",
+        "homepage": "https://github.com/scalpelpoe/scalpel-now-playing"
+      },
+      {
+        "id": "scalpel-strats",
+        "name": "Scalpel Strats",
+        "author": "eniner",
+        "description": "PoE2 Atlas farming strategies, Expedition Aldur's rumour checker, and useful links",
+        "repo": "eniner/scalpel-strats",
+        "latestVersion": "1.1.0",
+        "sha256": "5c6445869b985a419787286b61be3ff36a3087757ce729c759e0ae0275f02884",
+        "scalpelMinVersion": ">=0.9.16-rc1",
+        "poeVersions": [
+          2
+        ],
+        "iconUrl": "https://raw.githubusercontent.com/eniner/scalpel-strats/main/icon.svg",
+        "homepage": "https://github.com/eniner/scalpel-strats"
+      }
+    ]
+  },
+  "manifests": {
+    "currency-exchange": {
+      "manifestVersion": 1,
+      "id": "currency-exchange",
+      "version": "1.4.0",
+      "name": "Currency Exchange Rates",
+      "description": "Easily monitor exchange rates for currency. Pretty straightforward.",
+      "author": "scalpelpoe",
+      "homepage": "https://github.com/scalpelpoe/scalpel-currency-exchange",
+      "iconUrl": "https://raw.githubusercontent.com/scalpelpoe/scalpel-currency-exchange/main/icon.png",
+      "scalpelMinVersion": ">=0.9.13-rc3",
+      "poeVersions": [
+        1,
+        2
+      ]
+    },
+    "poe-event-log": {
+      "manifestVersion": 1,
+      "id": "poe-event-log",
+      "version": "1.0.0",
+      "name": "PoE Event Log",
+      "description": "A clean, filterable feed of in-game events (zones, levels, deaths, whispers, trade) parsed live from the PoE client log, in a pop-out overlay window.",
+      "author": "scalpelpoe",
+      "homepage": "https://github.com/scalpelpoe/poe-event-log",
+      "iconUrl": "https://raw.githubusercontent.com/scalpelpoe/poe-event-log/main/icon.png",
+      "scalpelMinVersion": ">=0.9.9"
+    },
+    "scalpel-importer": {
+      "manifestVersion": 1,
+      "id": "scalpel-importer",
+      "version": "1.0.0",
+      "name": "Scalpel Importer",
+      "description": "Import PoBs, pobb.in links, and official Path of Exile .build files directly inside Scalpel.",
+      "author": "juddisjudd",
+      "homepage": "https://github.com/juddisjudd/scalpel-importer",
+      "scalpelMinVersion": ">=0.9.9",
+      "poeVersions": [
+        1,
+        2
+      ],
+      "iconUrl": "https://raw.githubusercontent.com/juddisjudd/scalpel-importer/main/resources/icon.png"
+    },
+    "ini-editor": {
+      "manifestVersion": 1,
+      "id": "ini-editor",
+      "version": "1.0.0",
+      "name": ".ini Editor",
+      "description": "Edit your production_Config.ini. If you dare.",
+      "author": "scalpelpoe",
+      "homepage": "https://github.com/scalpelpoe/scalpel-ini-editor",
+      "scalpelMinVersion": ">=0.9.12",
+      "poeVersions": [
+        1,
+        2
+      ]
+    },
+    "plugin-examples": {
+      "manifestVersion": 1,
+      "id": "plugin-examples",
+      "version": "1.0.2",
+      "name": "Plugin Examples",
+      "description": "Showcase of every visual component the Scalpel plugin SDK ships, plus a hotkey to copy and inspect the hovered item.",
+      "author": "scalpelpoe",
+      "scalpelMinVersion": ">=0.0.0",
+      "iconUrl": "https://raw.githubusercontent.com/scalpelpoe/scalpel/main/resources/icon.png"
+    },
+    "well-tiers": {
+      "manifestVersion": 1,
+      "id": "well-tiers",
+      "version": "1.2.1",
+      "name": "Scalpel OCR",
+      "description": "OCR hotkey for Well of Souls affix tiers and Runeshape Combinations reward pricing (layout row detection + per-row masked OCR)",
+      "author": "scalpelpoe",
+      "homepage": "https://github.com/scalpelpoe/scalpel-well-tiers",
+      "scalpelMinVersion": ">=0.9.16-rc1",
+      "poeVersions": [
+        2
+      ]
+    },
+    "cluster-back": {
+      "manifestVersion": 1,
+      "id": "cluster-back",
+      "version": "1.1.1",
+      "name": "Cluster Back",
+      "description": "Large Cluster Jewel finder for PoE1. Pick some desired notables, then find and search trade for options that put a trash notable in back.",
+      "author": "scalpelpoe",
+      "homepage": "https://github.com/scalpelpoe/scalpel-cluster-back",
+      "iconUrl": "https://raw.githubusercontent.com/scalpelpoe/scalpel-cluster-back/main/icon.png",
+      "scalpelMinVersion": ">=0.9.13-rc3",
+      "poeVersions": [
+        1
+      ]
+    },
+    "map-mod-check": {
+      "manifestVersion": 1,
+      "id": "map-mod-check",
+      "version": "2.0.0",
+      "name": "Map Mod Check",
+      "description": "Hover a map, press a hotkey, and get a Good / Warn / Bad verdict beside your cursor, pre-flagged by Scalpel's map-mod danger scale.",
+      "author": "BurtonCameron",
+      "homepage": "https://github.com/BurtonCameron/Scalple-MapModCheck",
+      "scalpelMinVersion": ">=1.0.2",
+      "poeVersions": [
+        1
+      ],
+      "tabIcon": "icon.svg"
+    },
+    "hideout-hunter": {
+      "manifestVersion": 1,
+      "id": "hideout-hunter",
+      "version": "1.0.0",
+      "name": "Hideout Hunter",
+      "description": "Lets you know if a map you entered spawned a hideout.",
+      "author": "xmopi",
+      "homepage": "https://github.com/xmopi/hideout-hunter",
+      "scalpelMinVersion": "0.9.13",
+      "poeVersions": [
+        1
+      ]
+    },
+    "calculator": {
+      "manifestVersion": 1,
+      "id": "calculator",
+      "version": "1.0.0",
+      "name": "Calculator",
+      "description": "A calculator. Like, to do math with. For currency exchange math. Or whatever else.",
+      "author": "scalpelpoe",
+      "homepage": "https://github.com/scalpelpoe/scalpel-calculator",
+      "iconUrl": "https://raw.githubusercontent.com/scalpelpoe/scalpel-calculator/main/icon.png",
+      "scalpelMinVersion": ">=1.0.3-rc1",
+      "poeVersions": [
+        1,
+        2
+      ]
+    },
+    "scalpel-quest-tracker": {
+      "manifestVersion": 1,
+      "id": "scalpel-quest-tracker",
+      "version": "1.3.2",
+      "name": "Scalpel Quest Tracker",
+      "description": "PoE2 campaign checklist with Waystone UI across campaign, leveling, endgame, and crafting",
+      "author": "eniner",
+      "homepage": "https://github.com/eniner/scalpel-quest-tracker",
+      "scalpelMinVersion": ">=0.9.16-rc1",
+      "poeVersions": [
+        2
+      ]
+    },
+    "scalpel-dps": {
+      "manifestVersion": 1,
+      "id": "scalpel-dps",
+      "version": "1.3.4",
+      "name": "Scalpel DPS",
+      "description": "PoB-style weapon compare for PoE1 and PoE2 — Scalpel Ctrl+D capture, attack + spell DPS",
+      "author": "eniner",
+      "homepage": "https://github.com/eniner/scalpel-dps",
+      "scalpelMinVersion": ">=0.9.16-rc1",
+      "poeVersions": [
+        1,
+        2
+      ]
+    },
+    "now-playing": {
+      "manifestVersion": 1,
+      "id": "now-playing",
+      "version": "1.0.1",
+      "name": "Now Playing",
+      "description": "Windows Only. See and control what's playing - Spotify, YouTube, or most media players. Album art, track details, play/pause and skip.",
+      "author": "scalpelpoe",
+      "homepage": "https://github.com/scalpelpoe/scalpel-now-playing",
+      "iconUrl": "https://raw.githubusercontent.com/scalpelpoe/scalpel-now-playing/main/icon.svg",
+      "scalpelMinVersion": ">=1.0.4-rc1",
+      "poeVersions": [
+        1,
+        2
+      ]
+    },
+    "scalpel-strats": {
+      "manifestVersion": 1,
+      "id": "scalpel-strats",
+      "version": "1.1.0",
+      "name": "Scalpel Strats",
+      "description": "PoE2 Atlas farming strategies, Expedition Aldur's rumour checker, and useful links",
+      "author": "eniner",
+      "homepage": "https://github.com/eniner/scalpel-strats",
+      "scalpelMinVersion": ">=0.9.16-rc1",
+      "poeVersions": [
+        2
+      ]
+    }
+  },
+  "unreachable": {
+    "loot-tracker": "https://github.com/cccarv82/scalpel-loot-tracker/releases/download/v0.1.2/manifest.json returned 404"
+  }
+}

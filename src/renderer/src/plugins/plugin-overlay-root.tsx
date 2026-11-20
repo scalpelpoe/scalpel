@@ -38,7 +38,8 @@ export function mountPluginOverlayRoot(
   }
 
   const root = document.getElementById('root')!
-  createRoot(root).render(
+  const reactRoot = createRoot(root)
+  reactRoot.render(
     <StrictMode>
       <DiagnosticErrorBoundary source={sourceName}>
         <LocaleProvider>
@@ -47,4 +48,5 @@ export function mountPluginOverlayRoot(
       </DiagnosticErrorBoundary>
     </StrictMode>,
   )
+  window.addEventListener('beforeunload', () => reactRoot.unmount(), { once: true })
 }
