@@ -2,7 +2,7 @@ import { desktop } from './desktop'
 import { join } from 'node:path'
 import { BrowserWindow, ipcMain, screen, webContents } from 'electron'
 import { OVERLAY_WINDOW_OPTS, OverlayController } from 'electron-overlay-window'
-import { uIOhook } from 'uiohook-napi'
+import { uIOhook } from './desktop/input'
 import { startClientLogWatcher } from './client-log'
 import { guardNativeListener, registerDiagnosticProvider } from './diagnostics'
 import { setGameAttached } from './game-presence'
@@ -17,6 +17,12 @@ import {
   isInsideAnySecondaryOverlay,
 } from './windowing'
 import { getWhiteboardOverlay } from './whiteboard'
+import {
+  adoptOverlayWindow,
+  layerShellActive,
+  overlayWebPreferences,
+  setOverlayInputRects,
+} from './desktop/layer-shell'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 import { GAME_TITLES } from '@shared/contracts/game-variant'
 import { IPC_CHANNELS } from '@shared/contracts/ipc'
@@ -105,6 +111,8 @@ function windowAtPoint(x: number, y: number): BrowserWindow | null {
 }
 
 function getScaleFactor(): number {
+  // Layer-shell target bounds are logical (DIP) already.
+  if (layerShellActive()) return 1
   // Use the display the game is actually on, not the primary display.
   // Multi-monitor setups with different DPIs need the correct scale factor.
   const tb = OverlayController.targetBounds
@@ -118,11 +126,35 @@ function getScaleFactor(): number {
   return screen.getPrimaryDisplay().scaleFactor
 }
 
+/** Last reported panel rects per window under layer-shell, where they become
+ *  the window's input region. */
+const layerPanelRects = new WeakMap<
+  BrowserWindow,
+  Array<{ left: number; top: number; width: number; height: number }>
+>()
+
+/** The main overlay keeps its window mapped while its content is hidden, so
+ *  its last panel rects must not stay clickable over the game. */
+function applyLayerPanelRects(win: BrowserWindow): void {
+  const hidden = win === overlayWindow && !overlayVisible
+  setOverlayInputRects(win, hidden ? [] : (layerPanelRects.get(win) ?? []))
+}
+
 ipcMain.on('report-panel-rect', (event, payload: unknown) => {
   // Accept either a single rect (legacy) or an array of rects (main + sister etc.).
   const rects = Array.isArray(payload)
     ? (payload as Array<{ left: number; top: number; width: number; height: number }>)
     : [payload as { left: number; top: number; width: number; height: number }]
+  if (layerShellActive()) {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return
+    layerPanelRects.set(
+      win,
+      rects.filter((r) => r.width > 0 && r.height > 0),
+    )
+    applyLayerPanelRects(win)
+    return
+  }
   const tb = OverlayController.targetBounds
   if (!tb?.width) return
   const sf = getScaleFactor()
@@ -141,6 +173,13 @@ ipcMain.on('report-panel-rect', (event, payload: unknown) => {
 })
 
 ipcMain.on('clear-panel-rect', (event) => {
+  if (layerShellActive()) {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return
+    layerPanelRects.delete(win)
+    applyLayerPanelRects(win)
+    return
+  }
   const entry = panelRectsBySender.get(event.sender.id)
   panelRectsBySender.delete(event.sender.id)
   // Restore click-through on the window we just dropped rects for, in case
@@ -266,6 +305,8 @@ let hyprlandPointerTimer: ReturnType<typeof setTimeout> | null = null
 uIOhook.on(
   'mousemove',
   guardNativeListener('mousemove', function trackPointer(e) {
+    // Input regions route the pointer; uiohook never sees it over an overlay.
+    if (layerShellActive()) return
     // A dialog owns input until explicitly dismissed. Hit-test updates can lag
     // behind dragging; neither leaving a rect nor stale geometry may release it.
     if (hyprlandOverlayActive() && overlayVisible) return
@@ -323,7 +364,9 @@ uIOhook.on(
   guardNativeListener('mousedown-overlay', (e) => {
     if (!overlayVisible && !desktop.hasInteractiveDialog() && hyprlandInputAllowed()) {
       const point = hyprlandOverlayActive() ? getHyprlandPointerPhysical() : e
-      if (point && !windowAtPoint(point.x, point.y) && (OverlayController.targetHasFocus || hyprlandOverlayActive())) {
+      // uiohook only sees clicks delivered to X11 windows, never ones on a layer surface.
+      const onOverlay = !layerShellActive() && point && windowAtPoint(point.x, point.y)
+      if (point && !onOverlay && (OverlayController.targetHasFocus || hyprlandOverlayActive())) {
         if (hideOverlaysOnGameClick()) {
           setInteractiveWindow(null)
           desktop.focusGame()
@@ -334,10 +377,10 @@ uIOhook.on(
     if (!hyprlandInputAllowed()) return
     // Only process clicks if the overlay window is actually visible on screen
     if (!overlayWindow || overlayWindow.isDestroyed() || !overlayWindow.isVisible()) return
-    if (!isInsidePanel(e.x, e.y)) {
+    if (layerShellActive() || !isInsidePanel(e.x, e.y)) {
       // A click on any visible Scalpel secondary overlay (cheat sheets etc.) is
       // an interaction with our app, not a "click outside" - don't hide.
-      if (isInsideAnySecondaryOverlay(e.x, e.y)) return
+      if (!layerShellActive() && isInsideAnySecondaryOverlay(e.x, e.y)) return
       // A native <select> dropdown is open -- its option list lives outside our reported
       // panel rect, so every click on it looks like a click "outside". Bail so we don't
       // disable interactivity (click-through to PoE) or close the overlay.
@@ -402,12 +445,13 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
     // window later is too late to prevent Hyprland disrupting game fullscreen.
     ...(hyprlandOverlayActive() ? { type: 'utility' as const, title: 'Scalpel Overlay' } : {}),
     show: false,
-    webPreferences: {
+    webPreferences: overlayWebPreferences({
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       contextIsolation: true,
-    },
+    }),
   })
+  adoptOverlayWindow(overlayWindow)
   nameHyprlandOverlay(overlayWindow)
 
   if (process.env.ELECTRON_RENDERER_URL) {
@@ -683,6 +727,7 @@ export function showOverlay(): void {
     console.error('[overlay] Error in showOverlay:', err)
   }
   overlayVisibilityListener?.(true)
+  if (layerShellActive()) applyLayerPanelRects(overlayWindow)
   if (hyprlandOverlayActive()) {
     if (exitTimer) clearTimeout(exitTimer)
     exitTimer = null
@@ -713,6 +758,7 @@ export function hideOverlay(): void {
   // Tell renderer to hide its content (don't call overlayWindow.hide() -
   // OverlayController manages window visibility and would re-show it, causing flicker)
   overlayWindow.webContents.send('overlay-hide')
+  if (layerShellActive()) applyLayerPanelRects(overlayWindow)
   if (!hyprlandOverlayActive()) OverlayController.focusTarget()
   overlayVisibilityListener?.(false)
 }
@@ -722,7 +768,7 @@ export function reloadFilterInGame(): void {
   import('./hotkeys').then(({ sendReloadFilterToPoE }) => {
     sendReloadFilterToPoE()
       .then(() => {
-        if (overlayVisible && overlayWindow && mouseOverPanel) {
+        if (overlayVisible && overlayWindow && mouseOverPanel && !layerShellActive()) {
           overlayWindow.setIgnoreMouseEvents(false)
         }
       })
@@ -734,7 +780,8 @@ export function reloadFilterInGame(): void {
 export async function switchFilterInGame(filterName: string, currentFilter?: string): Promise<void> {
   const { sendItemFilterCommand } = await import('./hotkeys')
   await sendItemFilterCommand(filterName, currentFilter)
-  if (overlayVisible && overlayWindow) {
+  // Under layer-shell the panel's input region already accepts the pointer.
+  if (overlayVisible && overlayWindow && !layerShellActive()) {
     overlayWindow.setIgnoreMouseEvents(false)
     mouseOverPanel = true
   }

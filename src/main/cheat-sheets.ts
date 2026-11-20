@@ -2,6 +2,7 @@ import { desktop } from './desktop'
 import { join } from 'node:path'
 import { BrowserWindow, screen } from 'electron'
 import { OverlayController, OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
+import { adoptOverlayWindow, overlayWebPreferences } from './desktop/layer-shell'
 import {
   CHEAT_SHEET_MINIMIZED_HEIGHT,
   CHEAT_SHEET_MINIMIZED_SLACK,
@@ -362,12 +363,13 @@ function ensurePreviewWindow(): BrowserWindow {
     focusable: false,
     backgroundColor: '#00000000',
     show: false,
-    webPreferences: {
+    webPreferences: overlayWebPreferences({
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-    },
+    }),
   })
+  adoptOverlayWindow(previewWin)
   // 'screen-saver' matches the secondary overlays' level so the preview lifts
   // above PoE and the cheat-sheet grid window without fighting the taskbar.
   previewWin.setAlwaysOnTop(true, 'screen-saver')

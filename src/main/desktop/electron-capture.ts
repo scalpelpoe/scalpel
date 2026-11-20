@@ -1,6 +1,10 @@
 import { desktopCapturer, screen } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
 import type { CaptureOptions, CaptureResult, CaptureFailure } from '../screen-capture/capture'
+import { GAME_TITLES } from '@shared/contracts/game-variant'
+import { getPoeVersion } from '../game-state'
+import { matchGameWindowSource } from '../handlers/screen-source'
+import { layerShellServices } from './layer-shell-state'
 
 const MAX_CAPTURE_HEIGHT = 1080
 
@@ -50,6 +54,48 @@ export async function captureElectronGame(opts?: CaptureOptions): Promise<Captur
     // width. Single scalar; assumes a proportional thumbnail (tpdX == tpdY).
     const scale = w / gameSize.width
     return { frame: { data: out, width: w, height: h, gameSize, scale } }
+  } catch (err) {
+    if (process.env.SCALPEL_DEBUG_LOG) console.error('[screen-capture] capture failed', err)
+    return fail('error')
+  }
+}
+
+/** Captures the game's area of the screen through the compositor
+ *  (wlr-screencopy), or through the screen-cast portal where that is missing.
+ *  Like the Hyprland capture, compositor captures include visible overlays. */
+export async function captureLayerShellGame(opts?: CaptureOptions): Promise<CaptureResult> {
+  if (!opts?.skipFocusGate && !OverlayController.targetHasFocus) return fail('focus')
+  const tb = OverlayController.targetBounds
+  if (!tb?.width || !tb.height) return fail('bounds')
+  const native = layerShellServices()?.native
+  if (native?.canCapture()) {
+    const shot = await native.capture({ x: tb.x, y: tb.y, width: tb.width, height: tb.height })
+    if (!shot) return fail('error')
+    const gameSize = { width: tb.width, height: tb.height }
+    return {
+      frame: { data: shot.data, width: shot.width, height: shot.height, gameSize, scale: shot.width / tb.width },
+    }
+  }
+
+  try {
+    const display = screen.getDisplayNearestPoint({ x: tb.x + tb.width / 2, y: tb.y + tb.height / 2 })
+    const capScale = Math.min(1, MAX_CAPTURE_HEIGHT / (tb.height * display.scaleFactor))
+    const sources = await desktopCapturer.getSources({
+      types: ['window'],
+      thumbnailSize: {
+        width: Math.round(tb.width * display.scaleFactor * capScale),
+        height: Math.round(tb.height * display.scaleFactor * capScale),
+      },
+    })
+    const sourceId = matchGameWindowSource(sources, GAME_TITLES[getPoeVersion()])
+    const source = sources.find((s) => s.id === sourceId)
+    if (!source) return fail('no-source')
+
+    const img = source.thumbnail
+    const { width, height } = img.getSize()
+    if (width === 0 || height === 0) return fail('empty-frame')
+    const gameSize = { width: tb.width, height: tb.height }
+    return { frame: { data: img.toBitmap(), width, height, gameSize, scale: width / gameSize.width } }
   } catch (err) {
     if (process.env.SCALPEL_DEBUG_LOG) console.error('[screen-capture] capture failed', err)
     return fail('error')

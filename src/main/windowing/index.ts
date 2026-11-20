@@ -1,7 +1,7 @@
 import { desktop, type OverlayInteraction } from '../desktop'
 import { app, type BrowserWindow, screen } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
-import { uIOhook } from 'uiohook-napi'
+import { uIOhook } from '../desktop/input'
 import { gameDipBounds } from './geometry'
 import { guardNativeListener } from '../diagnostics'
 import { hideAllOnPoeBlur, isAnyScalpelWindowFocused } from './focus'
@@ -11,6 +11,7 @@ import { type FlushEdges, nearestMountTarget } from './snap-mounts'
 import { fireOnLeaveScalpel, type OverlayState, overlays } from './state'
 import { createOverlayWindow } from './window'
 import { trackLinuxBounds } from './linux-bounds'
+import { layerShellActive } from '../desktop/layer-shell-state'
 
 export type { OverlayAnchor } from '@shared/types'
 export {
@@ -522,6 +523,17 @@ function wireWindowEvents(state: OverlayState, win: BrowserWindow): void {
     win.hide()
     state.wasVisibleBeforeFocusLoss = false
   })
+  if (layerShellActive()) {
+    // uiohook never sees presses on layer surfaces; the layer window reports
+    // its own drags instead.
+    win.on('will-move', () => {
+      leftMouseHeld = true
+      cancelSnapGhostSafetyClear()
+    })
+    win.on('moved', () => {
+      leftMouseHeld = false
+    })
+  }
   win.on('move', () => {
     if (state.inProgrammaticMove) return
     maybeUpdateSnap(state)

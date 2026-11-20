@@ -65,6 +65,8 @@ const mock = vi.hoisted(() => {
     stop: vi.fn(),
     keyToggle: vi.fn(),
     keyTap: vi.fn(),
+    seesInjectedKeys: () => true,
+    physicallyHeld: () => null,
   }
   const trigger = vi.fn()
   // Stateful: a chat paste refuses to inject until it can read its own command
@@ -112,6 +114,8 @@ vi.mock('electron-overlay-window', () => ({
   },
 }))
 
+// The code under test reaches uiohook through the session input facade.
+vi.mock('./desktop/input', async () => ({ uIOhook: (await import('uiohook-napi')).uIOhook }))
 vi.mock('uiohook-napi', () => ({
   UiohookKey: mock.keycodes,
   uIOhook: mock.uIOhook,
