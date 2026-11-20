@@ -5,90 +5,68 @@ type TimelessItemInfo = {
   baseType?: string
 }
 
+// Every leader that indexes as explicit.pseudo_timeless_jewel_<name> on PoE1 trade,
+// grouped by jewel. Sourced from the live /api/trade/data/stats catalog (3.30).
+// The "Any Leader" chip searches the whole family, so this table - not the item
+// text - is the source of truth: the advanced copy's "(min-max)" leader hints
+// don't list every leader and aren't guaranteed to be valid trade ids.
+const TIMELESS_FAMILIES: string[][] = [
+  ['Kaom', 'Rakiata', 'Kiloava', 'Akoya'], // Lethal Pride
+  ['Asenath', 'Nasima', 'Balbala', 'Deshret'], // Brutal Restraint
+  ['Dominus', 'Avarius', 'Maxarius', 'Venarius'], // Militant Faith
+  ['Cadiro', 'Victario', 'Caspiro', 'Chitus'], // Elegant Hubris
+  ['Doryani', 'Xibaqua', 'Ahuana', 'Zerphi'], // Glorious Vanity
+  ['Medved', 'Vorana', 'Uhtred'], // Heroic Tragedy
+  ['Amanamu', 'Ulaman', 'Kurgal', 'Tecrod'], // "Subjugating # souls in the thrall of"
+  ['Zorath'], // "Binding # souls to phylacteries to sustain"
+]
+
+const FAMILY_BY_LEADER = new Map<string, string[]>(
+  TIMELESS_FAMILIES.flatMap((family) => family.map((leader) => [leader.toLowerCase(), family] as const)),
+)
+
+// Seed lines all end with the leader's name, optionally followed by the advanced
+// copy's "(min-max)" hint: "...in the akhara of Nasima(Asenath-Balbala)".
+const SEED_LINE = /(\d+)\D*?\b([A-Za-z]+)(?:\([^)]*\))?\s*$/
+
+function parseSeedLine(line: string): { seed: number; leader: string } | null {
+  // Drop "(500-8000)" style range hints so the seed is the first bare number.
+  const seedMatch = line.replace(/\(\d+-\d+\)/g, '').match(/\b(\d+)\b/)
+  const leaderMatch = line.match(SEED_LINE)
+  if (!seedMatch || !leaderMatch) return null
+  const leader = leaderMatch[2]
+  if (!FAMILY_BY_LEADER.has(leader.toLowerCase())) return null
+  return { seed: parseInt(seedMatch[1], 10), leader }
+}
+
+const statId = (leader: string): string => `explicit.pseudo_timeless_jewel_${leader.toLowerCase()}`
+
 // Timeless jewel handling: two toggleable chips - "Any Leader" and specific leader
 export function buildTimelessFilters(
   itemInfo: TimelessItemInfo | undefined,
   advancedMods: AdvancedMod[] | undefined,
   explicits: string[],
 ): StatFilter[] {
-  const out: StatFilter[] = []
+  if (itemInfo?.baseType !== 'Timeless Jewel') return []
 
-  if (itemInfo?.baseType !== 'Timeless Jewel') return out
-
-  let seed: number | null = null
-  let currentLeader: string | null = null
-  let allLeaders: string[] = []
-
-  if (advancedMods) {
-    // Advanced mod format: "Carved to glorify 5972(2000-10000) new faithful converted by High Templar Dominus(Avarius-Maxarius)"
-    const timelessMod = advancedMods.find((am) => am.lines.some((l) => /Passives in radius are Conquered/i.test(l)))
-    if (timelessMod) {
-      const leaderLine = timelessMod.lines.find((l) => /\d/.test(l))
-      if (leaderLine) {
-        const seedMatch = leaderLine.match(/(\d+)\(\d+-\d+\)/)
-        seed = seedMatch ? parseInt(seedMatch[1], 10) : null
-        const leaderMatch = leaderLine.match(/(\w+)\(([^)]+)\)\s*$/)
-        if (leaderMatch) {
-          currentLeader = leaderMatch[1]
-          const alternatives = leaderMatch[2].split('-')
-          allLeaders = [...new Set([currentLeader, ...alternatives])]
-        }
-      }
-    }
+  const candidates = [...(advancedMods ?? []).flatMap((am) => am.lines), ...explicits].filter(
+    (l) => /\d/.test(l) && !/Passives in radius are Conquered/i.test(l),
+  )
+  let parsed: { seed: number; leader: string } | null = null
+  for (const line of candidates) {
+    parsed = parseSeedLine(line)
+    if (parsed) break
   }
+  if (!parsed) return []
 
-  if (!seed) {
-    // Plain text format (Ctrl+C): "Remembrancing 2724 songworthy deeds by the line of Medved"
-    const remembrancingLine = explicits.find((l) => /^Remembrancing/i.test(l))
-    if (remembrancingLine) {
-      const seedMatch = remembrancingLine.match(/Remembrancing (\d+)/)
-      seed = seedMatch ? parseInt(seedMatch[1], 10) : null
-      const leaderMatch = remembrancingLine.match(/by the line of (\w+)/i)
-      if (leaderMatch) {
-        currentLeader = leaderMatch[1]
-        allLeaders = ['Medved', 'Vorana', 'Uhtred']
-      }
-    }
-  }
+  const { seed, leader } = parsed
+  const family = FAMILY_BY_LEADER.get(leader.toLowerCase())!
+  const canonical = family.find((l) => l.toLowerCase() === leader.toLowerCase())!
+  const ordered = [canonical, ...family.filter((l) => l !== canonical)]
 
-  if (!seed) {
-    // Plain text format for other timeless jewels: "Bathed 7421 tips of fingers and toes in the Precursor's blood by Doryani"
-    const seedLine = explicits.find((l) => /Commanded|Commissioned|Carved|Bathed|Denoted/i.test(l))
-    if (seedLine) {
-      const seedMatch = seedLine.match(/\b(\d{4,5})\b/)
-      seed = seedMatch ? parseInt(seedMatch[1], 10) : null
-      const leaderMatch = seedLine.match(/by (?:High Templar |Victorious |)(\w+)\s*$/i)
-      if (leaderMatch) {
-        currentLeader = leaderMatch[1]
-        // Determine alternatives based on known timeless jewel families
-        const timelessFamilies: Record<string, string[]> = {
-          Dominus: ['Dominus', 'Avarius', 'Maxarius'],
-          Avarius: ['Dominus', 'Avarius', 'Maxarius'],
-          Maxarius: ['Dominus', 'Avarius', 'Maxarius'],
-          Doryani: ['Doryani', 'Xibaqua', 'Ahuana'],
-          Xibaqua: ['Doryani', 'Xibaqua', 'Ahuana'],
-          Ahuana: ['Doryani', 'Xibaqua', 'Ahuana'],
-          Asenath: ['Asenath', 'Balbala', 'Nasima'],
-          Balbala: ['Asenath', 'Balbala', 'Nasima'],
-          Nasima: ['Asenath', 'Balbala', 'Nasima'],
-          Cadiro: ['Cadiro', 'Victario', 'Caspiro'],
-          Victario: ['Cadiro', 'Victario', 'Caspiro'],
-          Caspiro: ['Cadiro', 'Victario', 'Caspiro'],
-          Kaom: ['Kaom', 'Rakiata', 'Kiloava'],
-          Rakiata: ['Kaom', 'Rakiata', 'Kiloava'],
-          Kiloava: ['Kaom', 'Rakiata', 'Kiloava'],
-        }
-        allLeaders = timelessFamilies[currentLeader] ?? [currentLeader]
-      }
-    }
-  }
-
-  if (seed && currentLeader && allLeaders.length > 0) {
-    const allStatIds = allLeaders.map((l) => `explicit.pseudo_timeless_jewel_${l.toLowerCase()}`)
-    const currentStatId = `explicit.pseudo_timeless_jewel_${currentLeader.toLowerCase()}`
-
+  return [
     // "Any Leader" chip (default on) - uses count group with all leaders
-    out.push({
+    {
       id: 'timeless-any',
       text: `${seed} Any Leader`,
       value: seed,
@@ -96,19 +74,17 @@ export function buildTimelessFilters(
       max: seed,
       enabled: true,
       type: 'timeless',
-      timelessLeaders: allStatIds,
-    })
+      timelessLeaders: ordered.map(statId),
+    },
     // Specific leader chip (default off) - searches only this leader
-    out.push({
-      id: currentStatId,
-      text: `${seed} ${currentLeader}`,
+    {
+      id: statId(canonical),
+      text: `${seed} ${canonical}`,
       value: seed,
       min: seed,
       max: seed,
       enabled: false,
       type: 'timeless',
-    })
-  }
-
-  return out
+    },
+  ]
 }

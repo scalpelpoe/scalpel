@@ -1830,6 +1830,7 @@ describe('matchItemMods', () => {
         'explicit.pseudo_timeless_jewel_doryani',
         'explicit.pseudo_timeless_jewel_xibaqua',
         'explicit.pseudo_timeless_jewel_ahuana',
+        'explicit.pseudo_timeless_jewel_zerphi',
       ])
     })
 
@@ -1866,6 +1867,56 @@ describe('matchItemMods', () => {
         'explicit.pseudo_timeless_jewel_dominus',
         'explicit.pseudo_timeless_jewel_avarius',
         'explicit.pseudo_timeless_jewel_maxarius',
+        'explicit.pseudo_timeless_jewel_venarius',
+      ])
+    })
+
+    it('generates Brutal Restraint chips from plain text ("in the akhara of")', () => {
+      const filters = matchItemMods(
+        ['Denoted service of 3769 dekhara in the akhara of Nasima', 'Passives in radius are Conquered by the Maraketh'],
+        [],
+        undefined,
+        makeItemInfo({ baseType: 'Timeless Jewel', itemClass: 'Jewels', sockets: '' }),
+      )
+      const anyLeader = filters.find((f) => f.id === 'timeless-any')!
+      expect(anyLeader.text).toBe('3769 Any Leader')
+      expect(anyLeader.timelessLeaders).toEqual([
+        'explicit.pseudo_timeless_jewel_nasima',
+        'explicit.pseudo_timeless_jewel_asenath',
+        'explicit.pseudo_timeless_jewel_balbala',
+        'explicit.pseudo_timeless_jewel_deshret',
+      ])
+      expect(filters.find((f) => f.id === 'explicit.pseudo_timeless_jewel_nasima')?.text).toBe('3769 Nasima')
+    })
+
+    it('ignores the advanced leader hint and only emits known trade ids', () => {
+      const advancedMods: AdvancedMod[] = [
+        {
+          type: 'prefix',
+          name: 'Timeless',
+          tier: 1,
+          tags: [],
+          lines: [
+            'Denoted service of 3769(500-8000) dekhara in the akhara of Nasima(1-4)',
+            'Passives in radius are Conquered by the Maraketh',
+          ],
+          ranges: [{ value: 3769, min: 500, max: 8000 }],
+        },
+      ]
+      const filters = matchItemMods(
+        ['Denoted service of 3769 dekhara in the akhara of Nasima', 'Passives in radius are Conquered by the Maraketh'],
+        [],
+        undefined,
+        makeItemInfo({ baseType: 'Timeless Jewel', itemClass: 'Jewels', sockets: '' }),
+        advancedMods,
+      )
+      const anyLeader = filters.find((f) => f.id === 'timeless-any')!
+      expect(anyLeader.value).toBe(3769)
+      expect(anyLeader.timelessLeaders).toEqual([
+        'explicit.pseudo_timeless_jewel_nasima',
+        'explicit.pseudo_timeless_jewel_asenath',
+        'explicit.pseudo_timeless_jewel_balbala',
+        'explicit.pseudo_timeless_jewel_deshret',
       ])
     })
 
