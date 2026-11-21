@@ -10,7 +10,9 @@ import {
 } from '../hyprland'
 import { captureHyprlandGame } from '../screen-capture/hyprland-capture'
 import type { CaptureOptions, CaptureResult } from '../screen-capture/capture'
-import { captureElectronGame } from './electron-capture'
+import { captureElectronGame, captureLayerShellGame } from './electron-capture'
+import { lastPointer, refreshPointer } from './input'
+import { layerShellActive, layerShellServices } from './layer-shell-state'
 import { warpWindowsCursorTo } from './windows-pointer'
 
 export type OverlayInteraction = 'dialog' | 'panel' | 'passthrough'
@@ -23,6 +25,8 @@ export function getGameBounds(win: BrowserWindow | null = null): Electron.Rectan
   if (hyprlandOverlayActive()) return getHyprlandGameBounds()
   const tb = OverlayController.targetBounds
   if (!tb || tb.width <= 0 || tb.height <= 0) return null
+  // The layer-shell tracker reports logical (DIP) coordinates.
+  if (layerShellActive()) return { x: tb.x, y: tb.y, width: tb.width, height: tb.height }
   if (process.platform === 'win32') return screen.screenToDipRect(win, tb)
   if (process.platform !== 'linux') return { x: tb.x, y: tb.y, width: tb.width, height: tb.height }
   // Electron 32 exposes neither screenToDipPoint nor screenToDipRect on Linux.
@@ -46,8 +50,14 @@ export const desktop = {
   hasInteractiveDialog(): boolean {
     return !!activeDialog && !activeDialog.isDestroyed() && activeDialog.isVisible()
   },
+  /** Updates the position getCursorScreenPoint returns under layer-shell,
+   *  where only the compositor knows it. Await before reading it. */
+  async refreshCursor(): Promise<void> {
+    if (layerShellActive()) await refreshPointer()
+  },
   getCursorScreenPoint(): Electron.Point | null {
     try {
+      if (layerShellActive()) return lastPointer()
       return hyprlandOverlayActive() ? getHyprlandCursorDip() : screen.getCursorScreenPoint()
     } catch {
       return null
@@ -55,10 +65,12 @@ export const desktop = {
   },
   warpCursorTo(point: Electron.Point): void {
     if (![point.x, point.y].every(Number.isFinite)) return
-    if (hyprlandOverlayActive()) warpHyprlandCursor(point)
+    if (layerShellActive()) layerShellServices()?.native.warpPointer(point)
+    else if (hyprlandOverlayActive()) warpHyprlandCursor(point)
     else warpWindowsCursorTo(point)
   },
   captureGame(opts?: CaptureOptions): Promise<CaptureResult> {
+    if (layerShellActive()) return captureLayerShellGame(opts)
     return hyprlandOverlayActive() ? captureHyprlandGame(opts) : captureElectronGame(opts)
   },
   focusOverlay(win: BrowserWindow): void {

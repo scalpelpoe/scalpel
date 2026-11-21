@@ -1,4 +1,4 @@
-import { clipboard } from 'electron'
+import { clipboard } from '../desktop/clipboard'
 import { getItemClasses } from '@shared/data/items/item-classes'
 import { MERCENARY_WARRANT_BASE_TYPE } from '@shared/data/trade/mercenary-warrants'
 import { vaalGemType } from '@shared/data/trade/vaal-gems'
