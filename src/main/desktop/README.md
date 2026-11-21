@@ -14,7 +14,9 @@ pixel dimensions and `scale` for conversion into those game coordinates.
   offscreen into layer surfaces (`layer-shell.ts`). Game bounds are the logical
   bounds of the game's output, so the game must be fullscreen or borderless
   fullscreen. Panel rects become input regions instead of uiohook hit tests.
-  Nothing goes through XWayland, so the game may run on XWayland or natively:
+  Nothing goes through XWayland. The game may run on XWayland, but items it
+  copies may not reach the data-control clipboard (seen with
+  xwayland-satellite), so a native game is preferred:
   - `input.ts` keeps uiohook's API but reads keys, buttons and the wheel from
     evdev (the user needs read access to `/dev/input`, usually the `input`
     group) while the game has focus, and types with a Wayland virtual keyboard.

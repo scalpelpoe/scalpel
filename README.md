@@ -31,6 +31,20 @@ See [PLUGINS.md](PLUGINS.md) for information on how to build a plugin. Please jo
 
 - Windows 10+, Linux
 
+### Linux on Wayland
+
+On compositors with wlr-layer-shell and a virtual keyboard (Hyprland, niri,
+Sway and other wlroots compositors), Scalpel runs as a native Wayland client.
+It reads hotkeys from `/dev/input`, so your user must be in the `input` group
+(`sudo usermod -aG input $USER`, then log in again). On GNOME and KDE it runs
+through XWayland.
+
+Run PoE as a native Wayland client too: items copied in PoE under XWayland may
+not reach Scalpel. GE-Proton does this with `PROTON_ENABLE_WAYLAND=1` in the
+launch options; Valve's Proton ignores it. If the game then crashes with
+`error: 4` or `Cannot create thread`, add `PROTON_NO_NTSYNC=1` or raise the
+open files limit.
+
 ## Official Releases
 
 Pre-built releases are available on the [Releases](https://github.com/scalpelpoe/scalpel/releases) page.
