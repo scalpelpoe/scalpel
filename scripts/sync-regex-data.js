@@ -4,7 +4,8 @@
  *
  * Fetches generated data files from their GitHub repo and saves them locally.
  * Run manually: npm run sync-regex
- * Not part of `npm run dev`: upstream moved to veiset/poe.re and restructured, so these paths 404.
+ * Not part of `npm run dev`: upstream moved to veiset/poe.re and restructured, so the FILES paths 404.
+ * Map mods are the exception: they sync from poe.re's JSON (see syncMapMods).
  */
 
 const https = require('node:https')
@@ -18,17 +19,25 @@ const BASE_URL = `https://raw.githubusercontent.com/${REPO}/${BRANCH}/src/genera
 const OUTPUT_DIR = path.join(__dirname, '..', 'src', 'shared', 'data', 'regex', 'vendor')
 const META_FILE = path.join(OUTPUT_DIR, '.sync-meta.json')
 
+// Map mods moved to veiset/poe.re as JSON. Fetched from there and rendered back into
+// the Generated.MapModsV3.<LANG>.ts shape the renderer imports.
+const MAPMODS_REPO = 'veiset/poe.re'
+const MAPMODS_BRANCH = 'master'
+const MAPMODS_PATH = 'poe/generated/mapmods'
+const MAPMODS_LANGUAGES = [
+  'CHINESE',
+  'ENGLISH',
+  'FRENCH',
+  'GERMAN',
+  'JAPANESE',
+  'KOREAN',
+  'PORTUGUESE',
+  'RUSSIAN',
+  'SPANISH',
+  'THAI',
+]
+
 const FILES = [
-  'mapmods/Generated.MapModsV3.CHINESE.ts',
-  'mapmods/Generated.MapModsV3.ENGLISH.ts',
-  'mapmods/Generated.MapModsV3.FRENCH.ts',
-  'mapmods/Generated.MapModsV3.GERMAN.ts',
-  'mapmods/Generated.MapModsV3.JAPANESE.ts',
-  'mapmods/Generated.MapModsV3.KOREAN.ts',
-  'mapmods/Generated.MapModsV3.PORTUGUESE.ts',
-  'mapmods/Generated.MapModsV3.RUSSIAN.ts',
-  'mapmods/Generated.MapModsV3.SPANISH.ts',
-  'mapmods/Generated.MapModsV3.THAI.ts',
   'mapmods/GeneratedTypes.ts',
   // Re-mapped on save: upstream stores it in src/generated/, we put it under flaskmods/.
   { from: 'GeneratedFlaskMods.ts', to: 'flaskmods/GeneratedFlaskMods.ts' },
@@ -73,11 +82,63 @@ function fetch(url) {
   })
 }
 
-async function getLatestCommit() {
-  const url = `https://api.github.com/repos/${REPO}/commits?path=src/generated&per_page=1`
+async function getLatestCommit(repo = REPO, dir = 'src/generated') {
+  const url = `https://api.github.com/repos/${repo}/commits?path=${dir}&per_page=1`
   const data = await fetch(url)
   const commits = JSON.parse(data)
   return commits[0]?.sha ?? null
+}
+
+const str = (s) => JSON.stringify(s)
+
+/** Render poe.re's Generated.Map.<LANG>.json in the old Generated.MapModsV3 TS layout. */
+function renderMapMods(language, json) {
+  const tokens = json.tokens.map((t) => {
+    const o = t.options
+    const rewards = o.rewards?.length ? `, rewards: [${o.rewards.map(str).join(', ')}]` : ''
+    return `    {id: ${t.id}, regex: ${str(t.regex)}, rawText: ${str(t.rawText)}, generalizedText: ${str(t.generalizedText)}, options: {scary: ${o.scary}, nm: ${o.nm}, prefix: ${o.prefix}${rewards}}},`
+  })
+  const optimizations = Object.entries(json.optimizationTable).map(
+    ([key, v]) =>
+      `    ${str(key)}: {ids: [${v.ids.join(', ')}], regex: ${str(v.regex)}, weight: ${v.weight}, count: ${v.count}},`,
+  )
+  return [
+    `// Data sourced from poe.re (https://github.com/${MAPMODS_REPO})`,
+    '// Used with permission. All credit to veiset and contributors.',
+    '// @formatter:off',
+    'import {Regex, MapModsTokenOption} from "./GeneratedTypes";',
+    '',
+    `export const regexMapMods${language}: Regex<MapModsTokenOption> = {`,
+    '  tokens: [',
+    ...tokens,
+    '  ],',
+    '  optimizationTable: {',
+    ...optimizations,
+    '  },',
+    '}',
+    '',
+  ].join('\n')
+}
+
+async function syncMapMods() {
+  let updated = 0
+  for (const language of MAPMODS_LANGUAGES) {
+    const url = `https://raw.githubusercontent.com/${MAPMODS_REPO}/${MAPMODS_BRANCH}/${MAPMODS_PATH}/Generated.Map.${language}.json`
+    const toPath = `mapmods/Generated.MapModsV3.${language}.ts`
+    try {
+      const content = renderMapMods(language, JSON.parse(await fetch(url)))
+      const outputPath = path.join(OUTPUT_DIR, toPath)
+      const existing = fs.existsSync(outputPath) ? fs.readFileSync(outputPath, 'utf-8') : null
+      if (existing !== content) {
+        fs.writeFileSync(outputPath, content)
+        updated++
+        console.log(`[sync-regex]   Updated ${toPath}`)
+      }
+    } catch (err) {
+      console.warn(`[sync-regex]   Failed to fetch map mods ${language}: ${err.message}`)
+    }
+  }
+  return updated
 }
 
 async function sync() {
@@ -91,18 +152,23 @@ async function sync() {
     } catch {}
   }
 
+  if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true })
+
+  const mapModsCommit = await getLatestCommit(MAPMODS_REPO, MAPMODS_PATH).catch(() => null)
+  const mapModsUpdated = await syncMapMods()
+  if (mapModsUpdated > 0) {
+    meta = { ...meta, mapModsCommit, mapModsRepo: MAPMODS_REPO, mapModsTimestamp: new Date().toISOString() }
+    fs.writeFileSync(META_FILE, JSON.stringify(meta, null, 2))
+    console.log(`[sync-regex] Updated ${mapModsUpdated} map mod file(s) from ${MAPMODS_REPO}.`)
+  }
+
   const latestCommit = await getLatestCommit()
   if (latestCommit && latestCommit === meta.commit) {
     console.log('[sync-regex] Data is up to date.')
-    return false
+    return mapModsUpdated > 0
   }
 
   console.log(`[sync-regex] Syncing from ${REPO} (${latestCommit?.slice(0, 7) ?? 'unknown'})...`)
-
-  // Ensure output directory exists
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true })
-  }
 
   // Download files. Entries can be a plain path (same path upstream and locally) or
   // { from, to } when the upstream layout differs from where we store it.
@@ -138,6 +204,7 @@ async function sync() {
       META_FILE,
       JSON.stringify(
         {
+          ...meta,
           commit: latestCommit,
           timestamp: new Date().toISOString(),
           repo: REPO,
@@ -150,7 +217,7 @@ async function sync() {
   } else {
     console.log('[sync-regex] All files already current.')
   }
-  return updated > 0
+  return updated + mapModsUpdated > 0
 }
 
 sync().catch((err) => {

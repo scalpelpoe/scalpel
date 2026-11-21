@@ -28,7 +28,7 @@ describe('generatePresetTags', () => {
     const tags = generatePresetTags({ avoid: new Set(), want: new Set(), qualifiers: { quantity: 70 } })
     expect(tags).toHaveLength(1)
     expect(tags[0]).toMatchObject({
-      text: '70 quant',
+      text: '70 atlas',
       source: 'qualifier',
       sourceId: 'quantity',
     })

@@ -1,5 +1,8 @@
 {
   "commit": "b4d15bda50008874a66ae47f919e73828ac2a35f",
   "timestamp": "2026-08-19T13:16:58.666Z",
-  "repo": "veiset/poe-vendor-string"
+  "repo": "veiset/poe-vendor-string",
+  "mapModsCommit": "e96b4955cfde0175fd2d3dab3f664b0aff70aed9",
+  "mapModsRepo": "veiset/poe.re",
+  "mapModsTimestamp": "2026-11-21T01:56:09.609Z"
 }

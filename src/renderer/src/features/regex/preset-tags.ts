@@ -132,10 +132,10 @@ const MOD_TAG_NAMES: Record<number, string> = {
 
 /** Short display names for qualifier IDs */
 const QUALIFIER_TAG_NAMES: Record<string, string> = {
-  quantity: 'quant',
+  quantity: 'atlas',
   packsize: 'pack',
   morecurrency: '+currency',
-  morescarabs: '+scarabs',
+  morescarabs: '+threads',
   moremaps: '+maps',
   rarity: 'rarity',
   quality: 'qual',
@@ -143,7 +143,7 @@ const QUALIFIER_TAG_NAMES: Record<string, string> = {
   quality_rarity: 'mq-rarity',
   quality_currency: 'mq-curr',
   quality_divination: 'mq-divs',
-  quality_scarab: 'mq-scarabs',
+  quality_scarab: 'mq-threads',
 }
 
 /** Build a mod ID -> short tag lookup */
