@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { SCRYING_ORB_AREAS, SCRYING_ORB_DISCRIMINATOR } from './scrying-orbs'
 
 describe('SCRYING_ORB_AREAS', () => {
-  it('covers all 100 map areas the trade API indexes', () => {
-    expect(Object.keys(SCRYING_ORB_AREAS)).toHaveLength(100)
+  it('covers all 131 map areas the trade API indexes (3.30 atlas)', () => {
+    expect(Object.keys(SCRYING_ORB_AREAS)).toHaveLength(131)
   })
 
   it('maps an area to its opaque trade option id', () => {
@@ -16,6 +16,12 @@ describe('SCRYING_ORB_AREAS', () => {
     expect(SCRYING_ORB_AREAS['Primordial Blocks']).toBe('15595')
     expect(SCRYING_ORB_AREAS['Haunted Mansion']).toBe('1215')
     expect(SCRYING_ORB_AREAS['Vaal Pyramid']).toBe('28018')
+  })
+
+  it('includes areas added by the 3.30 atlas rotation (#652)', () => {
+    expect(SCRYING_ORB_AREAS['Castle Ruins']).toBe('36357')
+    expect(SCRYING_ORB_AREAS.Barrows).toBe('49687')
+    expect(SCRYING_ORB_AREAS['Defiled Cathedral']).toBe('47897')
   })
 
   it('gives every area a distinct id', () => {
