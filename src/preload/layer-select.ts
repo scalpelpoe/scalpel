@@ -85,7 +85,7 @@ function open(select: HTMLSelectElement): void {
   host = document.createElement('div')
   const root = host.attachShadow({ mode: 'open' })
   const sheet = document.createElement('style')
-  sheet.textContent = `
+  sheet.textContent = `${pageScrollbarRules()}
     .list { position: fixed; z-index: 2147483647; overflow-y: auto; box-sizing: border-box;
       min-width: ${bounds.width}px; max-width: calc(100vw - ${MARGIN * 2}px);
       font: ${style.font}; color: ${optionStyle.color};
@@ -160,6 +160,23 @@ function open(select: HTMLSelectElement): void {
 }
 
 const FALLBACK_BACKGROUND = '#23232e'
+
+/** The page's global scrollbar rules, which do not cross into the popup's shadow root. */
+function pageScrollbarRules(): string {
+  const rules: string[] = []
+  for (const sheet of Array.from(document.styleSheets)) {
+    let list: CSSRuleList
+    try {
+      list = sheet.cssRules
+    } catch {
+      continue // cross-origin sheet
+    }
+    for (const rule of Array.from(list)) {
+      if (rule instanceof CSSStyleRule && rule.selectorText.startsWith('::-webkit-scrollbar')) rules.push(rule.cssText)
+    }
+  }
+  return rules.join('\n')
+}
 
 /** A translucent background would leave the popup see-through. */
 function opaque(color: string, fallback: string): string {

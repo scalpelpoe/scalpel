@@ -101,3 +101,17 @@ describe('layer-shell select popups', () => {
     expect(select.value).toBe('b')
   })
 })
+
+describe('layer-shell select popup styling', () => {
+  it('carries the page scrollbar rules into the popup', async () => {
+    const { select, press } = await setup()
+    const style = document.createElement('style')
+    style.textContent = '::-webkit-scrollbar-thumb { border-radius: 3px; } .other { color: red; }'
+    document.head.append(style)
+    press(select)
+    const sheet = document.documentElement.lastElementChild?.shadowRoot?.querySelector('style')?.textContent ?? ''
+    style.remove()
+    expect(sheet).toContain('::-webkit-scrollbar-thumb')
+    expect(sheet).not.toContain('.other')
+  })
+})
