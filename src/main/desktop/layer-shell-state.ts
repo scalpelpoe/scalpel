@@ -13,6 +13,7 @@ export interface LayerShellServices {
     write(data: { text?: string; html?: string }): void
     clear(): void
   }
+  gameHasKeyboardFocus?: () => boolean
   globalShortcut: Pick<Electron.GlobalShortcut, 'register' | 'unregister' | 'unregisterAll' | 'isRegistered'>
   /** Input, pointer and capture for the game, all through the compositor or
    *  evdev, never XWayland. */

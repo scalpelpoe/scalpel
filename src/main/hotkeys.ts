@@ -4,6 +4,7 @@ import { globalShortcut } from './desktop/global-shortcut'
 import { OverlayController } from 'electron-overlay-window'
 import { UiohookKey } from 'uiohook-napi'
 import { uIOhook } from './desktop/input'
+import { layerShellServices } from './desktop/layer-shell-state'
 import { appMacroEffectiveScope, chatCommandEffectiveScope, type MacroScope, scopeAppliesTo } from '@shared/macro-scope'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 import { snapshotClipboard } from './clipboard-preserve'
@@ -713,12 +714,13 @@ const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms)
  *  hotkey (see hotkeyContextIsActive). */
 async function awaitGameFocus(): Promise<void> {
   if (!hyprlandInputAllowed()) throw new Error('Game workspace is inactive - input not sent')
-  if (OverlayController.targetHasFocus) return
+  const hasFocus = layerShellServices()?.gameHasKeyboardFocus ?? (() => OverlayController.targetHasFocus)
+  if (hasFocus()) return
   focusGameWindow()
   for (let waited = 0; waited < FOCUS_WAIT_MS; waited += FOCUS_POLL_MS) {
     await wait(FOCUS_POLL_MS)
     if (!hyprlandInputAllowed()) throw new Error('Game workspace is inactive - input not sent')
-    if (OverlayController.targetHasFocus) return
+    if (hasFocus()) return
   }
   throw new Error('PoE did not take focus - chat command not sent')
 }
@@ -1078,6 +1080,7 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
  */
 export async function sendCtrlCToPoE(opts?: { withAlt?: boolean }): Promise<void> {
   if (!hyprlandInputAllowed()) return
+  if (layerShellServices()?.gameHasKeyboardFocus) await awaitGameFocus()
   injecting = true
   const restoreCKeyedRegistrations = releaseCKeyedRegistrationsForInjection()
 

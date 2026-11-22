@@ -1,43 +1,59 @@
 import type { HostFeatures } from 'electron-overlay-window'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { waylandLayerShellSupported } from './layer-shell'
 
-const host = vi.hoisted(() => {
-  const state: { features: HostFeatures | null } = { features: null }
-  return state
-})
+const host = vi.hoisted(() => ({
+  features: null as HostFeatures | null,
+  kwin: false,
+  keyboard: false,
+}))
+
+vi.mock('./kwin-input', () => ({
+  kwinWaylandSession: () => host.kwin,
+  kwinKeyboardAvailable: () => host.keyboard,
+}))
 
 vi.mock('electron', () => ({ app: {} }))
 vi.mock('electron-overlay-window', () => ({
-  layerShellUsable: (features: HostFeatures | null) => features?.layerShell === true,
+  layerShellUsable: (features: HostFeatures | null) => features?.layerShell === true && features.layerShellVersion >= 4,
   probeWaylandHost: () => host.features,
 }))
 
-const WLROOTS: HostFeatures = {
+const PLASMA: HostFeatures = {
   layerShell: true,
   layerShellVersion: 4,
-  foreignToplevel: true,
+  foreignToplevel: false,
   dataControl: true,
   cursorShape: true,
   viewporter: true,
-  virtualKeyboard: true,
-  virtualPointer: true,
-  screencopy: true,
+  virtualKeyboard: false,
+  virtualPointer: false,
+  screencopy: false,
 }
 
 describe('waylandLayerShellSupported', () => {
-  it('runs natively where the game can be typed into', () => {
-    host.features = WLROOTS
-    expect(waylandLayerShellSupported()).toBe(true)
+  beforeEach(() => {
+    host.features = PLASMA
+    host.kwin = true
+    host.keyboard = true
   })
 
-  it('falls back to XWayland without a virtual keyboard, as on KWin', () => {
-    host.features = { ...WLROOTS, foreignToplevel: false, virtualKeyboard: false, virtualPointer: false }
+  it('uses ydotool on KDE even without a Wayland virtual keyboard', () => {
+    expect(waylandLayerShellSupported()).toBe(true)
+    host.keyboard = false
     expect(waylandLayerShellSupported()).toBe(false)
   })
 
-  it('falls back to XWayland without layer-shell or a host', () => {
-    host.features = { ...WLROOTS, layerShell: false }
+  it('leaves platform selection to the existing path on other desktops', () => {
+    host.kwin = false
+    host.features = { ...PLASMA, virtualKeyboard: true, foreignToplevel: true }
+    expect(waylandLayerShellSupported()).toBe(false)
+  })
+
+  it('requires layer-shell v4 and data-control', () => {
+    host.features = { ...PLASMA, layerShellVersion: 3 }
+    expect(waylandLayerShellSupported()).toBe(false)
+    host.features = { ...PLASMA, dataControl: false }
     expect(waylandLayerShellSupported()).toBe(false)
     host.features = null
     expect(waylandLayerShellSupported()).toBe(false)

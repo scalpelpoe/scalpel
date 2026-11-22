@@ -36,14 +36,27 @@ See [PLUGINS.md](PLUGINS.md) for information on how to build a plugin. Please jo
 On compositors with wlr-layer-shell and a virtual keyboard (Hyprland, niri,
 Sway and other wlroots compositors), Scalpel runs as a native Wayland client.
 It reads hotkeys from `/dev/input`, so your user must be in the `input` group
-(`sudo usermod -aG input $USER`, then log in again). On GNOME and KDE it runs
-through XWayland.
+(`sudo usermod -aG input $USER`, then log in again). On GNOME it runs through
+XWayland; KDE Plasma is covered below.
 
 Run PoE as a native Wayland client too: items copied in PoE under XWayland may
 not reach Scalpel. GE-Proton does this with `PROTON_ENABLE_WAYLAND=1` in the
 launch options; Valve's Proton ignores it. If the game then crashes with
 `error: 4` or `Cannot create thread`, add `PROTON_NO_NTSYNC=1` or raise the
 open files limit.
+
+### KDE Plasma on Wayland
+
+On Plasma 6.8, native Scalpel supports PoE running on Wayland or XWayland.
+Scalpel needs layer-shell v4, data-control, read access to `/dev/input` (usually via the
+`input` group), and a running `ydotoold` for keyboard input. Scalpel looks for
+`$XDG_RUNTIME_DIR/.ydotool_socket` by default. Set `YDOTOOL_SOCKET` for a custom
+socket.
+
+To launch PoE on native Wayland, use `PROTON_ENABLE_WAYLAND=1 %command%` in
+Steam with a compatible Proton build, such as GE-Proton or CachyOS Proton. Press your
+configured price-check hotkey while hovering an item to test the overlay.
+Pass `--ozone-platform=x11` to use the XWayland backend.
 
 ## Official Releases
 
@@ -103,7 +116,8 @@ There are two ways to contribute to Scalpel - fork this repo and make a PR (duh)
 
 ## Building from Source
 
-Running it is easy:
+On Linux, install the Wayland client development headers, `wayland-scanner`,
+and the xkbcommon development headers to build the native overlay host.
 
 ```
 npm install

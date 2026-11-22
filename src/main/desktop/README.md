@@ -9,7 +9,7 @@ pixel dimensions and `scale` for conversion into those game coordinates.
   guarded cursor restoration, and `grim` capture. Requires Hyprland 0.56+ and
   `grim` on PATH. Other Wayland compositors need their own adapter.
 - Native Wayland with wlr-layer-shell v4 and a virtual keyboard (not GNOME,
-  which lacks layer-shell, nor KWin, which lacks the virtual keyboard):
+  which lacks layer-shell; KWin lacks the virtual keyboard, see below):
   Scalpel relaunches with `--ozone-platform=wayland` and overlay windows render
   offscreen into layer surfaces (`layer-shell.ts`). Game bounds are the logical
   bounds of the game's output, so the game must be fullscreen or borderless
@@ -29,6 +29,14 @@ pixel dimensions and `scale` for conversion into those game coordinates.
   - The clipboard comes from the host's data-control connection (`clipboard.ts`).
 
   Pass `--ozone-platform=x11` to use XWayland instead.
+- KDE Plasma Wayland: KWin reports the game's client bounds, focus, and pointer
+  position in logical coordinates. Scalpel runs with `--ozone-platform=wayland`
+  and renders overlays offscreen into layer-shell surfaces. Those surfaces
+  use panel rectangles as input regions and data-control for the clipboard.
+  Hotkeys use evdev while the game is focused and layer-surface key events
+  while an overlay is focused. Keyboard input to PoE uses `ydotoold` after
+  the game takes focus. Pointer warping is unavailable on this backend.
+  Pass `--ozone-platform=x11` to use XWayland.
 - Windows: Electron geometry/capture and native cursor restoration.
 - Other desktops: existing Electron capture and geometry path; cursor restoration
   remains unavailable where no native backend has been implemented.
