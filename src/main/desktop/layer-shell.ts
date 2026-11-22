@@ -20,27 +20,39 @@ import { NativeShortcuts } from './native-shortcuts'
 
 export { layerShellActive }
 
-/** KDE needs layer-shell for overlays, data-control for clipboard access,
- * and ydotoold for keyboard input. */
+/** Whether Scalpel should run as a native Wayland client. Needs wlr-layer-shell
+ *  v4 to keep overlays above a fullscreen game (every current Wayland desktop
+ *  except GNOME) and a way to type into the game: a virtual keyboard, or on
+ *  KDE, whose KWin has none, ydotoold plus data-control for the clipboard.
+ *  Otherwise Scalpel falls back to XWayland. */
 export function waylandLayerShellSupported(): boolean {
-  if (!kwinWaylandSession()) return false
   const features = probeWaylandHost()
-  return layerShellUsable(features) && features?.dataControl === true && kwinKeyboardAvailable()
+  if (!layerShellUsable(features)) return false
+  if (kwinWaylandSession()) return features?.dataControl === true && kwinKeyboardAvailable()
+  return features?.virtualKeyboard === true
 }
 
-/** Call before any overlay window exists. */
+/** Starts the layer-shell overlay backend when Electron runs with
+ *  `--ozone-platform=wayland`. Call once at startup, before any overlay
+ *  window exists. */
 export function initLayerShell(): boolean {
-  if (!kwinWaylandSession() || app.commandLine.getSwitchValue('ozone-platform') !== 'wayland') return false
-  if (!waylandLayerShellSupported()) {
+  if (process.platform !== 'linux' || app.commandLine.getSwitchValue('ozone-platform') !== 'wayland') return false
+  const kde = kwinWaylandSession()
+  if (kde && !waylandLayerShellSupported()) {
     console.warn('[layer-shell] KDE Wayland needs layer-shell v4, data-control and a running ydotoold')
     return false
   }
+  // KWin lists no toplevels to other clients, so KDE tracks the game with a KWin script.
   let tracker: KWinTracker | undefined
-  if (!OverlayController.useLayerShell((titles, emit) => (tracker = new KWinTracker(titles, emit)))) {
+  const createTracker = kde
+    ? (titles: string[], emit: ConstructorParameters<typeof KWinTracker>[1]) =>
+        (tracker = new KWinTracker(titles, emit))
+    : undefined
+  if (!OverlayController.useLayerShell(createTracker)) {
     console.warn('[layer-shell] Wayland host unavailable; overlays will not be shown')
     return false
   }
-  app.once('will-quit', () => tracker?.stop())
+  if (kde) app.once('will-quit', () => tracker?.stop())
   const shortcuts = new NativeShortcuts()
   setLayerShortcutHandler((key) =>
     shortcuts.dispatch(evdevToUiohook(key.code), {
@@ -52,17 +64,21 @@ export function initLayerShell(): boolean {
   setLayerShellServices({
     clipboard: waylandClipboard,
     globalShortcut: shortcuts,
-    gameHasKeyboardFocus: () => tracker?.gameHasKeyboardFocus() ?? false,
-    native: {
-      ...waylandNative,
-      key: (code, pressed) => {
-        if (pressed && tracker?.gameHasKeyboardFocus() !== true) return false
-        sendKWinKey(code, pressed)
-        return true
-      },
-      probePointer: async () => tracker?.pointer() ?? null,
-    },
     overlayPointer: getLayerPointer,
+    ...(kde
+      ? {
+          gameHasKeyboardFocus: () => tracker?.gameHasKeyboardFocus() ?? false,
+          native: {
+            ...waylandNative,
+            key: (code: number, pressed: boolean) => {
+              if (pressed && tracker?.gameHasKeyboardFocus() !== true) return false
+              sendKWinKey(code, pressed)
+              return true
+            },
+            probePointer: async () => tracker?.pointer() ?? null,
+          },
+        }
+      : { native: waylandNative }),
   })
   return true
 }

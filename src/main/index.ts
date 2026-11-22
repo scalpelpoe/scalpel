@@ -133,8 +133,9 @@ import { initLayerShell, waylandLayerShellSupported } from './desktop/layer-shel
 
 // ---- Linux display-server setup --------------------------------------------
 
-// KDE Wayland uses a native backend when its requirements are available.
-// Passing --ozone-platform explicitly overrides automatic selection.
+// Wayland compositors with wlr-layer-shell and a virtual keyboard, and KDE with
+// ydotoold, get a native Wayland client with layer-shell overlays; the rest use
+// XWayland. Passing --ozone-platform explicitly overrides the choice.
 if (
   process.platform === 'linux' &&
   process.env.WAYLAND_DISPLAY &&
