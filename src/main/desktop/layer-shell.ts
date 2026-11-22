@@ -11,6 +11,7 @@ import {
   waylandClipboard,
   waylandNative,
 } from 'electron-overlay-window'
+import { LAYER_SELECT_ARG } from '@shared/contracts/overlay'
 import { evdevToUiohook } from './input'
 import { kwinKeyboardAvailable, kwinWaylandSession, sendKWinKey } from './kwin-input'
 import { KWinTracker } from './kwin-tracker'
@@ -68,7 +69,13 @@ export function initLayerShell(): boolean {
 
 /** Web preferences for an overlay window: offscreen rendering under layer-shell. */
 export function overlayWebPreferences(prefs: WebPreferences): WebPreferences {
-  return layerShellActive() ? { ...prefs, ...LAYER_SHELL_WEB_PREFERENCES } : prefs
+  if (!layerShellActive()) return prefs
+  return {
+    ...prefs,
+    ...LAYER_SHELL_WEB_PREFERENCES,
+    // Offscreen rendering cannot show native <select> popups; the preload draws them.
+    additionalArguments: [...(prefs.additionalArguments ?? []), LAYER_SELECT_ARG],
+  }
 }
 
 /** Presents a new overlay window as a layer surface. Call right after

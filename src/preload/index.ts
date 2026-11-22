@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { IPC_CHANNELS } from '@shared/contracts/ipc'
+import { clearLayerSelectRects, installLayerSelect } from './layer-select'
 import type { BugReportResult, RendererDiagnosticPayload } from '@shared/diagnostics'
 import type { ExternalLinkTarget } from '@shared/external-link'
 import type {
@@ -24,6 +25,8 @@ import type {
   Zone,
 } from '@shared/types'
 import type { BoardLibrary, BoardSnapshot, BoardState } from '@shared/whiteboard-types'
+
+const reportPanelRects = installLayerSelect((rects) => ipcRenderer.send('report-panel-rect', rects))
 
 export const api = {
   // Manifest
@@ -238,7 +241,7 @@ export const api = {
     rects:
       | { left: number; top: number; width: number; height: number }
       | Array<{ left: number; top: number; width: number; height: number }>,
-  ): void => ipcRenderer.send('report-panel-rect', rects),
+  ): void => reportPanelRects(Array.isArray(rects) ? rects : [rects]),
   lockInteractive: (): void => ipcRenderer.send('lock-interactive'),
   unlockInteractive: (): void => ipcRenderer.send('unlock-interactive'),
   suspendHotkeys: (): void => ipcRenderer.send('suspend-hotkeys'),
@@ -857,8 +860,11 @@ export const api = {
     requestClose: (): void => ipcRenderer.send('whiteboard:request-close'),
     setMode: (mode: 'edit' | 'play'): void => ipcRenderer.send('whiteboard:set-mode', mode),
     reportToolbarRects: (rects: Array<{ left: number; top: number; width: number; height: number }>): void =>
-      ipcRenderer.send('report-panel-rect', rects),
-    clearToolbarRect: (): void => ipcRenderer.send('clear-panel-rect'),
+      reportPanelRects(rects),
+    clearToolbarRect: (): void => {
+      clearLayerSelectRects()
+      ipcRenderer.send('clear-panel-rect')
+    },
     load: (version: 1 | 2, gameSize: { w: number; h: number }): Promise<BoardLibrary> =>
       ipcRenderer.invoke('whiteboard:load', version, gameSize),
     saveActive: (version: 1 | 2, state: BoardState): void => ipcRenderer.send('whiteboard:save-active', version, state),
