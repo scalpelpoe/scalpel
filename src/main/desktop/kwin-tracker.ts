@@ -11,6 +11,11 @@ const KWIN = 'org.kde.KWin'
 const SCRIPTING = 'org.kde.kwin.Scripting'
 const CALLBACK = 'com.filterscalpel.KWinTracker'
 const CALLBACK_PATH = '/com/filterscalpel/KWinTracker'
+// Fixed, as Scalpel runs single-instance: a script a crashed run left loaded
+// in KWin is found and unloaded by name on the next start.
+const SCRIPT_NAME = 'scalpel-wayland'
+const POINTER_INTERVAL_MS = 40
+const RECONNECT_MS = 5000
 
 const windowState = z.object({
   id: z.string(),
@@ -59,7 +64,9 @@ function publish() {
 }
 
 function watch(win) {
-  win.captionChanged.connect(publish);
+  win.captionChanged.connect(() => {
+    if (known[String(win.internalId)] || titles.includes(win.caption)) publish();
+  });
   const changed = () => {
     if (known[String(win.internalId)]) publish();
   };
@@ -74,21 +81,46 @@ workspace.windowRemoved.connect(win => {
   publish();
 });
 workspace.windowActivated.connect(publish);
-workspace.cursorPosChanged.connect(() => {
-  const active = workspace.activeWindow;
-  if (!active || !known[String(active.internalId)] || Date.now() - lastPointerUpdate < 40) return;
+function publishPointer() {
   lastPointerUpdate = Date.now();
   publish();
+}
+// Throttled with a trailing update, so the position where the pointer comes
+// to rest is always published.
+const pointerTimer = new QTimer();
+pointerTimer.singleShot = true;
+pointerTimer.timeout.connect(publishPointer);
+workspace.cursorPosChanged.connect(() => {
+  const active = workspace.activeWindow;
+  if (!active || !known[String(active.internalId)] || pointerTimer.active) return;
+  const wait = ${POINTER_INTERVAL_MS} - (Date.now() - lastPointerUpdate);
+  if (wait <= 0) {
+    publishPointer();
+    return;
+  }
+  pointerTimer.interval = wait;
+  pointerTimer.start();
 });
 publish();
 `
 }
 
+function unloadScript(): Message {
+  return new Message({
+    destination: KWIN,
+    path: '/Scripting',
+    interface: SCRIPTING,
+    member: 'unloadScript',
+    signature: 's',
+    body: [SCRIPT_NAME],
+  })
+}
+
 export class KWinTracker implements LayerTracker {
   private readonly arbiter: FocusArbiter
-  private readonly bus = sessionBus()
-  private readonly name = `scalpel-wayland-${process.pid}`
-  private ready: Promise<void>
+  private bus!: ReturnType<typeof sessionBus>
+  private ready: Promise<void> = Promise.resolve()
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
   private stopped = false
   private loaded = false
   private attached: GameWindow | null = null
@@ -99,19 +131,40 @@ export class KWinTracker implements LayerTracker {
     private readonly emit: (event: TrackerEvent) => void,
   ) {
     this.arbiter = new FocusArbiter(emit)
-    const busEvents: EventEmitter = this.bus
+    this.connect()
+  }
+
+  private connect(): void {
+    const bus = sessionBus()
+    this.bus = bus
+    this.loaded = false
+    const busEvents: EventEmitter = bus
     busEvents.on('error', (error: Error) => {
+      if (bus !== this.bus) return
       this.latest = null
       this.detach()
       console.warn('[kwin] Tracking connection failed:', error)
+      this.scheduleReconnect()
     })
-    this.ready = this.start().catch((error) => {
+    this.ready = this.start(bus).catch((error) => {
       if (!this.stopped) console.warn('[kwin] Could not start tracking:', error)
     })
   }
 
-  private async start(): Promise<void> {
-    const owner = await this.bus.call(
+  /** A lost session bus connection would otherwise end tracking until restart. */
+  private scheduleReconnect(): void {
+    if (this.stopped || this.reconnectTimer) return
+    try {
+      this.bus.disconnect()
+    } catch {}
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null
+      if (!this.stopped) this.connect()
+    }, RECONNECT_MS)
+  }
+
+  private async start(bus: ReturnType<typeof sessionBus>): Promise<void> {
+    const owner = await bus.call(
       new Message({
         destination: 'org.freedesktop.DBus',
         path: '/org/freedesktop/DBus',
@@ -123,10 +176,10 @@ export class KWinTracker implements LayerTracker {
     )
     if (this.stopped) return
     const sender = owner?.body[0]
-    const destination = this.bus.name
+    const destination = bus.name
     if (typeof sender !== 'string' || !destination) throw new Error('KWin session service unavailable')
 
-    this.bus.addMethodHandler((message) => {
+    bus.addMethodHandler((message) => {
       if (
         message.sender !== sender ||
         message.path !== CALLBACK_PATH ||
@@ -136,8 +189,8 @@ export class KWinTracker implements LayerTracker {
       )
         return false
 
-      this.bus.send(Message.newMethodReturn(message))
-      if (!this.stopped) {
+      bus.send(Message.newMethodReturn(message))
+      if (!this.stopped && bus === this.bus) {
         let value: unknown
         try {
           value = JSON.parse(String(message.body[0]))
@@ -153,25 +206,29 @@ export class KWinTracker implements LayerTracker {
       return true
     })
 
+    // Left by a crashed run, or by this run before a reconnect.
+    await bus.call(unloadScript())
+    if (this.stopped) return
+
     const dir = mkdtempSync(join(process.env.XDG_RUNTIME_DIR ?? tmpdir(), 'scalpel-kwin-'))
     try {
       const file = join(dir, 'tracker.js')
       writeFileSync(file, script(destination), { mode: 0o600 })
-      const reply = await this.bus.call(
+      const reply = await bus.call(
         new Message({
           destination: KWIN,
           path: '/Scripting',
           interface: SCRIPTING,
           member: 'loadScript',
           signature: 'ss',
-          body: [file, this.name],
+          body: [file, SCRIPT_NAME],
         }),
       )
       const id = reply?.body[0]
       if (typeof id !== 'number' || id < 0) throw new Error('KWin rejected the window tracker')
       this.loaded = true
       if (this.stopped) return
-      await this.bus.call(
+      await bus.call(
         new Message({
           destination: KWIN,
           path: `/Scripting/Script${id}`,
@@ -211,19 +268,10 @@ export class KWinTracker implements LayerTracker {
     if (this.stopped) return
     this.stopped = true
     this.arbiter.stop()
+    if (this.reconnectTimer) clearTimeout(this.reconnectTimer)
+    this.reconnectTimer = null
     void this.ready.finally(() => {
-      if (this.loaded) {
-        this.bus.send(
-          new Message({
-            destination: KWIN,
-            path: '/Scripting',
-            interface: SCRIPTING,
-            member: 'unloadScript',
-            signature: 's',
-            body: [this.name],
-          }),
-        )
-      }
+      if (this.loaded) this.bus.send(unloadScript())
       this.bus.disconnect()
     })
   }

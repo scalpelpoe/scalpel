@@ -54,7 +54,11 @@ export function initLayerShell(): boolean {
     gameHasKeyboardFocus: () => tracker?.gameHasKeyboardFocus() ?? false,
     native: {
       ...waylandNative,
-      key: (code, pressed) => (!pressed || tracker?.gameHasKeyboardFocus() === true) && sendKWinKey(code, pressed),
+      key: (code, pressed) => {
+        if (pressed && tracker?.gameHasKeyboardFocus() !== true) return false
+        sendKWinKey(code, pressed)
+        return true
+      },
       probePointer: async () => tracker?.pointer() ?? null,
     },
     overlayPointer: getLayerPointer,

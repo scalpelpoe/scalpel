@@ -4,6 +4,7 @@ import type { CaptureOptions, CaptureResult, CaptureFailure } from '../screen-ca
 import { GAME_TITLES } from '@shared/contracts/game-variant'
 import { getPoeVersion } from '../game-state'
 import { matchGameWindowSource } from '../handlers/screen-source'
+import { kwinWaylandSession } from './kwin-input'
 import { layerShellServices } from './layer-shell-state'
 
 const MAX_CAPTURE_HEIGHT = 1080
@@ -76,6 +77,9 @@ export async function captureLayerShellGame(opts?: CaptureOptions): Promise<Capt
       frame: { data: shot.data, width: shot.width, height: shot.height, gameSize, scale: shot.width / tb.width },
     }
   }
+  // KWin's portal opens a source picker on every request, and its sources
+  // carry no window titles to match the game by.
+  if (kwinWaylandSession()) return fail('no-source')
 
   try {
     const display = screen.getDisplayNearestPoint({ x: tb.x + tb.width / 2, y: tb.y + tb.height / 2 })

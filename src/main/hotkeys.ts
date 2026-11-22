@@ -1080,7 +1080,16 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
  */
 export async function sendCtrlCToPoE(opts?: { withAlt?: boolean }): Promise<void> {
   if (!hyprlandInputAllowed()) return
-  if (layerShellServices()?.gameHasKeyboardFocus) await awaitGameFocus()
+  if (layerShellServices()?.gameHasKeyboardFocus) {
+    // Without focus the copy reads nothing, which callers already handle
+    // (windowed-mode retry, no-item notice); a throw would skip that.
+    try {
+      await awaitGameFocus()
+    } catch (err) {
+      if (process.env.SCALPEL_DEBUG_LOG) console.error('[hotkey] copy skipped:', err)
+      return
+    }
+  }
   injecting = true
   const restoreCKeyedRegistrations = releaseCKeyedRegistrationsForInjection()
 
