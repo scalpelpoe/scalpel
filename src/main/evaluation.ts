@@ -1,6 +1,6 @@
 import { desktop } from './desktop'
 import { clipboard, screen } from 'electron'
-import { OverlayController } from 'electron-overlay-window'
+import { platform } from '@scalpel/platform'
 import type Store from 'electron-store'
 import { isTownOrHideout } from '@shared/is-town-or-hideout'
 import { IPC_CHANNELS } from '@shared/contracts/ipc'
@@ -226,7 +226,7 @@ async function captureItemFromClipboard(
   try {
     // Hotkeys are also valid while a gameplay overlay owns focus. Hand input
     // back to PoE before copying so that path is as immediate as game focus.
-    if (!OverlayController.targetHasFocus) focusGameWindow()
+    if (!platform().windowTracker.targetHasFocus) focusGameWindow()
     const withAlt = advancedCopyTracker.needsAlt()
     clipboard.clear()
     await sendCtrlCToPoE({ withAlt })

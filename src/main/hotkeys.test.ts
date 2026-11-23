@@ -48,14 +48,14 @@ const windowingMockState = {
   hideFocusedOrAnyVisibleSecondaryOverlay: vi.fn(() => false),
 }
 
-// Scalpel-owned gameplay-window focus complements OverlayController target focus.
+// Scalpel-owned gameplay-window focus complements the tracked game's focus.
 const focusMockState: { scalpelBrowserWindowFocused: boolean } = {
   scalpelBrowserWindowFocused: false,
 }
 
-// Whether the compositor-driven overlay path is in charge. Mocked rather than
-// derived from the environment so no test shells out to hyprctl.
-const hyprlandMockState = { overlayActive: false, allowed: true }
+// Whether the compositor owns overlay focus, and whether it still allows input.
+// Mocked rather than derived from the environment so no test shells out to hyprctl.
+const platformMockState = { compositorFocus: false, inputAllowed: true }
 
 vi.mock('electron', () => ({
   globalShortcut: globalShortcutMock,
@@ -69,8 +69,24 @@ vi.mock('electron', () => ({
   ipcMain: { on: vi.fn(), handle: vi.fn() },
 }))
 
-vi.mock('electron-overlay-window', () => ({
-  OverlayController: overlayControllerState,
+vi.mock('@scalpel/platform', () => ({
+  platform: () => ({
+    traits: {
+      get compositorFocus() {
+        return platformMockState.compositorFocus
+      },
+    },
+    windowTracker: {
+      get targetHasFocus() {
+        return overlayControllerState.targetHasFocus
+      },
+      get targetBounds() {
+        return overlayControllerState.targetBounds
+      },
+      events: overlayControllerState.events,
+      inputAllowed: () => platformMockState.inputAllowed,
+    },
+  }),
 }))
 
 vi.mock('uiohook-napi', () => {
@@ -98,11 +114,6 @@ vi.mock('./overlay', () => ({
 vi.mock('./windowing', () => ({
   hideFocusedOrAnyVisibleSecondaryOverlay: () => windowingMockState.hideFocusedOrAnyVisibleSecondaryOverlay(),
   isAnyScalpelBrowserWindowFocused: () => focusMockState.scalpelBrowserWindowFocused,
-}))
-
-vi.mock('./hyprland', () => ({
-  hyprlandOverlayActive: () => hyprlandMockState.overlayActive,
-  hyprlandInputAllowed: () => hyprlandMockState.allowed,
 }))
 
 vi.mock('./diagnostics', () => ({
@@ -136,8 +147,8 @@ async function loadHotkeys(onEscape: () => void) {
   windowingMockState.hideFocusedOrAnyVisibleSecondaryOverlay.mockReset()
   windowingMockState.hideFocusedOrAnyVisibleSecondaryOverlay.mockReturnValue(false)
   focusMockState.scalpelBrowserWindowFocused = false
-  hyprlandMockState.overlayActive = false
-  hyprlandMockState.allowed = true
+  platformMockState.compositorFocus = false
+  platformMockState.inputAllowed = true
 
   const hotkeys = await import('./hotkeys')
   hotkeys.startHotkeyListener(() => {})
@@ -160,8 +171,8 @@ describe('Hyprland dialog shortcut dismissal', () => {
   ])('uses live compositor focus (%s) for Escape when only an annotation is open', async (allowed) => {
     const onEscape = vi.fn()
     await loadHotkeys(onEscape)
-    hyprlandMockState.overlayActive = true
-    hyprlandMockState.allowed = allowed
+    platformMockState.compositorFocus = true
+    platformMockState.inputAllowed = allowed
     overlayControllerState.targetHasFocus = false
     emitKeydown(ESCAPE_KEYDOWN)
     expect(onEscape).toHaveBeenCalledTimes(allowed ? 1 : 0)
@@ -169,7 +180,7 @@ describe('Hyprland dialog shortcut dismissal', () => {
   it('uses the close handler instead of starting another filter lookup', async () => {
     const close = vi.fn()
     const hotkeys = await loadHotkeys(close)
-    hyprlandMockState.overlayActive = true
+    platformMockState.compositorFocus = true
     overlayControllerState.targetHasFocus = true
     overlayMockState.visibilityListener?.(true)
     hotkeys.setHotkey('Ctrl+C')
@@ -201,7 +212,7 @@ describe('Escape globalShortcut sync', () => {
   it('stays registered through the initial Hyprland dialog focus handoff', async () => {
     const onEscape = vi.fn()
     await loadHotkeys(onEscape)
-    hyprlandMockState.overlayActive = true
+    platformMockState.compositorFocus = true
     overlayControllerState.targetHasFocus = true
     overlayMockState.visibilityListener?.(true)
 
@@ -216,7 +227,7 @@ describe('Escape globalShortcut sync', () => {
   it('closes from the uiohook path during the initial Hyprland dialog focus handoff', async () => {
     const onEscape = vi.fn()
     await loadHotkeys(onEscape)
-    hyprlandMockState.overlayActive = true
+    platformMockState.compositorFocus = true
     overlayControllerState.targetHasFocus = false
     focusMockState.scalpelBrowserWindowFocused = false
     overlayMockState.visibilityListener?.(true)

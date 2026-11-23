@@ -8,7 +8,7 @@
 // bounds) current. See the worker header for why it can't run here.
 import path from 'node:path'
 import { Worker } from 'node:worker_threads'
-import { OverlayController } from 'electron-overlay-window'
+import { platform } from '@scalpel/platform'
 import { guardNativeListener, recordMainBreadcrumb, recordMainDiagnostic } from './diagnostics'
 import {
   DEFAULT_TOGGLE_KEY,
@@ -41,14 +41,15 @@ function syncGate(): void {
   if (!running) return
   const { state } = running
   Atomics.store(state, SLOT.TOGGLE_VK, toggleKeyVk(toggleKey))
-  const tb = OverlayController.targetBounds
+  const { windowTracker } = platform()
+  const tb = windowTracker.targetBounds
   if (tb) {
     Atomics.store(state, SLOT.X, Math.round(tb.x))
     Atomics.store(state, SLOT.Y, Math.round(tb.y))
     Atomics.store(state, SLOT.W, Math.round(tb.width))
     Atomics.store(state, SLOT.H, Math.round(tb.height))
   }
-  const active = enabled && OverlayController.targetHasFocus && !!tb?.width
+  const active = enabled && windowTracker.targetHasFocus && !!tb?.width
   Atomics.store(state, SLOT.ACTIVE, active ? 1 : 0)
 }
 
@@ -57,7 +58,7 @@ function attachListeners(): void {
   listenersAttached = true
   const sync = guardNativeListener('wheel-click-sync', () => syncGate())
   for (const event of ['focus', 'blur', 'attach', 'detach', 'moveresize'] as const) {
-    OverlayController.events.on(event, sync)
+    platform().windowTracker.events.on(event, sync)
   }
 }
 

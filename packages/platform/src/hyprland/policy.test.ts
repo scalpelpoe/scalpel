@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  type HyprClient,
-  hyprlandOverlayBounds,
-  hyprlandVersionAtLeast,
-  isHyprlandGameContext,
-} from './hyprland-policy'
+import { type HyprClient, hyprlandOverlayBounds, hyprlandVersionAtLeast, isHyprlandGameContext } from './policy'
 
 const game: HyprClient = {
   address: '0x1',

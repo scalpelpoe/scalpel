@@ -1,7 +1,7 @@
 import { desktop } from '../desktop'
 import { join } from 'node:path'
 import { BrowserWindow, screen } from 'electron'
-import { OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
+import { OVERLAY_WINDOW_OPTS } from '@scalpel/platform'
 
 /** Shared transparent click-through window used by the secondary-overlay system
  *  to render the snap-target ghost during drag. Sized to PoE's current display

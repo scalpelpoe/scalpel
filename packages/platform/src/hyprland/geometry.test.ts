@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import { hyprlandGeometryScript } from './hyprland-geometry'
+import { hyprlandGeometryScript } from './geometry'
 
 it.each([
   ['0x1', '0x1', 10],

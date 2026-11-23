@@ -3,12 +3,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 const mock = vi.hoisted(() => ({ exec: vi.fn(), game: vi.fn(), displays: vi.fn(), image: vi.fn() }))
 vi.mock('node:child_process', () => ({ execFile: vi.fn() }))
 vi.mock('node:util', () => ({ promisify: () => mock.exec }))
-vi.mock('../hyprland', () => ({ getHyprlandGame: mock.game }))
+vi.mock('./tracker', () => ({ getHyprlandGame: mock.game }))
 vi.mock('electron', () => ({
   nativeImage: { createFromBuffer: mock.image },
   screen: { getAllDisplays: mock.displays },
 }))
-import { captureHyprlandGame } from './hyprland-capture'
+import { captureHyprlandGame } from './capture'
 
 const game = {
   address: '0x1',

@@ -1,6 +1,6 @@
 import { execFileSync, spawnSync } from 'node:child_process'
 import { describe, expect, it } from 'vitest'
-import { hyprlandFocusScript } from './hyprland-focus'
+import { hyprlandFocusScript } from './focus'
 
 describe('Hyprland focus script', () => {
   it('rejects invalid selectors before constructing Lua', () => {

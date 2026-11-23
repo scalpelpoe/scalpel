@@ -1,21 +1,14 @@
-import { mapPointBetweenRects } from './desktop/coordinates'
+import { mapPointBetweenRects } from '../coordinates'
 import { execFile, execFileSync } from 'node:child_process'
 import { promisify } from 'node:util'
 import { createConnection } from 'node:net'
 import { join } from 'node:path'
 import { app, type BrowserWindow, screen } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
-import {
-  type HyprClient,
-  MIN_HYPRLAND,
-  hyprlandOverlayBounds,
-  hyprlandVersionAtLeast,
-  isHyprlandGameContext,
-} from './hyprland-policy'
-import { hyprlandFocusScript } from './hyprland-focus'
-import { hyprlandGeometryScript } from './hyprland-geometry'
+import { type HyprClient, hyprlandOverlayBounds, isHyprlandGameContext } from './policy'
+import { hyprlandFocusScript } from './focus'
+import { hyprlandGeometryScript } from './geometry'
 
-const isHyprland = process.platform === 'linux' && !!process.env.HYPRLAND_INSTANCE_SIGNATURE
 const exec = promisify(execFile)
 let game: HyprClient | null = null
 let gameDipBounds: Electron.Rectangle | null = null
@@ -45,27 +38,7 @@ export function getHyprlandPointerPhysical(): Electron.Point | null {
 }
 
 let tracking = false
-let overlayActive: boolean | null = null
 let requestWindowFocus: ((win: BrowserWindow) => void) | null = null
-
-/** Whether to drive the compositor instead of the native X11 tracker. Resolved
- *  once, on first use: the version query costs a subprocess, and Hyprland can't
- *  be swapped underneath a running process. */
-export function hyprlandOverlayActive(): boolean {
-  if (!isHyprland) return false
-  if (overlayActive === null) {
-    try {
-      overlayActive = hyprlandVersionAtLeast(
-        execFileSync('hyprctl', ['-j', 'version'], { encoding: 'utf8', timeout: 1000 }),
-      )
-      if (!overlayActive) console.warn(`[hyprland] older than ${MIN_HYPRLAND.join('.')}; using the X11 overlay tracker`)
-    } catch (error) {
-      overlayActive = false
-      console.warn('[hyprland] version query failed; using the X11 overlay tracker:', String(error))
-    }
-  }
-  return overlayActive
-}
 
 // Native X11 focus can remain stale when focus moves to a Wayland client.
 // Recheck with the compositor at the point of input/focus dispatch; fail closed.
@@ -81,7 +54,6 @@ export function hyprlandInputAllowed(): boolean {
 }
 
 export function nameHyprlandOverlay(win: BrowserWindow): void {
-  if (!hyprlandOverlayActive()) return
   // Several plugin windows load the same HTML title. Keep the BrowserWindow
   // identity in every title so compositor focus lookup selects this window.
   const titlePrefix = `Scalpel Overlay ${win.id}`

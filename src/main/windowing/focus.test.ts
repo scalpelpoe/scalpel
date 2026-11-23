@@ -14,8 +14,8 @@ vi.mock('./snap-canvas', () => ({
   },
 }))
 // These cases cover focus bookkeeping off the compositor-driven path, where the
-// Hyprland gate is a no-op. Mocked so the suite never loads the native tracker.
-vi.mock('../hyprland', () => ({ hyprlandInputAllowed: () => true }))
+// input gate is a no-op. Mocked so the suite never loads the native tracker.
+vi.mock('@scalpel/platform', () => ({ platform: () => ({ windowTracker: { inputAllowed: () => true } }) }))
 import {
   aroundNativeDialog,
   closeAllOverlaysOnPoeExit,

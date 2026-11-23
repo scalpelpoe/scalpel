@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest'
 vi.mock('electron', () => ({ screen: { dipToScreenPoint: (p: { x: number; y: number }) => p } }))
 vi.mock('koffi', () => ({ default: { load: () => ({ func: () => () => true }) } }))
 
-import { warpWith } from './cursor-warp'
+import { warpWith } from './windows-pointer'
 
 describe('warpWith', () => {
   it('converts DIP to physical then sets, rounding to ints', () => {

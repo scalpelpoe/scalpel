@@ -102,14 +102,18 @@ vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn() },
 }))
 
-vi.mock('electron-overlay-window', () => ({
-  OverlayController: {
-    get targetHasFocus() {
-      return mock.state.targetHasFocus
+vi.mock('@scalpel/platform', () => ({
+  platform: () => ({
+    traits: { compositorFocus: false },
+    windowTracker: {
+      get targetHasFocus() {
+        return mock.state.targetHasFocus
+      },
+      targetBounds: null,
+      events: { on: vi.fn() },
+      inputAllowed: () => true,
     },
-    targetBounds: null,
-    events: { on: vi.fn() },
-  },
+  }),
 }))
 
 vi.mock('uiohook-napi', () => ({

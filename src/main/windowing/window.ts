@@ -1,10 +1,8 @@
 import { join } from 'node:path'
 import { BrowserWindow } from 'electron'
-import { OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
 import type { Rect } from './snap-canvas'
 import { desktop, type OverlayInteraction } from '../desktop'
-import { hyprlandOverlayActive, nameHyprlandOverlay } from '../hyprland'
-import { linkX11Transient } from '../desktop/x11-transient'
+import { platform } from '@scalpel/platform'
 import { GAME_TITLES } from '@shared/contracts/game-variant'
 import { getPoeVersion } from '../game-state'
 
@@ -20,10 +18,7 @@ interface CreateOptions {
  *  /.hide /.isVisible already overridden. */
 export function createOverlayWindow({ htmlEntry, bounds, interaction }: CreateOptions): BrowserWindow {
   const win = new BrowserWindow({
-    ...OVERLAY_WINDOW_OPTS,
-    // Advertise a floating X11 window before mapping, including before the
-    // renderer has loaded the title used by the user's overlay window rule.
-    ...(hyprlandOverlayActive() ? { type: 'utility' as const, title: 'Scalpel Overlay' } : {}),
+    ...platform().windowTracker.overlayWindowOptions(),
     width: bounds.width,
     height: bounds.height,
     x: bounds.x,
@@ -36,7 +31,7 @@ export function createOverlayWindow({ htmlEntry, bounds, interaction }: CreateOp
       nodeIntegration: false,
     },
   })
-  nameHyprlandOverlay(win)
+  platform().windowTracker.adoptOverlay(win)
   // 'screen-saver' is the level the main overlay uses (set by electron-overlay-
   // window on attach). It sits above PoE, the taskbar, and other floating
   // windows, and lets the window's full bounds render including the taskbar
@@ -60,7 +55,7 @@ export function createOverlayWindow({ htmlEntry, bounds, interaction }: CreateOp
  *
  *  Map without taking focus first. The declared interaction policy then claims
  *  input for dialogs, leaves panels available for normal interaction, or keeps
- *  annotations click-through. Hyprland focus retries wait for compositor mapping. */
+ *  annotations click-through. Compositor focus requests wait for the window to map. */
 function installOpacityHideShow(win: BrowserWindow, interaction: () => OverlayInteraction = () => 'panel'): void {
   const origShowInactive = win.showInactive.bind(win)
   const origHide = win.hide.bind(win)
@@ -68,19 +63,13 @@ function installOpacityHideShow(win: BrowserWindow, interaction: () => OverlayIn
   let opacityHidden = false
   win.hide = (): void => {
     desktop.releaseOverlay(win)
-    if (process.platform === 'linux' || hyprlandOverlayActive()) origHide()
+    if (process.platform === 'linux' || platform().traits.compositorFocus) origHide()
     else win.setOpacity(0)
     win.setIgnoreMouseEvents(true)
     opacityHidden = true
   }
   win.show = (): void => {
-    if (process.platform === 'linux' && !hyprlandOverlayActive()) {
-      try {
-        linkX11Transient(win.getNativeWindowHandle(), GAME_TITLES[getPoeVersion()])
-      } catch {
-        // Keep the overlay usable if the native X11 backend is unavailable.
-      }
-    }
+    platform().windowTracker.beforeOverlayShow(win, GAME_TITLES[getPoeVersion()])
     const bounds = process.platform === 'linux' ? win.getBounds() : null
     win.setOpacity(1)
     opacityHidden = false

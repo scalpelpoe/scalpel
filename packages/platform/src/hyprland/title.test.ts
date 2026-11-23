@@ -1,23 +1,10 @@
 import type { BrowserWindow } from 'electron'
-import { afterAll, expect, it, vi } from 'vitest'
+import { expect, it, vi } from 'vitest'
 
-vi.hoisted(() => {
-  vi.stubGlobal('process', {
-    ...process,
-    platform: 'linux',
-    env: { ...process.env, HYPRLAND_INSTANCE_SIGNATURE: 'test' },
-  })
-})
-vi.mock('node:child_process', () => ({
-  execFile: vi.fn(),
-  execFileSync: vi.fn(() => JSON.stringify({ tag: 'v0.56.0' })),
-}))
 vi.mock('electron', () => ({ app: {}, screen: {} }))
 vi.mock('electron-overlay-window', () => ({ OverlayController: {} }))
 
-import { nameHyprlandOverlay } from './hyprland'
-
-afterAll(() => vi.unstubAllGlobals())
+import { nameHyprlandOverlay } from './tracker'
 
 it('keeps compositor titles unique when annotation windows load or update the same page title', () => {
   const windows = [1, 2].map((id) => {

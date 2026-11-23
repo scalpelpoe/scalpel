@@ -77,7 +77,19 @@ vi.mock('electron', () => ({
   clipboard: clipboardMock,
   ipcMain: { on: vi.fn(), handle: vi.fn() },
 }))
-vi.mock('electron-overlay-window', () => ({ OverlayController: overlayControllerState }))
+vi.mock('@scalpel/platform', () => ({
+  platform: () => ({
+    traits: { compositorFocus: false },
+    windowTracker: {
+      get targetHasFocus() {
+        return overlayControllerState.targetHasFocus
+      },
+      targetBounds: null,
+      events: overlayControllerState.events,
+      inputAllowed: () => true,
+    },
+  }),
+}))
 vi.mock('uiohook-napi', () => {
   const UiohookKey = {
     Escape: 1,

@@ -17,6 +17,7 @@ export default defineConfig({
       'src/**/*.test.ts',
       'src/**/*.test.tsx',
       'scripts/**/*.test.mjs',
+      'packages/platform/src/**/*.test.ts',
       'packages/stream-contract/src/**/*.test.ts',
       'packages/stream-viewer/src/**/*.test.ts',
       'packages/stream-viewer/src/**/*.test.tsx',

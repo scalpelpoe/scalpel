@@ -1,5 +1,4 @@
 import { clipboard, globalShortcut, ipcMain } from 'electron'
-import { OverlayController } from 'electron-overlay-window'
 import { UiohookKey, uIOhook } from 'uiohook-napi'
 import { appMacroEffectiveScope, chatCommandEffectiveScope, type MacroScope, scopeAppliesTo } from '@shared/macro-scope'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
@@ -13,7 +12,7 @@ import {
 } from './diagnostics'
 import { getPoeVersion } from './game-state'
 import { focusGameWindow, isTypingInOverlay, setOverlayVisibilityListener } from './overlay'
-import { hyprlandInputAllowed, hyprlandOverlayActive } from './hyprland'
+import { platform } from '@scalpel/platform'
 import { advancedCopyTracker } from './trade/advanced-copy'
 import { hideFocusedOrAnyVisibleSecondaryOverlay, isAnyScalpelBrowserWindowFocused } from './windowing'
 import {
@@ -24,6 +23,8 @@ import {
   wheelClickOwnsWheel,
 } from './wheel-click'
 export { setWheelClickEnabled, setWheelClickToggleKey }
+
+const { traits, windowTracker } = platform()
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -106,7 +107,7 @@ function fireTrigger(): void {
   if (now - lastTriggerFireAt < DEDUPE_MS) return
   lastTriggerFireAt = now
   releaseHotkeyKey(triggerCombo)
-  if (hyprlandOverlayActive() && overlayVisibleForEscape && onEscape) {
+  if (traits.compositorFocus && overlayVisibleForEscape && onEscape) {
     onEscape()
     return
   }
@@ -119,7 +120,7 @@ function firePriceCheck(): void {
   if (now - lastPriceCheckFireAt < DEDUPE_MS) return
   lastPriceCheckFireAt = now
   releaseHotkeyKey(priceCheckCombo)
-  if (hyprlandOverlayActive() && overlayVisibleForEscape && onEscape) {
+  if (traits.compositorFocus && overlayVisibleForEscape && onEscape) {
     onEscape()
     return
   }
@@ -148,14 +149,14 @@ function fireEscape(): void {
 function syncEscapeShortcut(): void {
   // On Hyprland, activating the XWayland overlay takes focus away from PoE
   // before Electron reliably reports the overlay BrowserWindow as focused.
-  // Keep Escape registered across that handoff; hyprlandInputAllowed() in
+  // Keep Escape registered across that handoff; windowTracker.inputAllowed() in
   // escapeContextIsActive() still rejects delivery after leaving the gameplay
   // context or switching workspace.
-  const ownsHyprlandDialog = hyprlandOverlayActive() && overlayVisibleForEscape
+  const ownsCompositorDialog = traits.compositorFocus && overlayVisibleForEscape
   const desired =
     !!onEscape &&
     overlayVisibleForEscape &&
-    (OverlayController.targetHasFocus || ownsHyprlandDialog) &&
+    (windowTracker.targetHasFocus || ownsCompositorDialog) &&
     !hotkeysAreSuspended()
   if (desired === escapeShortcutRegistered) return
   if (desired) {
@@ -256,11 +257,11 @@ export function startHotkeyListener(handler: () => void): void {
   // Escape's globalShortcut is only valid while the game has focus (see
   // syncEscapeShortcut). Re-sync on every focus/blur so it registers/unregisters
   // in step with the attached game gaining/losing OS focus.
-  OverlayController.events.on(
+  windowTracker.events.on(
     'focus',
     guardNativeListener('escape-sync-focus', () => syncEscapeShortcut()),
   )
-  OverlayController.events.on(
+  windowTracker.events.on(
     'blur',
     guardNativeListener('escape-sync-blur', () => syncEscapeShortcut()),
   )
@@ -302,12 +303,12 @@ export function startHotkeyListener(handler: () => void): void {
     guardNativeListener('wheel', (e) => {
       const modHeld =
         stashScrollModifier === 'Ctrl' ? e.ctrlKey : stashScrollModifier === 'Shift' ? e.shiftKey : e.altKey
-      if (!stashScrollEnabled || !modHeld || !OverlayController.targetHasFocus || !hyprlandInputAllowed()) return
+      if (!stashScrollEnabled || !modHeld || !windowTracker.targetHasFocus || !windowTracker.inputAllowed()) return
       // Lock-key wheel-click mode owns the wheel: that scroll became a click,
       // so don't also flip stash tabs. (uiohook may sit ahead of the swallowing
       // hook in the chain and still see the event.)
       if (wheelClickOwnsWheel()) return
-      const tb = OverlayController.targetBounds
+      const tb = windowTracker.targetBounds
       if (!tb?.width) return
       // Only act when cursor is inside the PoE window but outside the stash grid area
       if (e.x < tb.x || e.x > tb.x + tb.width || e.y < tb.y || e.y > tb.y + tb.height) return
@@ -432,9 +433,9 @@ function applySuspendTransition(wasSuspended: boolean, rearmReason: string): voi
  *  lifecycle, and this dispatch-time check closes uIOhook and transition races. */
 function hotkeyContextIsActive(): boolean {
   return (
-    hyprlandInputAllowed() &&
+    windowTracker.inputAllowed() &&
     !hotkeysAreSuspended() &&
-    (OverlayController.targetHasFocus || isAnyScalpelBrowserWindowFocused())
+    (windowTracker.targetHasFocus || isAnyScalpelBrowserWindowFocused())
   )
 }
 
@@ -444,9 +445,9 @@ function hotkeyContextIsActive(): boolean {
  * the active game context. Other hotkeys retain the stricter focus gate. */
 function escapeContextIsActive(): boolean {
   return (
-    hyprlandInputAllowed() &&
+    windowTracker.inputAllowed() &&
     !hotkeysAreSuspended() &&
-    (OverlayController.targetHasFocus || isAnyScalpelBrowserWindowFocused() || hyprlandOverlayActive())
+    (windowTracker.targetHasFocus || isAnyScalpelBrowserWindowFocused() || traits.compositorFocus)
   )
 }
 
@@ -709,13 +710,13 @@ const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms)
  *  the paste. targetHasFocus is the same signal that authorizes every gameplay
  *  hotkey (see hotkeyContextIsActive). */
 async function awaitGameFocus(): Promise<void> {
-  if (!hyprlandInputAllowed()) throw new Error('Game workspace is inactive - input not sent')
-  if (OverlayController.targetHasFocus) return
+  if (!windowTracker.inputAllowed()) throw new Error('Game workspace is inactive - input not sent')
+  if (windowTracker.targetHasFocus) return
   focusGameWindow()
   for (let waited = 0; waited < FOCUS_WAIT_MS; waited += FOCUS_POLL_MS) {
     await wait(FOCUS_POLL_MS)
-    if (!hyprlandInputAllowed()) throw new Error('Game workspace is inactive - input not sent')
-    if (OverlayController.targetHasFocus) return
+    if (!windowTracker.inputAllowed()) throw new Error('Game workspace is inactive - input not sent')
+    if (windowTracker.targetHasFocus) return
   }
   throw new Error('PoE did not take focus - chat command not sent')
 }
@@ -1073,7 +1074,7 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
  * releaseCKeyedRegistrationsForInjection (#601).
  */
 export async function sendCtrlCToPoE(opts?: { withAlt?: boolean }): Promise<void> {
-  if (!hyprlandInputAllowed()) return
+  if (!windowTracker.inputAllowed()) return
   injecting = true
   const restoreCKeyedRegistrations = releaseCKeyedRegistrationsForInjection()
 
