@@ -76,37 +76,37 @@ const mock = vi.hoisted(() => {
 })
 
 vi.mock('electron', () => ({
-  clipboard: {
-    readText: vi.fn(() => mock.clip.text),
-    readHTML: vi.fn(() => ''),
-    writeText: vi.fn((t: string) => {
-      mock.clip.text = t
-    }),
-    write: vi.fn((d: { text?: string }) => {
-      mock.clip.text = d.text ?? ''
-    }),
-    clear: vi.fn(() => {
-      mock.clip.text = ''
-    }),
-  },
-  globalShortcut: {
-    register: vi.fn((accelerator: string, cb: () => void) => {
-      mock.registered.set(accelerator, cb)
-      return true
-    }),
-    unregister: vi.fn((accelerator: string) => {
-      mock.registered.delete(accelerator)
-    }),
-    unregisterAll: vi.fn(() => {
-      mock.registered.clear()
-    }),
-  },
   ipcMain: { handle: vi.fn() },
 }))
 
 vi.mock('@scalpel/platform', () => ({
   Key: mock.keycodes,
   platform: () => ({
+    clipboard: {
+      readText: vi.fn(() => mock.clip.text),
+      readHTML: vi.fn(() => ''),
+      writeText: vi.fn((t: string) => {
+        mock.clip.text = t
+      }),
+      write: vi.fn((d: { text?: string }) => {
+        mock.clip.text = d.text ?? ''
+      }),
+      clear: vi.fn(() => {
+        mock.clip.text = ''
+      }),
+    },
+    shortcuts: {
+      register: vi.fn((accelerator: string, cb: () => void) => {
+        mock.registered.set(accelerator, cb)
+        return true
+      }),
+      unregister: vi.fn((accelerator: string) => {
+        mock.registered.delete(accelerator)
+      }),
+      unregisterAll: vi.fn(() => {
+        mock.registered.clear()
+      }),
+    },
     input: mock.uIOhook,
     traits: { compositorFocus: false },
     windowTracker: {

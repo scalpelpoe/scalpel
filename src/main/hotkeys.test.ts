@@ -70,20 +70,20 @@ const focusMockState: { scalpelBrowserWindowFocused: boolean } = {
 const platformMockState = { compositorFocus: false, inputAllowed: true }
 
 vi.mock('electron', () => ({
-  globalShortcut: globalShortcutMock,
-  clipboard: {
-    readText: vi.fn(() => ''),
-    readHTML: vi.fn(() => ''),
-    writeText: vi.fn(),
-    write: vi.fn(),
-    clear: vi.fn(),
-  },
   ipcMain: { on: vi.fn(), handle: vi.fn() },
 }))
 
 vi.mock('@scalpel/platform', () => ({
   Key: keyMock,
   platform: () => ({
+    clipboard: {
+      readText: vi.fn(() => ''),
+      readHTML: vi.fn(() => ''),
+      writeText: vi.fn(),
+      write: vi.fn(),
+      clear: vi.fn(),
+    },
+    shortcuts: globalShortcutMock,
     input: inputMock,
     traits: {
       get compositorFocus() {

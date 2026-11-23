@@ -1,7 +1,8 @@
 import { readFileSync, statSync } from 'node:fs'
 import { extname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { clipboard, ipcMain } from 'electron'
+import { ipcMain } from 'electron'
+import { platform } from '@scalpel/platform'
 
 /** Cap on the size of a file we'll inline as a data URL on paste. Larger
  *  images bloat the BoardLibrary JSON and grind the renderer. The user can
@@ -69,7 +70,7 @@ function readClipboardUrls(): string[] {
   for (const fmt of URL_FORMATS) {
     let raw = ''
     try {
-      raw = clipboard.read(fmt)
+      raw = platform().clipboard.read(fmt)
     } catch {
       /* unsupported format on this platform; skip */
     }
@@ -93,7 +94,7 @@ function readWindowsFilePathBuffers(): string[] {
   const paths: string[] = []
   const readBuf = (fmt: string): Buffer => {
     try {
-      return clipboard.readBuffer(fmt)
+      return platform().clipboard.readBuffer(fmt)
     } catch {
       return Buffer.alloc(0)
     }
@@ -203,7 +204,7 @@ export async function __fetchHttpImage(url: string): Promise<{ src: string } | n
  *
  *  Returns null when no source yields an image. */
 export async function __readClipboardImage(): Promise<{ src: string } | null> {
-  const native = clipboard.readImage()
+  const native = platform().clipboard.readImage()
   if (!native.isEmpty()) {
     return { src: native.toDataURL() }
   }

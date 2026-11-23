@@ -1,8 +1,9 @@
 # @scalpel/platform
 
 Desktop integration for Scalpel's Electron main process. The app reaches the
-game window, global input, the pointer and screen capture only through
-`platform()`, so a new desktop needs a new backend here and no app changes.
+game window, global input and shortcuts, the clipboard, the pointer and screen
+capture only through `platform()`, so a new desktop needs a new backend here
+and no app changes.
 
 This package must not import from Scalpel's `src/`.
 
@@ -28,6 +29,12 @@ All backends use uiohook-napi for global key and mouse hooks and for key
 injection. Key codes are `Key` values (PC scancodes). A hook that only sees
 physical devices reports `seesInjectedKeys: false` and answers
 `physicallyHeld()`, so the app can track held modifiers while it injects keys.
+
+## Shortcuts and clipboard
+
+All backends use Electron's `globalShortcut` and `clipboard`. A backend whose
+session hides the clipboard from unfocused windows, or has no global shortcut
+service, supplies its own implementations instead.
 
 ## Coordinates
 

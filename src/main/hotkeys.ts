@@ -1,4 +1,4 @@
-import { clipboard, globalShortcut, ipcMain } from 'electron'
+import { ipcMain } from 'electron'
 import { appMacroEffectiveScope, chatCommandEffectiveScope, type MacroScope, scopeAppliesTo } from '@shared/macro-scope'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 import { snapshotClipboard } from './clipboard-preserve'
@@ -23,7 +23,7 @@ import {
 } from './wheel-click'
 export { setWheelClickEnabled, setWheelClickToggleKey }
 
-const { input, traits, windowTracker } = platform()
+const { clipboard, input, shortcuts, traits, windowTracker } = platform()
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -160,14 +160,14 @@ function syncEscapeShortcut(): void {
   if (desired === escapeShortcutRegistered) return
   if (desired) {
     try {
-      const ok = globalShortcut.register('Escape', () => fireEscape())
+      const ok = shortcuts.register('Escape', () => fireEscape())
       escapeShortcutRegistered = ok
     } catch (e) {
       console.error('[hotkeys] Failed to register Escape shortcut:', e)
     }
   } else {
     try {
-      globalShortcut.unregister('Escape')
+      shortcuts.unregister('Escape')
     } catch {}
     escapeShortcutRegistered = false
   }
@@ -396,8 +396,8 @@ function hotkeysAreSuspended(): boolean {
 }
 
 function disarmHotkeys(): void {
-  globalShortcut.unregisterAll()
-  // globalShortcut.unregisterAll() above already wiped Escape's OS-side
+  shortcuts.unregisterAll()
+  // shortcuts.unregisterAll() above already wiped Escape's OS-side
   // registration - just reflect that in our own flag. No sync needed: the
   // desired state is false while suspended either way.
   escapeShortcutRegistered = false
@@ -488,7 +488,7 @@ export function resumeHotkeys(): void {
 export function setHotkey(accelerator: string): void {
   if (currentAccelerator && !hotkeysAreSuspended() && isElectronRegisterable(currentAccelerator)) {
     try {
-      globalShortcut.unregister(currentAccelerator)
+      shortcuts.unregister(currentAccelerator)
     } catch {}
   }
   currentAccelerator = accelerator
@@ -500,7 +500,7 @@ export function setHotkey(accelerator: string): void {
   // above fires them. Skip the register so it doesn't log a spurious failure.
   if (!isElectronRegisterable(accelerator)) return
   try {
-    globalShortcut.register(accelerator, () => fireTrigger())
+    shortcuts.register(accelerator, () => fireTrigger())
   } catch (e) {
     console.error(`[hotkeys] Failed to register hotkey "${accelerator}":`, e)
   }
@@ -509,7 +509,7 @@ export function setHotkey(accelerator: string): void {
 export function setPriceCheckHotkey(accelerator: string): void {
   if (priceCheckAccelerator && !hotkeysAreSuspended() && isElectronRegisterable(priceCheckAccelerator)) {
     try {
-      globalShortcut.unregister(priceCheckAccelerator)
+      shortcuts.unregister(priceCheckAccelerator)
     } catch {}
   }
   priceCheckAccelerator = accelerator
@@ -517,7 +517,7 @@ export function setPriceCheckHotkey(accelerator: string): void {
   if (hotkeysAreSuspended()) return
   if (!isElectronRegisterable(accelerator)) return
   try {
-    globalShortcut.register(accelerator, () => firePriceCheck())
+    shortcuts.register(accelerator, () => firePriceCheck())
   } catch (e) {
     console.error(`[hotkeys] Failed to register price check hotkey "${accelerator}":`, e)
   }
@@ -544,7 +544,7 @@ function clearScopedHotkeyRegistrations(): void {
   if (!hotkeysAreSuspended()) {
     for (const accelerator of [...registeredChatAccelerators, ...appMacroAccelerators]) {
       try {
-        globalShortcut.unregister(accelerator)
+        shortcuts.unregister(accelerator)
       } catch {}
     }
   }
@@ -579,7 +579,7 @@ export function refreshScopedHotkeys(reason?: string): void {
       continue
     }
     try {
-      if (globalShortcut.register(c.hotkey, () => runChatCommand(c, autoSubmit, combo))) {
+      if (shortcuts.register(c.hotkey, () => runChatCommand(c, autoSubmit, combo))) {
         registeredChatAccelerators.push(c.hotkey)
       } else {
         recordScopedRegistrationFailure('chat-command', c.hotkey)
@@ -603,7 +603,7 @@ export function refreshScopedHotkeys(reason?: string): void {
       continue
     }
     try {
-      if (globalShortcut.register(m.hotkey, () => runAppMacro(m, combo))) {
+      if (shortcuts.register(m.hotkey, () => runAppMacro(m, combo))) {
         appMacroAccelerators.push(m.hotkey)
       } else {
         recordScopedRegistrationFailure('app-macro', m.hotkey)
@@ -643,7 +643,7 @@ export function setSecondaryOverlayHotkeys(hotkeys: OverlayHotkey[]): void {
   if (!hotkeysAreSuspended()) {
     for (const acc of registeredOverlayAccelerators) {
       try {
-        globalShortcut.unregister(acc)
+        shortcuts.unregister(acc)
       } catch {}
     }
   }
@@ -659,7 +659,7 @@ export function setSecondaryOverlayHotkeys(hotkeys: OverlayHotkey[]): void {
       continue
     }
     try {
-      if (globalShortcut.register(accelerator, () => runSecondaryOverlay(handler, combo))) {
+      if (shortcuts.register(accelerator, () => runSecondaryOverlay(handler, combo))) {
         registeredOverlayAccelerators.push(accelerator)
       }
     } catch (e) {
@@ -949,7 +949,7 @@ export function stopHotkeyListener(): void {
     recordMainBreadcrumb('uIOhook.stop() returned')
     hookStarted = false
   }
-  globalShortcut.unregisterAll()
+  shortcuts.unregisterAll()
   escapeShortcutRegistered = false
 }
 
@@ -1020,7 +1020,7 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
   // so a hotkey changed mid-injection isn't clobbered by its old value.
   if (currentAccelerator && acceleratorTapsC(currentAccelerator)) {
     try {
-      globalShortcut.unregister(currentAccelerator)
+      shortcuts.unregister(currentAccelerator)
     } catch {}
     restores.push(() => {
       if (currentAccelerator) setHotkey(currentAccelerator)
@@ -1028,7 +1028,7 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
   }
   if (priceCheckAccelerator && acceleratorTapsC(priceCheckAccelerator)) {
     try {
-      globalShortcut.unregister(priceCheckAccelerator)
+      shortcuts.unregister(priceCheckAccelerator)
     } catch {}
     restores.push(() => {
       if (priceCheckAccelerator) setPriceCheckHotkey(priceCheckAccelerator)
@@ -1038,7 +1038,7 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
   if (scoped.length > 0) {
     for (const accelerator of scoped) {
       try {
-        globalShortcut.unregister(accelerator)
+        shortcuts.unregister(accelerator)
       } catch {}
     }
     restores.push(() => refreshScopedHotkeys('copy-injection'))
@@ -1047,7 +1047,7 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
   if (overlayScoped.length > 0) {
     for (const accelerator of overlayScoped) {
       try {
-        globalShortcut.unregister(accelerator)
+        shortcuts.unregister(accelerator)
       } catch {}
     }
     restores.push(() => setSecondaryOverlayHotkeys(secondaryOverlayHotkeys))

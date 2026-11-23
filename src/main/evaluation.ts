@@ -1,5 +1,5 @@
 import { desktop } from './desktop'
-import { clipboard, screen } from 'electron'
+import { screen } from 'electron'
 import { platform } from '@scalpel/platform'
 import type Store from 'electron-store'
 import { isTownOrHideout } from '@shared/is-town-or-hideout'
@@ -228,14 +228,14 @@ async function captureItemFromClipboard(
     // back to PoE before copying so that path is as immediate as game focus.
     if (!platform().windowTracker.targetHasFocus) focusGameWindow()
     const withAlt = advancedCopyTracker.needsAlt()
-    clipboard.clear()
+    platform().clipboard.clear()
     await sendCtrlCToPoE({ withAlt })
 
     item = await pollClipboardForItem(3)
 
     // Fallback for windowed mode
     if (!item) {
-      clipboard.clear()
+      platform().clipboard.clear()
       focusGameWindow()
       await new Promise((r) => setTimeout(r, 50))
       await sendCtrlCToPoE({ withAlt })
@@ -247,7 +247,7 @@ async function captureItemFromClipboard(
     // copy before latching -- see advanced-copy.ts. Costs nothing once both games
     // honour a plain Ctrl+C (#560), since the probe never fires.
     if (item && advancedCopyTracker.shouldProbe(item)) {
-      clipboard.clear()
+      platform().clipboard.clear()
       await sendCtrlCToPoE({ withAlt: true })
       item = advancedCopyTracker.recordProbe(await pollClipboardForItem(3)) ?? item
     }

@@ -24,8 +24,6 @@ const overlayControllerState = { targetHasFocus: false, events: new EventEmitter
 const focusState = { throwOnFocus: false }
 
 vi.mock('electron', () => ({
-  globalShortcut: { register: vi.fn(() => true), unregister: vi.fn(), unregisterAll: vi.fn() },
-  clipboard: clipboardMock,
   ipcMain: { on: vi.fn(), handle: vi.fn() },
 }))
 vi.mock('@scalpel/platform', () => ({
@@ -45,6 +43,8 @@ vi.mock('@scalpel/platform', () => ({
     Delete: 11,
   },
   platform: () => ({
+    clipboard: clipboardMock,
+    shortcuts: { register: vi.fn(() => true), unregister: vi.fn(), unregisterAll: vi.fn() },
     input: {
       on: vi.fn(),
       start: vi.fn(),

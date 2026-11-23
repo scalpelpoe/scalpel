@@ -1,4 +1,4 @@
-import { clipboard } from 'electron'
+import { platform } from '@scalpel/platform'
 
 type Snapshot = { text: string; html: string }
 
@@ -14,10 +14,12 @@ let borrowers = 0
 const BORROW_TIMEOUT_MS = 10_000
 
 function readSnapshot(): Snapshot {
+  const { clipboard } = platform()
   return { text: clipboard.readText(), html: clipboard.readHTML() }
 }
 
 function writeSnapshot(snap: Snapshot): void {
+  const { clipboard } = platform()
   if (snap.html) clipboard.write({ text: snap.text, html: snap.html })
   else if (snap.text) clipboard.writeText(snap.text)
   else clipboard.clear()

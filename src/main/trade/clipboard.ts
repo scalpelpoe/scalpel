@@ -1,4 +1,4 @@
-import { clipboard } from 'electron'
+import { platform } from '@scalpel/platform'
 import { getItemClasses } from '@shared/data/items/item-classes'
 import { MERCENARY_WARRANT_BASE_TYPE } from '@shared/data/trade/mercenary-warrants'
 import { vaalGemType } from '@shared/data/trade/vaal-gems'
@@ -192,7 +192,7 @@ function scanMagicAffixNames(text: string): { prefix?: string; suffix?: string }
  * Returns null if the clipboard doesn't look like a PoE item.
  */
 export function readItemFromClipboard(): PoeItem | null {
-  const text = clipboard.readText()
+  const text = platform().clipboard.readText()
   return parseItemText(text)
 }
 

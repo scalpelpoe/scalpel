@@ -1,4 +1,4 @@
-import type { BrowserWindow, BrowserWindowConstructorOptions, Point, Rectangle } from 'electron'
+import type { BrowserWindow, BrowserWindowConstructorOptions, NativeImage, Point, Rectangle } from 'electron'
 
 /** The desktop integration selected for this process. */
 export type BackendId = 'windows' | 'macos' | 'x11' | 'hyprland'
@@ -64,6 +64,25 @@ export interface InputHook {
   /** Whether the user physically holds `key`, or null when injected keys make
    *  that unknowable. */
   physicallyHeld(key: number): boolean | null
+}
+
+/** OS-level shortcuts that fire while another application has focus. */
+export interface GlobalShortcuts {
+  register(accelerator: string, callback: () => void): boolean
+  unregister(accelerator: string): void
+  unregisterAll(): void
+  isRegistered(accelerator: string): boolean
+}
+
+export interface Clipboard {
+  readText(): string
+  readHTML(): string
+  writeText(text: string): void
+  write(data: { text?: string; html?: string }): void
+  clear(): void
+  read(format: string): string
+  readBuffer(format: string): Buffer
+  readImage(): NativeImage
 }
 
 /** A captured game-window frame. `data` is BGRA, row-major, (0,0) at the game
@@ -196,6 +215,8 @@ export interface Platform {
   readonly id: BackendId
   readonly traits: Traits
   readonly input: InputHook
+  readonly shortcuts: GlobalShortcuts
+  readonly clipboard: Clipboard
   readonly capture: GameCapture
   readonly cursor: Cursor
   readonly windowTracker: WindowTracker

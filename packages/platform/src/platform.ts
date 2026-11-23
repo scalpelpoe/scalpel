@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { electronClipboard, electronShortcuts } from './electron'
 import { createHyprlandBackend } from './hyprland/backend'
 import { uiohookInput } from './input'
 import { createNativeBackend } from './native/backend'
@@ -32,6 +33,8 @@ const facade: Platform = {
     },
   },
   input: uiohookInput,
+  shortcuts: electronShortcuts,
+  clipboard: electronClipboard,
   capture: {
     captureGame: (opts) => backend().capture.captureGame(opts),
     gameWindowSource: (title) => backend().capture.gameWindowSource(title),
