@@ -102,6 +102,7 @@ export function StatFilterRow({
   updateFilterMax,
   itemRarity,
   onRowContextMenu,
+  fadeUnchecked = true,
 }: {
   f: StatFilter
   i: number
@@ -111,6 +112,8 @@ export function StatFilterRow({
   updateFilterMax: (i: number, val: string) => void
   itemRarity: string
   onRowContextMenu: (i: number, x: number, y: number, scale: number) => void
+  /** False when the tradeNoFadeUnchecked accessibility setting is on. */
+  fadeUnchecked?: boolean
 }): JSX.Element {
   const minTint = getSearchTint(f.min, null, f.modRange, itemRarity, f.type)
   const maxTint = getSearchTint(null, f.max, f.modRange, itemRarity, f.type)
@@ -207,7 +210,7 @@ export function StatFilterRow({
     <div
       className="flex items-center gap-2 px-3 py-[2px] text-xs"
       style={{
-        opacity: f.enabled ? 1 : 0.4,
+        opacity: f.enabled || !fadeUnchecked ? 1 : 0.4,
         background: zebraRowBg(rowIdx),
       }}
       onMouseEnter={() => setHovered(true)}

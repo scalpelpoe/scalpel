@@ -126,4 +126,24 @@ describe('bootstrapTheme', () => {
     updatedCb!('customThemePalette', customPalette)
     expect(document.documentElement.style.getPropertyValue('--accent')).toBe(resolveCssVars(customPalette)['--accent'])
   })
+
+  it('applies fontScale as --font-scale and follows setting-updated', async () => {
+    let updatedCb: ((key: string, value: unknown) => void) | undefined
+    ;(window as unknown as { api: unknown }).api = {
+      getSettings: vi.fn().mockResolvedValue({ themeId: 'default', customThemePalette: null, fontScale: 1.25 }),
+      onSettingUpdated: (cb: (k: string, v: unknown) => void) => {
+        updatedCb = cb
+        return () => {}
+      },
+    }
+
+    await bootstrapTheme()
+    expect(document.documentElement.style.getPropertyValue('--font-scale')).toBe('1.25')
+
+    updatedCb!('fontScale', 1.5)
+    expect(document.documentElement.style.getPropertyValue('--font-scale')).toBe('1.5')
+
+    updatedCb!('fontScale', undefined)
+    expect(document.documentElement.style.getPropertyValue('--font-scale')).toBe('1')
+  })
 })

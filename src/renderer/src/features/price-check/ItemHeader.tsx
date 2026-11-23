@@ -8,6 +8,7 @@ import { ExternalLinkButton } from '../../shared/ExternalLinkButton'
 import { CurrencyIcon } from '../../shared/CurrencyIcon'
 import { NinjaPriceChip } from '../../shared/NinjaPriceChip'
 import dustIcon from '../../assets/currency/thaumaturgic-dust.png'
+import { scaledPx } from '@renderer/shared/font-scale'
 
 export function ItemHeader({
   heroIcon,
@@ -158,7 +159,7 @@ export function ItemHeader({
                   background: 'var(--bg-card)',
                   border: '1px solid var(--border)',
                   borderRadius: 4,
-                  fontSize: 10,
+                  fontSize: scaledPx(10),
                   whiteSpace: 'nowrap',
                   pointerEvents: 'none',
                   opacity: 0,

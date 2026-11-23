@@ -1,3 +1,5 @@
+import { scaledPx } from '@renderer/shared/font-scale'
+
 interface SaveButtonProps {
   isDirty: boolean
   isSaving: boolean
@@ -14,7 +16,7 @@ export function SaveButton({ isDirty, isSaving, isSaved, onSave, compact }: Save
       className="font-bold tracking-[0.5px] rounded border-none shrink-0 self-stretch transition-all duration-150"
       style={{
         padding: compact ? '6px 16px' : '10px 28px',
-        fontSize: compact ? 11 : 13,
+        fontSize: scaledPx(compact ? 11 : 13),
         cursor: isDirty ? 'pointer' : 'default',
         ...(isSaved
           ? { background: 'var(--match)', color: '#fff' }

@@ -17,6 +17,7 @@ import { usePoeVersion } from '../../shared/poe-version-context'
 import { ProfileManagerTab } from '../profiles/ProfileManagerTab'
 import { m } from '@shared/paraglide/messages.js'
 import { usePluginUpdates } from '../../plugins/use-plugin-updates'
+import { scaledPx } from '@renderer/shared/font-scale'
 
 interface Props {
   settings: RuntimeSettings
@@ -147,7 +148,7 @@ export function SettingsPanel({
         <div className="flex items-baseline gap-2">
           <h2
             className="section-title"
-            style={!isOverlay ? { color: 'var(--accent)', fontSize: 16, fontWeight: 700 } : undefined}
+            style={!isOverlay ? { color: 'var(--accent)', fontSize: scaledPx(16), fontWeight: 700 } : undefined}
           >
             {m.settings_title()}
           </h2>

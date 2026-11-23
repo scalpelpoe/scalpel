@@ -10,6 +10,7 @@ import { DIV_CARD_ICON_URL, IP } from '@renderer/shared/constants'
 import dustIconAsset from '@renderer/assets/currency/thaumaturgic-dust.png'
 import poereIcon from '@renderer/assets/other/poere-logo.svg'
 import { m } from '@shared/paraglide/messages.js'
+import { applyFontScale } from '@renderer/shared/apply-theme'
 
 interface Props {
   settings: RuntimeSettings
@@ -18,6 +19,7 @@ interface Props {
 }
 
 const SCALE_PRESETS = [0.75, 1, 1.25, 1.5, 2] as const
+const FONT_SCALE_PRESETS = [1, 1.1, 1.25, 1.5] as const
 
 const TAB_BUTTON_BASE = 'w-[30px] h-[30px] flex items-center justify-center'
 // Three button states for the Show/Hide Tabs preview, communicated by fill color.
@@ -33,6 +35,15 @@ export function ViewTab({ settings, update, updateMany }: Props): JSX.Element {
   const [customScale, setCustomScale] = useState<boolean>(
     !(SCALE_PRESETS as readonly number[]).includes(settings.overlayScale),
   )
+  const fontScale = settings.fontScale ?? 1
+  const [customFontScale, setCustomFontScale] = useState<boolean>(
+    !(FONT_SCALE_PRESETS as readonly number[]).includes(fontScale),
+  )
+  // The settings broadcast skips the sending window, so apply locally too.
+  const setFontScale = (scale: number): void => {
+    applyFontScale(scale)
+    update('fontScale', scale)
+  }
 
   // Show/Hide Tabs registry. Order matches the title bar (left-to-right). Features-gated
   // tabs only render if the current PoE version supports them, mirroring TitleBar
@@ -202,6 +213,45 @@ export function ViewTab({ settings, update, updateMany }: Props): JSX.Element {
               }}
               min={50}
               max={300}
+              step={5}
+              suffix="%"
+            />
+          )}
+        </div>
+      </section>
+
+      {/* Font scale (accessibility): multiplies text size only, layout stays put */}
+      <section>
+        <label>{m.settings_font_scale()}</label>
+        <div className="flex items-center gap-1.5 mt-[6px]">
+          {FONT_SCALE_PRESETS.map((scale) => (
+            <button
+              key={scale}
+              onClick={() => {
+                setCustomFontScale(false)
+                setFontScale(scale)
+              }}
+              className={`text-[11px] px-3 py-1.5 ${
+                !customFontScale && fontScale === scale ? 'bg-accent text-bg-solid' : 'text-text-dim'
+              }`}
+            >
+              {Math.round(scale * 100)}%
+            </button>
+          ))}
+          <button
+            onClick={() => setCustomFontScale(true)}
+            className={`text-[11px] px-3 py-1.5 ${customFontScale ? 'bg-accent text-bg-solid' : 'text-text-dim'}`}
+          >
+            {m.common_custom()}
+          </button>
+          {customFontScale && (
+            <ScrubInput
+              value={Math.round(fontScale * 100)}
+              onChange={(v) => {
+                if (v != null) setFontScale(v / 100)
+              }}
+              min={75}
+              max={200}
               step={5}
               suffix="%"
             />

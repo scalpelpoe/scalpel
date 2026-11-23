@@ -5,6 +5,7 @@ import { CurrencyIcon } from './CurrencyIcon'
 import { formatRate, formatVolume } from './utils'
 import { chartDirection, nearestIndex, projectChart, VIEW_H, VIEW_W } from './rate-chart-geometry'
 import { TREND_DOWN_COLOR, TREND_UP_COLOR } from './price-trend'
+import { scaledPx } from './font-scale'
 
 interface Props {
   /** Oldest-first daily samples. Fewer than two still renders (early league). */
@@ -263,17 +264,17 @@ export function RateChart({
               whiteSpace: 'nowrap',
             }}
           >
-            <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-dim, #888)', lineHeight: 1 }}>
+            <div style={{ fontSize: scaledPx(10), fontWeight: 600, color: 'var(--text-dim, #888)', lineHeight: 1 }}>
               {formatDay(active.t)}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, lineHeight: 1 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text, #fff)' }}>
+              <span style={{ fontSize: scaledPx(14), fontWeight: 700, color: 'var(--text, #fff)' }}>
                 {formatRate(active.rate)}
               </span>
               <CurrencyIcon name={currency} style={{ width: 12, height: 12 }} />
             </div>
             {geometry.volumeMax > 0 && (
-              <div style={{ fontSize: 10, color: 'var(--text-dim, #888)', lineHeight: 1 }}>
+              <div style={{ fontSize: scaledPx(10), color: 'var(--text-dim, #888)', lineHeight: 1 }}>
                 {volumeLabel.prefix && `${volumeLabel.prefix} `}
                 <span style={{ fontWeight: 700, color: 'var(--text, #fff)' }}>{formatVolume(active.volume)}</span>
                 {volumeLabel.suffix}

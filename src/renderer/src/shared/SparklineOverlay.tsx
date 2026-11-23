@@ -4,6 +4,7 @@ import { CurrencyIcon } from './CurrencyIcon'
 import { usePoeVersion } from './poe-version-context'
 import { getTrendDirection, TREND_DOWN_COLOR, TREND_UP_COLOR } from './price-trend'
 import { promoteChaos } from './utils'
+import { scaledPx } from './font-scale'
 
 interface CurrentPrice {
   chaosValue: number
@@ -176,7 +177,7 @@ function MiniPriceChip({
         padding: '1px 4px',
         borderRadius: 999,
         background: 'rgba(0, 0, 0, 0.75)',
-        fontSize: 9,
+        fontSize: scaledPx(9),
         fontWeight: 700,
         color: '#fff',
         whiteSpace: 'nowrap',
@@ -280,7 +281,7 @@ export function SparklineOverlay({ graph, visible, cursor, currentPrice, noPromo
           justifyContent: 'space-between',
           alignItems: 'baseline',
           padding: '0 8px',
-          fontSize: 10,
+          fontSize: scaledPx(10),
         }}
       >
         <span style={{ color: 'var(--text-dim, #888)', fontWeight: 600 }}>7-day trend</span>
@@ -442,7 +443,7 @@ export function SparklineOverlay({ graph, visible, cursor, currentPrice, noPromo
             padding: '1px 8px',
             background: 'rgba(0, 0, 0, 0.25)',
             textAlign: 'center',
-            fontSize: 11,
+            fontSize: scaledPx(11),
             fontWeight: 700,
             lineHeight: 1.5,
             color: 'var(--text, #fff)',

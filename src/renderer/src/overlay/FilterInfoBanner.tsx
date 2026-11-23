@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { m } from '@shared/paraglide/messages.js'
+import { scaledPx } from '@renderer/shared/font-scale'
 
 interface FilterInfoBannerProps {
   filterPath: string
@@ -112,7 +113,7 @@ export function FilterInfoBanner({
             className="primary"
             style={{
               padding: '4px 12px',
-              fontSize: 11,
+              fontSize: scaledPx(11),
               fontWeight: 600,
               flexShrink: 0,
               opacity: updatingFilter ? 0.5 : 1,

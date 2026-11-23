@@ -5,6 +5,19 @@ import { resolveCssVars } from '@shared/theme/derive'
 import { resolveActivePalette } from '@shared/theme/active'
 
 export const THEME_CACHE_KEY = 'scalpel:theme-vars'
+export const FONT_SCALE_CACHE_KEY = 'scalpel:font-scale'
+
+/** Set the accessibility font multiplier read by every font-size / line-height
+ *  (postcss.config.js rewrites them to calc(N * var(--font-scale, 1))). */
+export function applyFontScale(scale: number | undefined): void {
+  const s = typeof scale === 'number' && Number.isFinite(scale) && scale > 0 ? scale : 1
+  document.documentElement.style.setProperty('--font-scale', String(s))
+  try {
+    localStorage.setItem(FONT_SCALE_CACHE_KEY, String(s))
+  } catch {
+    // cache is only a pre-paint optimisation
+  }
+}
 
 type ThemeApi = Pick<Api, 'getSettings' | 'onSettingUpdated'>
 
@@ -33,6 +46,12 @@ export function applyPalette(palette: ThemePalette): void {
  *  Eliminates the default-theme flash for non-default themes. Safe no-op
  *  when there is no cache or it is corrupt. */
 export function applyCachedVars(): void {
+  try {
+    const scale = Number(localStorage.getItem(FONT_SCALE_CACHE_KEY))
+    if (scale > 0) document.documentElement.style.setProperty('--font-scale', String(scale))
+  } catch {
+    // no cache: --font-scale falls back to 1
+  }
   let raw: string | null = null
   try {
     raw = localStorage.getItem(THEME_CACHE_KEY)
@@ -78,8 +97,10 @@ export async function bootstrapTheme(): Promise<void> {
     customThemePalette: settings.customThemePalette ?? null,
   }
   reapply()
+  applyFontScale(settings.fontScale)
 
   api.onSettingUpdated((key, value) => {
+    if (key === 'fontScale') return applyFontScale(value as number | undefined)
     if (key === 'themeId') snapshot = { ...snapshot, themeId: value as string }
     else if (key === 'customThemePalette') snapshot = { ...snapshot, customThemePalette: value as ThemePalette | null }
     else return

@@ -1,5 +1,6 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { scaledPx } from './font-scale'
 
 // Native `title` tooltips have a fixed ~500ms OS/Chromium delay that can't be
 // configured, which reads as sluggish. This renders our own tooltip with a
@@ -83,7 +84,7 @@ export function HoverTooltip({ text, children, className }: HoverTooltipProps): 
               borderRadius: 6,
               boxShadow: '0 4px 16px rgba(0, 0, 0, 0.8)',
               padding: '3px 8px',
-              fontSize: 11,
+              fontSize: scaledPx(11),
               fontWeight: 600,
               color: 'var(--text, #fff)',
               // `pre`, not `nowrap`: identical for the single-line price tooltips,

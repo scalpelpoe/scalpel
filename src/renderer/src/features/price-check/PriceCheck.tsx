@@ -297,6 +297,7 @@ export function PriceCheck({
   const baseModeExpandedIndices = useRef<Set<number> | null>(null)
   const keepUncheckedVisible = useRef(false)
   const neverAutoSearch = useRef(false)
+  const [noFadeUnchecked, setNoFadeUnchecked] = useState(false)
   const [settingsLoaded, setSettingsLoaded] = useState(false)
   useEffect(() => {
     if (baseModeApplied.current) return
@@ -304,6 +305,7 @@ export function PriceCheck({
       if (baseModeApplied.current) return
       keepUncheckedVisible.current = !!s.tradeKeepUncheckedVisible
       neverAutoSearch.current = !!s.tradeNeverAutoSearch
+      setNoFadeUnchecked(!!s.tradeNoFadeUnchecked)
       // Seed the per-search dropdowns from the user's global preferences --
       // except for primary-currency items, where pricing in the same currency
       // is meaningless. Override to the OTHER primary currency so the user
@@ -835,6 +837,7 @@ export function PriceCheck({
                 {visibleStats.map(({ f, i }, rowIdx) => (
                   <Fragment key={i}>
                     <StatFilterRow
+                      fadeUnchecked={!noFadeUnchecked}
                       f={f}
                       i={i}
                       rowIdx={rowIdx}

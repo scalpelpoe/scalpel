@@ -126,6 +126,11 @@ export function PriceCheckTab({ settings, update, updateProfile, tryHotkey }: Pr
           onChange={(val) => update('tradeKeepUncheckedVisible', val)}
         />
         <SettingToggleBox
+          label={m.settings_pc_no_fade_unchecked()}
+          checked={settings.tradeNoFadeUnchecked ?? false}
+          onChange={(val) => update('tradeNoFadeUnchecked', val)}
+        />
+        <SettingToggleBox
           label={m.settings_pc_never_autosearch()}
           checked={settings.tradeNeverAutoSearch ?? false}
           onChange={(val) => update('tradeNeverAutoSearch', val)}

@@ -34,6 +34,8 @@ export interface AppSettings {
   priceCheckHotkey: string
   overlayOpacity: number
   overlayScale: number
+  /** Accessibility: multiplies every CSS font-size/line-height (see postcss.config.js). */
+  fontScale?: number
   openSide: 'both' | 'right' | 'left'
   closeOnClickOutside: boolean
   useCurrentZoneAreaLevel: boolean
@@ -58,6 +60,8 @@ export interface AppSettings {
   tradeAffixesPrechecked: AffixesPrechecked
   tradePoe2CraftingReadyDefault?: boolean
   tradeKeepUncheckedVisible?: boolean
+  /** Accessibility: render unchecked price-check rows at full opacity. */
+  tradeNoFadeUnchecked?: boolean
   tradeNeverAutoSearch?: boolean
   chatCommands: Array<{ hotkey: string; command: string; autoSubmit?: boolean; scope?: MacroScope }>
   appMacros: Array<{ action: string; hotkey: string; tag?: string; presetId?: string; scope?: MacroScope }>
