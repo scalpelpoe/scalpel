@@ -12,12 +12,15 @@ options=(!strip)
 depends=(
     "fuse2"
 )
+optdepends=("ydotool: keyboard input on native KDE Wayland")
 makedepends=(
     "git"
     "nodejs-lts-jod"
     "npm"
     "python"
     "python-setuptools"
+    "wayland"
+    "libxkbcommon"
 )
 provides=("scalpel-poe")
 conflicts=("scalpel-poe" "scalpel-poe-bin")

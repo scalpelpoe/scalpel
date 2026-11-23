@@ -12,6 +12,7 @@ options=(!strip)
 depends=(
     "fuse2"
 )
+optdepends=("ydotool: keyboard input on native KDE Wayland")
 provides=("scalpel-poe")
 conflicts=("scalpel-poe" "scalpel-poe-git")
 _upstream_version="${pkgver/_/-}"
@@ -26,7 +27,7 @@ noextract=("$pkgname-$_upstream_version.AppImage")
 sha256sums=('c8f42f29d262caf2298c790fe01a03e161ac41c53e8cedcb8829d7dcaa2307ab'
             '31db68f35fdeb9f2d8ad1fdf87784c4e590a8d715a18972a58e5870b160fd92e'
             '0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0'
-            'aec6807cc11a1f0f172577d5d24744d457c2d52fd51c4b92d1e6b8bfbb943b1f'
+            '92fd85ff8a328c2b94d1c65cfa8fb9b0d78681b77f2df2c3b8f847166d2d7822'
             'be4904493f9322e59649768c209eeeed71ebf8f4f92321614967f749807794dc')
 
 package() {

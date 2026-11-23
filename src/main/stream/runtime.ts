@@ -344,6 +344,7 @@ export function createStreamRuntime(
       const item = await capture()
       if (!item) return
 
+      await desktop.refreshCursor()
       const cursor = desktop.getCursorScreenPoint()
       const game = desktop.getGameBounds()
       const side = cursor && game ? paperdollSide(cursor.x, game, POE_SIDEBAR_RATIO) : 'left'

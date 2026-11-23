@@ -1,6 +1,10 @@
-import { clipboard, globalShortcut, ipcMain } from 'electron'
+import { ipcMain } from 'electron'
+import { clipboard } from './desktop/clipboard'
+import { globalShortcut } from './desktop/global-shortcut'
 import { OverlayController } from 'electron-overlay-window'
-import { UiohookKey, uIOhook } from 'uiohook-napi'
+import { UiohookKey } from 'uiohook-napi'
+import { uIOhook } from './desktop/input'
+import { layerShellServices } from './desktop/layer-shell-state'
 import { appMacroEffectiveScope, chatCommandEffectiveScope, type MacroScope, scopeAppliesTo } from '@shared/macro-scope'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 import { snapshotClipboard } from './clipboard-preserve'
@@ -710,12 +714,13 @@ const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms)
  *  hotkey (see hotkeyContextIsActive). */
 async function awaitGameFocus(): Promise<void> {
   if (!hyprlandInputAllowed()) throw new Error('Game workspace is inactive - input not sent')
-  if (OverlayController.targetHasFocus) return
+  const hasFocus = layerShellServices()?.gameHasKeyboardFocus ?? (() => OverlayController.targetHasFocus)
+  if (hasFocus()) return
   focusGameWindow()
   for (let waited = 0; waited < FOCUS_WAIT_MS; waited += FOCUS_POLL_MS) {
     await wait(FOCUS_POLL_MS)
     if (!hyprlandInputAllowed()) throw new Error('Game workspace is inactive - input not sent')
-    if (OverlayController.targetHasFocus) return
+    if (hasFocus()) return
   }
   throw new Error('PoE did not take focus - chat command not sent')
 }
@@ -892,14 +897,14 @@ export async function pasteRegexToPoESearch(regex: string): Promise<void> {
   restoreModifiers(held)
 }
 
-/** Track physically held modifier keys via uiohook (ignores synthetic key events during injection) */
+/** Track physically held modifier keys (ignores synthetic key events during injection where the backend sees them) */
 const heldModifiers = { ctrl: 0 as number, shift: 0 as number, alt: 0 as number }
 
 function initModifierTracking(): void {
   uIOhook.on(
     'keydown',
     guardNativeListener('keydown-modifiers', (e) => {
-      if (injecting) return
+      if (injecting && uIOhook.seesInjectedKeys()) return
       if (e.keycode === UiohookKey.Ctrl || e.keycode === UiohookKey.CtrlRight) heldModifiers.ctrl = e.keycode
       if (e.keycode === UiohookKey.Shift || e.keycode === UiohookKey.ShiftRight) heldModifiers.shift = e.keycode
       if (e.keycode === UiohookKey.Alt || e.keycode === UiohookKey.AltRight) heldModifiers.alt = e.keycode
@@ -908,7 +913,7 @@ function initModifierTracking(): void {
   uIOhook.on(
     'keyup',
     guardNativeListener('keyup', (e) => {
-      if (injecting) return
+      if (injecting && uIOhook.seesInjectedKeys()) return
       if (e.keycode === UiohookKey.Ctrl || e.keycode === UiohookKey.CtrlRight) heldModifiers.ctrl = 0
       if (e.keycode === UiohookKey.Shift || e.keycode === UiohookKey.ShiftRight) heldModifiers.shift = 0
       if (e.keycode === UiohookKey.Alt || e.keycode === UiohookKey.AltRight) heldModifiers.alt = 0
@@ -918,13 +923,14 @@ function initModifierTracking(): void {
 
 type ModSnapshot = { ctrl: number; shift: number; alt: number }
 
-/** Re-press the exact modifier keys from a snapshot (using the correct left/right variant) */
+/** Re-press the exact modifier keys from a snapshot (using the correct
+ *  left/right variant), skipping keys the user has since released. */
 function restoreModifiers(snapshot: ModSnapshot): void {
   const prevInjecting = injecting
   injecting = true
-  if (snapshot.ctrl) uIOhook.keyToggle(snapshot.ctrl, 'down')
-  if (snapshot.shift) uIOhook.keyToggle(snapshot.shift, 'down')
-  if (snapshot.alt) uIOhook.keyToggle(snapshot.alt, 'down')
+  for (const key of [snapshot.ctrl, snapshot.shift, snapshot.alt]) {
+    if (key && uIOhook.physicallyHeld(key) !== false) uIOhook.keyToggle(key, 'down')
+  }
   injecting = prevInjecting
 }
 
@@ -1074,6 +1080,16 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
  */
 export async function sendCtrlCToPoE(opts?: { withAlt?: boolean }): Promise<void> {
   if (!hyprlandInputAllowed()) return
+  if (layerShellServices()?.gameHasKeyboardFocus) {
+    // Without focus the copy reads nothing, which callers already handle
+    // (windowed-mode retry, no-item notice); a throw would skip that.
+    try {
+      await awaitGameFocus()
+    } catch (err) {
+      if (process.env.SCALPEL_DEBUG_LOG) console.error('[hotkey] copy skipped:', err)
+      return
+    }
+  }
   injecting = true
   const restoreCKeyedRegistrations = releaseCKeyedRegistrationsForInjection()
 
@@ -1112,8 +1128,8 @@ export async function sendCtrlCToPoE(opts?: { withAlt?: boolean }): Promise<void
       setTimeout(() => {
         if (needAlt) uIOhook.keyToggle(UiohookKey.Alt, 'up')
         if (needCtrl) uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
-        // Re-press Shift immediately if it was held
-        if (heldShift) uIOhook.keyToggle(heldShift, 'down')
+        // Re-press Shift immediately if it was held, and still is
+        if (heldShift && uIOhook.physicallyHeld(heldShift) !== false) uIOhook.keyToggle(heldShift, 'down')
       }, 10)
       setTimeout(() => {
         injecting = false

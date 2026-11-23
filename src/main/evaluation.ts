@@ -1,5 +1,6 @@
 import { desktop } from './desktop'
-import { clipboard, screen } from 'electron'
+import { screen } from 'electron'
+import { clipboard } from './desktop/clipboard'
 import { OverlayController } from 'electron-overlay-window'
 import type Store from 'electron-store'
 import { isTownOrHideout } from '@shared/is-town-or-hideout'
@@ -266,6 +267,10 @@ async function captureItemFromClipboard(
   }
 
   consecutiveClipboardFailures = 0
+  // Under layer-shell, finding the pointer briefly takes pointer focus from the
+  // game, which would end the hover the copy needs, so it waits until now.
+  await desktop.refreshCursor()
+  lastCursorX = desktop.getCursorScreenPoint()?.x ?? lastCursorX
   return item
 }
 

@@ -5,6 +5,7 @@ import type { Rect } from './snap-canvas'
 import { desktop, type OverlayInteraction } from '../desktop'
 import { hyprlandOverlayActive, nameHyprlandOverlay } from '../hyprland'
 import { linkX11Transient } from '../desktop/x11-transient'
+import { adoptOverlayWindow, layerShellActive, overlayWebPreferences } from '../desktop/layer-shell'
 import { GAME_TITLES } from '@shared/contracts/game-variant'
 import { getPoeVersion } from '../game-state'
 
@@ -30,12 +31,13 @@ export function createOverlayWindow({ htmlEntry, bounds, interaction }: CreateOp
     y: bounds.y,
     backgroundColor: '#00000000',
     show: false,
-    webPreferences: {
+    webPreferences: overlayWebPreferences({
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-    },
+    }),
   })
+  adoptOverlayWindow(win)
   nameHyprlandOverlay(win)
   // 'screen-saver' is the level the main overlay uses (set by electron-overlay-
   // window on attach). It sits above PoE, the taskbar, and other floating
@@ -74,7 +76,7 @@ function installOpacityHideShow(win: BrowserWindow, interaction: () => OverlayIn
     opacityHidden = true
   }
   win.show = (): void => {
-    if (process.platform === 'linux' && !hyprlandOverlayActive()) {
+    if (process.platform === 'linux' && !hyprlandOverlayActive() && !layerShellActive()) {
       try {
         linkX11Transient(win.getNativeWindowHandle(), GAME_TITLES[getPoeVersion()])
       } catch {

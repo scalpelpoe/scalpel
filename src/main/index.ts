@@ -129,20 +129,26 @@ import { createTray, refreshTrayMenu } from './app/tray'
 import { startLiveServices } from './app/lifecycle'
 import { getOverlayAttachStrategy } from './experimental'
 import { relaunchApp } from './relaunch'
+import { initLayerShell, waylandLayerShellSupported } from './desktop/layer-shell'
 
 // ---- Linux display-server setup --------------------------------------------
 
+// Wayland compositors with wlr-layer-shell and a virtual keyboard, and KDE with
+// ydotoold, get a native Wayland client with layer-shell overlays; the rest use
+// XWayland. Passing --ozone-platform explicitly overrides the choice.
 if (
   process.platform === 'linux' &&
   process.env.WAYLAND_DISPLAY &&
   !process.argv.some((a) => a.startsWith('--ozone-platform='))
 ) {
-  relaunchApp([...process.argv.slice(1), '--ozone-platform=x11'])
+  const platform = waylandLayerShellSupported() ? 'wayland' : 'x11'
+  relaunchApp([...process.argv.slice(1), `--ozone-platform=${platform}`])
   app.exit(0)
 }
 
 if (process.platform === 'linux') {
   app.disableHardwareAcceleration()
+  initLayerShell()
 }
 
 // ---- Elevation detection ---------------------------------------------------
@@ -422,7 +428,8 @@ app.whenReady().then(() => {
 
   const dispatchAppMacro = (action: string, tag?: string, presetId?: string): void => {
     if (action === RADIAL_MACRO_ACTION) {
-      toggleRadialMenu()
+      // The menu opens around the pointer, which layer-shell must look up.
+      void desktop.refreshCursor().then(toggleRadialMenu)
       return
     }
     if (action === 'streamUpdateSlot') {

@@ -1,4 +1,4 @@
-import { clipboard } from 'electron'
+import { clipboard } from './desktop/clipboard'
 
 type Snapshot = { text: string; html: string }
 

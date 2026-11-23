@@ -14,6 +14,7 @@ import {
 } from './hyprland-policy'
 import { hyprlandFocusScript } from './hyprland-focus'
 import { hyprlandGeometryScript } from './hyprland-geometry'
+import { layerShellActive } from './desktop/layer-shell-state'
 
 const isHyprland = process.platform === 'linux' && !!process.env.HYPRLAND_INSTANCE_SIGNATURE
 const exec = promisify(execFile)
@@ -52,7 +53,8 @@ let requestWindowFocus: ((win: BrowserWindow) => void) | null = null
  *  once, on first use: the version query costs a subprocess, and Hyprland can't
  *  be swapped underneath a running process. */
 export function hyprlandOverlayActive(): boolean {
-  if (!isHyprland) return false
+  // Native Wayland overlays are layer surfaces; this IPC path drives XWayland windows.
+  if (!isHyprland || layerShellActive()) return false
   if (overlayActive === null) {
     try {
       overlayActive = hyprlandVersionAtLeast(

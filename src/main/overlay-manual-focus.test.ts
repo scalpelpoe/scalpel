@@ -49,7 +49,10 @@ vi.mock('electron-overlay-window', () => ({
     focusTarget: mock.focus,
   },
 }))
+// The code under test reaches uiohook through the session input facade.
+vi.mock('./desktop/input', async () => ({ uIOhook: (await import('uiohook-napi')).uIOhook }))
 vi.mock('uiohook-napi', () => ({
+  UiohookKey: {},
   uIOhook: {
     on: (name: string, cb: any) => {
       mock.mouse[name] = cb

@@ -3,6 +3,7 @@ import { OverlayController } from 'electron-overlay-window'
 import { GAME_TITLES } from '@shared/contracts/game-variant'
 import { IPC_CHANNELS } from '@shared/contracts/ipc'
 import { getPoeVersion } from '../game-state'
+import { layerShellActive } from '../desktop/layer-shell-state'
 
 export interface GameWindowSourceInfo {
   sourceId: string
@@ -39,7 +40,8 @@ async function handleGetSource(): Promise<GameWindowSourceInfo | null> {
     }
     if (!sourceId) return null
     const display = screen.getDisplayNearestPoint({ x: tb.x + tb.width / 2, y: tb.y + tb.height / 2 })
-    const sf = display.scaleFactor
+    // Layer-shell bounds are already logical.
+    const sf = layerShellActive() ? 1 : display.scaleFactor
     return { sourceId, gameSize: { w: Math.round(tb.width / sf), h: Math.round(tb.height / sf) } }
   } catch (err) {
     if (process.env.SCALPEL_DEBUG_LOG) console.error('[screen-source] resolve failed', err)

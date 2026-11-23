@@ -73,6 +73,8 @@ vi.mock('electron-overlay-window', () => ({
   OverlayController: overlayControllerState,
 }))
 
+// The code under test reaches uiohook through the session input facade.
+vi.mock('./desktop/input', async () => ({ uIOhook: (await import('uiohook-napi')).uIOhook }))
 vi.mock('uiohook-napi', () => {
   const UiohookKey = { Escape: 1, Ctrl: 2, Alt: 3, Shift: 4, ShiftRight: 5, C: 6 }
   const uIOhook = {
@@ -83,6 +85,8 @@ vi.mock('uiohook-napi', () => {
     stop: vi.fn(),
     keyToggle: vi.fn(),
     keyTap: vi.fn(),
+    seesInjectedKeys: () => true,
+    physicallyHeld: () => null,
   }
   return { UiohookKey, uIOhook }
 })

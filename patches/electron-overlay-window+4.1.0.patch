@@ -1,0 +1,78 @@
+diff --git a/node_modules/electron-overlay-window/dist/index.d.ts b/node_modules/electron-overlay-window/dist/index.d.ts
+--- a/node_modules/electron-overlay-window/dist/index.d.ts
++++ b/node_modules/electron-overlay-window/dist/index.d.ts
+@@ -5,6 +5,14 @@
+ export { adoptLayerWindow, getLayerWindow, getLayerPointer, releaseLayerKeyboards, type LayerWindow, type LayerWindowOptions } from './wayland/layer-window';
+ export { setLayerShortcutHandler, type LayerShortcutKey } from './wayland/layer-window';
+ export type { NativeInputEvent } from './wayland/native-input';
++import type { TrackerEvent } from './wayland/tracker';
++export { FocusArbiter, type TrackerEvent } from './wayland/tracker';
++export interface LayerTracker {
++    setTitles(titles: string[]): void;
++    clear(): void;
++    focusTarget(): void;
++    stop(): void;
++}
+ export interface AttachEvent {
+     hasAccess: boolean | undefined;
+     isFullscreen: boolean | undefined;
+@@ -101,7 +109,7 @@
+      * must be created with `LAYER_SHELL_WEB_PREFERENCES`. Returns false when the
+      * compositor lacks layer-shell v4 or the host is not installed.
+      */
+-    useLayerShell(): boolean;
++    useLayerShell(createTracker?: (titles: string[], emit: (event: TrackerEvent) => void) => LayerTracker): boolean;
+     get isLayerShell(): boolean;
+     /**
+      * Create a dummy window to calculate the title bar height on Mac. We use
+diff --git a/node_modules/electron-overlay-window/dist/index.js b/node_modules/electron-overlay-window/dist/index.js
+--- a/node_modules/electron-overlay-window/dist/index.js
++++ b/node_modules/electron-overlay-window/dist/index.js
+@@ -21,6 +21,7 @@
+ Object.defineProperty(exports, "releaseLayerKeyboards", { enumerable: true, get: function () { return layer_window_2.releaseLayerKeyboards; } });
+ var layer_window_3 = require("./wayland/layer-window");
+ Object.defineProperty(exports, "setLayerShortcutHandler", { enumerable: true, get: function () { return layer_window_3.setLayerShortcutHandler; } });
++Object.defineProperty(exports, "FocusArbiter", { enumerable: true, get: function () { return tracker_1.FocusArbiter; } });
+ var EventType;
+ (function (EventType) {
+     EventType[EventType["EVENT_ATTACH"] = 1] = "EVENT_ATTACH";
+@@ -303,12 +304,13 @@
+      * must be created with `LAYER_SHELL_WEB_PREFERENCES`. Returns false when the
+      * compositor lacks layer-shell v4 or the host is not installed.
+      */
+-    useLayerShell() {
++    useLayerShell(createTracker) {
+         if (this.isInitialized)
+             throw new Error('Call useLayerShell before attaching.');
+         if (!isLinux || !(0, host_1.layerShellUsable)((0, host_1.probeWaylandHost)()))
+             return false;
+         this.layerShell = host_1.WaylandHost.start() !== null;
++        this.createLayerTracker = createTracker;
+         return this.layerShell;
+     }
+     get isLayerShell() {
+@@ -411,6 +413,10 @@
+                 console.error('[electron-overlay-window] the Wayland host did not start; the target is not tracked');
+                 return;
+             }
++            if (this.createLayerTracker) {
++                this.tracker = this.createLayerTracker(titles, (event) => this.emitTrackerEvent(event));
++                return;
++            }
+             if (host.features.foreignToplevel) {
+                 this.tracker = new tracker_1.ToplevelTracker(host, titles, (event) => this.emitTrackerEvent(event));
+                 return;
+diff --git a/node_modules/electron-overlay-window/src/lib/wayland/host.c b/node_modules/electron-overlay-window/src/lib/wayland/host.c
+--- a/node_modules/electron-overlay-window/src/lib/wayland/host.c
++++ b/node_modules/electron-overlay-window/src/lib/wayland/host.c
+@@ -2633,3 +2633,9 @@
+ static bool evdev_is_wanted(int fd)
+ {
+-	struct evdev_caps caps = { 0 };
++	/* Do not turn injected KDE keys into hotkey events. */
++	char name[128] = { 0 };
++	if (ioctl(fd, EVIOCGNAME(sizeof(name) - 1), name) >= 0 &&
++	    strcmp(name, "ydotoold virtual device") == 0)
++		return false;
++
++	struct evdev_caps caps = { 0 };
