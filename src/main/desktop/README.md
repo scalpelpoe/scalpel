@@ -18,9 +18,9 @@ The windowing layer reads this policy on every show, including after game focus
 returns. Features with changing modes should also call `desktop.applyInteraction`
 when changing modes while visible. Keep focus restoration before cursor warping.
 
-Do not import `electron-overlay-window` or native bindings in feature modules,
-or call `screenToDipRect`, `getCursorScreenPoint` or native warp functions
-directly.
+Do not import `electron-overlay-window`, `uiohook-napi` or native bindings in
+feature modules, or call `screenToDipRect`, `getCursorScreenPoint` or native
+warp functions directly. Key codes come from the package's `Key`.
 
 Regression coverage is in `desktop/*.test.ts`, `windowing/window.test.ts`, the
 radial, capture and overlay tests, and `packages/platform/src/**/*.test.ts`.

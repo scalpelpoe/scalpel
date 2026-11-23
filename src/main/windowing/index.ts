@@ -1,7 +1,6 @@
 import { desktop, type OverlayInteraction } from '../desktop'
 import { app, type BrowserWindow, screen } from 'electron'
 import { platform } from '@scalpel/platform'
-import { uIOhook } from 'uiohook-napi'
 import { gameDipBounds } from './geometry'
 import { guardNativeListener } from '../diagnostics'
 import { hideAllOnPoeBlur, isAnyScalpelWindowFocused } from './focus'
@@ -336,7 +335,7 @@ function scheduleSnapGhostSafetyClear(): void {
   snapGhostSafetyTimer = setTimeout(runSnapGhostSafetyClear, 300)
 }
 
-uIOhook.on(
+platform().input.on(
   'mousedown',
   guardNativeListener('mousedown-snap', (e) => {
     if (e.button === 1) {
@@ -345,7 +344,7 @@ uIOhook.on(
     }
   }),
 )
-uIOhook.on(
+platform().input.on(
   'mouseup',
   guardNativeListener('mouseup-snap', (e) => {
     if (e.button === 1) {

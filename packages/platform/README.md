@@ -1,8 +1,8 @@
 # @scalpel/platform
 
 Desktop integration for Scalpel's Electron main process. The app reaches the
-game window, the pointer and screen capture only through `platform()`, so a
-new desktop needs a new backend here and no app changes.
+game window, global input, the pointer and screen capture only through
+`platform()`, so a new desktop needs a new backend here and no app changes.
 
 This package must not import from Scalpel's `src/`.
 
@@ -21,6 +21,13 @@ first call through any member, not when the facade is imported.
 Hyprland is selected inside a Hyprland session from 0.56 on and needs `grim`
 on PATH. Other Wayland compositors keep the X11 tracker until they have their
 own backend.
+
+## Input
+
+All backends use uiohook-napi for global key and mouse hooks and for key
+injection. Key codes are `Key` values (PC scancodes). A hook that only sees
+physical devices reports `seesInjectedKeys: false` and answers
+`physicallyHeld()`, so the app can track held modifiers while it injects keys.
 
 ## Coordinates
 

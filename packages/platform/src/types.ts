@@ -18,6 +18,54 @@ export interface Traits {
   readonly compositorFocus: boolean
 }
 
+export interface InputKeyEvent {
+  keycode: number
+  ctrlKey: boolean
+  shiftKey: boolean
+  altKey: boolean
+  metaKey: boolean
+}
+
+/** Pointer positions are in the window tracker's coordinate space, the same
+ *  space as `windowTracker.targetBounds`. */
+export interface InputMouseEvent {
+  x: number
+  y: number
+  button: unknown
+}
+
+export interface InputWheelEvent {
+  x: number
+  y: number
+  rotation: number
+  ctrlKey: boolean
+  shiftKey: boolean
+  altKey: boolean
+}
+
+export interface InputEvents {
+  keydown: (event: InputKeyEvent) => void
+  keyup: (event: InputKeyEvent) => void
+  mousedown: (event: InputMouseEvent) => void
+  mouseup: (event: InputMouseEvent) => void
+  mousemove: (event: InputMouseEvent) => void
+  wheel: (event: InputWheelEvent) => void
+}
+
+/** Global key and mouse hooks plus key injection. Key codes are `Key` values. */
+export interface InputHook {
+  on<K extends keyof InputEvents>(event: K, listener: InputEvents[K]): void
+  start(): void
+  stop(): void
+  keyTap(key: number, modifiers?: number[]): void
+  keyToggle(key: number, state: 'down' | 'up'): void
+  /** Whether listeners also receive the keys this process injects. */
+  readonly seesInjectedKeys: boolean
+  /** Whether the user physically holds `key`, or null when injected keys make
+   *  that unknowable. */
+  physicallyHeld(key: number): boolean | null
+}
+
 /** A captured game-window frame. `data` is BGRA, row-major, (0,0) at the game
  *  window's top-left. `width`/`height` are the frame's px dimensions (downscaled
  *  from physical when the window is taller than the capture cap). `gameSize`
@@ -147,6 +195,7 @@ export interface WindowTracker {
 export interface Platform {
   readonly id: BackendId
   readonly traits: Traits
+  readonly input: InputHook
   readonly capture: GameCapture
   readonly cursor: Cursor
   readonly windowTracker: WindowTracker

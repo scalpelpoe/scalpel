@@ -1,7 +1,6 @@
 import { desktop } from './desktop'
 import { join } from 'node:path'
 import { BrowserWindow, ipcMain, screen, webContents } from 'electron'
-import { uIOhook } from 'uiohook-napi'
 import { startClientLogWatcher } from './client-log'
 import { guardNativeListener, registerDiagnosticProvider } from './diagnostics'
 import { setGameAttached } from './game-presence'
@@ -21,7 +20,7 @@ import { GAME_TITLES } from '@shared/contracts/game-variant'
 import { IPC_CHANNELS } from '@shared/contracts/ipc'
 import { platform } from '@scalpel/platform'
 
-const { cursor, traits, windowTracker } = platform()
+const { cursor, input, traits, windowTracker } = platform()
 
 let overlayWindow: BrowserWindow | null = null
 let unmapMainOverlay: (() => void) | null = null
@@ -60,7 +59,7 @@ export function setCloseOnClickOutside(enabled: boolean): void {
   closeOnClickOutside = enabled
 }
 
-// Panel bounds in physical screen coordinates (for uiohook mouse hit testing).
+// Panel bounds in physical screen coordinates (for input hook mouse hit testing).
 // Updated by the renderer reporting its actual CSS bounding rects, which we convert
 // to physical pixels. Keyed by sender webContents ID so multiple windows (main overlay,
 // whiteboard toolbar, etc.) can each report their own rects without overwriting each other.
@@ -252,13 +251,13 @@ function setInteractive(interactive: boolean): void {
   else if (currentInteractiveWindow === overlayWindow) currentInteractiveWindow = null
 }
 
-// Track mouse position via uiohook to toggle click-through
+// Track mouse position via the input hook to toggle click-through
 // Debounce exit to prevent flickering at DPI-scaled boundaries
 let exitTimer: ReturnType<typeof setTimeout> | null = null
 let lastTrackerPointerCheck = 0
 let trackerPointerTimer: ReturnType<typeof setTimeout> | null = null
 
-uIOhook.on(
+input.on(
   'mousemove',
   guardNativeListener('mousemove', function trackPointer(e) {
     // A dialog owns input until explicitly dismissed. Hit-test updates can lag
@@ -313,7 +312,7 @@ uIOhook.on(
 // Close overlay when clicking outside the panel
 // Use mousedown (not click) so the overlay hides immediately on press,
 // before PoE grabs focus and causes a flash.
-uIOhook.on(
+input.on(
   'mousedown',
   guardNativeListener('mousedown-overlay', (e) => {
     if (!overlayVisible && !desktop.hasInteractiveDialog() && windowTracker.inputAllowed()) {

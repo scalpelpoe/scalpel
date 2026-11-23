@@ -1,4 +1,4 @@
-import { UiohookKey } from 'uiohook-napi'
+import { Key } from '@scalpel/platform'
 import { describe, expect, it } from 'vitest'
 import { NUMPAD_CODE_TO_TOKEN } from '@shared/hotkey-tokens'
 import { isElectronRegisterable, parseAccelerator } from './hotkey-accelerator'
@@ -6,7 +6,7 @@ import { isElectronRegisterable, parseAccelerator } from './hotkey-accelerator'
 describe('parseAccelerator', () => {
   it('parses a plain modified letter', () => {
     expect(parseAccelerator('CommandOrControl+Shift+F')).toEqual({
-      keycode: UiohookKey.F,
+      keycode: Key.F,
       ctrl: true,
       shift: true,
       alt: false,
@@ -14,12 +14,12 @@ describe('parseAccelerator', () => {
   })
 
   it('parses a function key', () => {
-    expect(parseAccelerator('F8')).toEqual({ keycode: UiohookKey.F8, ctrl: false, shift: false, alt: false })
+    expect(parseAccelerator('F8')).toEqual({ keycode: Key.F8, ctrl: false, shift: false, alt: false })
   })
 
   it('resolves a Danish æ physical token to the Semicolon keycode', () => {
     expect(parseAccelerator('CommandOrControl+Phys:Semicolon:Æ')).toEqual({
-      keycode: UiohookKey.Semicolon,
+      keycode: Key.Semicolon,
       ctrl: true,
       shift: false,
       alt: false,
@@ -28,7 +28,7 @@ describe('parseAccelerator', () => {
 
   it('resolves an ø physical token to the Quote keycode', () => {
     expect(parseAccelerator('Phys:Quote:Ø')).toEqual({
-      keycode: UiohookKey.Quote,
+      keycode: Key.Quote,
       ctrl: false,
       shift: false,
       alt: false,
@@ -37,7 +37,7 @@ describe('parseAccelerator', () => {
 
   it('parses a physical token whose glyph is a plus sign', () => {
     expect(parseAccelerator('Alt+Phys:Equal:+')).toEqual({
-      keycode: UiohookKey.Equal,
+      keycode: Key.Equal,
       ctrl: false,
       shift: false,
       alt: true,
@@ -58,7 +58,7 @@ describe('parseAccelerator', () => {
 
   it('resolves a numpad token to its uiohook keycode', () => {
     expect(parseAccelerator('num2')).toEqual({
-      keycode: UiohookKey.Numpad2,
+      keycode: Key.Numpad2,
       ctrl: false,
       shift: false,
       alt: false,
@@ -67,7 +67,7 @@ describe('parseAccelerator', () => {
 
   it('resolves a modified numpad token', () => {
     const combo = parseAccelerator('Ctrl+numdiv')
-    expect(combo?.keycode).toBe(UiohookKey.NumpadDivide)
+    expect(combo?.keycode).toBe(Key.NumpadDivide)
     expect(combo?.ctrl).toBe(true)
   })
 

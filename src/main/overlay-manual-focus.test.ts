@@ -43,6 +43,11 @@ vi.mock('@scalpel/platform', () => {
   const targetBounds = { x: 0, y: 0, width: 1000, height: 800 }
   const instance = {
     traits: { compositorFocus: true },
+    input: {
+      on: (name: string, cb: any) => {
+        mock.mouse[name] = cb
+      },
+    },
     cursor: { trackerPoint: () => mock.pointer },
     windowTracker: {
       targetHasFocus: true,
@@ -60,13 +65,6 @@ vi.mock('@scalpel/platform', () => {
   }
   return { platform: () => instance }
 })
-vi.mock('uiohook-napi', () => ({
-  uIOhook: {
-    on: (name: string, cb: any) => {
-      mock.mouse[name] = cb
-    },
-  },
-}))
 vi.mock('./diagnostics', () => ({
   guardNativeListener: (_: string, cb: any) => cb,
   registerDiagnosticProvider: vi.fn(),

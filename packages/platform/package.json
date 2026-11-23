@@ -18,6 +18,7 @@
   "peerDependencies": {
     "electron": "*",
     "electron-overlay-window": "*",
-    "koffi": "*"
+    "koffi": "*",
+    "uiohook-napi": "*"
   }
 }

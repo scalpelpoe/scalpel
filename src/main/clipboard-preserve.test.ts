@@ -28,9 +28,8 @@ vi.mock('electron', () => ({
   clipboard: clipboardMock,
   ipcMain: { on: vi.fn(), handle: vi.fn() },
 }))
-vi.mock('electron-overlay-window', () => ({ OverlayController: overlayControllerState }))
-vi.mock('uiohook-napi', () => {
-  const UiohookKey = {
+vi.mock('@scalpel/platform', () => ({
+  Key: {
     Escape: 1,
     Ctrl: 2,
     CtrlRight: 22,
@@ -44,10 +43,28 @@ vi.mock('uiohook-napi', () => {
     Enter: 9,
     Home: 10,
     Delete: 11,
-  }
-  const uIOhook = { on: vi.fn(), start: vi.fn(), stop: vi.fn(), keyToggle: vi.fn(), keyTap: vi.fn() }
-  return { UiohookKey, uIOhook }
-})
+  },
+  platform: () => ({
+    input: {
+      on: vi.fn(),
+      start: vi.fn(),
+      stop: vi.fn(),
+      keyToggle: vi.fn(),
+      keyTap: vi.fn(),
+      seesInjectedKeys: true,
+      physicallyHeld: () => null,
+    },
+    traits: { compositorFocus: false },
+    windowTracker: {
+      get targetHasFocus() {
+        return overlayControllerState.targetHasFocus
+      },
+      targetBounds: null,
+      events: overlayControllerState.events,
+      inputAllowed: () => true,
+    },
+  }),
+}))
 vi.mock('./overlay', () => ({
   isTypingInOverlay: () => false,
   focusGameWindow: vi.fn(() => {

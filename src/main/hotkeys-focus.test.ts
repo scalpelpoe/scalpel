@@ -65,6 +65,8 @@ const mock = vi.hoisted(() => {
     stop: vi.fn(),
     keyToggle: vi.fn(),
     keyTap: vi.fn(),
+    seesInjectedKeys: true,
+    physicallyHeld: () => null,
   }
   const trigger = vi.fn()
   // Stateful: a chat paste refuses to inject until it can read its own command
@@ -103,7 +105,9 @@ vi.mock('electron', () => ({
 }))
 
 vi.mock('@scalpel/platform', () => ({
+  Key: mock.keycodes,
   platform: () => ({
+    input: mock.uIOhook,
     traits: { compositorFocus: false },
     windowTracker: {
       get targetHasFocus() {
@@ -114,11 +118,6 @@ vi.mock('@scalpel/platform', () => ({
       inputAllowed: () => true,
     },
   }),
-}))
-
-vi.mock('uiohook-napi', () => ({
-  UiohookKey: mock.keycodes,
-  uIOhook: mock.uIOhook,
 }))
 
 vi.mock('./diagnostics', () => ({

@@ -1,5 +1,4 @@
 import { clipboard, globalShortcut, ipcMain } from 'electron'
-import { UiohookKey, uIOhook } from 'uiohook-napi'
 import { appMacroEffectiveScope, chatCommandEffectiveScope, type MacroScope, scopeAppliesTo } from '@shared/macro-scope'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 import { snapshotClipboard } from './clipboard-preserve'
@@ -12,7 +11,7 @@ import {
 } from './diagnostics'
 import { getPoeVersion } from './game-state'
 import { focusGameWindow, isTypingInOverlay, setOverlayVisibilityListener } from './overlay'
-import { platform } from '@scalpel/platform'
+import { Key, platform } from '@scalpel/platform'
 import { advancedCopyTracker } from './trade/advanced-copy'
 import { hideFocusedOrAnyVisibleSecondaryOverlay, isAnyScalpelBrowserWindowFocused } from './windowing'
 import {
@@ -24,7 +23,7 @@ import {
 } from './wheel-click'
 export { setWheelClickEnabled, setWheelClickToggleKey }
 
-const { traits, windowTracker } = platform()
+const { input, traits, windowTracker } = platform()
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -98,7 +97,7 @@ function matchesCombo(
  *  Exchange-2's keepModKeys release. */
 function releaseHotkeyKey(combo: KeyCombo | null): void {
   if (!combo) return
-  uIOhook.keyToggle(combo.keycode, 'up')
+  input.keyToggle(combo.keycode, 'up')
 }
 
 function fireTrigger(): void {
@@ -273,7 +272,7 @@ export function startHotkeyListener(handler: () => void): void {
 
   // uiohook is only used for Escape (overlay close), stash scroll, and modifier tracking
   initModifierTracking()
-  uIOhook.on(
+  input.on(
     'keydown',
     guardNativeListener('keydown-main', (e) => {
       if (injecting) return
@@ -283,7 +282,7 @@ export function startHotkeyListener(handler: () => void): void {
       // path at all when the shortcut isn't registered (overlay hidden, game
       // unfocused, etc.). fireEscape() dedupes double-delivery and holds the
       // secondary-overlay precedence + PoE/overlay focus gate.
-      if (e.keycode === UiohookKey.Escape) {
+      if (e.keycode === Key.Escape) {
         fireEscape()
       }
       // Trigger + price-check also use uIOhook so bindings still work when
@@ -298,7 +297,7 @@ export function startHotkeyListener(handler: () => void): void {
   )
 
   // Stash tab scrolling: ModKey+scroll outside stash grid -> arrow key taps
-  uIOhook.on(
+  input.on(
     'wheel',
     guardNativeListener('wheel', (e) => {
       const modHeld =
@@ -314,16 +313,16 @@ export function startHotkeyListener(handler: () => void): void {
       if (e.x < tb.x || e.x > tb.x + tb.width || e.y < tb.y || e.y > tb.y + tb.height) return
       if (isStashGridArea(e.x, e.y, tb)) return
       if (e.rotation > 0) {
-        uIOhook.keyTap(UiohookKey.ArrowRight)
+        input.keyTap(Key.ArrowRight)
       } else if (e.rotation < 0) {
-        uIOhook.keyTap(UiohookKey.ArrowLeft)
+        input.keyTap(Key.ArrowLeft)
       }
     }),
   )
 
   if (!hookStarted) {
     try {
-      uIOhook.start()
+      input.start()
       hookStarted = true
       lastHookStartError = null
     } catch (e) {
@@ -334,7 +333,7 @@ export function startHotkeyListener(handler: () => void): void {
     ipcMain.handle('screen-pick:suspend-hook', () => {
       if (hookSuspended) return
       try {
-        uIOhook.stop()
+        input.stop()
       } catch {}
       hookSuspended = true
       if (hookResumeTimer) clearTimeout(hookResumeTimer)
@@ -344,7 +343,7 @@ export function startHotkeyListener(handler: () => void): void {
         hookResumeTimer = null
         if (hookSuspended) {
           try {
-            uIOhook.start()
+            input.start()
             hookSuspended = false
           } catch (e) {
             lastHookStartError = String(e)
@@ -360,7 +359,7 @@ export function startHotkeyListener(handler: () => void): void {
       }
       if (hookSuspended) {
         try {
-          uIOhook.start()
+          input.start()
           hookSuspended = false
           lastHookStartError = null
         } catch (e) {
@@ -767,30 +766,30 @@ async function pasteToPoEChat(text: string, submit: boolean): Promise<void> {
       // Ctrl+Enter pre-fills @<lastwhisperer> in the chat input; paste body after
       body = text.slice(`${PLACEHOLDER_LAST} `.length)
       openChat = () => {
-        uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-        uIOhook.keyTap(UiohookKey.Enter)
-        uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
+        input.keyToggle(Key.Ctrl, 'down')
+        input.keyTap(Key.Enter)
+        input.keyToggle(Key.Ctrl, 'up')
       }
     } else if (text.endsWith(PLACEHOLDER_LAST)) {
       // Ctrl+Enter pre-fills @CharName at position 0; Home x2 then Delete strips the @
       body = text.slice(0, -PLACEHOLDER_LAST.length)
       openChat = () => {
-        uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-        uIOhook.keyTap(UiohookKey.Enter)
-        uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
-        uIOhook.keyTap(UiohookKey.Home)
+        input.keyToggle(Key.Ctrl, 'down')
+        input.keyTap(Key.Enter)
+        input.keyToggle(Key.Ctrl, 'up')
+        input.keyTap(Key.Home)
         // press twice to focus input when using controller
-        uIOhook.keyTap(UiohookKey.Home)
-        uIOhook.keyTap(UiohookKey.Delete)
+        input.keyTap(Key.Home)
+        input.keyTap(Key.Delete)
       }
     } else {
       openChat = () => {
-        uIOhook.keyTap(UiohookKey.Enter)
+        input.keyTap(Key.Enter)
         // PoE auto-clears the input when the text starts with a chat-prefix char
         if (!AUTO_CLEAR.includes(text[0])) {
-          uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-          uIOhook.keyTap(UiohookKey.A)
-          uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
+          input.keyToggle(Key.Ctrl, 'down')
+          input.keyTap(Key.A)
+          input.keyToggle(Key.Ctrl, 'up')
         }
       }
     }
@@ -802,12 +801,12 @@ async function pasteToPoEChat(text: string, submit: boolean): Promise<void> {
     // opens and closes in a single frame, preventing visible flash
     openChat()
 
-    uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-    uIOhook.keyTap(UiohookKey.V)
-    uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
+    input.keyToggle(Key.Ctrl, 'down')
+    input.keyTap(Key.V)
+    input.keyToggle(Key.Ctrl, 'up')
 
     if (submit) {
-      uIOhook.keyTap(UiohookKey.Enter)
+      input.keyTap(Key.Enter)
     }
   } catch (e) {
     restoreClip()
@@ -834,9 +833,9 @@ export function sendChatCommand(command: string, autoSubmit = true): Promise<voi
   const held: ModSnapshot = { ...heldModifiers }
   const prevInjecting = injecting
   injecting = true
-  if (held.ctrl) uIOhook.keyToggle(held.ctrl, 'up')
-  if (held.shift) uIOhook.keyToggle(held.shift, 'up')
-  if (held.alt) uIOhook.keyToggle(held.alt, 'up')
+  if (held.ctrl) input.keyToggle(held.ctrl, 'up')
+  if (held.shift) input.keyToggle(held.shift, 'up')
+  if (held.alt) input.keyToggle(held.alt, 'up')
   injecting = prevInjecting
   // finally, not then: an aborted paste must still re-press the modifiers the
   // user is physically holding, or the game keeps thinking they let go.
@@ -858,9 +857,9 @@ export async function pasteRegexToPoESearch(regex: string): Promise<void> {
   const held: ModSnapshot = { ...heldModifiers }
   const prevInjecting = injecting
   injecting = true
-  if (held.ctrl) uIOhook.keyToggle(held.ctrl, 'up')
-  if (held.shift) uIOhook.keyToggle(held.shift, 'up')
-  if (held.alt) uIOhook.keyToggle(held.alt, 'up')
+  if (held.ctrl) input.keyToggle(held.ctrl, 'up')
+  if (held.shift) input.keyToggle(held.shift, 'up')
+  if (held.alt) input.keyToggle(held.alt, 'up')
   injecting = prevInjecting
 
   const restoreClip = snapshotClipboard()
@@ -871,12 +870,12 @@ export async function pasteRegexToPoESearch(regex: string): Promise<void> {
     await writeChatText(regex)
 
     injecting = true
-    uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-    uIOhook.keyTap(UiohookKey.F)
-    uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
-    uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-    uIOhook.keyTap(UiohookKey.V)
-    uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
+    input.keyToggle(Key.Ctrl, 'down')
+    input.keyTap(Key.F)
+    input.keyToggle(Key.Ctrl, 'up')
+    input.keyToggle(Key.Ctrl, 'down')
+    input.keyTap(Key.V)
+    input.keyToggle(Key.Ctrl, 'up')
   } catch (e) {
     restoreClip()
     regexPasteLocked = false
@@ -893,39 +892,40 @@ export async function pasteRegexToPoESearch(regex: string): Promise<void> {
   restoreModifiers(held)
 }
 
-/** Track physically held modifier keys via uiohook (ignores synthetic key events during injection) */
+/** Track physically held modifier keys (ignores synthetic key events during injection where the hook sees them) */
 const heldModifiers = { ctrl: 0 as number, shift: 0 as number, alt: 0 as number }
 
 function initModifierTracking(): void {
-  uIOhook.on(
+  input.on(
     'keydown',
     guardNativeListener('keydown-modifiers', (e) => {
-      if (injecting) return
-      if (e.keycode === UiohookKey.Ctrl || e.keycode === UiohookKey.CtrlRight) heldModifiers.ctrl = e.keycode
-      if (e.keycode === UiohookKey.Shift || e.keycode === UiohookKey.ShiftRight) heldModifiers.shift = e.keycode
-      if (e.keycode === UiohookKey.Alt || e.keycode === UiohookKey.AltRight) heldModifiers.alt = e.keycode
+      if (injecting && input.seesInjectedKeys) return
+      if (e.keycode === Key.Ctrl || e.keycode === Key.CtrlRight) heldModifiers.ctrl = e.keycode
+      if (e.keycode === Key.Shift || e.keycode === Key.ShiftRight) heldModifiers.shift = e.keycode
+      if (e.keycode === Key.Alt || e.keycode === Key.AltRight) heldModifiers.alt = e.keycode
     }),
   )
-  uIOhook.on(
+  input.on(
     'keyup',
     guardNativeListener('keyup', (e) => {
-      if (injecting) return
-      if (e.keycode === UiohookKey.Ctrl || e.keycode === UiohookKey.CtrlRight) heldModifiers.ctrl = 0
-      if (e.keycode === UiohookKey.Shift || e.keycode === UiohookKey.ShiftRight) heldModifiers.shift = 0
-      if (e.keycode === UiohookKey.Alt || e.keycode === UiohookKey.AltRight) heldModifiers.alt = 0
+      if (injecting && input.seesInjectedKeys) return
+      if (e.keycode === Key.Ctrl || e.keycode === Key.CtrlRight) heldModifiers.ctrl = 0
+      if (e.keycode === Key.Shift || e.keycode === Key.ShiftRight) heldModifiers.shift = 0
+      if (e.keycode === Key.Alt || e.keycode === Key.AltRight) heldModifiers.alt = 0
     }),
   )
 }
 
 type ModSnapshot = { ctrl: number; shift: number; alt: number }
 
-/** Re-press the exact modifier keys from a snapshot (using the correct left/right variant) */
+/** Re-press the exact modifier keys from a snapshot (using the correct
+ *  left/right variant), skipping keys the user has since released. */
 function restoreModifiers(snapshot: ModSnapshot): void {
   const prevInjecting = injecting
   injecting = true
-  if (snapshot.ctrl) uIOhook.keyToggle(snapshot.ctrl, 'down')
-  if (snapshot.shift) uIOhook.keyToggle(snapshot.shift, 'down')
-  if (snapshot.alt) uIOhook.keyToggle(snapshot.alt, 'down')
+  for (const key of [snapshot.ctrl, snapshot.shift, snapshot.alt]) {
+    if (key && input.physicallyHeld(key) !== false) input.keyToggle(key, 'down')
+  }
   injecting = prevInjecting
 }
 
@@ -940,7 +940,7 @@ export function stopHotkeyListener(): void {
     // aborting the process via the tsfn proxy.
     recordMainBreadcrumb('uIOhook.stop() calling')
     try {
-      uIOhook.stop()
+      input.stop()
       lastHookStopError = null
     } catch (e) {
       lastHookStopError = String(e)
@@ -996,7 +996,7 @@ export async function sendItemFilterCommand(filterName: string, currentFilter?: 
  *  injection taps -- and it goes through globalShortcut (uiohook matchers only
  *  observe; they can't consume). */
 function acceleratorTapsC(accelerator: string): boolean {
-  return isElectronRegisterable(accelerator) && parseAccelerator(accelerator)?.keycode === UiohookKey.C
+  return isElectronRegisterable(accelerator) && parseAccelerator(accelerator)?.keycode === Key.C
 }
 
 /**
@@ -1093,14 +1093,14 @@ export async function sendCtrlCToPoE(opts?: { withAlt?: boolean }): Promise<void
     // Give the Shift-up ~30ms to register first. Only paid when Shift is held.
     const heldShift = heldModifiers.shift
     if (heldShift) {
-      uIOhook.keyToggle(UiohookKey.Shift, 'up')
-      uIOhook.keyToggle(UiohookKey.ShiftRight, 'up')
+      input.keyToggle(Key.Shift, 'up')
+      input.keyToggle(Key.ShiftRight, 'up')
       await new Promise((r) => setTimeout(r, 30))
     }
 
-    if (needCtrl) uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-    if (needAlt) uIOhook.keyToggle(UiohookKey.Alt, 'down')
-    uIOhook.keyTap(UiohookKey.C)
+    if (needCtrl) input.keyToggle(Key.Ctrl, 'down')
+    if (needAlt) input.keyToggle(Key.Alt, 'down')
+    input.keyTap(Key.C)
 
     // PoE2 drops modifier keyup events when they fire too soon after the C tap,
     // leaving PoE's view of held modifiers out of sync -- on the Alt path that
@@ -1111,10 +1111,10 @@ export async function sendCtrlCToPoE(opts?: { withAlt?: boolean }): Promise<void
     // issue #124.
     await new Promise<void>((resolve) => {
       setTimeout(() => {
-        if (needAlt) uIOhook.keyToggle(UiohookKey.Alt, 'up')
-        if (needCtrl) uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
-        // Re-press Shift immediately if it was held
-        if (heldShift) uIOhook.keyToggle(heldShift, 'down')
+        if (needAlt) input.keyToggle(Key.Alt, 'up')
+        if (needCtrl) input.keyToggle(Key.Ctrl, 'up')
+        // Re-press Shift immediately if it was held, and still is
+        if (heldShift && input.physicallyHeld(heldShift) !== false) input.keyToggle(heldShift, 'down')
       }, 10)
       setTimeout(() => {
         injecting = false

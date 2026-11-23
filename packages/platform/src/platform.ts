@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { createHyprlandBackend } from './hyprland/backend'
+import { uiohookInput } from './input'
 import { createNativeBackend } from './native/backend'
 import { currentEnv, selectBackend } from './select'
 import type { Backend, BackendId, Platform } from './types'
@@ -30,6 +31,7 @@ const facade: Platform = {
       return backend().traits.compositorFocus
     },
   },
+  input: uiohookInput,
   capture: {
     captureGame: (opts) => backend().capture.captureGame(opts),
     gameWindowSource: (title) => backend().capture.gameWindowSource(title),
