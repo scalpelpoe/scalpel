@@ -20,7 +20,7 @@ import { getPoeVersion } from './game-state'
 import { sendCtrlCToPoE } from './hotkeys'
 import { focusGameWindow, getOverlayWindow, showOverlay } from './overlay'
 import { advancedCopyTracker } from './trade/advanced-copy'
-import { readItemFromClipboard } from './trade/clipboard'
+import { parseItemText } from './trade/clipboard'
 import { defensesFromPoeItem, itemInfoFromPoeItem } from './trade/item-info'
 import { buildUnidCandidates, lookupItemPrice, lookupPrice, lookupPriceForItem, refreshPrices } from './trade/prices'
 import { ensureStatsLoaded, matchItemMods } from './trade/trade'
@@ -191,7 +191,7 @@ let consecutiveClipboardFailures = 0
 /** Poll the clipboard for a parseable item, giving PoE `tries` x 50ms to land it. */
 async function pollClipboardForItem(tries: number): Promise<PoeItem | null> {
   for (let i = 0; i < tries; i++) {
-    const item = readItemFromClipboard()
+    const item = parseItemText(platform().clipboard.readText())
     if (item) return item
     await new Promise((r) => setTimeout(r, 50))
   }
