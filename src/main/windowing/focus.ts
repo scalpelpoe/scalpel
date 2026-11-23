@@ -1,5 +1,5 @@
 import { BrowserWindow, screen } from 'electron'
-import { hyprlandInputAllowed } from '../hyprland'
+import { platform } from '@scalpel/platform'
 import { getSnapCanvasWindow, setSnapGhost } from './snap-canvas'
 import { firePoeLeaveHooks, getAuxiliaryScalpelWindows, getMainOverlay, overlays } from './state'
 
@@ -70,7 +70,7 @@ function collectScalpelWindows(): BrowserWindow[] {
  *  dialogs are intentionally excluded: callers that authorize keyboard input
  *  must not treat a file picker as an injection target. */
 export function isAnyScalpelBrowserWindowFocused(): boolean {
-  if (!hyprlandInputAllowed()) return false
+  if (!platform().windowTracker.inputAllowed()) return false
   const focused = BrowserWindow.getFocusedWindow()
   if (!focused || focused.isDestroyed()) return false
   if (focused === getMainOverlay()) return true
@@ -204,7 +204,7 @@ export function hideOverlaysOnGameClick(): boolean {
 }
 
 /** Hide every secondary overlay because PoE itself exited. Used by the
- *  OverlayController 'detach' handler in overlay.ts. Delegates to
+ *  window tracker's 'detach' handler in overlay.ts. Delegates to
  *  hideOverlayState so a future change to the per-overlay hide path
  *  (e.g. a new opacity-restore step) automatically applies here too.
  *  Unlike hideAllOnPoeBlur this does not record prior visibility - there

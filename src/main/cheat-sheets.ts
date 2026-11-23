@@ -1,7 +1,7 @@
 import { desktop } from './desktop'
 import { join } from 'node:path'
 import { BrowserWindow, screen } from 'electron'
-import { OverlayController, OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
+import { OVERLAY_WINDOW_OPTS, platform } from '@scalpel/platform'
 import {
   CHEAT_SHEET_MINIMIZED_HEIGHT,
   CHEAT_SHEET_MINIMIZED_SLACK,
@@ -343,7 +343,7 @@ function registerPreviewHooks(): void {
   // Track PoE moves while a preview is visible. Without this a windowed-PoE
   // user dragging the game during a hover would see the preview detach and
   // stay at PoE's old bounds until the next mouseEnter.
-  OverlayController.events.on('moveresize', () => {
+  platform().windowTracker.events.on('moveresize', () => {
     if (pendingPreviewSrc === null || !previewWin || previewWin.isDestroyed()) return
     setBoundsToGame(previewWin)
   })

@@ -55,7 +55,7 @@ function clamp(v: number, lo: number, hi: number): number {
  *
  *  skipFocusGate is the whole reason the backdrop works at all. This is called
  *  microseconds after the radial overlay's own show(), and
- *  OverlayController.targetHasFocus flickers around exactly that - the same trap
+ *  windowTracker.targetHasFocus flickers around exactly that - the same trap
  *  getGameCursorPosition documents and sidesteps. Re-asking the flag here made
  *  the grab return null more often than not, with nothing in the payload to say
  *  why. The privacy invariant holds without it: this can only be reached from

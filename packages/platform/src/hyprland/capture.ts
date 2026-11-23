@@ -1,9 +1,9 @@
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { nativeImage, screen } from 'electron'
-import { getHyprlandGame } from '../hyprland'
-import { type HyprClient, hyprlandOverlayBounds, isHyprlandGameContext } from '../hyprland-policy'
-import type { CaptureOptions, CaptureResult } from './capture'
+import { getHyprlandGame } from './tracker'
+import { type HyprClient, hyprlandOverlayBounds, isHyprlandGameContext } from './policy'
+import type { CaptureOptions, CaptureResult } from '../types'
 
 const exec = promisify(execFile)
 

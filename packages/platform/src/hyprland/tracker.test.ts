@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events'
 import type { BrowserWindow, Rectangle } from 'electron'
-import type { HyprClient } from './hyprland-policy'
+import type { HyprClient } from './policy'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 const mock = vi.hoisted(() => ({
@@ -36,7 +36,7 @@ const game: HyprClient = {
   floating: true,
 }
 const panel = { ...game, address: '0x2', pid: process.pid, title: 'Scalpel Overlay: Radial' }
-let backend: typeof import('./hyprland')
+let backend: typeof import('./tracker')
 let main: BrowserWindow
 let secondary: BrowserWindow
 const evals = () => mock.sync.mock.calls.filter(([, args]) => args[0] === 'eval').map(([, args]) => args[1])
@@ -76,7 +76,7 @@ beforeEach(async () => {
     })
   main = window('Scalpel Overlay') as unknown as BrowserWindow
   secondary = window(panel.title) as unknown as BrowserWindow
-  backend = await import('./hyprland')
+  backend = await import('./tracker')
   backend.attachHyprlandOverlay(main, [game.title])
   await vi.advanceTimersByTimeAsync(0)
 })

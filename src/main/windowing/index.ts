@@ -1,7 +1,6 @@
 import { desktop, type OverlayInteraction } from '../desktop'
 import { app, type BrowserWindow, screen } from 'electron'
-import { OverlayController } from 'electron-overlay-window'
-import { uIOhook } from 'uiohook-napi'
+import { platform } from '@scalpel/platform'
 import { gameDipBounds } from './geometry'
 import { guardNativeListener } from '../diagnostics'
 import { hideAllOnPoeBlur, isAnyScalpelWindowFocused } from './focus'
@@ -336,7 +335,7 @@ function scheduleSnapGhostSafetyClear(): void {
   snapGhostSafetyTimer = setTimeout(runSnapGhostSafetyClear, 300)
 }
 
-uIOhook.on(
+platform().input.on(
   'mousedown',
   guardNativeListener('mousedown-snap', (e) => {
     if (e.button === 1) {
@@ -345,7 +344,7 @@ uIOhook.on(
     }
   }),
 )
-uIOhook.on(
+platform().input.on(
   'mouseup',
   guardNativeListener('mouseup-snap', (e) => {
     if (e.button === 1) {
@@ -551,7 +550,7 @@ function wireWindowEvents(state: OverlayState, win: BrowserWindow): void {
       // PoE keeps the overlay alive; focus moving to another Scalpel window
       // (main overlay or sibling secondary) does too. Only hide when focus
       // genuinely left the app.
-      if (OverlayController.targetHasFocus || isAnyScalpelWindowFocused()) return
+      if (platform().windowTracker.targetHasFocus || isAnyScalpelWindowFocused()) return
       // Hide every visible secondary overlay, not just this one. Sibling
       // overlays (the pinned-zone overlay, in particular) never receive
       // their own blur event because they were never focused - the user
@@ -618,10 +617,11 @@ export function getSecondaryOverlayWindows(): BrowserWindow[] {
 
 /** Subscribe to PoE attach/move/resize events and re-anchor every registered
  *  secondary overlay's window to track PoE. Call once during main-process boot
- *  after OverlayController is wired up. */
+ *  after the window tracker is wired up. */
 export function subscribeToPoeMoves(): void {
-  OverlayController.events.on('attach', guardNativeListener('reposition-attach', repositionAll))
-  OverlayController.events.on('moveresize', guardNativeListener('reposition-moveresize', repositionAll))
+  const { events } = platform().windowTracker
+  events.on('attach', guardNativeListener('reposition-attach', repositionAll))
+  events.on('moveresize', guardNativeListener('reposition-moveresize', repositionAll))
 }
 
 function repositionAll(): void {

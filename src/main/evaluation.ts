@@ -1,6 +1,6 @@
 import { desktop } from './desktop'
-import { clipboard, screen } from 'electron'
-import { OverlayController } from 'electron-overlay-window'
+import { screen } from 'electron'
+import { platform } from '@scalpel/platform'
 import type Store from 'electron-store'
 import { isTownOrHideout } from '@shared/is-town-or-hideout'
 import { IPC_CHANNELS } from '@shared/contracts/ipc'
@@ -20,7 +20,7 @@ import { getPoeVersion } from './game-state'
 import { sendCtrlCToPoE } from './hotkeys'
 import { focusGameWindow, getOverlayWindow, showOverlay } from './overlay'
 import { advancedCopyTracker } from './trade/advanced-copy'
-import { readItemFromClipboard } from './trade/clipboard'
+import { parseItemText } from './trade/clipboard'
 import { defensesFromPoeItem, itemInfoFromPoeItem } from './trade/item-info'
 import { buildUnidCandidates, lookupItemPrice, lookupPrice, lookupPriceForItem, refreshPrices } from './trade/prices'
 import { ensureStatsLoaded, matchItemMods } from './trade/trade'
@@ -191,7 +191,7 @@ let consecutiveClipboardFailures = 0
 /** Poll the clipboard for a parseable item, giving PoE `tries` x 50ms to land it. */
 async function pollClipboardForItem(tries: number): Promise<PoeItem | null> {
   for (let i = 0; i < tries; i++) {
-    const item = readItemFromClipboard()
+    const item = parseItemText(platform().clipboard.readText())
     if (item) return item
     await new Promise((r) => setTimeout(r, 50))
   }
@@ -226,16 +226,16 @@ async function captureItemFromClipboard(
   try {
     // Hotkeys are also valid while a gameplay overlay owns focus. Hand input
     // back to PoE before copying so that path is as immediate as game focus.
-    if (!OverlayController.targetHasFocus) focusGameWindow()
+    if (!platform().windowTracker.targetHasFocus) focusGameWindow()
     const withAlt = advancedCopyTracker.needsAlt()
-    clipboard.clear()
+    platform().clipboard.clear()
     await sendCtrlCToPoE({ withAlt })
 
     item = await pollClipboardForItem(3)
 
     // Fallback for windowed mode
     if (!item) {
-      clipboard.clear()
+      platform().clipboard.clear()
       focusGameWindow()
       await new Promise((r) => setTimeout(r, 50))
       await sendCtrlCToPoE({ withAlt })
@@ -247,7 +247,7 @@ async function captureItemFromClipboard(
     // copy before latching -- see advanced-copy.ts. Costs nothing once both games
     // honour a plain Ctrl+C (#560), since the probe never fires.
     if (item && advancedCopyTracker.shouldProbe(item)) {
-      clipboard.clear()
+      platform().clipboard.clear()
       await sendCtrlCToPoE({ withAlt: true })
       item = advancedCopyTracker.recordProbe(await pollClipboardForItem(3)) ?? item
     }

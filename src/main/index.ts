@@ -29,9 +29,8 @@ installEarlyDiagnostics()
 // uncaughtException handler, so this is the only trace it leaves on Windows.
 crashReporter.start({ uploadToServer: false })
 
-import { execSync } from 'node:child_process'
 import Store from 'electron-store'
-import { OverlayController } from 'electron-overlay-window'
+import { currentEnv, platform, relaunchArgs } from '@scalpel/platform'
 import { hideOverlay, showOverlay, getOverlayWindow, setCloseOnClickOutside, setWindowInputFocused } from './overlay'
 import { createAppWindow, showAppWindow, getAppWindow } from './app-window'
 import {
@@ -132,12 +131,9 @@ import { relaunchApp } from './relaunch'
 
 // ---- Linux display-server setup --------------------------------------------
 
-if (
-  process.platform === 'linux' &&
-  process.env.WAYLAND_DISPLAY &&
-  !process.argv.some((a) => a.startsWith('--ozone-platform='))
-) {
-  relaunchApp([...process.argv.slice(1), '--ozone-platform=x11'])
+const displayServerArgs = relaunchArgs(currentEnv())
+if (displayServerArgs) {
+  relaunchApp(displayServerArgs)
   app.exit(0)
 }
 
@@ -147,14 +143,7 @@ if (process.platform === 'linux') {
 
 // ---- Elevation detection ---------------------------------------------------
 
-function isElevated(): boolean {
-  try {
-    execSync('net session', { stdio: 'ignore' })
-    return true
-  } catch {
-    return false
-  }
-}
+const { isElevated } = platform()
 
 // ---- Persistent settings ---------------------------------------------------
 
@@ -389,7 +378,7 @@ app.whenReady().then(() => {
   const REGEX_REMOTE_FLUSH_EPS = 0.01
   function regexRemoteFlushLeft(anchor: { fracX: number } | null): boolean {
     if (!anchor || !getCurrentPanelState().leftPanelOpen) return false
-    return Math.abs(anchor.fracX - leftDockFracX(OverlayController.targetBounds)) < REGEX_REMOTE_FLUSH_EPS
+    return Math.abs(anchor.fracX - leftDockFracX(platform().windowTracker.targetBounds)) < REGEX_REMOTE_FLUSH_EPS
   }
   let regexRemoteToggleBusy = false
 
@@ -403,7 +392,7 @@ app.whenReady().then(() => {
       },
       focusGame: () => {
         try {
-          OverlayController.focusTarget()
+          platform().windowTracker.focusTarget()
         } catch {}
       },
       paste: (regex) => {
@@ -416,7 +405,7 @@ app.whenReady().then(() => {
   ipcMain.on('regex-remote:close', () => getRegexRemoteOverlay()?.hide())
   ipcMain.on('regex-remote:hand-focus', () => {
     try {
-      OverlayController.focusTarget()
+      platform().windowTracker.focusTarget()
     } catch {}
   })
 
@@ -522,10 +511,10 @@ app.whenReady().then(() => {
     onAnchorChanged: (anchor) => {
       getRegexRemoteOverlay()?.send('regex-remote:mount-changed', regexRemoteFlushLeft(anchor))
       try {
-        OverlayController.focusTarget()
+        platform().windowTracker.focusTarget()
       } catch {}
     },
-    getTargetBounds: () => OverlayController.targetBounds,
+    getTargetBounds: () => platform().windowTracker.targetBounds,
     getPanelState: () => getCurrentPanelState(),
   })
   registerRadialMenuOverlay({

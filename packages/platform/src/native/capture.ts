@@ -1,6 +1,6 @@
 import { desktopCapturer, screen } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
-import type { CaptureOptions, CaptureResult, CaptureFailure } from '../screen-capture/capture'
+import type { CaptureOptions, CaptureResult, CaptureFailure } from '../types'
 
 const MAX_CAPTURE_HEIGHT = 1080
 

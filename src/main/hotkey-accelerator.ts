@@ -1,4 +1,4 @@
-import { UiohookKey } from 'uiohook-napi'
+import { Key } from '@scalpel/platform'
 import { NUMPAD_CODE_TO_TOKEN, PHYSICAL_PREFIX, PHYSICAL_CODES, decodePhysicalToken } from '@shared/hotkey-tokens'
 
 // ─── Accelerator → uiohook keycode mapping ────────────────────────────────────
@@ -7,56 +7,56 @@ import { NUMPAD_CODE_TO_TOKEN, PHYSICAL_PREFIX, PHYSICAL_CODES, decodePhysicalTo
 // stateful registration; this module owns the string<->keycode translation.
 
 const LETTER_KEYS: Record<string, number> = Object.fromEntries(
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((c) => [c, UiohookKey[c as keyof typeof UiohookKey]]),
+  'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map((c) => [c, Key[c as keyof typeof Key]]),
 )
 
 const EXTRA_KEYS: Record<string, number> = {
-  F1: UiohookKey.F1,
-  F2: UiohookKey.F2,
-  F3: UiohookKey.F3,
-  F4: UiohookKey.F4,
-  F5: UiohookKey.F5,
-  F6: UiohookKey.F6,
-  F7: UiohookKey.F7,
-  F8: UiohookKey.F8,
-  F9: UiohookKey.F9,
-  F10: UiohookKey.F10,
-  F11: UiohookKey.F11,
-  F12: UiohookKey.F12,
-  Space: UiohookKey.Space,
-  Tab: UiohookKey.Tab,
-  Escape: UiohookKey.Escape,
-  Delete: UiohookKey.Delete,
-  Home: UiohookKey.Home,
-  End: UiohookKey.End,
-  PageUp: UiohookKey.PageUp,
-  PageDown: UiohookKey.PageDown,
-  '0': UiohookKey['0'],
-  '1': UiohookKey['1'],
-  '2': UiohookKey['2'],
-  '3': UiohookKey['3'],
-  '4': UiohookKey['4'],
-  '5': UiohookKey['5'],
-  '6': UiohookKey['6'],
-  '7': UiohookKey['7'],
-  '8': UiohookKey['8'],
-  '9': UiohookKey['9'],
+  F1: Key.F1,
+  F2: Key.F2,
+  F3: Key.F3,
+  F4: Key.F4,
+  F5: Key.F5,
+  F6: Key.F6,
+  F7: Key.F7,
+  F8: Key.F8,
+  F9: Key.F9,
+  F10: Key.F10,
+  F11: Key.F11,
+  F12: Key.F12,
+  Space: Key.Space,
+  Tab: Key.Tab,
+  Escape: Key.Escape,
+  Delete: Key.Delete,
+  Home: Key.Home,
+  End: Key.End,
+  PageUp: Key.PageUp,
+  PageDown: Key.PageDown,
+  '0': Key['0'],
+  '1': Key['1'],
+  '2': Key['2'],
+  '3': Key['3'],
+  '4': Key['4'],
+  '5': Key['5'],
+  '6': Key['6'],
+  '7': Key['7'],
+  '8': Key['8'],
+  '9': Key['9'],
 }
 
 // Electron's native num0-num9/numdec/numadd/numsub/nummult/numdiv tokens, mapped
 // to uiohook keycodes by inverting the shared code->token map. DOM code names
-// match UiohookKey property names, so this is a direct lookup.
+// match Key property names, so this is a direct lookup.
 const NUMPAD_KEYS: Record<string, number> = Object.fromEntries(
-  Object.entries(NUMPAD_CODE_TO_TOKEN).map(([code, token]) => [token, UiohookKey[code as keyof typeof UiohookKey]]),
+  Object.entries(NUMPAD_CODE_TO_TOKEN).map(([code, token]) => [token, Key[code as keyof typeof Key]]),
 )
 
 const KEY_MAP: Record<string, number> = { ...LETTER_KEYS, ...EXTRA_KEYS, ...NUMPAD_KEYS }
 
 // DOM code name -> uiohook keycode for the physically-routed OEM/punctuation
-// keys. The code names match UiohookKey's property names exactly, so this is a
+// keys. The code names match Key's property names exactly, so this is a
 // direct lookup keyed off the shared PHYSICAL_CODES list.
 const CODE_TO_UIOHOOK: Record<string, number> = Object.fromEntries(
-  PHYSICAL_CODES.map((code) => [code, UiohookKey[code as keyof typeof UiohookKey]]),
+  PHYSICAL_CODES.map((code) => [code, Key[code as keyof typeof Key]]),
 )
 
 export interface KeyCombo {

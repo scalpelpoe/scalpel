@@ -67,44 +67,57 @@ function handleKey(code: number): void {
   }
 }
 
+const keyMock = {
+  Escape: 1,
+  Ctrl: 2,
+  CtrlRight: 22,
+  Alt: 3,
+  AltRight: 33,
+  Shift: 4,
+  ShiftRight: 5,
+  C: 6,
+  V: 7,
+  A: 8,
+  Enter: 9,
+  Home: 10,
+  Delete: 11,
+}
+const inputMock = {
+  on: vi.fn(),
+  start: vi.fn(),
+  stop: vi.fn(),
+  keyToggle: vi.fn((code: number, dir: 'up' | 'down') => {
+    if (code === keyMock.Ctrl) queue(() => (game.ctrlHeld = dir === 'down'))
+  }),
+  keyTap: vi.fn((code: number) => queue(() => handleKey(code))),
+  seesInjectedKeys: true,
+  physicallyHeld: () => null,
+}
 const overlayControllerState = { targetHasFocus: false, events: new EventEmitter(), targetBounds: null }
 /** How long the OS takes to hand foreground to PoE. Infinity = it never does
  *  (PoE closed, or the foreground request was refused). */
 const focusState = { delayMs: 0 }
 
 vi.mock('electron', () => ({
-  globalShortcut: { register: vi.fn(() => true), unregister: vi.fn(), unregisterAll: vi.fn() },
-  clipboard: clipboardMock,
   ipcMain: { on: vi.fn(), handle: vi.fn() },
 }))
-vi.mock('electron-overlay-window', () => ({ OverlayController: overlayControllerState }))
-vi.mock('uiohook-napi', () => {
-  const UiohookKey = {
-    Escape: 1,
-    Ctrl: 2,
-    CtrlRight: 22,
-    Alt: 3,
-    AltRight: 33,
-    Shift: 4,
-    ShiftRight: 5,
-    C: 6,
-    V: 7,
-    A: 8,
-    Enter: 9,
-    Home: 10,
-    Delete: 11,
-  }
-  const uIOhook = {
-    on: vi.fn(),
-    start: vi.fn(),
-    stop: vi.fn(),
-    keyToggle: vi.fn((code: number, dir: 'up' | 'down') => {
-      if (code === UiohookKey.Ctrl) queue(() => (game.ctrlHeld = dir === 'down'))
-    }),
-    keyTap: vi.fn((code: number) => queue(() => handleKey(code))),
-  }
-  return { UiohookKey, uIOhook }
-})
+vi.mock('@scalpel/platform', () => ({
+  Key: keyMock,
+  platform: () => ({
+    clipboard: clipboardMock,
+    shortcuts: { register: vi.fn(() => true), unregister: vi.fn(), unregisterAll: vi.fn() },
+    input: inputMock,
+    traits: { compositorFocus: false },
+    windowTracker: {
+      get targetHasFocus() {
+        return overlayControllerState.targetHasFocus
+      },
+      targetBounds: null,
+      events: overlayControllerState.events,
+      inputAllowed: () => true,
+    },
+  }),
+}))
 vi.mock('./overlay', () => ({
   isTypingInOverlay: () => false,
   focusGameWindow: vi.fn(() => {
@@ -128,15 +141,13 @@ vi.mock('./diagnostics', () => ({
 }))
 
 type Hotkeys = typeof import('./hotkeys')
-type Uiohook = typeof import('uiohook-napi')
 
-async function freshHotkeys(): Promise<{ hk: Hotkeys; keyTap: MockedFunction<Uiohook['uIOhook']['keyTap']> }> {
+async function freshHotkeys(): Promise<{ hk: Hotkeys; keyTap: MockedFunction<(code: number) => void> }> {
   vi.resetModules()
   const hk = await import('./hotkeys')
-  const { uIOhook } = await import('uiohook-napi')
   const preserve = await import('./clipboard-preserve')
   preserve.__resetClipboardBorrows()
-  const keyTap = vi.mocked(uIOhook.keyTap)
+  const keyTap = inputMock.keyTap
   keyTap.mockClear()
   return { hk, keyTap }
 }

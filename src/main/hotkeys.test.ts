@@ -31,6 +31,18 @@ const overlayControllerState: { targetHasFocus: boolean; events: EventEmitter; t
 }
 
 const uiohookState: { listeners: Record<string, Array<(e: unknown) => void>> } = { listeners: {} }
+const keyMock = { Escape: 1, Ctrl: 2, Alt: 3, Shift: 4, ShiftRight: 5, C: 6 }
+const inputMock = {
+  on: (event: string, handler: (e: unknown) => void) => {
+    ;(uiohookState.listeners[event] ??= []).push(handler)
+  },
+  start: vi.fn(),
+  stop: vi.fn(),
+  keyToggle: vi.fn(),
+  keyTap: vi.fn(),
+  seesInjectedKeys: true,
+  physicallyHeld: vi.fn((_key: number): boolean | null => null),
+}
 
 function emitKeydown(e: { keycode: number; ctrlKey: boolean; shiftKey: boolean; altKey: boolean }): void {
   for (const handler of uiohookState.listeners.keydown ?? []) handler(e)
@@ -48,44 +60,48 @@ const windowingMockState = {
   hideFocusedOrAnyVisibleSecondaryOverlay: vi.fn(() => false),
 }
 
-// Scalpel-owned gameplay-window focus complements OverlayController target focus.
+// Scalpel-owned gameplay-window focus complements the tracked game's focus.
 const focusMockState: { scalpelBrowserWindowFocused: boolean } = {
   scalpelBrowserWindowFocused: false,
 }
 
-// Whether the compositor-driven overlay path is in charge. Mocked rather than
-// derived from the environment so no test shells out to hyprctl.
-const hyprlandMockState = { overlayActive: false, allowed: true }
+// Whether the compositor owns overlay focus, and whether it still allows input.
+// Mocked rather than derived from the environment so no test shells out to hyprctl.
+const platformMockState = { compositorFocus: false, inputAllowed: true }
 
 vi.mock('electron', () => ({
-  globalShortcut: globalShortcutMock,
-  clipboard: {
-    readText: vi.fn(() => ''),
-    readHTML: vi.fn(() => ''),
-    writeText: vi.fn(),
-    write: vi.fn(),
-    clear: vi.fn(),
-  },
   ipcMain: { on: vi.fn(), handle: vi.fn() },
 }))
 
-vi.mock('electron-overlay-window', () => ({
-  OverlayController: overlayControllerState,
-}))
-
-vi.mock('uiohook-napi', () => {
-  const UiohookKey = { Escape: 1, Ctrl: 2, Alt: 3, Shift: 4, ShiftRight: 5, C: 6 }
-  const uIOhook = {
-    on: (event: string, handler: (e: unknown) => void) => {
-      ;(uiohookState.listeners[event] ??= []).push(handler)
+vi.mock('@scalpel/platform', () => ({
+  Key: keyMock,
+  platform: () => ({
+    clipboard: {
+      readText: vi.fn(() => ''),
+      readHTML: vi.fn(() => ''),
+      writeText: vi.fn(),
+      write: vi.fn(),
+      clear: vi.fn(),
     },
-    start: vi.fn(),
-    stop: vi.fn(),
-    keyToggle: vi.fn(),
-    keyTap: vi.fn(),
-  }
-  return { UiohookKey, uIOhook }
-})
+    shortcuts: globalShortcutMock,
+    input: inputMock,
+    traits: {
+      get compositorFocus() {
+        return platformMockState.compositorFocus
+      },
+    },
+    windowTracker: {
+      get targetHasFocus() {
+        return overlayControllerState.targetHasFocus
+      },
+      get targetBounds() {
+        return overlayControllerState.targetBounds
+      },
+      events: overlayControllerState.events,
+      inputAllowed: () => platformMockState.inputAllowed,
+    },
+  }),
+}))
 
 vi.mock('./overlay', () => ({
   isTypingInOverlay: () => overlayMockState.isTypingInOverlay,
@@ -98,11 +114,6 @@ vi.mock('./overlay', () => ({
 vi.mock('./windowing', () => ({
   hideFocusedOrAnyVisibleSecondaryOverlay: () => windowingMockState.hideFocusedOrAnyVisibleSecondaryOverlay(),
   isAnyScalpelBrowserWindowFocused: () => focusMockState.scalpelBrowserWindowFocused,
-}))
-
-vi.mock('./hyprland', () => ({
-  hyprlandOverlayActive: () => hyprlandMockState.overlayActive,
-  hyprlandInputAllowed: () => hyprlandMockState.allowed,
 }))
 
 vi.mock('./diagnostics', () => ({
@@ -136,8 +147,8 @@ async function loadHotkeys(onEscape: () => void) {
   windowingMockState.hideFocusedOrAnyVisibleSecondaryOverlay.mockReset()
   windowingMockState.hideFocusedOrAnyVisibleSecondaryOverlay.mockReturnValue(false)
   focusMockState.scalpelBrowserWindowFocused = false
-  hyprlandMockState.overlayActive = false
-  hyprlandMockState.allowed = true
+  platformMockState.compositorFocus = false
+  platformMockState.inputAllowed = true
 
   const hotkeys = await import('./hotkeys')
   hotkeys.startHotkeyListener(() => {})
@@ -160,8 +171,8 @@ describe('Hyprland dialog shortcut dismissal', () => {
   ])('uses live compositor focus (%s) for Escape when only an annotation is open', async (allowed) => {
     const onEscape = vi.fn()
     await loadHotkeys(onEscape)
-    hyprlandMockState.overlayActive = true
-    hyprlandMockState.allowed = allowed
+    platformMockState.compositorFocus = true
+    platformMockState.inputAllowed = allowed
     overlayControllerState.targetHasFocus = false
     emitKeydown(ESCAPE_KEYDOWN)
     expect(onEscape).toHaveBeenCalledTimes(allowed ? 1 : 0)
@@ -169,7 +180,7 @@ describe('Hyprland dialog shortcut dismissal', () => {
   it('uses the close handler instead of starting another filter lookup', async () => {
     const close = vi.fn()
     const hotkeys = await loadHotkeys(close)
-    hyprlandMockState.overlayActive = true
+    platformMockState.compositorFocus = true
     overlayControllerState.targetHasFocus = true
     overlayMockState.visibilityListener?.(true)
     hotkeys.setHotkey('Ctrl+C')
@@ -201,7 +212,7 @@ describe('Escape globalShortcut sync', () => {
   it('stays registered through the initial Hyprland dialog focus handoff', async () => {
     const onEscape = vi.fn()
     await loadHotkeys(onEscape)
-    hyprlandMockState.overlayActive = true
+    platformMockState.compositorFocus = true
     overlayControllerState.targetHasFocus = true
     overlayMockState.visibilityListener?.(true)
 
@@ -216,7 +227,7 @@ describe('Escape globalShortcut sync', () => {
   it('closes from the uiohook path during the initial Hyprland dialog focus handoff', async () => {
     const onEscape = vi.fn()
     await loadHotkeys(onEscape)
-    hyprlandMockState.overlayActive = true
+    platformMockState.compositorFocus = true
     overlayControllerState.targetHasFocus = false
     focusMockState.scalpelBrowserWindowFocused = false
     overlayMockState.visibilityListener?.(true)
@@ -512,7 +523,6 @@ describe('scoped hotkey refresh', () => {
     const handler = vi.fn()
     const hotkeys = await loadHotkeys(() => {})
     const { setPoeVersion } = await import('./game-state')
-    const { uIOhook } = await import('uiohook-napi')
     setPoeVersion(1)
     hotkeys.setAppMacroHandler(handler)
     hotkeys.setChatCommands([{ hotkey: 'Ctrl+M', command: '/menagerie' }])
@@ -521,13 +531,13 @@ describe('scoped hotkey refresh', () => {
     const staleAppCallback = activeGlobalShortcuts.get('Ctrl+D')
 
     overlayControllerState.targetHasFocus = true
-    vi.mocked(uIOhook.keyToggle).mockClear()
+    vi.mocked(inputMock.keyToggle).mockClear()
     setPoeVersion(2)
     staleChatCallback?.()
     staleAppCallback?.()
 
     expect(handler).not.toHaveBeenCalled()
-    expect(uIOhook.keyToggle).not.toHaveBeenCalled()
+    expect(inputMock.keyToggle).not.toHaveBeenCalled()
   })
 })
 
@@ -535,15 +545,14 @@ describe('sendCtrlCToPoE', () => {
   /** Keys this call toggled down, in order. */
   async function toggledDownKeys(opts?: { withAlt?: boolean }): Promise<number[]> {
     const hotkeys = await loadHotkeys(() => {})
-    const { uIOhook, UiohookKey } = await import('uiohook-napi')
-    vi.mocked(uIOhook.keyToggle).mockClear()
-    vi.mocked(uIOhook.keyTap).mockClear()
+    vi.mocked(inputMock.keyToggle).mockClear()
+    vi.mocked(inputMock.keyTap).mockClear()
 
     await hotkeys.sendCtrlCToPoE(opts)
 
-    expect(uIOhook.keyTap).toHaveBeenCalledWith(UiohookKey.C)
+    expect(inputMock.keyTap).toHaveBeenCalledWith(keyMock.C)
     return vi
-      .mocked(uIOhook.keyToggle)
+      .mocked(inputMock.keyToggle)
       .mock.calls.filter((c) => c[1] === 'down')
       .map((c) => c[0] as number)
   }
@@ -551,27 +560,39 @@ describe('sendCtrlCToPoE', () => {
   // Both games emit the advanced item description for a plain Ctrl+C now (#560),
   // so Alt - PoE's "show advanced item descriptions" modifier - is not injected.
   it('sends a bare Ctrl+C by default', async () => {
-    const { UiohookKey } = await import('uiohook-napi')
-    expect(await toggledDownKeys()).toEqual([UiohookKey.Ctrl])
+    expect(await toggledDownKeys()).toEqual([keyMock.Ctrl])
   })
 
   it('adds Alt only when asked, for a client that still needs it', async () => {
-    const { UiohookKey } = await import('uiohook-napi')
-    expect(await toggledDownKeys({ withAlt: true })).toEqual([UiohookKey.Ctrl, UiohookKey.Alt])
+    expect(await toggledDownKeys({ withAlt: true })).toEqual([keyMock.Ctrl, keyMock.Alt])
+  })
+
+  it.each([
+    [null, true],
+    [false, false],
+  ])('re-presses a held Shift after the copy unless the hook reports it released (%s)', async (held, repressed) => {
+    const hotkeys = await loadHotkeys(() => {})
+    emitKeydown({ keycode: keyMock.Shift, ctrlKey: false, shiftKey: true, altKey: false })
+    inputMock.physicallyHeld.mockReturnValueOnce(held)
+    inputMock.keyToggle.mockClear()
+
+    await hotkeys.sendCtrlCToPoE()
+
+    const downs = inputMock.keyToggle.mock.calls.filter((c) => c[1] === 'down').map((c) => c[0])
+    expect(downs.includes(keyMock.Shift)).toBe(repressed)
   })
 
   it('releases every modifier it pressed', async () => {
     const hotkeys = await loadHotkeys(() => {})
-    const { uIOhook, UiohookKey } = await import('uiohook-napi')
-    vi.mocked(uIOhook.keyToggle).mockClear()
+    vi.mocked(inputMock.keyToggle).mockClear()
 
     await hotkeys.sendCtrlCToPoE({ withAlt: true })
 
     const ups = vi
-      .mocked(uIOhook.keyToggle)
+      .mocked(inputMock.keyToggle)
       .mock.calls.filter((c) => c[1] === 'up')
       .map((c) => c[0] as number)
-    expect(ups).toEqual([UiohookKey.Alt, UiohookKey.Ctrl])
+    expect(ups).toEqual([keyMock.Alt, keyMock.Ctrl])
   })
 
   // A user may bind Ctrl+C itself as a hotkey (POE_PROTECTED_HOTKEYS warns but
@@ -597,12 +618,11 @@ describe('sendCtrlCToPoE', () => {
 
     it('releases a Ctrl+C trigger binding before the tap and restores it after', async () => {
       const hotkeys = await loadHotkeys(() => {})
-      const { uIOhook } = await import('uiohook-napi')
       hotkeys.setHotkey('Ctrl+C')
       expect(activeGlobalShortcuts.has('Ctrl+C')).toBe(true)
 
       const order = trackOrder()
-      vi.mocked(uIOhook.keyTap).mockImplementation(() => {
+      vi.mocked(inputMock.keyTap).mockImplementation(() => {
         order.push('tap:C')
       })
       await hotkeys.sendCtrlCToPoE()
@@ -618,11 +638,10 @@ describe('sendCtrlCToPoE', () => {
 
     it('releases a Ctrl+Alt+C price-check binding too - the alt/probe copy path injects it', async () => {
       const hotkeys = await loadHotkeys(() => {})
-      const { uIOhook } = await import('uiohook-napi')
       hotkeys.setPriceCheckHotkey('Ctrl+Alt+C')
 
       const order = trackOrder()
-      vi.mocked(uIOhook.keyTap).mockImplementation(() => {
+      vi.mocked(inputMock.keyTap).mockImplementation(() => {
         order.push('tap:C')
       })
       await hotkeys.sendCtrlCToPoE({ withAlt: true })

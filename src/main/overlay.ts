@@ -1,8 +1,6 @@
 import { desktop } from './desktop'
 import { join } from 'node:path'
 import { BrowserWindow, ipcMain, screen, webContents } from 'electron'
-import { OVERLAY_WINDOW_OPTS, OverlayController } from 'electron-overlay-window'
-import { uIOhook } from 'uiohook-napi'
 import { startClientLogWatcher } from './client-log'
 import { guardNativeListener, registerDiagnosticProvider } from './diagnostics'
 import { setGameAttached } from './game-presence'
@@ -20,16 +18,12 @@ import { getWhiteboardOverlay } from './whiteboard'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 import { GAME_TITLES } from '@shared/contracts/game-variant'
 import { IPC_CHANNELS } from '@shared/contracts/ipc'
-import {
-  attachHyprlandOverlay,
-  getHyprlandPointerPhysical,
-  hyprlandInputAllowed,
-  hyprlandOverlayActive,
-  nameHyprlandOverlay,
-} from './hyprland'
+import { platform } from '@scalpel/platform'
+
+const { cursor, input, traits, windowTracker } = platform()
 
 let overlayWindow: BrowserWindow | null = null
-let unmapHyprlandDialog: (() => void) | null = null
+let unmapMainOverlay: (() => void) | null = null
 let overlayVisible = false
 let mouseOverPanel = false
 let closeOnClickOutside = false
@@ -65,7 +59,7 @@ export function setCloseOnClickOutside(enabled: boolean): void {
   closeOnClickOutside = enabled
 }
 
-// Panel bounds in physical screen coordinates (for uiohook mouse hit testing).
+// Panel bounds in physical screen coordinates (for input hook mouse hit testing).
 // Updated by the renderer reporting its actual CSS bounding rects, which we convert
 // to physical pixels. Keyed by sender webContents ID so multiple windows (main overlay,
 // whiteboard toolbar, etc.) can each report their own rects without overwriting each other.
@@ -94,7 +88,7 @@ function windowAtPoint(x: number, y: number): BrowserWindow | null {
     // A hidden window keeps its last reported rects until its renderer clears
     // them, and must not be made interactive on the strength of stale geometry.
     if (entry.win.isDestroyed() || !entry.win.isVisible()) continue
-    if (hyprlandOverlayActive() && entry.win === overlayWindow && !overlayVisible) continue
+    if (traits.compositorFocus && entry.win === overlayWindow && !overlayVisible) continue
     for (const r of entry.rects) {
       if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) {
         return entry.win
@@ -107,9 +101,9 @@ function windowAtPoint(x: number, y: number): BrowserWindow | null {
 function getScaleFactor(): number {
   // Use the display the game is actually on, not the primary display.
   // Multi-monitor setups with different DPIs need the correct scale factor.
-  const tb = OverlayController.targetBounds
+  const tb = windowTracker.targetBounds
   if (tb?.width) {
-    if (hyprlandOverlayActive()) {
+    if (traits.compositorFocus) {
       const dip = desktop.getGameBounds()
       if (dip?.width) return tb.width / dip.width
     }
@@ -123,7 +117,7 @@ ipcMain.on('report-panel-rect', (event, payload: unknown) => {
   const rects = Array.isArray(payload)
     ? (payload as Array<{ left: number; top: number; width: number; height: number }>)
     : [payload as { left: number; top: number; width: number; height: number }]
-  const tb = OverlayController.targetBounds
+  const tb = windowTracker.targetBounds
   if (!tb?.width) return
   const sf = getScaleFactor()
   const phys = rects
@@ -148,7 +142,7 @@ ipcMain.on('clear-panel-rect', (event) => {
   // unmount time).
   if (entry && !entry.win.isDestroyed()) {
     try {
-      entry.win.setIgnoreMouseEvents(!(hyprlandOverlayActive() && overlayVisible && entry.win === overlayWindow))
+      entry.win.setIgnoreMouseEvents(!(traits.compositorFocus && overlayVisible && entry.win === overlayWindow))
     } catch {}
   }
   if (currentInteractiveWindow === entry?.win) currentInteractiveWindow = null
@@ -156,7 +150,7 @@ ipcMain.on('clear-panel-rect', (event) => {
 
 // Allow renderer to pull initial state on mount (attach events may fire before renderer loads)
 ipcMain.handle('get-overlay-state', () => {
-  const tb = OverlayController.targetBounds
+  const tb = windowTracker.targetBounds
   const sf = getScaleFactor()
   return {
     poeVersion: getPoeVersion(),
@@ -174,11 +168,11 @@ ipcMain.handle('get-overlay-state', () => {
 ipcMain.on('lock-interactive', () => {
   interactiveLocked = true
   setInteractive(true)
-  OverlayController.activateOverlay()
+  windowTracker.activateOverlay()
 })
 ipcMain.on('unlock-interactive', () => {
   interactiveLocked = false
-  if (hyprlandOverlayActive() && overlayVisible) return
+  if (traits.compositorFocus && overlayVisible) return
   // Re-evaluate based on current mouse position
   if (!mouseOverPanel) setInteractive(false)
 })
@@ -198,7 +192,7 @@ let currentInteractiveWindow: BrowserWindow | null = null
  *  Setting a different window to interactive automatically reverts the prior
  *  one to click-through, so we never end up with two windows competing. */
 function setInteractiveWindow(win: BrowserWindow | null): void {
-  if (hyprlandOverlayActive() && desktop.hasInteractiveDialog() && win !== overlayWindow) {
+  if (traits.compositorFocus && desktop.hasInteractiveDialog() && win !== overlayWindow) {
     // A pending hover-exit timer or stale annotation region must not steal
     // focus from a newly opened radial menu or whiteboard editor.
     const prev = currentInteractiveWindow
@@ -206,12 +200,12 @@ function setInteractiveWindow(win: BrowserWindow | null): void {
     if (prev && !prev.isDestroyed()) prev.setIgnoreMouseEvents(true)
     return
   }
-  if (hyprlandOverlayActive() && overlayVisible && win !== overlayWindow) return
-  if (!hyprlandInputAllowed()) return
+  if (traits.compositorFocus && overlayVisible && win !== overlayWindow) return
+  if (!windowTracker.inputAllowed()) return
   if (currentInteractiveWindow === win) return
   // Revert prior window to click-through.
   const prev = currentInteractiveWindow
-  if (!win && prev && hyprlandOverlayActive()) OverlayController.focusTarget()
+  if (!win && prev && traits.compositorFocus) windowTracker.focusTarget()
   if (prev && !prev.isDestroyed()) {
     try {
       prev.setIgnoreMouseEvents(true)
@@ -228,18 +222,18 @@ function setInteractiveWindow(win: BrowserWindow | null): void {
     // exposes activateOverlay() for exactly this (it runs the native lib.activateOverlay()
     // on Linux). Only the attached main overlay can be activated this way, so secondary
     // windows (whiteboard, cheat sheets) fall outside this path. See issue #30.
-    if (hyprlandOverlayActive() && win !== overlayWindow) {
+    if (traits.compositorFocus && win !== overlayWindow) {
       desktop.focusOverlay(win)
     } else if (process.platform === 'linux' && win === overlayWindow) {
       try {
-        OverlayController.activateOverlay()
+        windowTracker.activateOverlay()
       } catch {}
     }
-  } else if (process.platform === 'linux' && !hyprlandOverlayActive() && prev === overlayWindow) {
+  } else if (process.platform === 'linux' && !traits.compositorFocus && prev === overlayWindow) {
     // Cursor left the main overlay: hand native input focus back to PoE so the
     // game keeps receiving input (mirrors the focusTarget() handoff hideOverlay uses).
     try {
-      OverlayController.focusTarget()
+      windowTracker.focusTarget()
     } catch {}
   }
 }
@@ -257,19 +251,19 @@ function setInteractive(interactive: boolean): void {
   else if (currentInteractiveWindow === overlayWindow) currentInteractiveWindow = null
 }
 
-// Track mouse position via uiohook to toggle click-through
+// Track mouse position via the input hook to toggle click-through
 // Debounce exit to prevent flickering at DPI-scaled boundaries
 let exitTimer: ReturnType<typeof setTimeout> | null = null
-let lastHyprlandPointerCheck = 0
-let hyprlandPointerTimer: ReturnType<typeof setTimeout> | null = null
+let lastTrackerPointerCheck = 0
+let trackerPointerTimer: ReturnType<typeof setTimeout> | null = null
 
-uIOhook.on(
+input.on(
   'mousemove',
   guardNativeListener('mousemove', function trackPointer(e) {
     // A dialog owns input until explicitly dismissed. Hit-test updates can lag
     // behind dragging; neither leaving a rect nor stale geometry may release it.
-    if (hyprlandOverlayActive() && overlayVisible) return
-    if (hyprlandOverlayActive() && desktop.hasInteractiveDialog()) {
+    if (traits.compositorFocus && overlayVisible) return
+    if (traits.compositorFocus && desktop.hasInteractiveDialog()) {
       setInteractiveWindow(null)
       return
     }
@@ -277,23 +271,23 @@ uIOhook.on(
     // rects independently of the main overlay's `overlayVisible` flag.)
     if (panelRectsBySender.size === 0) return
     let point = e
-    if (hyprlandOverlayActive()) {
+    if (traits.compositorFocus) {
       // Limit compositor queries for high polling-rate gaming mice.
-      const elapsed = Date.now() - lastHyprlandPointerCheck
+      const elapsed = Date.now() - lastTrackerPointerCheck
       if (elapsed < 32) {
         // Sample once more after the last motion event, even if the pointer
         // stops immediately upon entering a button or drag grip.
-        if (!hyprlandPointerTimer)
-          hyprlandPointerTimer = setTimeout(() => {
-            hyprlandPointerTimer = null
+        if (!trackerPointerTimer)
+          trackerPointerTimer = setTimeout(() => {
+            trackerPointerTimer = null
             trackPointer(e)
           }, 32 - elapsed)
         return
       }
-      lastHyprlandPointerCheck = Date.now()
-      const cursor = getHyprlandPointerPhysical()
-      if (!cursor) return
-      point = { ...e, ...cursor }
+      lastTrackerPointerCheck = Date.now()
+      const trackerPoint = cursor.trackerPoint()
+      if (!trackerPoint) return
+      point = { ...e, ...trackerPoint }
     }
     const winUnder = windowAtPoint(point.x, point.y)
     if (winUnder) {
@@ -318,12 +312,12 @@ uIOhook.on(
 // Close overlay when clicking outside the panel
 // Use mousedown (not click) so the overlay hides immediately on press,
 // before PoE grabs focus and causes a flash.
-uIOhook.on(
+input.on(
   'mousedown',
   guardNativeListener('mousedown-overlay', (e) => {
-    if (!overlayVisible && !desktop.hasInteractiveDialog() && hyprlandInputAllowed()) {
-      const point = hyprlandOverlayActive() ? getHyprlandPointerPhysical() : e
-      if (point && !windowAtPoint(point.x, point.y) && (OverlayController.targetHasFocus || hyprlandOverlayActive())) {
+    if (!overlayVisible && !desktop.hasInteractiveDialog() && windowTracker.inputAllowed()) {
+      const point = traits.compositorFocus ? cursor.trackerPoint() : e
+      if (point && !windowAtPoint(point.x, point.y) && (windowTracker.targetHasFocus || traits.compositorFocus)) {
         if (hideOverlaysOnGameClick()) {
           setInteractiveWindow(null)
           desktop.focusGame()
@@ -331,7 +325,7 @@ uIOhook.on(
       }
     }
     if (!overlayVisible) return
-    if (!hyprlandInputAllowed()) return
+    if (!windowTracker.inputAllowed()) return
     // Only process clicks if the overlay window is actually visible on screen
     if (!overlayWindow || overlayWindow.isDestroyed() || !overlayWindow.isVisible()) return
     if (!isInsidePanel(e.x, e.y)) {
@@ -342,7 +336,7 @@ uIOhook.on(
       // panel rect, so every click on it looks like a click "outside". Bail so we don't
       // disable interactivity (click-through to PoE) or close the overlay.
       if (interactiveLocked) return
-      if (hyprlandOverlayActive()) {
+      if (traits.compositorFocus) {
         hideOverlay()
         return
       }
@@ -397,10 +391,7 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
     .catch(() => {})
   setInterval(() => refreshEndgameFilterSupport().catch(() => {}), 24 * 60 * 60 * 1000)
   overlayWindow = new BrowserWindow({
-    ...OVERLAY_WINDOW_OPTS,
-    // XWayland utility windows float on their first map. Floating a normal
-    // window later is too late to prevent Hyprland disrupting game fullscreen.
-    ...(hyprlandOverlayActive() ? { type: 'utility' as const, title: 'Scalpel Overlay' } : {}),
+    ...windowTracker.overlayWindowOptions(),
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -408,7 +399,7 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
       contextIsolation: true,
     },
   })
-  nameHyprlandOverlay(overlayWindow)
+  windowTracker.adoptOverlay(overlayWindow)
 
   if (process.env.ELECTRON_RENDERER_URL) {
     overlayWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
@@ -421,7 +412,7 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
 
   overlayWindow.on('closed', () => {
     overlayWindow = null
-    unmapHyprlandDialog = null
+    unmapMainOverlay = null
   })
 
   // Prevent Windows show/hide animation by using opacity instead of hide/show.
@@ -430,22 +421,22 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
   const origShowInactive = overlayWindow.showInactive.bind(overlayWindow)
   const origHide = overlayWindow.hide.bind(overlayWindow)
   let opacityHidden = false
-  unmapHyprlandDialog = () => {
+  unmapMainOverlay = () => {
     origHide()
     opacityHidden = true
   }
 
   overlayWindow.hide = () => {
-    if (!hyprlandOverlayActive() && Date.now() - lastShowTime < 100) return
+    if (!traits.compositorFocus && Date.now() - lastShowTime < 100) return
 
     // electron-overlay-window's native code calls .hide() on PoE blur. Skip
     // the hide when focus actually moved to another Scalpel window (cheat
     // sheets etc.) - that's an in-app interaction, not "user left the app".
-    if (hyprlandOverlayActive() ? hyprlandInputAllowed() : isAnyScalpelWindowFocused()) return
+    if (traits.compositorFocus ? windowTracker.inputAllowed() : isAnyScalpelWindowFocused()) return
 
     // Linux setOpacity is a no-op; unmap so a hidden, click-through overlay
     // cannot remain painted over another application. Windows avoids animation.
-    if (process.platform === 'linux' || hyprlandOverlayActive()) origHide()
+    if (process.platform === 'linux' || traits.compositorFocus) origHide()
     else overlayWindow?.setOpacity(0)
     overlayWindow?.setIgnoreMouseEvents(true)
     currentInteractiveWindow = null
@@ -460,7 +451,7 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
 
   overlayWindow.showInactive = () => {
     // Only show the overlay if POE actually has focus (alt-tab fix)
-    if (hyprlandOverlayActive() ? !hyprlandInputAllowed() : !OverlayController.targetHasFocus) return
+    if (traits.compositorFocus ? !windowTracker.inputAllowed() : !windowTracker.targetHasFocus) return
 
     // Restore opacity before showing so it's visible immediately
     overlayWindow?.setOpacity(1)
@@ -482,18 +473,9 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
   // In multi-title mode (experimental), pass both titles so the native tracker
   // can find either PoE1 or PoE2 without a restart. In single-title mode
   // (stable), attach to the specific game version only.
-  if (hyprlandOverlayActive()) {
-    overlayWindow.setAlwaysOnTop(true, 'screen-saver')
-    OverlayController.events.on('blur', () => overlayWindow?.hide())
-    OverlayController.events.on('detach', () => overlayWindow?.hide())
-    attachHyprlandOverlay(overlayWindow, multiTitleMode ? [GAME_TITLES[1], GAME_TITLES[2]] : [GAME_TITLES[version]])
-  } else if (multiTitleMode) {
-    OverlayController.attachByTitles(overlayWindow, [GAME_TITLES[1], GAME_TITLES[2]])
-  } else {
-    OverlayController.attachByTitle(overlayWindow, GAME_TITLES[version])
-  }
+  windowTracker.attach(overlayWindow, multiTitleMode ? [GAME_TITLES[1], GAME_TITLES[2]] : [GAME_TITLES[version]])
 
-  OverlayController.events.on('attach', (ev) => {
+  windowTracker.events.on('attach', (ev) => {
     lastAttachAt = Date.now()
     setGameAttached(true)
     try {
@@ -530,7 +512,7 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
       getWhiteboardOverlay()?.send(IPC_CHANNELS.SCREEN.SOURCE_INVALIDATED_EVENT)
       mouseOverPanel = false
       if (overlayVisible && overlayWindow && !overlayWindow.isDestroyed()) {
-        overlayWindow.setIgnoreMouseEvents(!hyprlandOverlayActive())
+        overlayWindow.setIgnoreMouseEvents(!traits.compositorFocus)
         if (currentInteractiveWindow === overlayWindow) currentInteractiveWindow = null
         overlayWindow.webContents.send('skip-animation')
       }
@@ -539,7 +521,7 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
       console.error('[overlay] Error in attach handler:', err)
     }
   })
-  OverlayController.events.on('detach', () => {
+  windowTracker.events.on('detach', () => {
     lastDetachAt = Date.now()
     try {
       if (retargeting) {
@@ -560,14 +542,14 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
       console.error('[overlay] Error in detach handler:', err)
     }
   })
-  OverlayController.events.on(
+  windowTracker.events.on(
     'focus',
     guardNativeListener('overlay-focus', () => {
       if (!overlayWindow || overlayWindow.isDestroyed()) return
 
       // Only show the overlay if POE actually has focus (not another window)
       // This prevents the overlay from appearing on top of other windows during rapid alt-tab
-      if (!OverlayController.targetHasFocus) return
+      if (!windowTracker.targetHasFocus) return
 
       // A refocused game may be a NEW window since the whiteboard's live-mirror
       // stream last opened (game restarted while the board sat hidden, so the
@@ -575,14 +557,14 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
       // no-op when the stream is already healthy, so per-alt-tab cost is one IPC.
       getWhiteboardOverlay()?.send(IPC_CHANNELS.SCREEN.SOURCE_MAYBE_STALE_EVENT)
 
-      const tb = OverlayController.targetBounds
+      const tb = windowTracker.targetBounds
       if (tb?.width) sendGameBounds(tb.width, tb.height)
       if (overlayVisible) {
         // Patched showInactive() fires onGameFocus internally, which resumes
         // hotkeys and restores any hidden secondary overlays.
         overlayWindow.showInactive()
         mouseOverPanel = false
-        overlayWindow.setIgnoreMouseEvents(!hyprlandOverlayActive())
+        overlayWindow.setIgnoreMouseEvents(!traits.compositorFocus)
         if (currentInteractiveWindow === overlayWindow) currentInteractiveWindow = null
       } else if (onGameFocus) {
         // Main overlay is closed but PoE just refocused -- still need to resume
@@ -595,7 +577,7 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
       }
     }),
   )
-  OverlayController.events.on('moveresize', (ev) => {
+  windowTracker.events.on('moveresize', (ev) => {
     lastMoveResizeAt = Date.now()
     try {
       sendGameBounds(ev.width, ev.height)
@@ -641,7 +623,7 @@ export function retargetForGame(target: 1 | 2): void {
   hideOverlay()
   setPoeVersion(target)
   overlayAttachedVersion = target
-  OverlayController.setTargetTitles([GAME_TITLES[target]])
+  windowTracker.setTargetTitles([GAME_TITLES[target]])
   retargetWatchdog = setTimeout(() => {
     retargeting = false
     retargetWatchdog = null
@@ -663,7 +645,7 @@ export function showOverlay(): void {
   // Direct setOpacity(1) alone doesn't reset the closure flag, so the next hide/show cycle
   // from electron-overlay-window can re-zero the opacity.
   try {
-    if (hyprlandOverlayActive()) setInteractive(true)
+    if (traits.compositorFocus) setInteractive(true)
     overlayWindow.showInactive()
   } catch {}
   // If a persisting whiteboard is visible, raise the eval above it so the
@@ -674,7 +656,7 @@ export function showOverlay(): void {
     } catch {}
   }
   try {
-    const tb = OverlayController.targetBounds
+    const tb = windowTracker.targetBounds
     if (tb?.width) sendGameBounds(tb.width, tb.height)
     overlayWindow.webContents.send('poe-version', getPoeVersion())
     overlayWindow.webContents.send('overlay-show')
@@ -683,11 +665,11 @@ export function showOverlay(): void {
     console.error('[overlay] Error in showOverlay:', err)
   }
   overlayVisibilityListener?.(true)
-  if (hyprlandOverlayActive()) {
+  if (traits.compositorFocus) {
     if (exitTimer) clearTimeout(exitTimer)
     exitTimer = null
     setInteractive(true)
-    OverlayController.activateOverlay()
+    windowTracker.activateOverlay()
   }
 }
 
@@ -695,25 +677,25 @@ export function hideOverlay(): void {
   if (!overlayWindow || overlayWindow.isDestroyed() || !overlayVisible) return
   overlayVisible = false
   mouseOverPanel = false
-  if (hyprlandOverlayActive()) {
+  if (traits.compositorFocus) {
     interactiveLocked = false
     currentInteractiveWindow = null
     if (exitTimer) clearTimeout(exitTimer)
     exitTimer = null
     // Focus before removing the input region: otherwise pointer-follow-focus
     // can activate the game outside our no-warp handoff.
-    OverlayController.focusTarget()
-    // X11 input-shape click-through is not enough: Hyprland can still
+    windowTracker.focusTarget()
+    // X11 input-shape click-through is not enough: the compositor can still
     // hit-test the mapped full-screen window on the next physical click.
-    unmapHyprlandDialog?.()
+    unmapMainOverlay?.()
   }
   try {
     overlayWindow.setIgnoreMouseEvents(true)
   } catch {}
   // Tell renderer to hide its content (don't call overlayWindow.hide() -
-  // OverlayController manages window visibility and would re-show it, causing flicker)
+  // The window tracker manages window visibility and would re-show it, causing flicker)
   overlayWindow.webContents.send('overlay-hide')
-  if (!hyprlandOverlayActive()) OverlayController.focusTarget()
+  if (!traits.compositorFocus) windowTracker.focusTarget()
   overlayVisibilityListener?.(false)
 }
 
@@ -760,12 +742,12 @@ export function setGameFocusHandlers(onFocus: () => void, onBlur: () => void): v
 }
 
 export function focusGameWindow(): void {
-  OverlayController.focusTarget()
+  windowTracker.focusTarget()
 }
 
 /** Check if PoE or the overlay is in a usable state (PoE focused, or overlay visible) */
 export function isGameActive(): boolean {
-  return OverlayController.targetHasFocus || overlayVisible
+  return windowTracker.targetHasFocus || overlayVisible
 }
 
 // Tracks which Scalpel windows currently have an editable element
@@ -815,7 +797,7 @@ export function isTypingInOverlay(): boolean {
 }
 
 function getOverlayDiagnostics(): Record<string, unknown> {
-  const tb = OverlayController.targetBounds
+  const tb = windowTracker.targetBounds
   const sf = ((): number => {
     try {
       if (tb?.width) {
@@ -829,7 +811,7 @@ function getOverlayDiagnostics(): Record<string, unknown> {
   return {
     overlayWindowCreated: overlayWindow !== null,
     overlayVisible,
-    targetHasFocus: OverlayController.targetHasFocus,
+    targetHasFocus: windowTracker.targetHasFocus,
     targetBounds: tb?.width ? { width: tb.width, height: tb.height } : null,
     targetDisplayScaleFactor: sf,
     attachedPoeVersion: getPoeVersion(),

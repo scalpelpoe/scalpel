@@ -65,6 +65,8 @@ const mock = vi.hoisted(() => {
     stop: vi.fn(),
     keyToggle: vi.fn(),
     keyTap: vi.fn(),
+    seesInjectedKeys: true,
+    physicallyHeld: () => null,
   }
   const trigger = vi.fn()
   // Stateful: a chat paste refuses to inject until it can read its own command
@@ -74,47 +76,48 @@ const mock = vi.hoisted(() => {
 })
 
 vi.mock('electron', () => ({
-  clipboard: {
-    readText: vi.fn(() => mock.clip.text),
-    readHTML: vi.fn(() => ''),
-    writeText: vi.fn((t: string) => {
-      mock.clip.text = t
-    }),
-    write: vi.fn((d: { text?: string }) => {
-      mock.clip.text = d.text ?? ''
-    }),
-    clear: vi.fn(() => {
-      mock.clip.text = ''
-    }),
-  },
-  globalShortcut: {
-    register: vi.fn((accelerator: string, cb: () => void) => {
-      mock.registered.set(accelerator, cb)
-      return true
-    }),
-    unregister: vi.fn((accelerator: string) => {
-      mock.registered.delete(accelerator)
-    }),
-    unregisterAll: vi.fn(() => {
-      mock.registered.clear()
-    }),
-  },
   ipcMain: { handle: vi.fn() },
 }))
 
-vi.mock('electron-overlay-window', () => ({
-  OverlayController: {
-    get targetHasFocus() {
-      return mock.state.targetHasFocus
+vi.mock('@scalpel/platform', () => ({
+  Key: mock.keycodes,
+  platform: () => ({
+    clipboard: {
+      readText: vi.fn(() => mock.clip.text),
+      readHTML: vi.fn(() => ''),
+      writeText: vi.fn((t: string) => {
+        mock.clip.text = t
+      }),
+      write: vi.fn((d: { text?: string }) => {
+        mock.clip.text = d.text ?? ''
+      }),
+      clear: vi.fn(() => {
+        mock.clip.text = ''
+      }),
     },
-    targetBounds: null,
-    events: { on: vi.fn() },
-  },
-}))
-
-vi.mock('uiohook-napi', () => ({
-  UiohookKey: mock.keycodes,
-  uIOhook: mock.uIOhook,
+    shortcuts: {
+      register: vi.fn((accelerator: string, cb: () => void) => {
+        mock.registered.set(accelerator, cb)
+        return true
+      }),
+      unregister: vi.fn((accelerator: string) => {
+        mock.registered.delete(accelerator)
+      }),
+      unregisterAll: vi.fn(() => {
+        mock.registered.clear()
+      }),
+    },
+    input: mock.uIOhook,
+    traits: { compositorFocus: false },
+    windowTracker: {
+      get targetHasFocus() {
+        return mock.state.targetHasFocus
+      },
+      targetBounds: null,
+      events: { on: vi.fn() },
+      inputAllowed: () => true,
+    },
+  }),
 }))
 
 vi.mock('./diagnostics', () => ({

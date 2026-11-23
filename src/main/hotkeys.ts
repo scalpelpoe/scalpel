@@ -1,6 +1,4 @@
-import { clipboard, globalShortcut, ipcMain } from 'electron'
-import { OverlayController } from 'electron-overlay-window'
-import { UiohookKey, uIOhook } from 'uiohook-napi'
+import { ipcMain } from 'electron'
 import { appMacroEffectiveScope, chatCommandEffectiveScope, type MacroScope, scopeAppliesTo } from '@shared/macro-scope'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 import { snapshotClipboard } from './clipboard-preserve'
@@ -13,7 +11,7 @@ import {
 } from './diagnostics'
 import { getPoeVersion } from './game-state'
 import { focusGameWindow, isTypingInOverlay, setOverlayVisibilityListener } from './overlay'
-import { hyprlandInputAllowed, hyprlandOverlayActive } from './hyprland'
+import { Key, platform } from '@scalpel/platform'
 import { advancedCopyTracker } from './trade/advanced-copy'
 import { hideFocusedOrAnyVisibleSecondaryOverlay, isAnyScalpelBrowserWindowFocused } from './windowing'
 import {
@@ -24,6 +22,8 @@ import {
   wheelClickOwnsWheel,
 } from './wheel-click'
 export { setWheelClickEnabled, setWheelClickToggleKey }
+
+const { clipboard, input, shortcuts, traits, windowTracker } = platform()
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
@@ -97,7 +97,7 @@ function matchesCombo(
  *  Exchange-2's keepModKeys release. */
 function releaseHotkeyKey(combo: KeyCombo | null): void {
   if (!combo) return
-  uIOhook.keyToggle(combo.keycode, 'up')
+  input.keyToggle(combo.keycode, 'up')
 }
 
 function fireTrigger(): void {
@@ -106,7 +106,7 @@ function fireTrigger(): void {
   if (now - lastTriggerFireAt < DEDUPE_MS) return
   lastTriggerFireAt = now
   releaseHotkeyKey(triggerCombo)
-  if (hyprlandOverlayActive() && overlayVisibleForEscape && onEscape) {
+  if (traits.compositorFocus && overlayVisibleForEscape && onEscape) {
     onEscape()
     return
   }
@@ -119,7 +119,7 @@ function firePriceCheck(): void {
   if (now - lastPriceCheckFireAt < DEDUPE_MS) return
   lastPriceCheckFireAt = now
   releaseHotkeyKey(priceCheckCombo)
-  if (hyprlandOverlayActive() && overlayVisibleForEscape && onEscape) {
+  if (traits.compositorFocus && overlayVisibleForEscape && onEscape) {
     onEscape()
     return
   }
@@ -148,26 +148,26 @@ function fireEscape(): void {
 function syncEscapeShortcut(): void {
   // On Hyprland, activating the XWayland overlay takes focus away from PoE
   // before Electron reliably reports the overlay BrowserWindow as focused.
-  // Keep Escape registered across that handoff; hyprlandInputAllowed() in
+  // Keep Escape registered across that handoff; windowTracker.inputAllowed() in
   // escapeContextIsActive() still rejects delivery after leaving the gameplay
   // context or switching workspace.
-  const ownsHyprlandDialog = hyprlandOverlayActive() && overlayVisibleForEscape
+  const ownsCompositorDialog = traits.compositorFocus && overlayVisibleForEscape
   const desired =
     !!onEscape &&
     overlayVisibleForEscape &&
-    (OverlayController.targetHasFocus || ownsHyprlandDialog) &&
+    (windowTracker.targetHasFocus || ownsCompositorDialog) &&
     !hotkeysAreSuspended()
   if (desired === escapeShortcutRegistered) return
   if (desired) {
     try {
-      const ok = globalShortcut.register('Escape', () => fireEscape())
+      const ok = shortcuts.register('Escape', () => fireEscape())
       escapeShortcutRegistered = ok
     } catch (e) {
       console.error('[hotkeys] Failed to register Escape shortcut:', e)
     }
   } else {
     try {
-      globalShortcut.unregister('Escape')
+      shortcuts.unregister('Escape')
     } catch {}
     escapeShortcutRegistered = false
   }
@@ -256,11 +256,11 @@ export function startHotkeyListener(handler: () => void): void {
   // Escape's globalShortcut is only valid while the game has focus (see
   // syncEscapeShortcut). Re-sync on every focus/blur so it registers/unregisters
   // in step with the attached game gaining/losing OS focus.
-  OverlayController.events.on(
+  windowTracker.events.on(
     'focus',
     guardNativeListener('escape-sync-focus', () => syncEscapeShortcut()),
   )
-  OverlayController.events.on(
+  windowTracker.events.on(
     'blur',
     guardNativeListener('escape-sync-blur', () => syncEscapeShortcut()),
   )
@@ -272,7 +272,7 @@ export function startHotkeyListener(handler: () => void): void {
 
   // uiohook is only used for Escape (overlay close), stash scroll, and modifier tracking
   initModifierTracking()
-  uIOhook.on(
+  input.on(
     'keydown',
     guardNativeListener('keydown-main', (e) => {
       if (injecting) return
@@ -282,7 +282,7 @@ export function startHotkeyListener(handler: () => void): void {
       // path at all when the shortcut isn't registered (overlay hidden, game
       // unfocused, etc.). fireEscape() dedupes double-delivery and holds the
       // secondary-overlay precedence + PoE/overlay focus gate.
-      if (e.keycode === UiohookKey.Escape) {
+      if (e.keycode === Key.Escape) {
         fireEscape()
       }
       // Trigger + price-check also use uIOhook so bindings still work when
@@ -297,32 +297,32 @@ export function startHotkeyListener(handler: () => void): void {
   )
 
   // Stash tab scrolling: ModKey+scroll outside stash grid -> arrow key taps
-  uIOhook.on(
+  input.on(
     'wheel',
     guardNativeListener('wheel', (e) => {
       const modHeld =
         stashScrollModifier === 'Ctrl' ? e.ctrlKey : stashScrollModifier === 'Shift' ? e.shiftKey : e.altKey
-      if (!stashScrollEnabled || !modHeld || !OverlayController.targetHasFocus || !hyprlandInputAllowed()) return
+      if (!stashScrollEnabled || !modHeld || !windowTracker.targetHasFocus || !windowTracker.inputAllowed()) return
       // Lock-key wheel-click mode owns the wheel: that scroll became a click,
       // so don't also flip stash tabs. (uiohook may sit ahead of the swallowing
       // hook in the chain and still see the event.)
       if (wheelClickOwnsWheel()) return
-      const tb = OverlayController.targetBounds
+      const tb = windowTracker.targetBounds
       if (!tb?.width) return
       // Only act when cursor is inside the PoE window but outside the stash grid area
       if (e.x < tb.x || e.x > tb.x + tb.width || e.y < tb.y || e.y > tb.y + tb.height) return
       if (isStashGridArea(e.x, e.y, tb)) return
       if (e.rotation > 0) {
-        uIOhook.keyTap(UiohookKey.ArrowRight)
+        input.keyTap(Key.ArrowRight)
       } else if (e.rotation < 0) {
-        uIOhook.keyTap(UiohookKey.ArrowLeft)
+        input.keyTap(Key.ArrowLeft)
       }
     }),
   )
 
   if (!hookStarted) {
     try {
-      uIOhook.start()
+      input.start()
       hookStarted = true
       lastHookStartError = null
     } catch (e) {
@@ -333,7 +333,7 @@ export function startHotkeyListener(handler: () => void): void {
     ipcMain.handle('screen-pick:suspend-hook', () => {
       if (hookSuspended) return
       try {
-        uIOhook.stop()
+        input.stop()
       } catch {}
       hookSuspended = true
       if (hookResumeTimer) clearTimeout(hookResumeTimer)
@@ -343,7 +343,7 @@ export function startHotkeyListener(handler: () => void): void {
         hookResumeTimer = null
         if (hookSuspended) {
           try {
-            uIOhook.start()
+            input.start()
             hookSuspended = false
           } catch (e) {
             lastHookStartError = String(e)
@@ -359,7 +359,7 @@ export function startHotkeyListener(handler: () => void): void {
       }
       if (hookSuspended) {
         try {
-          uIOhook.start()
+          input.start()
           hookSuspended = false
           lastHookStartError = null
         } catch (e) {
@@ -396,8 +396,8 @@ function hotkeysAreSuspended(): boolean {
 }
 
 function disarmHotkeys(): void {
-  globalShortcut.unregisterAll()
-  // globalShortcut.unregisterAll() above already wiped Escape's OS-side
+  shortcuts.unregisterAll()
+  // shortcuts.unregisterAll() above already wiped Escape's OS-side
   // registration - just reflect that in our own flag. No sync needed: the
   // desired state is false while suspended either way.
   escapeShortcutRegistered = false
@@ -432,9 +432,9 @@ function applySuspendTransition(wasSuspended: boolean, rearmReason: string): voi
  *  lifecycle, and this dispatch-time check closes uIOhook and transition races. */
 function hotkeyContextIsActive(): boolean {
   return (
-    hyprlandInputAllowed() &&
+    windowTracker.inputAllowed() &&
     !hotkeysAreSuspended() &&
-    (OverlayController.targetHasFocus || isAnyScalpelBrowserWindowFocused())
+    (windowTracker.targetHasFocus || isAnyScalpelBrowserWindowFocused())
   )
 }
 
@@ -444,9 +444,9 @@ function hotkeyContextIsActive(): boolean {
  * the active game context. Other hotkeys retain the stricter focus gate. */
 function escapeContextIsActive(): boolean {
   return (
-    hyprlandInputAllowed() &&
+    windowTracker.inputAllowed() &&
     !hotkeysAreSuspended() &&
-    (OverlayController.targetHasFocus || isAnyScalpelBrowserWindowFocused() || hyprlandOverlayActive())
+    (windowTracker.targetHasFocus || isAnyScalpelBrowserWindowFocused() || traits.compositorFocus)
   )
 }
 
@@ -488,7 +488,7 @@ export function resumeHotkeys(): void {
 export function setHotkey(accelerator: string): void {
   if (currentAccelerator && !hotkeysAreSuspended() && isElectronRegisterable(currentAccelerator)) {
     try {
-      globalShortcut.unregister(currentAccelerator)
+      shortcuts.unregister(currentAccelerator)
     } catch {}
   }
   currentAccelerator = accelerator
@@ -500,7 +500,7 @@ export function setHotkey(accelerator: string): void {
   // above fires them. Skip the register so it doesn't log a spurious failure.
   if (!isElectronRegisterable(accelerator)) return
   try {
-    globalShortcut.register(accelerator, () => fireTrigger())
+    shortcuts.register(accelerator, () => fireTrigger())
   } catch (e) {
     console.error(`[hotkeys] Failed to register hotkey "${accelerator}":`, e)
   }
@@ -509,7 +509,7 @@ export function setHotkey(accelerator: string): void {
 export function setPriceCheckHotkey(accelerator: string): void {
   if (priceCheckAccelerator && !hotkeysAreSuspended() && isElectronRegisterable(priceCheckAccelerator)) {
     try {
-      globalShortcut.unregister(priceCheckAccelerator)
+      shortcuts.unregister(priceCheckAccelerator)
     } catch {}
   }
   priceCheckAccelerator = accelerator
@@ -517,7 +517,7 @@ export function setPriceCheckHotkey(accelerator: string): void {
   if (hotkeysAreSuspended()) return
   if (!isElectronRegisterable(accelerator)) return
   try {
-    globalShortcut.register(accelerator, () => firePriceCheck())
+    shortcuts.register(accelerator, () => firePriceCheck())
   } catch (e) {
     console.error(`[hotkeys] Failed to register price check hotkey "${accelerator}":`, e)
   }
@@ -544,7 +544,7 @@ function clearScopedHotkeyRegistrations(): void {
   if (!hotkeysAreSuspended()) {
     for (const accelerator of [...registeredChatAccelerators, ...appMacroAccelerators]) {
       try {
-        globalShortcut.unregister(accelerator)
+        shortcuts.unregister(accelerator)
       } catch {}
     }
   }
@@ -579,7 +579,7 @@ export function refreshScopedHotkeys(reason?: string): void {
       continue
     }
     try {
-      if (globalShortcut.register(c.hotkey, () => runChatCommand(c, autoSubmit, combo))) {
+      if (shortcuts.register(c.hotkey, () => runChatCommand(c, autoSubmit, combo))) {
         registeredChatAccelerators.push(c.hotkey)
       } else {
         recordScopedRegistrationFailure('chat-command', c.hotkey)
@@ -603,7 +603,7 @@ export function refreshScopedHotkeys(reason?: string): void {
       continue
     }
     try {
-      if (globalShortcut.register(m.hotkey, () => runAppMacro(m, combo))) {
+      if (shortcuts.register(m.hotkey, () => runAppMacro(m, combo))) {
         appMacroAccelerators.push(m.hotkey)
       } else {
         recordScopedRegistrationFailure('app-macro', m.hotkey)
@@ -643,7 +643,7 @@ export function setSecondaryOverlayHotkeys(hotkeys: OverlayHotkey[]): void {
   if (!hotkeysAreSuspended()) {
     for (const acc of registeredOverlayAccelerators) {
       try {
-        globalShortcut.unregister(acc)
+        shortcuts.unregister(acc)
       } catch {}
     }
   }
@@ -659,7 +659,7 @@ export function setSecondaryOverlayHotkeys(hotkeys: OverlayHotkey[]): void {
       continue
     }
     try {
-      if (globalShortcut.register(accelerator, () => runSecondaryOverlay(handler, combo))) {
+      if (shortcuts.register(accelerator, () => runSecondaryOverlay(handler, combo))) {
         registeredOverlayAccelerators.push(accelerator)
       }
     } catch (e) {
@@ -709,13 +709,13 @@ const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms)
  *  the paste. targetHasFocus is the same signal that authorizes every gameplay
  *  hotkey (see hotkeyContextIsActive). */
 async function awaitGameFocus(): Promise<void> {
-  if (!hyprlandInputAllowed()) throw new Error('Game workspace is inactive - input not sent')
-  if (OverlayController.targetHasFocus) return
+  if (!windowTracker.inputAllowed()) throw new Error('Game workspace is inactive - input not sent')
+  if (windowTracker.targetHasFocus) return
   focusGameWindow()
   for (let waited = 0; waited < FOCUS_WAIT_MS; waited += FOCUS_POLL_MS) {
     await wait(FOCUS_POLL_MS)
-    if (!hyprlandInputAllowed()) throw new Error('Game workspace is inactive - input not sent')
-    if (OverlayController.targetHasFocus) return
+    if (!windowTracker.inputAllowed()) throw new Error('Game workspace is inactive - input not sent')
+    if (windowTracker.targetHasFocus) return
   }
   throw new Error('PoE did not take focus - chat command not sent')
 }
@@ -766,30 +766,30 @@ async function pasteToPoEChat(text: string, submit: boolean): Promise<void> {
       // Ctrl+Enter pre-fills @<lastwhisperer> in the chat input; paste body after
       body = text.slice(`${PLACEHOLDER_LAST} `.length)
       openChat = () => {
-        uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-        uIOhook.keyTap(UiohookKey.Enter)
-        uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
+        input.keyToggle(Key.Ctrl, 'down')
+        input.keyTap(Key.Enter)
+        input.keyToggle(Key.Ctrl, 'up')
       }
     } else if (text.endsWith(PLACEHOLDER_LAST)) {
       // Ctrl+Enter pre-fills @CharName at position 0; Home x2 then Delete strips the @
       body = text.slice(0, -PLACEHOLDER_LAST.length)
       openChat = () => {
-        uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-        uIOhook.keyTap(UiohookKey.Enter)
-        uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
-        uIOhook.keyTap(UiohookKey.Home)
+        input.keyToggle(Key.Ctrl, 'down')
+        input.keyTap(Key.Enter)
+        input.keyToggle(Key.Ctrl, 'up')
+        input.keyTap(Key.Home)
         // press twice to focus input when using controller
-        uIOhook.keyTap(UiohookKey.Home)
-        uIOhook.keyTap(UiohookKey.Delete)
+        input.keyTap(Key.Home)
+        input.keyTap(Key.Delete)
       }
     } else {
       openChat = () => {
-        uIOhook.keyTap(UiohookKey.Enter)
+        input.keyTap(Key.Enter)
         // PoE auto-clears the input when the text starts with a chat-prefix char
         if (!AUTO_CLEAR.includes(text[0])) {
-          uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-          uIOhook.keyTap(UiohookKey.A)
-          uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
+          input.keyToggle(Key.Ctrl, 'down')
+          input.keyTap(Key.A)
+          input.keyToggle(Key.Ctrl, 'up')
         }
       }
     }
@@ -801,12 +801,12 @@ async function pasteToPoEChat(text: string, submit: boolean): Promise<void> {
     // opens and closes in a single frame, preventing visible flash
     openChat()
 
-    uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-    uIOhook.keyTap(UiohookKey.V)
-    uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
+    input.keyToggle(Key.Ctrl, 'down')
+    input.keyTap(Key.V)
+    input.keyToggle(Key.Ctrl, 'up')
 
     if (submit) {
-      uIOhook.keyTap(UiohookKey.Enter)
+      input.keyTap(Key.Enter)
     }
   } catch (e) {
     restoreClip()
@@ -833,9 +833,9 @@ export function sendChatCommand(command: string, autoSubmit = true): Promise<voi
   const held: ModSnapshot = { ...heldModifiers }
   const prevInjecting = injecting
   injecting = true
-  if (held.ctrl) uIOhook.keyToggle(held.ctrl, 'up')
-  if (held.shift) uIOhook.keyToggle(held.shift, 'up')
-  if (held.alt) uIOhook.keyToggle(held.alt, 'up')
+  if (held.ctrl) input.keyToggle(held.ctrl, 'up')
+  if (held.shift) input.keyToggle(held.shift, 'up')
+  if (held.alt) input.keyToggle(held.alt, 'up')
   injecting = prevInjecting
   // finally, not then: an aborted paste must still re-press the modifiers the
   // user is physically holding, or the game keeps thinking they let go.
@@ -857,9 +857,9 @@ export async function pasteRegexToPoESearch(regex: string): Promise<void> {
   const held: ModSnapshot = { ...heldModifiers }
   const prevInjecting = injecting
   injecting = true
-  if (held.ctrl) uIOhook.keyToggle(held.ctrl, 'up')
-  if (held.shift) uIOhook.keyToggle(held.shift, 'up')
-  if (held.alt) uIOhook.keyToggle(held.alt, 'up')
+  if (held.ctrl) input.keyToggle(held.ctrl, 'up')
+  if (held.shift) input.keyToggle(held.shift, 'up')
+  if (held.alt) input.keyToggle(held.alt, 'up')
   injecting = prevInjecting
 
   const restoreClip = snapshotClipboard()
@@ -870,12 +870,12 @@ export async function pasteRegexToPoESearch(regex: string): Promise<void> {
     await writeChatText(regex)
 
     injecting = true
-    uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-    uIOhook.keyTap(UiohookKey.F)
-    uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
-    uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-    uIOhook.keyTap(UiohookKey.V)
-    uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
+    input.keyToggle(Key.Ctrl, 'down')
+    input.keyTap(Key.F)
+    input.keyToggle(Key.Ctrl, 'up')
+    input.keyToggle(Key.Ctrl, 'down')
+    input.keyTap(Key.V)
+    input.keyToggle(Key.Ctrl, 'up')
   } catch (e) {
     restoreClip()
     regexPasteLocked = false
@@ -892,39 +892,40 @@ export async function pasteRegexToPoESearch(regex: string): Promise<void> {
   restoreModifiers(held)
 }
 
-/** Track physically held modifier keys via uiohook (ignores synthetic key events during injection) */
+/** Track physically held modifier keys (ignores synthetic key events during injection where the hook sees them) */
 const heldModifiers = { ctrl: 0 as number, shift: 0 as number, alt: 0 as number }
 
 function initModifierTracking(): void {
-  uIOhook.on(
+  input.on(
     'keydown',
     guardNativeListener('keydown-modifiers', (e) => {
-      if (injecting) return
-      if (e.keycode === UiohookKey.Ctrl || e.keycode === UiohookKey.CtrlRight) heldModifiers.ctrl = e.keycode
-      if (e.keycode === UiohookKey.Shift || e.keycode === UiohookKey.ShiftRight) heldModifiers.shift = e.keycode
-      if (e.keycode === UiohookKey.Alt || e.keycode === UiohookKey.AltRight) heldModifiers.alt = e.keycode
+      if (injecting && input.seesInjectedKeys) return
+      if (e.keycode === Key.Ctrl || e.keycode === Key.CtrlRight) heldModifiers.ctrl = e.keycode
+      if (e.keycode === Key.Shift || e.keycode === Key.ShiftRight) heldModifiers.shift = e.keycode
+      if (e.keycode === Key.Alt || e.keycode === Key.AltRight) heldModifiers.alt = e.keycode
     }),
   )
-  uIOhook.on(
+  input.on(
     'keyup',
     guardNativeListener('keyup', (e) => {
-      if (injecting) return
-      if (e.keycode === UiohookKey.Ctrl || e.keycode === UiohookKey.CtrlRight) heldModifiers.ctrl = 0
-      if (e.keycode === UiohookKey.Shift || e.keycode === UiohookKey.ShiftRight) heldModifiers.shift = 0
-      if (e.keycode === UiohookKey.Alt || e.keycode === UiohookKey.AltRight) heldModifiers.alt = 0
+      if (injecting && input.seesInjectedKeys) return
+      if (e.keycode === Key.Ctrl || e.keycode === Key.CtrlRight) heldModifiers.ctrl = 0
+      if (e.keycode === Key.Shift || e.keycode === Key.ShiftRight) heldModifiers.shift = 0
+      if (e.keycode === Key.Alt || e.keycode === Key.AltRight) heldModifiers.alt = 0
     }),
   )
 }
 
 type ModSnapshot = { ctrl: number; shift: number; alt: number }
 
-/** Re-press the exact modifier keys from a snapshot (using the correct left/right variant) */
+/** Re-press the exact modifier keys from a snapshot (using the correct
+ *  left/right variant), skipping keys the user has since released. */
 function restoreModifiers(snapshot: ModSnapshot): void {
   const prevInjecting = injecting
   injecting = true
-  if (snapshot.ctrl) uIOhook.keyToggle(snapshot.ctrl, 'down')
-  if (snapshot.shift) uIOhook.keyToggle(snapshot.shift, 'down')
-  if (snapshot.alt) uIOhook.keyToggle(snapshot.alt, 'down')
+  for (const key of [snapshot.ctrl, snapshot.shift, snapshot.alt]) {
+    if (key && input.physicallyHeld(key) !== false) input.keyToggle(key, 'down')
+  }
   injecting = prevInjecting
 }
 
@@ -939,7 +940,7 @@ export function stopHotkeyListener(): void {
     // aborting the process via the tsfn proxy.
     recordMainBreadcrumb('uIOhook.stop() calling')
     try {
-      uIOhook.stop()
+      input.stop()
       lastHookStopError = null
     } catch (e) {
       lastHookStopError = String(e)
@@ -948,7 +949,7 @@ export function stopHotkeyListener(): void {
     recordMainBreadcrumb('uIOhook.stop() returned')
     hookStarted = false
   }
-  globalShortcut.unregisterAll()
+  shortcuts.unregisterAll()
   escapeShortcutRegistered = false
 }
 
@@ -995,7 +996,7 @@ export async function sendItemFilterCommand(filterName: string, currentFilter?: 
  *  injection taps -- and it goes through globalShortcut (uiohook matchers only
  *  observe; they can't consume). */
 function acceleratorTapsC(accelerator: string): boolean {
-  return isElectronRegisterable(accelerator) && parseAccelerator(accelerator)?.keycode === UiohookKey.C
+  return isElectronRegisterable(accelerator) && parseAccelerator(accelerator)?.keycode === Key.C
 }
 
 /**
@@ -1019,7 +1020,7 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
   // so a hotkey changed mid-injection isn't clobbered by its old value.
   if (currentAccelerator && acceleratorTapsC(currentAccelerator)) {
     try {
-      globalShortcut.unregister(currentAccelerator)
+      shortcuts.unregister(currentAccelerator)
     } catch {}
     restores.push(() => {
       if (currentAccelerator) setHotkey(currentAccelerator)
@@ -1027,7 +1028,7 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
   }
   if (priceCheckAccelerator && acceleratorTapsC(priceCheckAccelerator)) {
     try {
-      globalShortcut.unregister(priceCheckAccelerator)
+      shortcuts.unregister(priceCheckAccelerator)
     } catch {}
     restores.push(() => {
       if (priceCheckAccelerator) setPriceCheckHotkey(priceCheckAccelerator)
@@ -1037,7 +1038,7 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
   if (scoped.length > 0) {
     for (const accelerator of scoped) {
       try {
-        globalShortcut.unregister(accelerator)
+        shortcuts.unregister(accelerator)
       } catch {}
     }
     restores.push(() => refreshScopedHotkeys('copy-injection'))
@@ -1046,7 +1047,7 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
   if (overlayScoped.length > 0) {
     for (const accelerator of overlayScoped) {
       try {
-        globalShortcut.unregister(accelerator)
+        shortcuts.unregister(accelerator)
       } catch {}
     }
     restores.push(() => setSecondaryOverlayHotkeys(secondaryOverlayHotkeys))
@@ -1073,7 +1074,7 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
  * releaseCKeyedRegistrationsForInjection (#601).
  */
 export async function sendCtrlCToPoE(opts?: { withAlt?: boolean }): Promise<void> {
-  if (!hyprlandInputAllowed()) return
+  if (!windowTracker.inputAllowed()) return
   injecting = true
   const restoreCKeyedRegistrations = releaseCKeyedRegistrationsForInjection()
 
@@ -1092,14 +1093,14 @@ export async function sendCtrlCToPoE(opts?: { withAlt?: boolean }): Promise<void
     // Give the Shift-up ~30ms to register first. Only paid when Shift is held.
     const heldShift = heldModifiers.shift
     if (heldShift) {
-      uIOhook.keyToggle(UiohookKey.Shift, 'up')
-      uIOhook.keyToggle(UiohookKey.ShiftRight, 'up')
+      input.keyToggle(Key.Shift, 'up')
+      input.keyToggle(Key.ShiftRight, 'up')
       await new Promise((r) => setTimeout(r, 30))
     }
 
-    if (needCtrl) uIOhook.keyToggle(UiohookKey.Ctrl, 'down')
-    if (needAlt) uIOhook.keyToggle(UiohookKey.Alt, 'down')
-    uIOhook.keyTap(UiohookKey.C)
+    if (needCtrl) input.keyToggle(Key.Ctrl, 'down')
+    if (needAlt) input.keyToggle(Key.Alt, 'down')
+    input.keyTap(Key.C)
 
     // PoE2 drops modifier keyup events when they fire too soon after the C tap,
     // leaving PoE's view of held modifiers out of sync -- on the Alt path that
@@ -1110,10 +1111,10 @@ export async function sendCtrlCToPoE(opts?: { withAlt?: boolean }): Promise<void
     // issue #124.
     await new Promise<void>((resolve) => {
       setTimeout(() => {
-        if (needAlt) uIOhook.keyToggle(UiohookKey.Alt, 'up')
-        if (needCtrl) uIOhook.keyToggle(UiohookKey.Ctrl, 'up')
-        // Re-press Shift immediately if it was held
-        if (heldShift) uIOhook.keyToggle(heldShift, 'down')
+        if (needAlt) input.keyToggle(Key.Alt, 'up')
+        if (needCtrl) input.keyToggle(Key.Ctrl, 'up')
+        // Re-press Shift immediately if it was held, and still is
+        if (heldShift && input.physicallyHeld(heldShift) !== false) input.keyToggle(heldShift, 'down')
       }, 10)
       setTimeout(() => {
         injecting = false

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { matchGameWindowSource } from './screen-source'
+import { matchGameWindowSource } from './window-source'
 
 describe('matchGameWindowSource', () => {
   it('prefers an exact title match', () => {

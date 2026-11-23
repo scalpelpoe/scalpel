@@ -39,32 +39,32 @@ vi.mock('electron', () => ({
   screen: { getDisplayNearestPoint: () => ({ scaleFactor: 1 }), getPrimaryDisplay: () => ({ scaleFactor: 1 }) },
   webContents: {},
 }))
-vi.mock('electron-overlay-window', () => ({
-  OVERLAY_WINDOW_OPTS: {},
-  OverlayController: {
-    targetHasFocus: true,
-    targetBounds: { x: 0, y: 0, width: 1000, height: 800 },
-    events: { on: vi.fn() },
-    activateOverlay: mock.activate,
-    focusTarget: mock.focus,
-  },
-}))
-vi.mock('uiohook-napi', () => ({
-  uIOhook: {
-    on: (name: string, cb: any) => {
-      mock.mouse[name] = cb
+vi.mock('@scalpel/platform', () => {
+  const targetBounds = { x: 0, y: 0, width: 1000, height: 800 }
+  const instance = {
+    traits: { compositorFocus: true },
+    input: {
+      on: (name: string, cb: any) => {
+        mock.mouse[name] = cb
+      },
     },
-  },
-}))
-vi.mock('./hyprland', () => ({
-  hyprlandOverlayActive: () => true,
-  hyprlandInputAllowed: () => mock.allowed,
-  nameHyprlandOverlay: vi.fn(),
-  attachHyprlandOverlay: vi.fn(),
-  focusHyprlandPanel: mock.panelFocus,
-  getHyprlandPointerPhysical: () => mock.pointer,
-  getHyprlandGameBounds: () => ({ x: 0, y: 0, width: 1000, height: 800 }),
-}))
+    cursor: { trackerPoint: () => mock.pointer },
+    windowTracker: {
+      targetHasFocus: true,
+      targetBounds,
+      events: { on: vi.fn() },
+      activateOverlay: mock.activate,
+      focusTarget: mock.focus,
+      focusOverlay: mock.panelFocus,
+      inputAllowed: () => mock.allowed,
+      gameBounds: () => targetBounds,
+      overlayWindowOptions: () => ({}),
+      adoptOverlay: vi.fn(),
+      attach: vi.fn(),
+    },
+  }
+  return { platform: () => instance }
+})
 vi.mock('./diagnostics', () => ({
   guardNativeListener: (_: string, cb: any) => cb,
   registerDiagnosticProvider: vi.fn(),

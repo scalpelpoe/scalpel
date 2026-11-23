@@ -1,0 +1,24 @@
+{
+  "name": "@scalpel/platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Desktop integration for Scalpel's Electron main process: game window tracking, input, shortcuts, clipboard, capture and cursor",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/scalpelpoe/scalpel.git",
+    "directory": "packages/platform"
+  },
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "files": ["src", "README.md"],
+  "peerDependencies": {
+    "electron": "*",
+    "electron-overlay-window": "*",
+    "koffi": "*",
+    "uiohook-napi": "*"
+  }
+}

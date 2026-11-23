@@ -1,4 +1,3 @@
-import { clipboard } from 'electron'
 import { getItemClasses } from '@shared/data/items/item-classes'
 import { MERCENARY_WARRANT_BASE_TYPE } from '@shared/data/trade/mercenary-warrants'
 import { vaalGemType } from '@shared/data/trade/vaal-gems'
@@ -185,15 +184,6 @@ function scanMagicAffixNames(text: string): { prefix?: string; suffix?: string }
     if (result.prefix && result.suffix) break
   }
   return result
-}
-
-/**
- * Read the current clipboard and attempt to parse it as a PoE item.
- * Returns null if the clipboard doesn't look like a PoE item.
- */
-export function readItemFromClipboard(): PoeItem | null {
-  const text = clipboard.readText()
-  return parseItemText(text)
 }
 
 /** PoE1 3.30 prints a zero-width space in front of keyworded effect names
