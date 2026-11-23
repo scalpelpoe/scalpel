@@ -1,5 +1,19 @@
 export const CHANGELOG: { version: string; notes: string[] }[] = [
   {
+    version: '1.0.7-rc1',
+    notes: [
+      'Added a price tracker for uniques over a div.',
+      "Added a font size a11y setting for jacksenic's bat eyes.",
+      'Added an option to fade unchecked price-check rows.',
+      'Added a toggle that turns scroll wheel ticks into clicks while a lock key is on, for faster stash sorting.',
+      'Refreshed mod tier data.',
+      'Fixed map regexes not matching 3.30 map mods.',
+      'Fixed Scrying Orb searches using the old atlas areas.',
+      'Fixed the Div Card Explorer showing pre-3.30 atlas and map drop pools.',
+      'Fixed Timeless Jewel price checks picking the wrong leader.',
+    ],
+  },
+  {
     version: '1.0.6',
     notes: [
       'Updated PoE1 for the 3.30 Covens league.',
