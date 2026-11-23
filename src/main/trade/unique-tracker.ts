@@ -21,6 +21,7 @@ export interface OverviewLine {
   links?: number
   chaosValue?: number
   divineValue?: number
+  listingCount?: number
   /** ninja's own page slug for this exact line ("mageblood-4-flasks-heavy-belt"). */
   detailsId?: string
   /** Foulborn mutations as mod templates ("+(32-38)% to ..."). ninja's variant
@@ -117,6 +118,15 @@ export function pickLine(lines: OverviewLine[], q: UniqueTrackerQuery, links = 0
   const sameBase = candidates.filter((l) => !l.baseType || l.baseType === q.baseType)
   const pool = sameBase.length > 0 ? sameBase : candidates
   if (pool.length <= 1) return pool[0] ?? null
+
+  // No mod text means a name-only item (the item search), not an ambiguous
+  // copy: show the variant people actually trade -- the most-listed line
+  // (4-flask Mageblood, not the cheaper 2-flask one), cheapest on a tie.
+  if (q.modText.length === 0) {
+    return [...pool].sort(
+      (a, b) => (b.listingCount ?? 0) - (a.listingCount ?? 0) || (a.chaosValue ?? 0) - (b.chaosValue ?? 0),
+    )[0]
+  }
 
   const text = q.modText.join('\n').toLowerCase()
   const templates = new Set(q.modText.map(modTemplate))

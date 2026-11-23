@@ -71,6 +71,22 @@ describe('pickUnlinkedLine', () => {
       { id: 1, name: 'Mageblood', baseType: 'Heavy Belt', variant: '4 Flasks', chaosValue: 47000 },
       { id: 2, name: 'Mageblood', baseType: 'Heavy Belt', variant: '2 Flasks', chaosValue: 19000 },
     ]
+    expect(pickUnlinkedLine(lines, q('Mageblood', 'Heavy Belt', ['+40 to Dexterity']))?.id).toBe(2)
+  })
+
+  it('picks the most-listed line for a name-only (searched) item', () => {
+    const lines: OverviewLine[] = [
+      { id: 1, name: 'Mageblood', baseType: 'Heavy Belt', variant: '4 Flasks', chaosValue: 47000, listingCount: 300 },
+      { id: 2, name: 'Mageblood', baseType: 'Heavy Belt', variant: '2 Flasks', chaosValue: 19000, listingCount: 12 },
+    ]
+    expect(pickUnlinkedLine(lines, q('Mageblood', 'Heavy Belt'))?.id).toBe(1)
+  })
+
+  it('falls back to the cheapest line for a name-only item without listing counts', () => {
+    const lines: OverviewLine[] = [
+      { id: 1, name: 'Mageblood', baseType: 'Heavy Belt', variant: '4 Flasks', chaosValue: 47000 },
+      { id: 2, name: 'Mageblood', baseType: 'Heavy Belt', variant: '2 Flasks', chaosValue: 19000 },
+    ]
     expect(pickUnlinkedLine(lines, q('Mageblood', 'Heavy Belt'))?.id).toBe(2)
   })
 
