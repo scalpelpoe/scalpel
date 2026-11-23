@@ -1,10 +1,11 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useState } from 'react'
 import type { ExchangeDetails } from '@shared/contracts/exchange'
 import { CurrencyIcon } from '../../shared/CurrencyIcon'
 import { ExternalLinkButton } from '../../shared/ExternalLinkButton'
 import { RateChart } from '../../shared/RateChart'
 import { angePortrait, faustusPortrait } from '../../shared/icons'
 import { formatRate } from '../../shared/utils'
+import { PairSwitch } from './PairSwitch'
 
 interface Props {
   details: ExchangeDetails
@@ -25,17 +26,6 @@ export function ExchangePanel({ details, vendor, stackSize, onOpenNinja }: Props
   // survive a details swap, which remounts via the key in PriceCheck.
   const pair = details.pairs[pairIdx] ?? details.pairs[0]
   const portrait = vendor === 'Ange' ? angePortrait : faustusPortrait
-
-  // The switch highlight is a single sliding thumb, positioned from the active
-  // segment's measured box rather than from an equal-width assumption: with the
-  // "show currency names" setting on, CurrencyIcon renders text labels, so
-  // "chaos" and "divine" produce segments of different widths.
-  const segRefs = useRef<Array<HTMLButtonElement | null>>([])
-  const [thumb, setThumb] = useState<{ left: number; width: number } | null>(null)
-  useLayoutEffect(() => {
-    const seg = segRefs.current[pairIdx]
-    if (seg) setThumb({ left: seg.offsetLeft, width: seg.offsetWidth })
-  }, [pairIdx, details.pairs.length])
 
   return (
     // shrink-0 is load-bearing: the panel sits in the same flex column as
@@ -112,49 +102,7 @@ export function ExchangePanel({ details, vendor, stackSize, onOpenNinja }: Props
            *  title row at a 260px overlay. */}
           <div className="flex flex-col items-end gap-1 shrink-0">
             {details.pairs.length > 1 && (
-              // Segmented switch rather than separate pills: one recessed track
-              // with a single thumb that slides between positions, so the two
-              // read as one control rather than two buttons.
-              <div className="relative flex items-center shrink-0 rounded-full bg-black/40 p-[2px]">
-                <div
-                  data-testid="exchange-pair-thumb"
-                  style={{
-                    position: 'absolute',
-                    top: 2,
-                    bottom: 2,
-                    left: thumb?.left ?? 0,
-                    width: thumb?.width ?? 0,
-                    borderRadius: 999,
-                    background: 'rgba(255,255,255,0.16)',
-                    boxShadow: '0 1px 2px rgba(0,0,0,0.45)',
-                    transition: 'left 180ms cubic-bezier(0.4, 0, 0.2, 1), width 180ms cubic-bezier(0.4, 0, 0.2, 1)',
-                    // Hidden until measured so it can't flash at the origin.
-                    opacity: thumb ? 1 : 0,
-                    pointerEvents: 'none',
-                  }}
-                />
-                {details.pairs.map((p, i) => (
-                  <button
-                    key={p.currency}
-                    ref={(el) => {
-                      segRefs.current[i] = el
-                    }}
-                    type="button"
-                    data-testid="exchange-pair-pill"
-                    aria-label={`Show rate in ${p.currency}`}
-                    aria-pressed={i === pairIdx}
-                    onClick={() => setPairIdx(i)}
-                    className="relative z-[1] flex items-center justify-center px-[7px] py-[2px] rounded-full border-none cursor-pointer"
-                    style={{
-                      background: 'transparent',
-                      opacity: i === pairIdx ? 1 : 0.45,
-                      transition: 'opacity 180ms ease',
-                    }}
-                  >
-                    <CurrencyIcon name={p.currency} className="w-3 h-3" />
-                  </button>
-                ))}
-              </div>
+              <PairSwitch currencies={details.pairs.map((p) => p.currency)} active={pairIdx} onChange={setPairIdx} />
             )}
             {onOpenNinja && (
               <ExternalLinkButton

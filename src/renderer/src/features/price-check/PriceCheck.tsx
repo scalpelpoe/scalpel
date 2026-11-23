@@ -5,6 +5,7 @@ import { searchSignature } from './search-signature'
 import { getTradeUrls } from '@shared/endpoints'
 import { getGameFeatures } from '@shared/game-features'
 import type { ExchangeDetails } from '@shared/contracts/exchange'
+import type { UniqueTrackerDetails } from '@shared/contracts/unique-tracker'
 import { isVendorExchangeItem } from '@shared/data/trade/bulk-exchange-eligibility'
 import {
   RARITY_COLORS,
@@ -21,6 +22,7 @@ import { FilterChip } from '../../components/primitives/FilterChip'
 import { FaustusBanner } from './FaustusBanner'
 import { AngeBanner } from './AngeBanner'
 import { ExchangePanel } from './ExchangePanel'
+import { PriceTrackerPanel } from './PriceTrackerPanel'
 import { TradeTimeoutBanner } from './TradeTimeoutBanner'
 import { ItemHeader } from './ItemHeader'
 import { getDustInfo } from '../../shared/dust'
@@ -268,6 +270,25 @@ export function PriceCheck({
       cancelled = true
     }
   }, [item.baseType, item.itemClass, item.rarity, poeVersion])
+
+  // Price Tracker: league history of the unlinked ninja line for identified
+  // PoE1 uniques worth a divine or more. Main returns null for anything else
+  // (cheap uniques, unpriced ones, PoE2), so the panel simply doesn't render.
+  const [tracker, setTracker] = useState<UniqueTrackerDetails | null>(null)
+  useEffect(() => {
+    setTracker(null)
+    if (poeVersion !== 1 || item.rarity !== 'Unique' || !item.identified) return
+    let cancelled = false
+    window.api
+      .uniqueTracker({ name: item.name, baseType: item.baseType, modText: [...item.implicits, ...item.explicits] })
+      .then((d) => {
+        if (!cancelled) setTracker(d)
+      })
+      .catch(() => {})
+    return () => {
+      cancelled = true
+    }
+  }, [item.name, item.baseType, item.rarity, item.identified, item.implicits, item.explicits, poeVersion])
 
   // Opening preset (see resolveDefaultPreset): PoE2 Crafting Ready wins where eligible,
   // then BASE_DEFAULT_ITEM_CLASSES force Base, then the "Affixes prechecked" setting --
@@ -949,6 +970,14 @@ export function PriceCheck({
               </button>
             )}
           </div>
+        )}
+
+        {tracker && (
+          <PriceTrackerPanel
+            key={`${item.name}|${item.baseType}`}
+            details={tracker}
+            onOpenNinja={tracker.ninjaUrl ? () => window.api.openExternal(tracker.ninjaUrl!) : onOpenNinja}
+          />
         )}
 
         {showExchangePanel ? (

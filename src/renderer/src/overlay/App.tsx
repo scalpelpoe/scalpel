@@ -784,6 +784,23 @@ export default function App(): JSX.Element {
     const leagueSlugMap = getManifest().ninjaLeagues[poeVersion === 1 ? 'poe1' : 'poe2']
     const url = ninjaLinkUrl(item, poeVersion, settings.activeProfile.league, leagueSlugMap, priceInfo)
     if (!url) return undefined
+    // PoE1 uniques: ninja splits many into variant pages (Foulborn mutations,
+    // flask counts, links) the derived slug can't name, so ask main for the
+    // line's own detailsId and keep the derived URL as the fallback.
+    if (poeVersion === 1 && item.rarity === 'Unique' && item.identified) {
+      return () => {
+        const query = {
+          name: item.name,
+          baseType: item.baseType,
+          modText: [...item.implicits, ...item.explicits],
+          linkedSockets: item.linkedSockets,
+        }
+        window.api
+          .ninjaUniqueUrl(query)
+          .catch(() => null)
+          .then((exact) => window.api.openExternal(exact ?? url))
+      }
+    }
     return () => window.api.openExternal(url)
   }
 

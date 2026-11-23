@@ -84,6 +84,36 @@ const NINJA_HOST_BY_VERSION: Record<1 | 2, string> = {
   2: 'https://poe.ninja/poe2/economy',
 }
 
+/** poe.ninja stash-overview type -> its page category segment, for links built
+ *  from ninja's own `detailsId` rather than a slug we derive. */
+const NINJA_UNIQUE_TYPE_CATEGORY: Record<string, string> = {
+  UniqueWeapon: 'unique-weapons',
+  UniqueArmour: 'unique-armours',
+  UniqueAccessory: 'unique-accessories',
+  UniqueJewel: 'unique-jewels',
+  UniqueFlask: 'unique-flasks',
+  UniqueMap: 'unique-maps',
+  UniqueRelic: 'unique-relics',
+  UniqueTincture: 'unique-tinctures',
+}
+
+/** PoE1 unique page URL from a stash-overview line's `detailsId`. The derived
+ *  slug in ninjaLinkUrl can't see ninja's variant labels (Foulborn mutations,
+ *  "4 Flasks") or its per-family quirks (flasks drop the base, unique maps use
+ *  "-t0"), so it 404s or lands on the wrong variant for about a third of
+ *  uniques. Null when the type or league has no known segment. */
+export function ninjaUniqueDetailsUrl(
+  league: string,
+  leagueSlugMap: Record<string, string>,
+  ninjaType: string,
+  detailsId: string,
+): string | null {
+  const leagueSegment = ninjaLeagueSegment(league, leagueSlugMap)
+  const category = NINJA_UNIQUE_TYPE_CATEGORY[ninjaType]
+  if (!leagueSegment || !category || !detailsId) return null
+  return `${NINJA_HOST_BY_VERSION[1]}/${leagueSegment}/${category}/${detailsId}`
+}
+
 /** Item classes that map to "unique-armours" on poe.ninja. */
 const NINJA_ARMOUR_CLASSES = new Set(['Body Armours', 'Helmets', 'Gloves', 'Boots', 'Shields', 'Quivers'])
 /** Item classes that map to "unique-accessories". */

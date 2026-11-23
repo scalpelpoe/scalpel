@@ -59,6 +59,12 @@ export const POE2_NINJA_PROXY = 'https://api.exiledexchange2.dev/proxy'
  *  menagerie budget. Append `?league=<league>&type=Beast`. */
 export const POE_NINJA_STASH_OVERVIEW = 'https://poe.ninja/poe1/api/economy/stash/current/item/overview'
 
+/** poe.ninja PoE1 per-line price history for one stash-overview line. Append
+ *  `?league=<league>&type=<ninjaType>&id=<numeric line id>` -- the id is the
+ *  overview line's `id`, not its `detailsId` slug (`itemId=` 404s). Returns a
+ *  bare array of `{ count, value, daysAgo }`, value in chaos, whole league. */
+export const POE_NINJA_STASH_HISTORY = 'https://poe.ninja/poe1/api/economy/stash/current/item/history'
+
 /** poe.ninja's per-item Currency Exchange detail endpoint, keyed by game
  *  version. Undocumented, and the only source for real exchange rates plus
  *  traded volume/hour and league-length daily history. Append

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { externalLinkUrl, ninjaLinkUrl, ninjaLeagueSegment } from './external-link'
+import { externalLinkUrl, ninjaLinkUrl, ninjaLeagueSegment, ninjaUniqueDetailsUrl } from './external-link'
 
 describe('externalLinkUrl', () => {
   it('uses baseType for Rare items (random name has no wiki page)', () => {
@@ -466,5 +466,18 @@ describe('ninjaLinkUrl', () => {
   it('returns null for unknown item classes', () => {
     const item = { name: 'Whatever', baseType: 'Whatever', rarity: 'Unique', itemClass: 'Hideout Decorations' }
     expect(ninjaLinkUrl(item, 1, 'Mirage', POE1_SLUGS)).toBeNull()
+  })
+})
+
+describe('ninjaUniqueDetailsUrl', () => {
+  it('builds the page from the type segment and ninja detailsId', () => {
+    expect(
+      ninjaUniqueDetailsUrl('Covens', { Covens: 'covens' }, 'UniqueAccessory', 'mageblood-4-flasks-heavy-belt'),
+    ).toBe('https://poe.ninja/poe1/economy/covens/unique-accessories/mageblood-4-flasks-heavy-belt')
+  })
+
+  it('returns null for an unknown league or type', () => {
+    expect(ninjaUniqueDetailsUrl('Nope', { Covens: 'covens' }, 'UniqueArmour', 'x')).toBeNull()
+    expect(ninjaUniqueDetailsUrl('Covens', { Covens: 'covens' }, 'Currency', 'x')).toBeNull()
   })
 })

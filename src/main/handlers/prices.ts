@@ -1,21 +1,24 @@
 import { ipcMain } from 'electron'
 import type Store from 'electron-store'
 import type { ExchangeDetails } from '@shared/contracts/exchange'
+import type { UniqueTrackerDetails, UniqueTrackerQuery } from '@shared/contracts/unique-tracker'
 import divCardsData from '@shared/data/economy/div-cards.json'
 import { getItemClasses } from '@shared/data/items/item-classes'
 import uniqueInfoData from '@shared/data/items/unique-info.json'
 import { TRANSFIGURED_GEM_DISC } from '@shared/data/trade/transfigured-gems'
-import { ninjaSlug } from '@shared/external-link'
+import { ninjaSlug, ninjaUniqueDetailsUrl } from '@shared/external-link'
 import { defaultPoeItem } from '@shared/poe-item'
 import type { AppSettings, FilterBlock, FilterFile, PoeItem, SearchableItem } from '@shared/types'
 import { evaluateAndSend, preloadPriceCheck, runPriceCheck } from '../evaluation'
 import { findMatchingBlocks } from '../filter/matcher'
 import { getCurrentFilter, onFilterLoaded } from '../filter-state'
 import { getPoeVersion } from '../game-state'
+import { getManifest } from '../manifest'
 import { getProfileBackedSetting } from '../profiles/profile-settings'
 import { getBeastPrices } from '../trade/beast-prices'
 import { fetchExchangeDetails } from '../trade/exchange-details'
 import { loadIconCache } from '../trade/icon-cache'
+import { fetchUniqueTracker, resolveUniqueNinjaUrl } from '../trade/unique-tracker'
 import {
   fetchJson,
   getGemNames,
@@ -351,6 +354,10 @@ export async function resolveExchangeDetails(
   return deps.fetchDetails(version, league, ninjaType, ninjaSlug(name))
 }
 
+function uniqueDetailsUrl(league: string): (ninjaType: string, detailsId: string) => string | null {
+  return (ninjaType, detailsId) => ninjaUniqueDetailsUrl(league, getManifest().ninjaLeagues.poe1, ninjaType, detailsId)
+}
+
 export function register(store: Store<AppSettings>): void {
   // Serve the current version's runtime icon cache to the renderer on startup;
   // filled over time by harvestIcons() in trade.ts.
@@ -532,6 +539,33 @@ export function register(store: Store<AppSettings>): void {
       getNinjaType,
       fetchDetails: (version, lg, type, slug) => fetchExchangeDetails(version, lg, type, slug, fetchJson),
     })
+  })
+
+  // Price Tracker panel for PoE1 uniques >= 1 divine. PoE2's ninja has no
+  // stash history endpoint, so the panel is PoE1-only.
+  ipcMain.handle('unique-tracker', async (_event, query: UniqueTrackerQuery): Promise<UniqueTrackerDetails | null> => {
+    if (getPoeVersion() !== 1) return null
+    const league = getProfileBackedSetting(store, 'league')
+    await refreshPrices(league)
+    return fetchUniqueTracker(league, query, {
+      fetchJson,
+      getNinjaType,
+      detailsUrl: uniqueDetailsUrl(league),
+      chaosPerDivine: lookupPrice('Divine Orb', 'Divine Orb')?.chaosValue,
+      divineHistory: async () => {
+        const d = await fetchExchangeDetails(1, league, 'Currency', ninjaSlug('Divine Orb'), fetchJson)
+        return d?.pairs.find((p) => p.currency === 'chaos')?.history ?? []
+      },
+    })
+  })
+
+  // Exact poe.ninja page for a PoE1 unique, from ninja's own detailsId. The
+  // renderer falls back to its derived slug when this resolves null.
+  ipcMain.handle('ninja-unique-url', async (_event, query: UniqueTrackerQuery): Promise<string | null> => {
+    if (getPoeVersion() !== 1) return null
+    const league = getProfileBackedSetting(store, 'league')
+    await refreshPrices(league)
+    return resolveUniqueNinjaUrl(league, query, { fetchJson, getNinjaType, detailsUrl: uniqueDetailsUrl(league) })
   })
 
   ipcMain.handle('get-searchable-items', async (): Promise<SearchableItem[]> => {

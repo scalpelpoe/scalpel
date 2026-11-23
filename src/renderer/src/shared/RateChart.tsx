@@ -13,7 +13,12 @@ interface Props {
   currency: string
   /** Rendered height in CSS px. Width always fills the container. */
   height?: number
+  /** Tooltip label for the bar series. Exchange data is traded volume per hour
+   *  (the default); the unique Price Tracker feeds daily listing counts. */
+  volumeLabel?: { prefix: string; suffix: string }
 }
+
+const EXCHANGE_VOLUME_LABEL = { prefix: 'vol', suffix: '/hr' }
 
 /** Gap between the cursor and the tooltip's nearest corner. */
 const TIP_OFFSET_X = 14
@@ -40,7 +45,12 @@ interface Cursor {
 /** League-length exchange-rate chart: rate line over ghosted hourly-volume bars.
  *  Hovering reads out the day under the cursor in a tooltip. Hand-rolled SVG --
  *  the app ships no chart library and one chart doesn't justify adding one. */
-export function RateChart({ points, currency, height = 120 }: Props): JSX.Element | null {
+export function RateChart({
+  points,
+  currency,
+  height = 120,
+  volumeLabel = EXCHANGE_VOLUME_LABEL,
+}: Props): JSX.Element | null {
   const geometry = projectChart(points)
   const [hover, setHover] = useState<number | null>(null)
   const [cursor, setCursor] = useState<Cursor>({ x: 0, y: 0, scale: 1 })
@@ -264,8 +274,9 @@ export function RateChart({ points, currency, height = 120 }: Props): JSX.Elemen
             </div>
             {geometry.volumeMax > 0 && (
               <div style={{ fontSize: 10, color: 'var(--text-dim, #888)', lineHeight: 1 }}>
-                vol <span style={{ fontWeight: 700, color: 'var(--text, #fff)' }}>{formatVolume(active.volume)}</span>
-                /hr
+                {volumeLabel.prefix && `${volumeLabel.prefix} `}
+                <span style={{ fontWeight: 700, color: 'var(--text, #fff)' }}>{formatVolume(active.volume)}</span>
+                {volumeLabel.suffix}
               </div>
             )}
           </div>,

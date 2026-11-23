@@ -574,6 +574,12 @@ export const api = {
   ): Promise<boolean> => ipcRenderer.invoke('check-bulk-item', itemName, baseType, itemClass, rarity, zanaMemory),
   exchangeDetails: (name: string): Promise<import('@shared/contracts/exchange').ExchangeDetails | null> =>
     ipcRenderer.invoke('exchange-details', name),
+  uniqueTracker: (
+    query: import('@shared/contracts/unique-tracker').UniqueTrackerQuery,
+  ): Promise<import('@shared/contracts/unique-tracker').UniqueTrackerDetails | null> =>
+    ipcRenderer.invoke('unique-tracker', query),
+  ninjaUniqueUrl: (query: import('@shared/contracts/unique-tracker').UniqueTrackerQuery): Promise<string | null> =>
+    ipcRenderer.invoke('ninja-unique-url', query),
   mapRegexTrade: (params: {
     tier: number
     avoidTexts: string[]
