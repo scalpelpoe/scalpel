@@ -22,6 +22,13 @@ export interface MapData {
   icon?: string
 }
 
+/** poedb overlay written by scripts/sync-div-map-drops.js, keyed by world area id. */
+export interface MapDrops {
+  source: string
+  generated_at: string
+  maps: Record<string, { name: string; cards: { name: string; min_tier?: number }[] }>
+}
+
 export interface MapCardEntry {
   card: DivCard
   dropRate: number // weight / pool

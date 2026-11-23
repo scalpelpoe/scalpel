@@ -1,0 +1,1819 @@
+{
+  "source": "poedb.tw",
+  "generated_at": "2026-11-23",
+  "maps": {
+    "MapWorldsAcademy": {
+      "name": "Academy",
+      "cards": [
+        {
+          "name": "The Scholar"
+        },
+        {
+          "name": "A Dab of Ink"
+        },
+        {
+          "name": "Thirst for Knowledge"
+        },
+        {
+          "name": "The Academic"
+        }
+      ]
+    },
+    "MapWorldsAncientCity": {
+      "name": "Ancient City",
+      "cards": [
+        {
+          "name": "Humility"
+        },
+        {
+          "name": "Rats"
+        },
+        {
+          "name": "Lingering Remnants",
+          "min_tier": 10
+        },
+        {
+          "name": "Pearls Before Swine",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsArachnidNest": {
+      "name": "Arachnid Nest",
+      "cards": [
+        {
+          "name": "The Explorer"
+        },
+        {
+          "name": "The Demoness",
+          "min_tier": 4
+        },
+        {
+          "name": "Mawr Blaidd",
+          "min_tier": 14
+        },
+        {
+          "name": "Poisoned Faith"
+        }
+      ]
+    },
+    "MapWorldsArcade": {
+      "name": "Arcade",
+      "cards": [
+        {
+          "name": "The Gentleman"
+        },
+        {
+          "name": "The Saint's Treasure"
+        },
+        {
+          "name": "The Mayor",
+          "min_tier": 13
+        },
+        {
+          "name": "The Last Laugh"
+        }
+      ]
+    },
+    "MapWorldsAridLake": {
+      "name": "Arid Lake",
+      "cards": [
+        {
+          "name": "The Rabid Rhoa",
+          "min_tier": 13
+        },
+        {
+          "name": "The Old Man"
+        },
+        {
+          "name": "The Mind's Eyes",
+          "min_tier": 7
+        },
+        {
+          "name": "The Lake",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsArmoury": {
+      "name": "Armoury",
+      "cards": [
+        {
+          "name": "Three Faces in the Dark"
+        },
+        {
+          "name": "The Warlord",
+          "min_tier": 13
+        },
+        {
+          "name": "The Side Quest"
+        },
+        {
+          "name": "Lucky Bastion"
+        }
+      ]
+    },
+    "MapWorldsBarrows": {
+      "name": "Barrows",
+      "cards": [
+        {
+          "name": "Loyalty"
+        },
+        {
+          "name": "The Dragon"
+        },
+        {
+          "name": "The Wolf's Shadow"
+        },
+        {
+          "name": "The Shepherd's Sandals",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsBasilica": {
+      "name": "Basilica",
+      "cards": [
+        {
+          "name": "Prosperity",
+          "min_tier": 13
+        },
+        {
+          "name": "Demigod's Wager"
+        },
+        {
+          "name": "The Bear Woman",
+          "min_tier": 13
+        },
+        {
+          "name": "Ambitious Obsession"
+        }
+      ]
+    },
+    "MapWorldsBelfry": {
+      "name": "Belfry",
+      "cards": [
+        {
+          "name": "The Tower"
+        },
+        {
+          "name": "The Surveyor",
+          "min_tier": 7
+        },
+        {
+          "name": "The Life Thief"
+        },
+        {
+          "name": "The Demon",
+          "min_tier": 7
+        }
+      ]
+    },
+    "MapWorldsBoneCrypt": {
+      "name": "Bone Crypt",
+      "cards": [
+        {
+          "name": "The Celestial Justicar"
+        },
+        {
+          "name": "Grave Knowledge"
+        },
+        {
+          "name": "The Forsaken"
+        },
+        {
+          "name": "The Admirer",
+          "min_tier": 7
+        }
+      ]
+    },
+    "MapWorldsBurialChambers": {
+      "name": "Burial Chambers",
+      "cards": [
+        {
+          "name": "The Doctor",
+          "min_tier": 7
+        },
+        {
+          "name": "The Summoner"
+        },
+        {
+          "name": "The Incantation"
+        },
+        {
+          "name": "Rebirth and Renewal",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsCage": {
+      "name": "Cage",
+      "cards": [
+        {
+          "name": "The Warden"
+        },
+        {
+          "name": "The Blazing Fire"
+        },
+        {
+          "name": "The Journalist"
+        },
+        {
+          "name": "The Last Supper"
+        }
+      ]
+    },
+    "MapWorldsCaldera": {
+      "name": "Caldera",
+      "cards": [
+        {
+          "name": "The Battle Born"
+        },
+        {
+          "name": "The Watcher",
+          "min_tier": 1
+        },
+        {
+          "name": "The Standoff"
+        },
+        {
+          "name": "Bound by Flame",
+          "min_tier": 4
+        }
+      ]
+    },
+    "MapWorldsCarcass": {
+      "name": "Carcass",
+      "cards": [
+        {
+          "name": "Vinia's Token"
+        },
+        {
+          "name": "The Hunger"
+        },
+        {
+          "name": "The Aesthete"
+        },
+        {
+          "name": "The Nurse",
+          "min_tier": 7
+        }
+      ]
+    },
+    "MapWorldsCastleRuins": {
+      "name": "Castle Ruins",
+      "cards": [
+        {
+          "name": "The Tyrant",
+          "min_tier": 13
+        },
+        {
+          "name": "The Enthusiasts"
+        },
+        {
+          "name": "Deadly Joy",
+          "min_tier": 13
+        },
+        {
+          "name": "Home",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsCemetery": {
+      "name": "Cemetery",
+      "cards": [
+        {
+          "name": "The Union"
+        },
+        {
+          "name": "The Damned"
+        },
+        {
+          "name": "Brother's Stash"
+        },
+        {
+          "name": "Brother's Gift"
+        }
+      ]
+    },
+    "MapWorldsChannel": {
+      "name": "Channel",
+      "cards": [
+        {
+          "name": "Humility"
+        },
+        {
+          "name": "Desperate Crusade"
+        },
+        {
+          "name": "The Destination",
+          "min_tier": 13
+        },
+        {
+          "name": "Outfoxed",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsCitySquare": {
+      "name": "City Square",
+      "cards": [
+        {
+          "name": "Three Faces in the Dark"
+        },
+        {
+          "name": "The Sigil",
+          "min_tier": 5
+        },
+        {
+          "name": "Home",
+          "min_tier": 13
+        },
+        {
+          "name": "The Slumbering Beast"
+        }
+      ]
+    },
+    "MapWorldsColdRiver_": {
+      "name": "Cold River",
+      "cards": [
+        {
+          "name": "Gemcutter's Promise"
+        },
+        {
+          "name": "The Lunaris Priestess"
+        },
+        {
+          "name": "Mitts"
+        },
+        {
+          "name": "The Mountain"
+        }
+      ]
+    },
+    "MapWorldsColonnade": {
+      "name": "Colonnade",
+      "cards": [
+        {
+          "name": "Gemcutter's Promise"
+        },
+        {
+          "name": "The Coming Storm"
+        },
+        {
+          "name": "The Ruthless Ceinture"
+        },
+        {
+          "name": "The Last Laugh"
+        }
+      ]
+    },
+    "MapWorldsColosseum": {
+      "name": "Colosseum",
+      "cards": [
+        {
+          "name": "The Gladiator"
+        },
+        {
+          "name": "The Watcher",
+          "min_tier": 1
+        },
+        {
+          "name": "The King's Blade"
+        },
+        {
+          "name": "The Sword King's Salute"
+        }
+      ]
+    },
+    "MapWorldsConservatory": {
+      "name": "Conservatory",
+      "cards": [
+        {
+          "name": "The Flora's Gift"
+        },
+        {
+          "name": "Rain Tempter"
+        },
+        {
+          "name": "The Porcupine"
+        },
+        {
+          "name": "Peaceful Moments"
+        }
+      ]
+    },
+    "MapWorldsCoralRuins": {
+      "name": "Coral Ruins",
+      "cards": [
+        {
+          "name": "Lantador's Lost Love"
+        },
+        {
+          "name": "Thunderous Skies"
+        },
+        {
+          "name": "The Stormcaller"
+        },
+        {
+          "name": "The Journey",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsCore": {
+      "name": "Core",
+      "cards": [
+        {
+          "name": "Doedre's Madness"
+        },
+        {
+          "name": "The Insatiable"
+        },
+        {
+          "name": "Echoes of Love"
+        },
+        {
+          "name": "Draped in Dreams",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsCoves": {
+      "name": "Coves",
+      "cards": [
+        {
+          "name": "The Vast"
+        },
+        {
+          "name": "The Rite of Elements",
+          "min_tier": 4
+        },
+        {
+          "name": "The Primordial",
+          "min_tier": 12
+        },
+        {
+          "name": "A Stone Perfected",
+          "min_tier": 12
+        }
+      ]
+    },
+    "MapWorldsCrimsonTemple": {
+      "name": "Crimson Temple",
+      "cards": [
+        {
+          "name": "Hope"
+        },
+        {
+          "name": "The Wrath"
+        },
+        {
+          "name": "The Army of Blood"
+        },
+        {
+          "name": "The Apothecary",
+          "min_tier": 7
+        }
+      ]
+    },
+    "MapWorldsCrystalOre": {
+      "name": "Crystal Ore",
+      "cards": [
+        {
+          "name": "Time-Lost Relic"
+        },
+        {
+          "name": "Azyran's Reward",
+          "min_tier": 12
+        },
+        {
+          "name": "A Sea of Blue"
+        },
+        {
+          "name": "Runic Luck"
+        }
+      ]
+    },
+    "MapWorldsCursedCrypt": {
+      "name": "Cursed Crypt",
+      "cards": [
+        {
+          "name": "Coveted Possession"
+        },
+        {
+          "name": "The Lich"
+        },
+        {
+          "name": "Might is Right"
+        },
+        {
+          "name": "The Skeleton"
+        }
+      ]
+    },
+    "MapWorldsDefiledCathedral": {
+      "name": "Defiled Cathedral",
+      "cards": [
+        {
+          "name": "The Wrath"
+        },
+        {
+          "name": "Lingering Remnants",
+          "min_tier": 10
+        },
+        {
+          "name": "The Innocent"
+        },
+        {
+          "name": "The Life Thief"
+        }
+      ]
+    },
+    "MapWorldsDesert": {
+      "name": "Desert",
+      "cards": [
+        {
+          "name": "The Wind",
+          "min_tier": 2
+        },
+        {
+          "name": "Earth Drinker"
+        },
+        {
+          "name": "Baited Expectations"
+        },
+        {
+          "name": "Acclimatisation"
+        }
+      ]
+    },
+    "MapWorldsDesertSpring": {
+      "name": "Desert Spring",
+      "cards": [
+        {
+          "name": "Imperial Legacy",
+          "min_tier": 13
+        },
+        {
+          "name": "The Tumbleweed",
+          "min_tier": 13
+        },
+        {
+          "name": "Gift of Asenath",
+          "min_tier": 7
+        },
+        {
+          "name": "Unrequited Love"
+        }
+      ]
+    },
+    "MapWorldsDig": {
+      "name": "Dig",
+      "cards": [
+        {
+          "name": "Time-Lost Relic"
+        },
+        {
+          "name": "Volatile Power"
+        },
+        {
+          "name": "The Endurance"
+        },
+        {
+          "name": "Friendship",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsDunes": {
+      "name": "Dunes",
+      "cards": [
+        {
+          "name": "Imperial Legacy",
+          "min_tier": 13
+        },
+        {
+          "name": "The Tumbleweed",
+          "min_tier": 13
+        },
+        {
+          "name": "Gift of Asenath",
+          "min_tier": 7
+        },
+        {
+          "name": "The Fortunate"
+        }
+      ]
+    },
+    "MapWorldsDungeon": {
+      "name": "Dungeon",
+      "cards": [
+        {
+          "name": "The Penitent"
+        },
+        {
+          "name": "Boon of Justice",
+          "min_tier": 5
+        },
+        {
+          "name": "Brotherhood in Exile"
+        },
+        {
+          "name": "The Dungeon Master",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsExcavation": {
+      "name": "Excavation",
+      "cards": [
+        {
+          "name": "Time-Lost Relic"
+        },
+        {
+          "name": "The Endurance"
+        },
+        {
+          "name": "The Tinkerer's Table"
+        },
+        {
+          "name": "Bijoux",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsFactory": {
+      "name": "Factory",
+      "cards": [
+        {
+          "name": "The Golden Era",
+          "min_tier": 13
+        },
+        {
+          "name": "The Tireless Extractor"
+        },
+        {
+          "name": "Further Invention",
+          "min_tier": 13
+        },
+        {
+          "name": "Who Asked",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsFields": {
+      "name": "Fields",
+      "cards": [
+        {
+          "name": "The Scarred Meadow"
+        },
+        {
+          "name": "Rain of Chaos"
+        },
+        {
+          "name": "Rats"
+        },
+        {
+          "name": "The Harvester"
+        }
+      ]
+    },
+    "MapWorldsGeode": {
+      "name": "Geode",
+      "cards": [
+        {
+          "name": "Underground Forest",
+          "min_tier": 10
+        },
+        {
+          "name": "Terrible Secret of Space",
+          "min_tier": 4
+        },
+        {
+          "name": "Lachrymal Necrosis"
+        },
+        {
+          "name": "Runic Luck"
+        }
+      ]
+    },
+    "MapWorldsGraveTrough": {
+      "name": "Grave Trough",
+      "cards": [
+        {
+          "name": "The Union"
+        },
+        {
+          "name": "The One With All"
+        },
+        {
+          "name": "Left to Fate",
+          "min_tier": 10
+        },
+        {
+          "name": "Cursed Words"
+        }
+      ]
+    },
+    "MapWorldsGraveyard": {
+      "name": "Graveyard",
+      "cards": [
+        {
+          "name": "The Enlightened"
+        },
+        {
+          "name": "The Fletcher"
+        },
+        {
+          "name": "Bowyer's Dream",
+          "min_tier": 13
+        },
+        {
+          "name": "Struck by Lightning",
+          "min_tier": 7
+        }
+      ]
+    },
+    "MapWorldsGrotto": {
+      "name": "Grotto",
+      "cards": [
+        {
+          "name": "Treasure Hunter"
+        },
+        {
+          "name": "The Jeweller's Boon"
+        },
+        {
+          "name": "The Rite of Elements",
+          "min_tier": 4
+        },
+        {
+          "name": "A Sea of Blue"
+        }
+      ]
+    },
+    "MapWorldsHauntedMansion": {
+      "name": "Haunted Mansion",
+      "cards": [
+        {
+          "name": "The Sun"
+        },
+        {
+          "name": "The Lord of Celebration",
+          "min_tier": 9
+        },
+        {
+          "name": "The Demon",
+          "min_tier": 7
+        },
+        {
+          "name": "The Journalist"
+        }
+      ]
+    },
+    "MapWorldsIceberg": {
+      "name": "Iceberg",
+      "cards": [
+        {
+          "name": "The Fletcher"
+        },
+        {
+          "name": "The Oath"
+        },
+        {
+          "name": "Mitts"
+        },
+        {
+          "name": "The Undaunted"
+        }
+      ]
+    },
+    "MapWorldsInfestedValley": {
+      "name": "Infested Valley",
+      "cards": [
+        {
+          "name": "Struck by Lightning",
+          "min_tier": 7
+        },
+        {
+          "name": "The Long Watch"
+        },
+        {
+          "name": "Ambitious Obsession"
+        },
+        {
+          "name": "Divine Shard"
+        }
+      ]
+    },
+    "MapWorldsJungleValley": {
+      "name": "Jungle Valley",
+      "cards": [
+        {
+          "name": "The Web"
+        },
+        {
+          "name": "The Adventuring Spirit"
+        },
+        {
+          "name": "The Scout"
+        },
+        {
+          "name": "Alivia's Grace"
+        }
+      ]
+    },
+    "MapWorldsLavaLake": {
+      "name": "Lava Lake",
+      "cards": [
+        {
+          "name": "The King's Heart"
+        },
+        {
+          "name": "Pride Before the Fall"
+        },
+        {
+          "name": "Heterochromia"
+        },
+        {
+          "name": "When Currents Blaze",
+          "min_tier": 10
+        }
+      ]
+    },
+    "MapWorldsLookout": {
+      "name": "Lookout",
+      "cards": [
+        {
+          "name": "The Traitor"
+        },
+        {
+          "name": "The Visionary",
+          "min_tier": 3
+        },
+        {
+          "name": "The Blazing Fire"
+        },
+        {
+          "name": "Demigod's Wager"
+        }
+      ]
+    },
+    "MapWorldsMalformation": {
+      "name": "Malformation",
+      "cards": [
+        {
+          "name": "The Hunger"
+        },
+        {
+          "name": "The Scavenger"
+        },
+        {
+          "name": "The Jeweller's Boon"
+        },
+        {
+          "name": "Vile Power"
+        }
+      ]
+    },
+    "MapWorldsMarshes": {
+      "name": "Marshes",
+      "cards": [
+        {
+          "name": "The Inoculated",
+          "min_tier": 5
+        },
+        {
+          "name": "Glimmer of Hope"
+        },
+        {
+          "name": "Rain Tempter"
+        },
+        {
+          "name": "The Eye of the Dragon"
+        }
+      ]
+    },
+    "MapWorldsMausoleum": {
+      "name": "Mausoleum",
+      "cards": [
+        {
+          "name": "The Lich"
+        },
+        {
+          "name": "Treasure Hunter"
+        },
+        {
+          "name": "The Forsaken"
+        },
+        {
+          "name": "The Return of the Rat"
+        }
+      ]
+    },
+    "MapWorldsMaze": {
+      "name": "Maze",
+      "cards": [
+        {
+          "name": "The Inventor"
+        },
+        {
+          "name": "The Queen",
+          "min_tier": 12
+        },
+        {
+          "name": "The Catalyst"
+        },
+        {
+          "name": "Blind Venture"
+        }
+      ]
+    },
+    "MapWorldsMesa": {
+      "name": "Mesa",
+      "cards": [
+        {
+          "name": "The Scarred Meadow"
+        },
+        {
+          "name": "The Betrayal",
+          "min_tier": 7
+        },
+        {
+          "name": "The Mercenary"
+        },
+        {
+          "name": "Tranquillity"
+        }
+      ]
+    },
+    "MapWorldsMineralPools": {
+      "name": "Mineral Pools",
+      "cards": [
+        {
+          "name": "The Gambler"
+        },
+        {
+          "name": "Abandoned Wealth"
+        },
+        {
+          "name": "The Doppelganger"
+        },
+        {
+          "name": "The Fathomless Depths"
+        }
+      ]
+    },
+    "MapWorldsMoonTemple": {
+      "name": "Moon Temple",
+      "cards": [
+        {
+          "name": "Gemcutter's Promise"
+        },
+        {
+          "name": "The Enlightened"
+        },
+        {
+          "name": "The Lunaris Priestess"
+        },
+        {
+          "name": "The Army of Blood"
+        }
+      ]
+    },
+    "MapWorldsMudGeyser": {
+      "name": "Mud Geyser",
+      "cards": [
+        {
+          "name": "The Survivalist"
+        },
+        {
+          "name": "Shard of Fate"
+        },
+        {
+          "name": "The Offspring"
+        },
+        {
+          "name": "Toxic Tidings"
+        }
+      ]
+    },
+    "MapWorldsMuseum": {
+      "name": "Museum",
+      "cards": [
+        {
+          "name": "The Scholar"
+        },
+        {
+          "name": "Destined to Crumble",
+          "min_tier": 13
+        },
+        {
+          "name": "Sambodhi's Wisdom"
+        },
+        {
+          "name": "One Last Score",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsNecropolis": {
+      "name": "Necropolis",
+      "cards": [
+        {
+          "name": "Coveted Possession"
+        },
+        {
+          "name": "The Celestial Justicar"
+        },
+        {
+          "name": "Cursed Words"
+        },
+        {
+          "name": "Damnation",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsOvergrownRuin": {
+      "name": "Overgrown Ruin",
+      "cards": [
+        {
+          "name": "The Surgeon",
+          "min_tier": 7
+        },
+        {
+          "name": "Shard of Fate"
+        },
+        {
+          "name": "Emperor of Purity"
+        },
+        {
+          "name": "The Wedding Gift"
+        }
+      ]
+    },
+    "MapWorldsOvergrownShrine": {
+      "name": "Overgrown Shrine",
+      "cards": [
+        {
+          "name": "The Dark Mage"
+        },
+        {
+          "name": "The Surgeon",
+          "min_tier": 7
+        },
+        {
+          "name": "The Garish Power"
+        },
+        {
+          "name": "Draped in Dreams",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsPalace": {
+      "name": "Palace",
+      "cards": [
+        {
+          "name": "The Conduit",
+          "min_tier": 1
+        },
+        {
+          "name": "The Unexpected Prize"
+        },
+        {
+          "name": "The Transformation"
+        },
+        {
+          "name": "Matryoshka",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsPark": {
+      "name": "Park",
+      "cards": [
+        {
+          "name": "The Poet"
+        },
+        {
+          "name": "The Sun"
+        },
+        {
+          "name": "The Road to Power",
+          "min_tier": 13
+        },
+        {
+          "name": "Assassin's Favour"
+        }
+      ]
+    },
+    "MapWorldsPen": {
+      "name": "Pen",
+      "cards": [
+        {
+          "name": "The Chains that Bind"
+        },
+        {
+          "name": "The Blazing Fire"
+        },
+        {
+          "name": "The Journalist"
+        },
+        {
+          "name": "The Enforcer",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsPeninsula": {
+      "name": "Peninsula",
+      "cards": [
+        {
+          "name": "The Harvester"
+        },
+        {
+          "name": "The Fishmonger"
+        },
+        {
+          "name": "Desperate Crusade"
+        },
+        {
+          "name": "Home",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsPhantasmagoria": {
+      "name": "Phantasmagoria",
+      "cards": [
+        {
+          "name": "Vinia's Token"
+        },
+        {
+          "name": "The Soul"
+        },
+        {
+          "name": "Brush, Paint and Palette"
+        },
+        {
+          "name": "The Prince of Darkness"
+        }
+      ]
+    },
+    "MapWorldsPit": {
+      "name": "Pit",
+      "cards": [
+        {
+          "name": "The Gladiator"
+        },
+        {
+          "name": "The Arena Champion",
+          "min_tier": 5
+        },
+        {
+          "name": "The Deceiver"
+        },
+        {
+          "name": "The Sword King's Salute"
+        }
+      ]
+    },
+    "MapWorldsPlateau": {
+      "name": "Plateau",
+      "cards": [
+        {
+          "name": "Rain of Chaos"
+        },
+        {
+          "name": "The Trial",
+          "min_tier": 10
+        },
+        {
+          "name": "Thunderous Skies"
+        },
+        {
+          "name": "The Stormcaller"
+        }
+      ]
+    },
+    "MapWorldsPort": {
+      "name": "Port",
+      "cards": [
+        {
+          "name": "Lucky Connections"
+        },
+        {
+          "name": "The Pact"
+        },
+        {
+          "name": "Jack in the Box"
+        },
+        {
+          "name": "Assassin's Favour"
+        }
+      ]
+    },
+    "MapWorldsPrimordialBoss1": {
+      "name": "Seething Chyme",
+      "cards": []
+    },
+    "MapWorldsPrimordialBoss2": {
+      "name": "Polaric Void",
+      "cards": []
+    },
+    "MapWorldsPrimordialPool": {
+      "name": "Primordial Pool",
+      "cards": [
+        {
+          "name": "The Survivalist"
+        },
+        {
+          "name": "Death"
+        },
+        {
+          "name": "The Inoculated",
+          "min_tier": 5
+        },
+        {
+          "name": "Glimmer of Hope"
+        }
+      ]
+    },
+    "MapWorldsPromenade": {
+      "name": "Promenade",
+      "cards": [
+        {
+          "name": "Gemcutter's Promise"
+        },
+        {
+          "name": "Dying Anguish"
+        },
+        {
+          "name": "The Patient"
+        },
+        {
+          "name": "Energy Sword"
+        }
+      ]
+    },
+    "MapWorldsRacecourse_": {
+      "name": "Racecourse",
+      "cards": [
+        {
+          "name": "The Last One Standing",
+          "min_tier": 12
+        },
+        {
+          "name": "The King's Blade"
+        },
+        {
+          "name": "The Arena Champion",
+          "min_tier": 5
+        },
+        {
+          "name": "The Sword King's Salute"
+        }
+      ]
+    },
+    "MapWorldsRamparts": {
+      "name": "Ramparts",
+      "cards": [
+        {
+          "name": "Hunter's Resolve"
+        },
+        {
+          "name": "Merciless Armament",
+          "min_tier": 13
+        },
+        {
+          "name": "The Ruthless Ceinture"
+        },
+        {
+          "name": "Last Stand"
+        }
+      ]
+    },
+    "MapWorldsReef": {
+      "name": "Reef",
+      "cards": [
+        {
+          "name": "Lantador's Lost Love"
+        },
+        {
+          "name": "The Watcher",
+          "min_tier": 1
+        },
+        {
+          "name": "The Mad King",
+          "min_tier": 13
+        },
+        {
+          "name": "The One That Got Away"
+        }
+      ]
+    },
+    "MapWorldsRelicChambers": {
+      "name": "Relic Chambers",
+      "cards": [
+        {
+          "name": "Prosperity",
+          "min_tier": 13
+        },
+        {
+          "name": "The Opulent",
+          "min_tier": 13
+        },
+        {
+          "name": "Temperance",
+          "min_tier": 13
+        },
+        {
+          "name": "Reflection of the Heart"
+        }
+      ]
+    },
+    "MapWorldsResidence": {
+      "name": "Residence",
+      "cards": [
+        {
+          "name": "The Drunken Aristocrat"
+        },
+        {
+          "name": "The Sephirot"
+        },
+        {
+          "name": "Light and Truth"
+        },
+        {
+          "name": "Squandered Prosperity",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsScriptorium": {
+      "name": "Scriptorium",
+      "cards": [
+        {
+          "name": "The Scholar"
+        },
+        {
+          "name": "Destined to Crumble",
+          "min_tier": 13
+        },
+        {
+          "name": "Thirst for Knowledge"
+        },
+        {
+          "name": "Checkmate"
+        }
+      ]
+    },
+    "MapWorldsSepulchre": {
+      "name": "Sepulchre",
+      "cards": [
+        {
+          "name": "Doedre's Madness"
+        },
+        {
+          "name": "The Witch"
+        },
+        {
+          "name": "Harmony of Souls"
+        },
+        {
+          "name": "The Cacophony"
+        }
+      ]
+    },
+    "MapWorldsShore": {
+      "name": "Shore",
+      "cards": [
+        {
+          "name": "Hope"
+        },
+        {
+          "name": "The Catch",
+          "min_tier": 13
+        },
+        {
+          "name": "From Bone to Ashes"
+        },
+        {
+          "name": "The Leviathan",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsSiege": {
+      "name": "Siege",
+      "cards": [
+        {
+          "name": "The Trial",
+          "min_tier": 10
+        },
+        {
+          "name": "The Visionary",
+          "min_tier": 3
+        },
+        {
+          "name": "Unchained"
+        },
+        {
+          "name": "The Miracle"
+        }
+      ]
+    },
+    "MapWorldsSilo": {
+      "name": "Silo",
+      "cards": [
+        {
+          "name": "The Polymath"
+        },
+        {
+          "name": "The Professor"
+        },
+        {
+          "name": "Haunting Shadows"
+        },
+        {
+          "name": "Ever-Changing"
+        }
+      ]
+    },
+    "MapWorldsSpiderForest": {
+      "name": "Spider Forest",
+      "cards": [
+        {
+          "name": "The Incantation"
+        },
+        {
+          "name": "The Witch"
+        },
+        {
+          "name": "Alivia's Grace"
+        },
+        {
+          "name": "Avian Pursuit"
+        }
+      ]
+    },
+    "MapWorldsSpiderLair": {
+      "name": "Spider Lair",
+      "cards": [
+        {
+          "name": "The Dark Mage"
+        },
+        {
+          "name": "The Web"
+        },
+        {
+          "name": "The Wretched"
+        },
+        {
+          "name": "The Skeleton"
+        }
+      ]
+    },
+    "MapWorldsSprings": {
+      "name": "Fungal Hollow",
+      "cards": [
+        {
+          "name": "The Betrayal",
+          "min_tier": 7
+        },
+        {
+          "name": "The Mercenary"
+        },
+        {
+          "name": "Loyalty"
+        },
+        {
+          "name": "The Dragon"
+        }
+      ]
+    },
+    "MapWorldsStrand": {
+      "name": "Strand",
+      "cards": [
+        {
+          "name": "Boundless Realms"
+        },
+        {
+          "name": "The Messenger"
+        },
+        {
+          "name": "The Deep Ones"
+        },
+        {
+          "name": "I See Brothers"
+        }
+      ]
+    },
+    "MapWorldsSulphurVents": {
+      "name": "Sulphur Vents",
+      "cards": [
+        {
+          "name": "Death"
+        },
+        {
+          "name": "The Throne"
+        },
+        {
+          "name": "The Darkest Dream"
+        },
+        {
+          "name": "The Bitter Blossom",
+          "min_tier": 4
+        }
+      ]
+    },
+    "MapWorldsSummit": {
+      "name": "Summit",
+      "cards": [
+        {
+          "name": "The Pack Leader"
+        },
+        {
+          "name": "The Whiteout"
+        },
+        {
+          "name": "Ambitious Obsession"
+        },
+        {
+          "name": "A Chilling Wind",
+          "min_tier": 4
+        }
+      ]
+    },
+    "MapWorldsSunkenCity": {
+      "name": "Sunken City",
+      "cards": [
+        {
+          "name": "The Fox"
+        },
+        {
+          "name": "The Web"
+        },
+        {
+          "name": "Ambitious Obsession"
+        },
+        {
+          "name": "Last Stand"
+        }
+      ]
+    },
+    "MapWorldsTerrace": {
+      "name": "Terrace",
+      "cards": [
+        {
+          "name": "The Flora's Gift"
+        },
+        {
+          "name": "The Porcupine"
+        },
+        {
+          "name": "The Wilted Rose",
+          "min_tier": 4
+        },
+        {
+          "name": "The Easy Stroll",
+          "min_tier": 10
+        }
+      ]
+    },
+    "MapWorldsThicket": {
+      "name": "Thicket",
+      "cards": [
+        {
+          "name": "The Explorer"
+        },
+        {
+          "name": "The Demoness",
+          "min_tier": 4
+        },
+        {
+          "name": "Call to the First Ones"
+        },
+        {
+          "name": "The Adventuring Spirit"
+        }
+      ]
+    },
+    "MapWorldsTower": {
+      "name": "Tower",
+      "cards": [
+        {
+          "name": "The Aesthete"
+        },
+        {
+          "name": "The Offering"
+        },
+        {
+          "name": "Thunderous Skies"
+        },
+        {
+          "name": "The Stormcaller"
+        }
+      ]
+    },
+    "MapWorldsTribunal": {
+      "name": "Crater",
+      "cards": [
+        {
+          "name": "Emperor's Luck"
+        },
+        {
+          "name": "Pride Before the Fall"
+        },
+        {
+          "name": "The Lion"
+        },
+        {
+          "name": "Burning Blood",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsTropicalIsland": {
+      "name": "Tropical Island",
+      "cards": [
+        {
+          "name": "Loyalty"
+        },
+        {
+          "name": "The Dragon"
+        },
+        {
+          "name": "Azure Rage",
+          "min_tier": 13
+        },
+        {
+          "name": "The Forbidden Fruit",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsUndergroundRiver": {
+      "name": "Underground River",
+      "cards": [
+        {
+          "name": "The Wolf's Shadow"
+        },
+        {
+          "name": "The Cursed King"
+        },
+        {
+          "name": "The Wolverine"
+        },
+        {
+          "name": "The Wolven King's Bite",
+          "min_tier": 9
+        }
+      ]
+    },
+    "MapWorldsUndergroundSea": {
+      "name": "Underground Sea",
+      "cards": [
+        {
+          "name": "The Hoarder"
+        },
+        {
+          "name": "Chaotic Disposition"
+        },
+        {
+          "name": "Abandoned Wealth"
+        },
+        {
+          "name": "The Doppelganger"
+        }
+      ]
+    },
+    "MapWorldsVaalPyramid": {
+      "name": "Vaal Pyramid",
+      "cards": [
+        {
+          "name": "The Inventor"
+        },
+        {
+          "name": "The Spoiled Prince",
+          "min_tier": 13
+        },
+        {
+          "name": "Three Voices"
+        },
+        {
+          "name": "Arrogance of the Vaal"
+        }
+      ]
+    },
+    "MapWorldsVaalTemple": {
+      "name": "Vaal Temple",
+      "cards": [
+        {
+          "name": "The Cataclysm",
+          "min_tier": 4
+        },
+        {
+          "name": "The Inventor"
+        },
+        {
+          "name": "The Catalyst"
+        },
+        {
+          "name": "The Admirer",
+          "min_tier": 7
+        },
+        {
+          "name": "Beauty Through Death",
+          "min_tier": 12
+        },
+        {
+          "name": "The Damned"
+        },
+        {
+          "name": "Unrequited Love"
+        }
+      ]
+    },
+    "MapWorldsVilla": {
+      "name": "Villa",
+      "cards": [
+        {
+          "name": "The Dapper Prodigy",
+          "min_tier": 13
+        },
+        {
+          "name": "The Coming Storm"
+        },
+        {
+          "name": "A Modest Request"
+        },
+        {
+          "name": "Fire Of Unknown Origin",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsVolcano": {
+      "name": "Volcano",
+      "cards": [
+        {
+          "name": "The Battle Born"
+        },
+        {
+          "name": "The King's Heart"
+        },
+        {
+          "name": "The Lion"
+        },
+        {
+          "name": "Lonely Warrior",
+          "min_tier": 7
+        }
+      ]
+    },
+    "MapWorldsWasteland": {
+      "name": "Wasteland",
+      "cards": [
+        {
+          "name": "The Brittle Emperor",
+          "min_tier": 2
+        },
+        {
+          "name": "Earth Drinker"
+        },
+        {
+          "name": "Boundless Realms"
+        },
+        {
+          "name": "Imperial Legacy",
+          "min_tier": 13
+        }
+      ]
+    },
+    "MapWorldsWastePool": {
+      "name": "Waste Pool",
+      "cards": [
+        {
+          "name": "The Doctor",
+          "min_tier": 7
+        },
+        {
+          "name": "The Feast"
+        },
+        {
+          "name": "Doedre's Madness"
+        },
+        {
+          "name": "The Brawny Battle Mage",
+          "min_tier": 13
+        }
+      ]
+    }
+  }
+}
