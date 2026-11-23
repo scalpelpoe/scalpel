@@ -1,6 +1,6 @@
 import type { BrowserWindow } from 'electron'
 import { beforeEach, expect, it, vi } from 'vitest'
-const mock = vi.hoisted(() => ({ display: vi.fn(), link: vi.fn() }))
+const mock = vi.hoisted(() => ({ display: vi.fn(), link: vi.fn(), capture: vi.fn() }))
 vi.mock('electron-overlay-window', () => ({
   OVERLAY_WINDOW_OPTS: { transparent: true },
   OverlayController: { targetBounds: { x: 3840, y: 0, width: 3840, height: 2160 } },
@@ -8,6 +8,7 @@ vi.mock('electron-overlay-window', () => ({
 // Electron 32 exposes neither point nor rectangle DIP conversion on Linux.
 vi.mock('electron', () => ({ screen: { getDisplayNearestPoint: mock.display } }))
 vi.mock('./x11-transient', () => ({ linkX11Transient: mock.link }))
+vi.mock('./capture', () => ({ captureElectronGame: mock.capture }))
 import { createNativeBackend } from './backend'
 
 const handle = Buffer.from([1, 0, 0, 0])
@@ -43,4 +44,9 @@ it('keeps the overlay usable when native binding fails', () => {
 
 it('leaves overlay window options to the native tracker', () => {
   expect(createNativeBackend('x11').windowTracker.overlayWindowOptions()).toEqual({ transparent: true })
+})
+
+it('captures through Electron, keeping the caller options', async () => {
+  await createNativeBackend('windows').capture.captureGame({ skipFocusGate: true })
+  expect(mock.capture).toHaveBeenCalledWith({ skipFocusGate: true })
 })
