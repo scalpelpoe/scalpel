@@ -1,4 +1,5 @@
 import { execFileSync } from 'node:child_process'
+import { controllerTracker } from './controller'
 import { electronClipboard, electronShortcuts } from './electron'
 import { isElevated } from './elevation'
 import { createHyprlandBackend } from './hyprland/backend'
@@ -45,27 +46,17 @@ const facade: Platform = {
     trackerPoint: () => backend().cursor.trackerPoint(),
     warpTo: (point) => backend().cursor.warpTo(point),
   },
-  windowTracker: {
-    events: {
-      on: (event, listener) => backend().windowTracker.events.on(event, listener),
-    },
-    get targetBounds() {
-      return backend().windowTracker.targetBounds
-    },
-    get targetHasFocus() {
-      return backend().windowTracker.targetHasFocus
-    },
+  // Every backend reports the game window through electron-overlay-window's
+  // controller, so its events and target state never select a backend.
+  windowTracker: controllerTracker({
     gameBounds: (win) => backend().windowTracker.gameBounds(win),
     attach: (win, titles) => backend().windowTracker.attach(win, titles),
-    setTargetTitles: (titles) => backend().windowTracker.setTargetTitles(titles),
-    focusTarget: () => backend().windowTracker.focusTarget(),
-    activateOverlay: () => backend().windowTracker.activateOverlay(),
     focusOverlay: (win) => backend().windowTracker.focusOverlay(win),
     inputAllowed: () => backend().windowTracker.inputAllowed(),
     overlayWindowOptions: () => backend().windowTracker.overlayWindowOptions(),
     adoptOverlay: (win) => backend().windowTracker.adoptOverlay(win),
     beforeOverlayShow: (win, gameTitle) => backend().windowTracker.beforeOverlayShow(win, gameTitle),
-  },
+  }),
   isElevated,
 }
 
