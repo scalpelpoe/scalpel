@@ -23,6 +23,12 @@ Hyprland is selected inside a Hyprland session from 0.56 on and needs `grim`
 on PATH. Other Wayland compositors keep the X11 tracker until they have their
 own backend.
 
+## Startup
+
+`relaunchArgs` tells the app, before any window exists, whether to relaunch
+Electron on another Ozone platform. Every backend is an X11 client today, so a
+Wayland session relaunches under XWayland unless the user picked a platform.
+
 ## Input
 
 All backends use uiohook-napi for global key and mouse hooks and for key

@@ -29,9 +29,8 @@ installEarlyDiagnostics()
 // uncaughtException handler, so this is the only trace it leaves on Windows.
 crashReporter.start({ uploadToServer: false })
 
-import { execSync } from 'node:child_process'
 import Store from 'electron-store'
-import { platform } from '@scalpel/platform'
+import { currentEnv, platform, relaunchArgs } from '@scalpel/platform'
 import { hideOverlay, showOverlay, getOverlayWindow, setCloseOnClickOutside, setWindowInputFocused } from './overlay'
 import { createAppWindow, showAppWindow, getAppWindow } from './app-window'
 import {
@@ -132,12 +131,9 @@ import { relaunchApp } from './relaunch'
 
 // ---- Linux display-server setup --------------------------------------------
 
-if (
-  process.platform === 'linux' &&
-  process.env.WAYLAND_DISPLAY &&
-  !process.argv.some((a) => a.startsWith('--ozone-platform='))
-) {
-  relaunchApp([...process.argv.slice(1), '--ozone-platform=x11'])
+const displayServerArgs = relaunchArgs(currentEnv())
+if (displayServerArgs) {
+  relaunchApp(displayServerArgs)
   app.exit(0)
 }
 
@@ -147,14 +143,7 @@ if (process.platform === 'linux') {
 
 // ---- Elevation detection ---------------------------------------------------
 
-function isElevated(): boolean {
-  try {
-    execSync('net session', { stdio: 'ignore' })
-    return true
-  } catch {
-    return false
-  }
-}
+const { isElevated } = platform()
 
 // ---- Persistent settings ---------------------------------------------------
 

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { selectBackend } from './select'
+import { relaunchArgs, selectBackend } from './select'
 import type { PlatformEnv } from './types'
 
 const env = (platform: NodeJS.Platform, vars: Record<string, string> = {}): PlatformEnv => ({
@@ -45,5 +45,22 @@ describe('selectBackend', () => {
         throw new Error('hyprctl: command not found')
       }),
     ).toBe('x11')
+  })
+})
+
+describe('relaunchArgs', () => {
+  const wayland = (argv: string[]): PlatformEnv => ({ platform: 'linux', env: { WAYLAND_DISPLAY: 'wayland-1' }, argv })
+
+  it('relaunches a Wayland session under XWayland, keeping the original arguments', () => {
+    expect(relaunchArgs(wayland(['/opt/scalpel', '--no-sandbox']))).toEqual(['--no-sandbox', '--ozone-platform=x11'])
+  })
+
+  it('respects an explicitly chosen Ozone platform', () => {
+    expect(relaunchArgs(wayland(['/opt/scalpel', '--ozone-platform=wayland']))).toBeNull()
+  })
+
+  it('keeps X11 sessions and other systems as they are', () => {
+    expect(relaunchArgs(env('linux'))).toBeNull()
+    expect(relaunchArgs(env('win32', { WAYLAND_DISPLAY: 'wayland-1' }))).toBeNull()
   })
 })

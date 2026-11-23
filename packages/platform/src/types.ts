@@ -220,6 +220,8 @@ export interface Platform {
   readonly capture: GameCapture
   readonly cursor: Cursor
   readonly windowTracker: WindowTracker
+  /** Whether this process runs with administrator rights. */
+  isElevated(): boolean
 }
 
 /** The parts of a platform that differ between backends. */

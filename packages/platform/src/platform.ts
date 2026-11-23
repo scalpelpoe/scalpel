@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { electronClipboard, electronShortcuts } from './electron'
+import { isElevated } from './elevation'
 import { createHyprlandBackend } from './hyprland/backend'
 import { uiohookInput } from './input'
 import { createNativeBackend } from './native/backend'
@@ -65,6 +66,7 @@ const facade: Platform = {
     adoptOverlay: (win) => backend().windowTracker.adoptOverlay(win),
     beforeOverlayShow: (win, gameTitle) => backend().windowTracker.beforeOverlayShow(win, gameTitle),
   },
+  isElevated,
 }
 
 /** The platform integration for this process. */
