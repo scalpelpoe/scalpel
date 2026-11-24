@@ -18,7 +18,7 @@ import { getWhiteboardOverlay } from './whiteboard'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
 import { GAME_TITLES } from '@shared/contracts/game-variant'
 import { IPC_CHANNELS } from '@shared/contracts/ipc'
-import { platform } from '@scalpel/platform'
+import { type InputRect, platform } from '@scalpel/platform'
 
 const { cursor, input, traits, windowTracker } = platform()
 
@@ -103,7 +103,7 @@ function getScaleFactor(): number {
   // Multi-monitor setups with different DPIs need the correct scale factor.
   const tb = windowTracker.targetBounds
   if (tb?.width) {
-    if (traits.compositorFocus) {
+    if (traits.compositorFocus || traits.inputRegions) {
       const dip = desktop.getGameBounds()
       if (dip?.width) return tb.width / dip.width
     }
@@ -112,11 +112,32 @@ function getScaleFactor(): number {
   return screen.getPrimaryDisplay().scaleFactor
 }
 
+/** Last reported panel rects per window where they become the window's
+ *  input region. */
+const inputRegionRects = new WeakMap<BrowserWindow, InputRect[]>()
+
+/** The main overlay keeps its window mapped while its content is hidden, so
+ *  its last panel rects must not stay clickable over the game. */
+function applyInputRegion(win: BrowserWindow): void {
+  const hidden = win === overlayWindow && !overlayVisible
+  windowTracker.setInputRegion(win, hidden ? [] : (inputRegionRects.get(win) ?? []))
+}
+
 ipcMain.on('report-panel-rect', (event, payload: unknown) => {
   // Accept either a single rect (legacy) or an array of rects (main + sister etc.).
   const rects = Array.isArray(payload)
     ? (payload as Array<{ left: number; top: number; width: number; height: number }>)
     : [payload as { left: number; top: number; width: number; height: number }]
+  if (traits.inputRegions) {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return
+    inputRegionRects.set(
+      win,
+      rects.filter((r) => r.width > 0 && r.height > 0),
+    )
+    applyInputRegion(win)
+    return
+  }
   const tb = windowTracker.targetBounds
   if (!tb?.width) return
   const sf = getScaleFactor()
@@ -135,6 +156,13 @@ ipcMain.on('report-panel-rect', (event, payload: unknown) => {
 })
 
 ipcMain.on('clear-panel-rect', (event) => {
+  if (traits.inputRegions) {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (!win) return
+    inputRegionRects.delete(win)
+    applyInputRegion(win)
+    return
+  }
   const entry = panelRectsBySender.get(event.sender.id)
   panelRectsBySender.delete(event.sender.id)
   // Restore click-through on the window we just dropped rects for, in case
@@ -260,6 +288,8 @@ let trackerPointerTimer: ReturnType<typeof setTimeout> | null = null
 input.on(
   'mousemove',
   guardNativeListener('mousemove', function trackPointer(e) {
+    // Input regions route the pointer; the hook never sees it over an overlay.
+    if (traits.inputRegions) return
     // A dialog owns input until explicitly dismissed. Hit-test updates can lag
     // behind dragging; neither leaving a rect nor stale geometry may release it.
     if (traits.compositorFocus && overlayVisible) return
@@ -317,7 +347,9 @@ input.on(
   guardNativeListener('mousedown-overlay', (e) => {
     if (!overlayVisible && !desktop.hasInteractiveDialog() && windowTracker.inputAllowed()) {
       const point = traits.compositorFocus ? cursor.trackerPoint() : e
-      if (point && !windowAtPoint(point.x, point.y) && (windowTracker.targetHasFocus || traits.compositorFocus)) {
+      // The hook never sees clicks on an overlay that has input regions.
+      const onOverlay = !traits.inputRegions && point && windowAtPoint(point.x, point.y)
+      if (point && !onOverlay && (windowTracker.targetHasFocus || traits.compositorFocus)) {
         if (hideOverlaysOnGameClick()) {
           setInteractiveWindow(null)
           desktop.focusGame()
@@ -328,10 +360,10 @@ input.on(
     if (!windowTracker.inputAllowed()) return
     // Only process clicks if the overlay window is actually visible on screen
     if (!overlayWindow || overlayWindow.isDestroyed() || !overlayWindow.isVisible()) return
-    if (!isInsidePanel(e.x, e.y)) {
+    if (traits.inputRegions || !isInsidePanel(e.x, e.y)) {
       // A click on any visible Scalpel secondary overlay (cheat sheets etc.) is
       // an interaction with our app, not a "click outside" - don't hide.
-      if (isInsideAnySecondaryOverlay(e.x, e.y)) return
+      if (!traits.inputRegions && isInsideAnySecondaryOverlay(e.x, e.y)) return
       // A native <select> dropdown is open -- its option list lives outside our reported
       // panel rect, so every click on it looks like a click "outside". Bail so we don't
       // disable interactivity (click-through to PoE) or close the overlay.
@@ -393,12 +425,13 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
   overlayWindow = new BrowserWindow({
     ...windowTracker.overlayWindowOptions(),
     show: false,
-    webPreferences: {
+    webPreferences: windowTracker.overlayWebPreferences({
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       contextIsolation: true,
-    },
+    }),
   })
+  windowTracker.adoptSurface(overlayWindow)
   windowTracker.adoptOverlay(overlayWindow)
 
   if (process.env.ELECTRON_RENDERER_URL) {
@@ -665,6 +698,7 @@ export function showOverlay(): void {
     console.error('[overlay] Error in showOverlay:', err)
   }
   overlayVisibilityListener?.(true)
+  if (traits.inputRegions) applyInputRegion(overlayWindow)
   if (traits.compositorFocus) {
     if (exitTimer) clearTimeout(exitTimer)
     exitTimer = null
@@ -695,6 +729,7 @@ export function hideOverlay(): void {
   // Tell renderer to hide its content (don't call overlayWindow.hide() -
   // The window tracker manages window visibility and would re-show it, causing flicker)
   overlayWindow.webContents.send('overlay-hide')
+  if (traits.inputRegions) applyInputRegion(overlayWindow)
   if (!traits.compositorFocus) windowTracker.focusTarget()
   overlayVisibilityListener?.(false)
 }
@@ -704,7 +739,7 @@ export function reloadFilterInGame(): void {
   import('./hotkeys').then(({ sendReloadFilterToPoE }) => {
     sendReloadFilterToPoE()
       .then(() => {
-        if (overlayVisible && overlayWindow && mouseOverPanel) {
+        if (overlayVisible && overlayWindow && mouseOverPanel && !traits.inputRegions) {
           overlayWindow.setIgnoreMouseEvents(false)
         }
       })
@@ -716,7 +751,8 @@ export function reloadFilterInGame(): void {
 export async function switchFilterInGame(filterName: string, currentFilter?: string): Promise<void> {
   const { sendItemFilterCommand } = await import('./hotkeys')
   await sendItemFilterCommand(filterName, currentFilter)
-  if (overlayVisible && overlayWindow) {
+  // With input regions the panel already accepts the pointer.
+  if (overlayVisible && overlayWindow && !traits.inputRegions) {
     overlayWindow.setIgnoreMouseEvents(false)
     mouseOverPanel = true
   }

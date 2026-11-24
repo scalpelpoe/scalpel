@@ -1,7 +1,14 @@
-import type { BrowserWindow, BrowserWindowConstructorOptions, NativeImage, Point, Rectangle } from 'electron'
+import type {
+  BrowserWindow,
+  BrowserWindowConstructorOptions,
+  NativeImage,
+  Point,
+  Rectangle,
+  WebPreferences,
+} from 'electron'
 
 /** The desktop integration selected for this process. */
-export type BackendId = 'windows' | 'macos' | 'x11' | 'hyprland'
+export type BackendId = 'windows' | 'macos' | 'x11' | 'hyprland' | 'layer-shell'
 
 /** Process facts backend selection depends on. */
 export interface PlatformEnv {
@@ -16,6 +23,11 @@ export interface Traits {
    *  through compositor requests, and pointer hit tests read
    *  `cursor.trackerPoint()` because hook coordinates are unreliable. */
   readonly compositorFocus: boolean
+  /** Overlays are layer-shell surfaces whose input regions route the pointer.
+   *  The input hook sees no pointer events over an overlay, so the app sets
+   *  each window's clickable areas with `windowTracker.setInputRegion` instead
+   *  of hit testing hook events and toggling click-through. */
+  readonly inputRegions: boolean
 }
 
 export interface InputKeyEvent {
@@ -146,6 +158,10 @@ export interface Cursor {
   trackerPoint(): Point | null
   /** Moves the pointer to a DIP point. A no-op where unsupported. */
   warpTo(point: Point): void
+  /** Asks the compositor for the pointer position where only it knows it,
+   *  so `screenPoint()` is current. Await it before reading the position for
+   *  a user action. Resolves at once elsewhere. */
+  refresh(): Promise<void>
 }
 
 export interface AttachEvent {
@@ -207,8 +223,25 @@ export interface WindowTracker {
   overlayWindowOptions(): BrowserWindowConstructorOptions
   /** Prepares a newly constructed overlay window for the backend. */
   adoptOverlay(win: BrowserWindow): void
+  /** Web preferences for any window drawn over the game. */
+  overlayWebPreferences(prefs: WebPreferences): WebPreferences
+  /** Presents a newly constructed window that is drawn over the game,
+   *  including click-through ones `adoptOverlay` does not cover. Call right
+   *  after construction, before wrapping its show and hide methods. */
+  adoptSurface(win: BrowserWindow): void
+  /** Sets the areas of an overlay window that accept the pointer, in the
+   *  window's CSS pixels. Only backends with `traits.inputRegions` use it. */
+  setInputRegion(win: BrowserWindow, rects: readonly InputRect[]): void
   /** Called right before an overlay window is shown over the game. */
   beforeOverlayShow(win: BrowserWindow, gameTitle: string): void
+}
+
+/** A rectangle in an overlay window's CSS pixels. */
+export interface InputRect {
+  left: number
+  top: number
+  width: number
+  height: number
 }
 
 export interface Platform {
@@ -224,5 +257,7 @@ export interface Platform {
   isElevated(): boolean
 }
 
-/** The parts of a platform that differ between backends. */
-export type Backend = Pick<Platform, 'traits' | 'capture' | 'cursor' | 'windowTracker'>
+/** The parts of a platform that differ between backends. Input, shortcuts
+ *  and the clipboard default to uiohook and Electron. */
+export type Backend = Pick<Platform, 'traits' | 'capture' | 'cursor' | 'windowTracker'> &
+  Partial<Pick<Platform, 'input' | 'shortcuts' | 'clipboard'>>

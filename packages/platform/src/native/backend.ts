@@ -28,9 +28,9 @@ function gameBounds(id: BackendId, win: BrowserWindow | null): Electron.Rectangl
 
 /** electron-overlay-window's native tracker with Electron capture. Cursor
  *  warping is implemented on Windows only. */
-export function createNativeBackend(id: Exclude<BackendId, 'hyprland'>): Backend {
+export function createNativeBackend(id: Exclude<BackendId, 'hyprland' | 'layer-shell'>): Backend {
   return {
-    traits: { compositorFocus: false },
+    traits: { compositorFocus: false, inputRegions: false },
     capture: { captureGame: captureElectronGame, gameWindowSource: electronGameWindowSource },
     cursor: {
       screenPoint: () => screen.getCursorScreenPoint(),
@@ -38,6 +38,7 @@ export function createNativeBackend(id: Exclude<BackendId, 'hyprland'>): Backend
       warpTo: (point) => {
         if (id === 'windows') warpWindowsCursorTo(point)
       },
+      refresh: async () => {},
     },
     windowTracker: controllerTracker({
       gameBounds: (win = null) => gameBounds(id, win),
@@ -46,6 +47,9 @@ export function createNativeBackend(id: Exclude<BackendId, 'hyprland'>): Backend
       inputAllowed: () => true,
       overlayWindowOptions: () => ({ ...OVERLAY_WINDOW_OPTS }),
       adoptOverlay: () => {},
+      overlayWebPreferences: (prefs) => prefs,
+      adoptSurface: () => {},
+      setInputRegion: () => {},
       beforeOverlayShow: (win, gameTitle) => {
         if (id !== 'x11') return
         try {

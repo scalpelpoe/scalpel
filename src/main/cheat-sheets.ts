@@ -362,12 +362,13 @@ function ensurePreviewWindow(): BrowserWindow {
     focusable: false,
     backgroundColor: '#00000000',
     show: false,
-    webPreferences: {
+    webPreferences: platform().windowTracker.overlayWebPreferences({
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-    },
+    }),
   })
+  platform().windowTracker.adoptSurface(previewWin)
   // 'screen-saver' matches the secondary overlays' level so the preview lifts
   // above PoE and the cheat-sheet grid window without fighting the taskbar.
   previewWin.setAlwaysOnTop(true, 'screen-saver')

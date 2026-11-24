@@ -1,5 +1,6 @@
 export { OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
 export { Key } from './input'
+export { layerShellSupported } from './layer-shell/backend'
 export { platform } from './platform'
 export { currentEnv, relaunchArgs, selectBackend } from './select'
 export type {
@@ -19,6 +20,7 @@ export type {
   InputHook,
   InputKeyEvent,
   InputMouseEvent,
+  InputRect,
   InputWheelEvent,
   MoveresizeEvent,
   Platform,

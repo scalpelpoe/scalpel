@@ -48,7 +48,7 @@
   "dependencies": {
     "@coooookies/windows-smtc-monitor": "^1.0.12",
     "@scalpel/item-data": "file:vendor/scalpel-item-data-0.1.0.tgz",
-    "electron-overlay-window": "github:scalpelpoe/electron-overlay-window#c78dc44651cac99c462eefa5654a628c545e07ba",
+    "electron-overlay-window": "github:kristoferssolo/electron-overlay-window#369a1a68031a7c534031810b83f9607099697b88",
     "electron-store": "^8.2.0",
     "koffi": "^3.1.6",
     "konva": "^9.3.22",

@@ -17,6 +17,8 @@ Declare `OverlaySpec.interaction` for secondary overlays:
 The windowing layer reads this policy on every show, including after game focus
 returns. Features with changing modes should also call `desktop.applyInteraction`
 when changing modes while visible. Keep focus restoration before cursor warping.
+Await `desktop.refreshCursor()` before reading the cursor for a user action: on
+native Wayland only the compositor knows where it is.
 
 Do not import `electron-overlay-window`, `uiohook-napi` or native bindings in
 feature modules, or call `screenToDipRect`, `getCursorScreenPoint` or native

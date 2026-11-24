@@ -30,7 +30,7 @@ installEarlyDiagnostics()
 crashReporter.start({ uploadToServer: false })
 
 import Store from 'electron-store'
-import { currentEnv, platform, relaunchArgs } from '@scalpel/platform'
+import { currentEnv, layerShellSupported, platform, relaunchArgs } from '@scalpel/platform'
 import { hideOverlay, showOverlay, getOverlayWindow, setCloseOnClickOutside, setWindowInputFocused } from './overlay'
 import { createAppWindow, showAppWindow, getAppWindow } from './app-window'
 import {
@@ -131,7 +131,7 @@ import { relaunchApp } from './relaunch'
 
 // ---- Linux display-server setup --------------------------------------------
 
-const displayServerArgs = relaunchArgs(currentEnv())
+const displayServerArgs = relaunchArgs(currentEnv(), layerShellSupported)
 if (displayServerArgs) {
   relaunchApp(displayServerArgs)
   app.exit(0)
@@ -411,7 +411,8 @@ app.whenReady().then(() => {
 
   const dispatchAppMacro = (action: string, tag?: string, presetId?: string): void => {
     if (action === RADIAL_MACRO_ACTION) {
-      toggleRadialMenu()
+      // The menu opens around the pointer, which layer-shell must look up.
+      void desktop.refreshCursor().then(toggleRadialMenu)
       return
     }
     if (action === 'streamUpdateSlot') {

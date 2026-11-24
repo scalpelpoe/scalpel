@@ -18,6 +18,13 @@ export const desktop = {
   hasInteractiveDialog(): boolean {
     return !!activeDialog && !activeDialog.isDestroyed() && activeDialog.isVisible()
   },
+  /** Updates the position getCursorScreenPoint returns where only the
+   *  compositor knows it. Await before reading it for a user action. */
+  async refreshCursor(): Promise<void> {
+    try {
+      await platform().cursor.refresh()
+    } catch {}
+  },
   getCursorScreenPoint(): Electron.Point | null {
     try {
       return platform().cursor.screenPoint()
