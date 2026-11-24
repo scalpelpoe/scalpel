@@ -424,7 +424,7 @@ export default function App(): JSX.Element {
       }),
       window.api.onGameBounds((bounds) => setGameBounds(bounds)),
       window.api.onSkipAnimation(() => {
-        if (animRef.current) animRef.current.style.animation = 'none'
+        if (panelRef.current) panelRef.current.style.animation = 'none'
       }),
       window.api.onSettingUpdated((key, value) => {
         setSettings((prev) => (prev ? { ...prev, [key]: value } : prev))
@@ -503,7 +503,6 @@ export default function App(): JSX.Element {
   wasHiddenRef.current = isHidden
 
   const panelRef = useRef<HTMLDivElement>(null)
-  const animRef = useRef<HTMLDivElement>(null)
 
   // Report the panel's actual visual bounding rect to the main process for click-through
   // hit testing. Using getBoundingClientRect on the wrapper (which has the CSS transform)
@@ -559,8 +558,8 @@ export default function App(): JSX.Element {
 
   // Suppress slide-in animation when cursorSide changes due to a snap
   useLayoutEffect(() => {
-    if (skipAnimRef.current && animRef.current) {
-      animRef.current.style.animation = 'none'
+    if (skipAnimRef.current && panelRef.current) {
+      panelRef.current.style.animation = 'none'
       skipAnimRef.current = false
     }
   }, [cursorSide, dragOffset])
@@ -578,12 +577,13 @@ export default function App(): JSX.Element {
     const scaleStr = settings?.overlayScale && settings.overlayScale !== 1 ? ` scale(${settings.overlayScale})` : ''
     const setTranslate = (el: HTMLElement | null, x: number, y: number): void => {
       if (!el) return
-      el.style.transform = `translate(${x}px, ${y}px)${scaleStr}`
+      // Zoom already sizes the main panel. The sister panels still need their scale transform during drag and snap.
+      el.style.transform = `translate(${x}px, ${y}px)${el === wrapperRef.current ? '' : scaleStr}`
     }
     const resetToIdentity = (el: HTMLElement | null): void => {
       if (!el) return
       el.style.transition = ''
-      el.style.transform = `translate(0px, 0px)${scaleStr}`
+      setTranslate(el, 0, 0)
     }
     let dragStarted = false
     const onMove = (ev: MouseEvent): void => {
@@ -859,41 +859,38 @@ export default function App(): JSX.Element {
           style={{
             top: PANEL_TOP,
             left: basePanelLeft ?? 0,
-            width: PANEL_WIDTH,
+            // The right mount uses the unscaled width. Offset the width difference to keep the right edge anchored.
+            marginLeft: cursorSide === 'left' ? 0 : PANEL_WIDTH * (1 - overlayScale),
+            width: PANEL_WIDTH * overlayScale,
             display: isHidden ? 'none' : 'block',
-            transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)${settings?.overlayScale && settings.overlayScale !== 1 ? ` scale(${settings.overlayScale})` : ''}`,
-            transformOrigin: cursorSide === 'left' ? 'top left' : 'top right',
+            transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)`,
           }}
         >
-          <div
-            ref={animRef}
-            key={isHidden ? 'hidden' : `show-${showCountRef.current}`}
-            style={{
-              animation:
-                isHidden || showAnimDone.current || skipAnimRef.current
-                  ? 'none'
-                  : closing
-                    ? isMounted
-                      ? cursorSide === 'left'
-                        ? 'panel-slide-out-left 0.15s ease-in both'
-                        : 'panel-slide-out 0.15s ease-in both'
-                      : 'panel-fade-out 0.15s ease-in both'
-                    : isMounted
-                      ? cursorSide === 'left'
-                        ? 'panel-slide-in-left 0.2s ease-out both'
-                        : 'panel-slide-in 0.2s ease-out both'
-                      : 'panel-fade-in 0.15s ease-out both',
-              width: PANEL_WIDTH,
-            }}
-            onMouseEnter={() => {
-              showAnimDone.current = true
-              if (animRef.current) animRef.current.style.animation = 'none'
-            }}
-          >
+          {/* Size content at its final scale before Chromium animates the panel (#337). */}
+          <div style={{ zoom: overlayScale, width: PANEL_WIDTH }}>
             <div
               ref={panelRef}
+              key={isHidden ? 'hidden' : `show-${showCountRef.current}`}
               className="bg-bg flex flex-col overflow-hidden border-t border-b border-border"
+              onMouseEnter={() => {
+                showAnimDone.current = true
+                if (panelRef.current) panelRef.current.style.animation = 'none'
+              }}
               style={{
+                animation:
+                  isHidden || showAnimDone.current || skipAnimRef.current
+                    ? 'none'
+                    : closing
+                      ? isMounted
+                        ? cursorSide === 'left'
+                          ? 'panel-slide-out-left 0.15s ease-in both'
+                          : 'panel-slide-out 0.15s ease-in both'
+                        : 'panel-fade-out 0.15s ease-in both'
+                      : isMounted
+                        ? cursorSide === 'left'
+                          ? 'panel-slide-in-left 0.2s ease-out'
+                          : 'panel-slide-in 0.2s ease-out'
+                        : 'panel-fade-in 0.15s ease-out',
                 width: PANEL_WIDTH,
                 maxHeight: gameBounds
                   ? (gameBounds.gameHeight - PANEL_TOP * 2 - 23) / (settings?.overlayScale ?? 1)
