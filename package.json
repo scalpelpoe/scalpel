@@ -21,7 +21,7 @@
     "validate:premium-mods": "node scripts/validate-premium-mods.mjs",
     "build-tier-data": "node scripts/build-tier-data.js",
     "build-defence-bounds": "node scripts/build-defence-bounds.js",
-    "sync-regex": "node scripts/sync-regex-data.js",
+    "sync-regex": "node scripts/sync-poe-re-data.js",
     "sync-prefabs": "node scripts/sync-prefabs.js",
     "sync-league": "node scripts/sync-league-data.js && node scripts/sync-div-map-drops.js",
     "sync-div-map-drops": "node scripts/sync-div-map-drops.js",

@@ -20,4 +20,5 @@ export interface Regex<T> {
 export interface GemsTokenOption {
   c: string,
   support: boolean,
+  regexNoTransfiguredMatch?: string,
 }

@@ -1,8 +1,82 @@
 {
-  "commit": "b4d15bda50008874a66ae47f919e73828ac2a35f",
-  "timestamp": "2026-08-19T13:16:58.666Z",
-  "repo": "veiset/poe-vendor-string",
-  "mapModsCommit": "e96b4955cfde0175fd2d3dab3f664b0aff70aed9",
-  "mapModsRepo": "veiset/poe.re",
-  "mapModsTimestamp": "2026-11-21T01:56:09.609Z"
+  "source": "https://data.poe.re",
+  "poe1": {
+    "patch": "3.30.0.4.3",
+    "commit": "17bc109"
+  },
+  "poe2": {
+    "patch": "0.5.5.10",
+    "commit": "cd8569b"
+  },
+  "files": {
+    "poe1/mapmods/Generated.Map.CHINESE.json": {
+      "patch": "3.30.0.4.3",
+      "sha256": "db070cd0526f0c47f6eecf75f8ae761c87cc664810f88a70ef60c12537e3d40e"
+    },
+    "poe1/mapmods/Generated.Map.ENGLISH.json": {
+      "patch": "3.30.0.4.3",
+      "sha256": "aa779144e5d1d6d09dae09307f8242b9ecd94aa954d6ac2c76f295eb39e1a672"
+    },
+    "poe1/mapmods/Generated.Map.FRENCH.json": {
+      "patch": "3.30.0.4.3",
+      "sha256": "3b1b54b00333e424f8ce0728c69775916cc9ee17d70460a949b54463244b59d6"
+    },
+    "poe1/mapmods/Generated.Map.GERMAN.json": {
+      "patch": "3.30.0.4.3",
+      "sha256": "64857522b925a6f7365e89817dec8b2a071af9069659c7a21d241578382982e6"
+    },
+    "poe1/mapmods/Generated.Map.JAPANESE.json": {
+      "patch": "3.30.0.4.3",
+      "sha256": "c551cdd6421d9ec2707699f132f4a6920537268f8e4aef6d203b7a199b6a113b"
+    },
+    "poe1/mapmods/Generated.Map.KOREAN.json": {
+      "patch": "3.30.0.4.3",
+      "sha256": "640ee23e4271e8cc5f241abd8689a05854dc7192060d2643bb9aecb4b245aa5b"
+    },
+    "poe1/mapmods/Generated.Map.PORTUGUESE.json": {
+      "patch": "3.30.0.4.3",
+      "sha256": "9dfefce3215a925ecc32f57ccb2ba20865f50a0b4c03d08f0e5503d7b7eef7aa"
+    },
+    "poe1/mapmods/Generated.Map.RUSSIAN.json": {
+      "patch": "3.30.0.4.3",
+      "sha256": "e3d8902cfe0fda9b5de3963fd21af8b5be96b7ae1e2d03d92a45318549ad1a9a"
+    },
+    "poe1/mapmods/Generated.Map.SPANISH.json": {
+      "patch": "3.30.0.4.3",
+      "sha256": "9b73c83747ebd075a4453efd9d9c1e4fcc7c7c12b3b967a052c9593a77c77f54"
+    },
+    "poe1/mapmods/Generated.Map.THAI.json": {
+      "patch": "3.30.0.4.3",
+      "sha256": "ee40845a74e74eec46edf1b6d6de3d6151034f5f2c6ab2854ea8efe424044c5f"
+    },
+    "poe1/gems/Generated.Gems.ENGLISH.json": {
+      "patch": "3.30.0.4.3",
+      "sha256": "fcba6d3159292adc724473e25644d489859de8ea992a2962ac2e8bd9c16ddb50"
+    },
+    "poe1/beast/Generated.BeastRegex.ENGLISH.json": {
+      "patch": "3.30.0.4.3",
+      "sha256": "b3bc9cb9def028c991975d545e1e8fb359605a035ae923b5c213523f9ca7a79c"
+    },
+    "poe1/item/Generated.Basetypes.Item.ENGLISH.json": {
+      "patch": "3.30.0.4.3",
+      "sha256": "177220184e6dcb853a6170a20a80a32701ed275b961d35efda3535134dd62bd8"
+    },
+    "poe1/item/Generated.Item.ENGLISH.json": {
+      "patch": "3.30.0.4.3",
+      "sha256": "26ca66e417c1ef56951a833e91722e81ed6158fec13ed7a2fcd4a141440aa2fc"
+    },
+    "poe2/waystone/Generated.Waystone.ENGLISH.min.json": {
+      "patch": "0.5.5.10",
+      "sha256": "2248f844c1b2acf8b739c4cb058a11696a804b0209bb3c35e913bc32455c49d8"
+    },
+    "poe2/tablet/Generated.Tablet.ENGLISH.min.json": {
+      "patch": "0.5.5.10",
+      "sha256": "bf2d7e8fd5155593a6b9d13412161f9931be009e7e4de0a2d482802a48c0635e"
+    },
+    "poe2/relic/Generated.Relic.ENGLISH.json": {
+      "patch": "0.5.5.10",
+      "sha256": "65c6a6f3fdfc11b3a9eb30a8e28181e7d7a67fd1f349fc775f5b0ad3b18337c0"
+    }
+  },
+  "timestamp": "2026-11-24T09:29:21.585Z"
 }

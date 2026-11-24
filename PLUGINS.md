@@ -562,7 +562,7 @@ The SDK re-exports utilities Scalpel uses internally so you don't have to reimpl
 
 **Map mods**
 
-- `MAP_MODS` - Scalpel's map-mod danger dataset (`id`, `regex`, `text`, `danger`, `nightmare`); `DANGER_COLORS` and `DANGER_LABELS` map a `Danger` to a hex color and a display label. The export names are locked by the SDK contract, but the dataset's *content* is resynced from an upstream vendor feed by `scripts/sync-regex-data.js` every league - don't hard-code specific `MapMod.id` values across league boundaries. This is PoE1 map mod data only; PoE2 waystones and tablets use separate datasets that aren't exposed to plugins yet. `MAP_MODS` still returns its full PoE1 list regardless of the running game, so a `poeVersions: [2]` plugin that reads it gets real-looking data that will never match a PoE2 item - not an empty array or an error.
+- `MAP_MODS` - Scalpel's map-mod danger dataset (`id`, `regex`, `text`, `danger`, `nightmare`); `DANGER_COLORS` and `DANGER_LABELS` map a `Danger` to a hex color and a display label. The export names are locked by the SDK contract, but the dataset's *content* is resynced from poe.re's published dataset (data.poe.re) by `scripts/sync-poe-re-data.js` every league - don't hard-code specific `MapMod.id` values across league boundaries. This is PoE1 map mod data only; PoE2 waystones and tablets use separate datasets that aren't exposed to plugins yet. `MAP_MODS` still returns its full PoE1 list regardless of the running game, so a `poeVersions: [2]` plugin that reads it gets real-looking data that will never match a PoE2 item - not an empty array or an error.
 
 **Trend**
 

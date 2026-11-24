@@ -446,12 +446,12 @@ describe('waystone-engine: bounded value(min-max) matching', () => {
 
   it('over100 widens the scalar fallback for an out-of-range value', () => {
     const fireMod = WAYSTONE_MODS.find((m) => m.id === FIRE)!
-    // 24 exceeds FIRE's range max (20), so generateBoundedValueRegex falls back to
+    // 30 exceeds FIRE's range max (24), so generateBoundedValueRegex falls back to
     // the scalar generateNumberRegex, where over100 still applies (documented
     // deviation from upstream in waystone-number-regex.ts). Only 10-99 (2-digit)
     // scalar values get the over100 widening; 3-digit inputs use a different branch.
-    const withOver100 = generateBoundedValueRegex('24', String(fireMod.ranges[0][1]), false, true)
-    const withoutOver100 = generateBoundedValueRegex('24', String(fireMod.ranges[0][1]), false, false)
+    const withOver100 = generateBoundedValueRegex('30', String(fireMod.ranges[0][1]), false, true)
+    const withoutOver100 = generateBoundedValueRegex('30', String(fireMod.ranges[0][1]), false, false)
     expect(withOver100).not.toBe(withoutOver100)
   })
 })
