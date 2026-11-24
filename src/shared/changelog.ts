@@ -1,6 +1,6 @@
 export const CHANGELOG: { version: string; notes: string[] }[] = [
   {
-    version: '1.0.7-rc2',
+    version: '1.0.7-rc3',
     notes: [
       'Added a price tracker for uniques over a div.',
       "Added a font size a11y setting for jacksenic's bat eyes.",
@@ -13,6 +13,7 @@ export const CHANGELOG: { version: string; notes: string[] }[] = [
       'Fixed the Div Card Explorer showing pre-3.30 atlas and map drop pools.',
       'Fixed Timeless Jewel price checks picking the wrong leader.',
       "Fixed unique item searches showing the cheaper variant's price instead of the one people trade (like 2-flask Mageblood).",
+      'Fixed blurry overlay text at some Overlay Scale settings until you hovered the panel.',
     ],
   },
   {
