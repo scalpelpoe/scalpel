@@ -36,3 +36,7 @@ export type AdaptiveMode = 'eager' | 'conservative' | 'off'
 /** Price-check "Affixes prechecked" trade default: 'default' = the producer's smart
  *  best-effort state, 'base' = every affix unticked, 'all' = every affix ticked. */
 export type AffixesPrechecked = 'default' | 'base' | 'all'
+
+/** PoE1 Timeless Jewel chip a price check opens on: 'seed' = the seed under any of
+ *  the jewel's leaders, 'leader' = the jewel's own leader at any seed, 'both' = seed + leader. */
+export type TimelessSearch = 'seed' | 'leader' | 'both'

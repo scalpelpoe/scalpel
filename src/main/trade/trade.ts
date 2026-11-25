@@ -277,7 +277,7 @@ export interface StatFilter {
   // displayValue="Defeat waves of enemies"). Flows over IPC to the renderer's
   // value box; the trade query builder reads `option`, not this.
   displayValue?: string
-  timelessLeaders?: string[] // all leader stat IDs for timeless count group
+  timelessLeaders?: string[] // leader stat IDs a synthetic timeless chip searches (whole family, or one leader)
   foulborn?: boolean
   /** True when a unique mod rolled at or above its best possible value (perfect, or
    *  over-rolled by Vaal/corruption above the listed max / single value). Drives the
@@ -1299,9 +1299,10 @@ export function buildTradeQuery(
     }
   }
 
-  // Timeless jewel: "any leader" uses count group, specific leader uses and group
+  // Timeless jewel: "Any Leader" searches the seed across the leader family (count group);
+  // the other chips search one leader, at the seed or at any seed (and group).
   const timelessAny = timelessFilters.find((f) => f.id === 'timeless-any')
-  const timelessSpecific = timelessFilters.find((f) => f.id !== 'timeless-any')
+  const timelessOne = timelessFilters.find((f) => f.id !== 'timeless-any')
   if (timelessAny?.timelessLeaders) {
     statGroups.push({
       type: 'count',
@@ -1311,10 +1312,10 @@ export function buildTradeQuery(
       })),
       value: { min: 1 },
     })
-  } else if (timelessSpecific) {
+  } else if (timelessOne) {
     statGroups.push({
       type: 'and',
-      filters: [{ id: timelessSpecific.id, value: { min: timelessSpecific.min, max: timelessSpecific.max } }],
+      filters: (timelessOne.timelessLeaders ?? [timelessOne.id]).map((id) => ({ id, value: minMaxValue(timelessOne) })),
     })
   }
 

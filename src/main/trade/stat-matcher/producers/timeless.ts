@@ -1,4 +1,4 @@
-import type { AdvancedMod } from '@shared/types'
+import type { AdvancedMod, TimelessSearch } from '@shared/types'
 import type { StatFilter } from '../../trade'
 
 type TimelessItemInfo = {
@@ -41,7 +41,11 @@ function parseSeedLine(line: string): { seed: number; leader: string } | null {
 
 const statId = (leader: string): string => `explicit.pseudo_timeless_jewel_${leader.toLowerCase()}`
 
-// Timeless jewel handling: two toggleable chips - "Any Leader" and specific leader
+export const TIMELESS_ANY_LEADER_ID = 'timeless-any'
+export const TIMELESS_ANY_SEED_ID = 'timeless-any-seed'
+
+// Timeless jewel handling: three mutually exclusive chips - seed under any leader,
+// the jewel's leader at any seed, and seed + leader
 export function buildTimelessFilters(
   itemInfo: TimelessItemInfo | undefined,
   advancedMods: AdvancedMod[] | undefined,
@@ -67,7 +71,7 @@ export function buildTimelessFilters(
   return [
     // "Any Leader" chip (default on) - uses count group with all leaders
     {
-      id: 'timeless-any',
+      id: TIMELESS_ANY_LEADER_ID,
       text: `${seed} Any Leader`,
       value: seed,
       min: seed,
@@ -76,7 +80,18 @@ export function buildTimelessFilters(
       type: 'timeless',
       timelessLeaders: ordered.map(statId),
     },
-    // Specific leader chip (default off) - searches only this leader
+    // "Any Seed" chip (default off) - this leader, seed left open
+    {
+      id: TIMELESS_ANY_SEED_ID,
+      text: `Any Seed ${canonical}`,
+      value: null,
+      min: null,
+      max: null,
+      enabled: false,
+      type: 'timeless',
+      timelessLeaders: [statId(canonical)],
+    },
+    // Seed + leader chip (default off) - searches only this leader at this seed
     {
       id: statId(canonical),
       text: `${seed} ${canonical}`,
@@ -87,4 +102,18 @@ export function buildTimelessFilters(
       type: 'timeless',
     },
   ]
+}
+
+/**
+ * Open a Timeless Jewel on the chip the tradeTimelessSearch setting picks. The chips
+ * stay mutually exclusive; filters without that chip come back unchanged.
+ */
+export function applyTimelessSearch(filters: StatFilter[], mode: TimelessSearch): StatFilter[] {
+  const picked = (f: StatFilter): boolean => {
+    if (mode === 'seed') return f.id === TIMELESS_ANY_LEADER_ID
+    if (mode === 'leader') return f.id === TIMELESS_ANY_SEED_ID
+    return f.id !== TIMELESS_ANY_LEADER_ID && f.id !== TIMELESS_ANY_SEED_ID
+  }
+  if (!filters.some((f) => f.type === 'timeless' && picked(f))) return filters
+  return filters.map((f) => (f.type === 'timeless' ? { ...f, enabled: picked(f) } : f))
 }

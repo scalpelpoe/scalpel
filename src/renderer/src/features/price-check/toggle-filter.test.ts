@@ -74,12 +74,13 @@ describe('toggleFilterAt', () => {
   it('keeps timeless chips mutually exclusive', () => {
     const filters = [
       row({ id: 'timeless-any', type: 'timeless', enabled: true }),
-      row({ id: 'timeless-karui', type: 'timeless', enabled: false }),
+      row({ id: 'timeless-any-seed', type: 'timeless', enabled: false }),
+      row({ id: 'explicit.pseudo_timeless_jewel_kaom', type: 'timeless', enabled: false }),
     ]
 
-    const out = toggleFilterAt(filters, 1)
-
-    expect(out.map((f) => f.enabled)).toEqual([false, true])
+    const anySeed = toggleFilterAt(filters, 1)
+    expect(anySeed.map((f) => f.enabled)).toEqual([false, true, false])
+    expect(toggleFilterAt(anySeed, 2).map((f) => f.enabled)).toEqual([false, false, true])
   })
 
   it('flips the Fractured chip to yes when a fractured row is enabled', () => {

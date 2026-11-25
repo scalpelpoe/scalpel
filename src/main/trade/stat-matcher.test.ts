@@ -16,6 +16,7 @@ import { _setIndexedEndgameKeysForTests } from './endgame-filter-support'
 import { _setStatEntriesForTests, ITEM_CLASS_TO_CATEGORY, matchItemMods, matchModToStat } from './stat-matcher'
 import { resolveTierDefault } from './stat-matcher/producers/explicits'
 import { isPremiumMod, _resetPremiumMatchCacheForTests } from './stat-matcher/producers/premium'
+import { applyTimelessSearch } from './stat-matcher/producers/timeless'
 import bundledPremiumMods from '@shared/data/items/premium-mods.json'
 import type { PremiumModsData } from '@shared/data/items/premium-mods-types'
 import tabletMods from '@shared/data/trade/tablet-mods.json'
@@ -1796,7 +1797,7 @@ describe('matchItemMods', () => {
         makeItemInfo({ baseType: 'Timeless Jewel', itemClass: 'Jewels', sockets: '' }),
       )
       const timelessChips = filters.filter((f) => f.type === 'timeless')
-      expect(timelessChips).toHaveLength(2)
+      expect(timelessChips).toHaveLength(3)
 
       const anyLeader = timelessChips.find((f) => f.id === 'timeless-any')!
       expect(anyLeader.text).toBe('2724 Any Leader')
@@ -1808,6 +1809,12 @@ describe('matchItemMods', () => {
         'explicit.pseudo_timeless_jewel_vorana',
         'explicit.pseudo_timeless_jewel_uhtred',
       ])
+
+      const anySeed = timelessChips.find((f) => f.id === 'timeless-any-seed')!
+      expect(anySeed.text).toBe('Any Seed Medved')
+      expect([anySeed.min, anySeed.max]).toEqual([null, null])
+      expect(anySeed.enabled).toBe(false)
+      expect(anySeed.timelessLeaders).toEqual(['explicit.pseudo_timeless_jewel_medved'])
 
       const specificLeader = timelessChips.find((f) => f.id === 'explicit.pseudo_timeless_jewel_medved')!
       expect(specificLeader.text).toBe('2724 Medved')
@@ -1822,7 +1829,7 @@ describe('matchItemMods', () => {
         makeItemInfo({ baseType: 'Timeless Jewel', itemClass: 'Jewels', sockets: '' }),
       )
       const timelessChips = filters.filter((f) => f.type === 'timeless')
-      expect(timelessChips).toHaveLength(2)
+      expect(timelessChips).toHaveLength(3)
 
       const anyLeader = timelessChips.find((f) => f.id === 'timeless-any')!
       expect(anyLeader.text).toBe('7421 Any Leader')
@@ -1859,7 +1866,7 @@ describe('matchItemMods', () => {
         advancedMods,
       )
       const timelessChips = filters.filter((f) => f.type === 'timeless')
-      expect(timelessChips).toHaveLength(2)
+      expect(timelessChips).toHaveLength(3)
 
       const anyLeader = timelessChips.find((f) => f.id === 'timeless-any')!
       expect(anyLeader.text).toBe('5972 Any Leader')
@@ -1933,6 +1940,42 @@ describe('matchItemMods', () => {
       const hasHistoric = explicitChips.some((f) => f.text === 'Historic')
       expect(hasConquered).toBe(false)
       expect(hasHistoric).toBe(false)
+    })
+
+    describe('applyTimelessSearch (tradeTimelessSearch setting)', () => {
+      const timelessChips = (explicit: string) =>
+        matchItemMods(
+          [explicit],
+          [],
+          undefined,
+          makeItemInfo({ baseType: 'Timeless Jewel', itemClass: 'Jewels', sockets: '' }),
+        )
+      const enabledTimeless = (filters: ReturnType<typeof matchItemMods>) =>
+        filters.filter((f) => f.type === 'timeless' && f.enabled).map((f) => f.id)
+      const vanity = "Bathed 7421 tips of fingers and toes in the Precursor's blood by Doryani"
+
+      it.each([
+        ['seed', 'timeless-any'],
+        ['leader', 'timeless-any-seed'],
+        ['both', 'explicit.pseudo_timeless_jewel_doryani'],
+      ] as const)('%s enables only %s', (mode, id) => {
+        expect(enabledTimeless(applyTimelessSearch(timelessChips(vanity), mode))).toEqual([id])
+      })
+
+      it('opens on Any Leader without the setting', () => {
+        expect(enabledTimeless(timelessChips(vanity))).toEqual(['timeless-any'])
+      })
+
+      it('handles single-leader families', () => {
+        const zorath = timelessChips('Binding 1234 souls to phylacteries to sustain Zorath')
+        expect(enabledTimeless(applyTimelessSearch(zorath, 'both'))).toEqual(['explicit.pseudo_timeless_jewel_zorath'])
+        expect(enabledTimeless(applyTimelessSearch(zorath, 'leader'))).toEqual(['timeless-any-seed'])
+      })
+
+      it('returns non-timeless filters untouched', () => {
+        const filters = matchItemMods(['+20 to maximum Life'], [], undefined, makeItemInfo({ itemClass: 'Rings' }))
+        expect(applyTimelessSearch(filters, 'both')).toBe(filters)
+      })
     })
   })
 
