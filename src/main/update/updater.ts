@@ -13,12 +13,12 @@ import {
 import { dirname, join } from 'node:path'
 import { app, type BrowserWindow, ipcMain } from 'electron'
 import { ELECTRON_RELEASES, GITHUB_RELEASES_API } from '@shared/endpoints'
+import { gracefulRestart, gracefulShutdown } from '../restart'
 import type { InstallManifest } from '@shared/types'
 import { compareVersions, findBrickedMatch } from '@shared/version-match'
 import { selectListRelease } from './select-release'
 import { recordMainBreadcrumb, registerDiagnosticProvider } from '../diagnostics'
 import { stopHotkeyListener } from '../hotkeys'
-import { relaunchApp } from '../relaunch'
 
 const CHECK_DELAY = 5000
 const CHECK_INTERVAL = 60_000
@@ -488,7 +488,7 @@ function unpackedNeedsReplacing(destDir: string, pendingManifestPath: string): b
   }
 }
 
-ipcMain.handle('install-update', () => {
+ipcMain.handle('install-update', async () => {
   if (IS_DEV || process.platform === 'linux') return
   const stagingDir = getStagingDir()
   const asarNew = join(stagingDir, 'app.asar.new')
@@ -512,8 +512,7 @@ ipcMain.handle('install-update', () => {
     // during env cleanup with events in flight (tsfn-proxy abort risk).
     recordMainBreadcrumb('updater: relaunch (no pending update)')
     stopHotkeyListener()
-    relaunchApp()
-    app.exit(0)
+    await gracefulRestart({ exitImmediately: true })
     return
   }
 
@@ -611,6 +610,7 @@ ipcMain.handle('install-update', () => {
 
   recordMainBreadcrumb('updater: exit to apply update')
   stopHotkeyListener()
+  await gracefulShutdown()
   app.exit(0)
 })
 

@@ -64,6 +64,31 @@ describe('PluginsStep failure handling', () => {
 })
 
 describe('PluginsStep listing', () => {
+  it('hides the native-plugin trust notice when every entry is JS-only', async () => {
+    installApi({ registry: { ok: true, snapshot: { schemaVersion: 1, plugins: [entry()] } } })
+    const { queryByRole, findByText } = renderStep()
+
+    await findByText('Demo')
+    expect(queryByRole('note')).toBeNull()
+  })
+
+  it('discloses the temporary unsandboxed native-plugin trust model before installation when an entry pins a native executable', async () => {
+    installApi({
+      registry: {
+        ok: true,
+        snapshot: {
+          schemaVersion: 1,
+          plugins: [entry({ assets: { 'backend.exe': '0'.repeat(64) } })],
+        },
+      },
+    })
+    const { findByRole } = renderStep()
+
+    const warning = await findByRole('note')
+    expect(warning.textContent).toContain('without a sandbox')
+    expect(warning.textContent).toContain('temporary trust model')
+  })
+
   it('splits featured entries under Featured Plugins and the rest under More plugins', async () => {
     installApi({
       registry: {
@@ -99,13 +124,14 @@ describe('PluginsStep listing', () => {
       registry: { ok: true, snapshot: { schemaVersion: 1, plugins: [entry()] } },
       install: pluginInstallFromRegistry,
     })
-    const { findByText } = renderStep()
+    const { findByText, queryByText } = renderStep()
 
     const installBtn = await findByText('Install')
     fireEvent.click(installBtn)
 
     expect(pluginInstallFromRegistry).toHaveBeenCalledWith(entry())
     await findByText('Installed')
+    expect(queryByText(/Restart Scalpel after setup/)).toBeNull()
   })
 
   it('shows an inline error and leaves the row installable when install fails', async () => {

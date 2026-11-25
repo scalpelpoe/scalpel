@@ -11,7 +11,13 @@ export type {
   MediaApi,
   MediaSession,
   PluginActivate,
+  PluginApiClient,
+  PluginApiHandler,
+  PluginCommunicationApi,
+  PluginDependency,
   PluginManifest,
+  PluginNativeBackendApi,
+  PluginNativeCallError,
   PluginStorage,
   PluginTeardown,
   PriceEntry,
@@ -21,3 +27,10 @@ export type {
   RegisterTabOptions,
   ScalpelPluginContext,
 } from './types'
+export {
+  createNativeServiceClient,
+  createPluginServiceClient,
+  exposePluginService,
+  getPluginServiceClient,
+} from './protobuf'
+export type { PluginServiceClient, PluginServiceImplementation } from './protobuf'

@@ -17,7 +17,9 @@
     "paths": {
       "@shared/*": ["../shared/*"],
       "@main/*": ["../main/*"],
-      "@renderer/*": ["../renderer/src/*"]
+      "@renderer/*": ["../renderer/src/*"],
+      "@scalpel/stream-contract": ["../../packages/stream-contract/src/index.ts"],
+      "@scalpel/stream-contract/*": ["../../packages/stream-contract/src/*"]
     }
   },
   "include": ["src/**/*", "../../shared/**/*", "../../renderer/src/**/*"],

@@ -1,9 +1,7 @@
 // Build the publishable artifact for @scalpelpoe/plugin-sdk.
 //
-// The SDK is a types-only package. At runtime inside Scalpel, the renderer's
-// importmap re-routes `@scalpelpoe/plugin-sdk` to scalpel-internal://sdk.js
-// (served by Scalpel's main process from out/scalpel-internal/sdk.js). The
-// package on npm therefore needs only:
+// The SDK's renderer entry is host-provided. Inside Scalpel, the renderer's
+// importmap re-routes `@scalpelpoe/plugin-sdk` to scalpel-internal://sdk.js.
 //
 //   - dist/index.d.ts  - bundled type declarations (every type a plugin
 //                        author can use, inlined from the SDK's transitive
@@ -62,7 +60,7 @@ const stub = `// Auto-generated runtime stub for @scalpelpoe/plugin-sdk.
 // is a Proxy that throws with a helpful message on access / call / new.
 
 const MESSAGE =
-  "@scalpelpoe/plugin-sdk: this package is types-only. The runtime is " +
+  "@scalpelpoe/plugin-sdk: the root renderer runtime is host-provided. It is " +
   "served by Scalpel via importmap (scalpel-internal://sdk.js). " +
   "Externalize '@scalpelpoe/plugin-sdk' in your plugin bundler config."
 

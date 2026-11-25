@@ -10,6 +10,7 @@ vi.mock('electron', () => ({
 const mockFs = {
   files: new Map<string, string>(),
   writes: [] as Array<{ path: string; data: string }>,
+  rmCalls: [] as string[],
 }
 
 vi.mock('fs', () => ({
@@ -24,11 +25,33 @@ vi.mock('fs', () => ({
     mockFs.writes.push({ path: p, data })
   },
   mkdirSync: () => {},
+  renameSync: (from: string, to: string) => {
+    const value = mockFs.files.get(from)
+    if (value == null) throw new Error('source missing')
+    mockFs.files.set(to, value)
+    mockFs.files.delete(from)
+  },
+  copyFileSync: (from: string, to: string) => {
+    const value = mockFs.files.get(from)
+    if (value == null) throw new Error('source missing')
+    mockFs.files.set(to, value)
+  },
+  rmSync: (p: string, options?: { recursive?: boolean }) => {
+    mockFs.rmCalls.push(p)
+    if (options?.recursive) {
+      for (const key of [...mockFs.files.keys()]) {
+        if (key === p || key.startsWith(`${p}\\`) || key.startsWith(`${p}/`)) mockFs.files.delete(key)
+      }
+    } else {
+      mockFs.files.delete(p)
+    }
+  },
 }))
 
 beforeEach(() => {
   mockFs.files.clear()
   mockFs.writes.length = 0
+  mockFs.rmCalls.length = 0
   vi.useFakeTimers()
   vi.resetModules()
 })
@@ -37,7 +60,8 @@ afterEach(() => {
   vi.useRealTimers()
 })
 
-const storagePath = join(TEST_USER_DATA, 'plugins', 'p1', 'storage.json')
+const storagePath = join(TEST_USER_DATA, 'plugin-storage', 'p1', 'storage.json')
+const legacyStoragePath = join(TEST_USER_DATA, 'plugins', 'p1', 'storage.json')
 
 describe('plugin storage', () => {
   it('returns null when key is missing and file does not exist', async () => {
@@ -101,5 +125,78 @@ describe('plugin storage', () => {
     setValue('p1', 'k', 1)
     flushAll()
     expect(mockFs.writes[0].path).toBe(storagePath)
+  })
+
+  it('removeStorageNow drops the cache, the file and any pending tombstone', async () => {
+    mockFs.files.set(storagePath, JSON.stringify({ key: 'value' }))
+    const { getValue, removeStorageNow, scheduleStorageRemoval } = await import('./storage')
+    expect(getValue('p1', 'key')).toBe('value')
+    scheduleStorageRemoval('p1')
+
+    removeStorageNow('p1')
+
+    expect(mockFs.files.has(storagePath)).toBe(false)
+    expect(getValue('p1', 'key')).toBeNull()
+    const pending = mockFs.files.get(join(TEST_USER_DATA, 'plugin-storage', 'pending-deletions.json'))
+    expect(pending).toBe('[]')
+  })
+
+  it('does not allow a late renderer write to recreate immediately removed storage', async () => {
+    mockFs.files.set(storagePath, JSON.stringify({ key: 'value' }))
+    const { flushAll, removeStorageNow, setValue } = await import('./storage')
+
+    removeStorageNow('p1')
+
+    expect(() => setValue('p1', 'late', true)).toThrow(/storage has been removed/)
+    vi.advanceTimersByTime(150)
+    flushAll()
+    expect(mockFs.files.has(storagePath)).toBe(false)
+  })
+
+  it('allows storage writes again after the plugin is reinstalled', async () => {
+    const { cancelStorageRemoval, flushAll, removeStorageNow, setValue } = await import('./storage')
+    removeStorageNow('p1')
+
+    cancelStorageRemoval('p1')
+    setValue('p1', 'fresh', true)
+    flushAll()
+
+    expect(mockFs.files.get(storagePath)).toBe(JSON.stringify({ fresh: true }))
+  })
+
+  it('finalizePendingStorageRemovals ignores tombstone entries that are not valid plugin ids', async () => {
+    const pendingPath = join(TEST_USER_DATA, 'plugin-storage', 'pending-deletions.json')
+    mockFs.files.set(pendingPath, JSON.stringify(['..', '.', '', 'valid-id', 42]))
+    const { finalizePendingStorageRemovals } = await import('./storage')
+
+    finalizePendingStorageRemovals()
+
+    expect(mockFs.rmCalls).toContain(join(TEST_USER_DATA, 'plugin-storage', 'valid-id'))
+    expect(mockFs.rmCalls).not.toContain(TEST_USER_DATA)
+    expect(mockFs.rmCalls).not.toContain(join(TEST_USER_DATA, 'plugin-storage'))
+    expect(mockFs.files.get(pendingPath)).toBe('[]')
+  })
+
+  it('migrates legacy storage out of the package directory once', async () => {
+    mockFs.files.set(legacyStoragePath, JSON.stringify({ key: 'legacy' }))
+    const { getValue, setValue, flushAll, _resetForTests } = await import('./storage')
+
+    expect(getValue('p1', 'key')).toBe('legacy')
+    expect(mockFs.files.get(storagePath)).toBe(JSON.stringify({ key: 'legacy' }))
+    expect(mockFs.files.get(legacyStoragePath)).toBe(JSON.stringify({ key: 'legacy' }))
+
+    // A later write only touches the current-location file; the legacy
+    // snapshot is never written again.
+    setValue('p1', 'key', 'updated')
+    flushAll()
+    expect(mockFs.files.get(storagePath)).toBe(JSON.stringify({ key: 'updated' }))
+    expect(mockFs.files.get(legacyStoragePath)).toBe(JSON.stringify({ key: 'legacy' }))
+
+    // Migration only happens once: once the current file exists, a later
+    // change to the legacy file is never picked up again.
+    _resetForTests()
+    mockFs.files.set(legacyStoragePath, JSON.stringify({ key: 'stale' }))
+    expect(getValue('p1', 'key')).toBe('updated')
+    expect(mockFs.files.get(legacyStoragePath)).toBe(JSON.stringify({ key: 'stale' }))
   })
 })

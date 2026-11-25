@@ -11,6 +11,7 @@
       "packages/platform/**/*.ts",
       "tests/**/*.ts",
       "playwright.electron.config.ts",
+      "!src/main/plugins/generated",
       "!src/shared/data/regex/vendor",
       "!src/shared/paraglide"
     ]
