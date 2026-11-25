@@ -21,11 +21,13 @@ import { NativeShortcuts } from './shortcuts'
 
 /** Whether the app can run as a native Wayland client. Needs wlr-layer-shell
  *  v4 to keep overlays above a fullscreen game (every current Wayland desktop
- *  except GNOME) and a virtual keyboard to type into the game (KWin has none).
- *  Starts the layer-shell host to ask the compositor. */
+ *  except GNOME), wlr-foreign-toplevel to find the game (KWin has none), and a
+ *  virtual keyboard or a writable /dev/uinput to type into the game. Starts
+ *  the layer-shell host to ask the compositor. */
 export function layerShellSupported(): boolean {
   const features = probeWaylandHost()
-  return layerShellUsable(features) && features?.virtualKeyboard === true
+  if (!features || !layerShellUsable(features) || !features.foreignToplevel) return false
+  return features.virtualKeyboard || features.uinput
 }
 
 /** Chromium only sees the Wayland clipboard while one of its windows has
@@ -44,9 +46,9 @@ function layerShellClipboard(): Clipboard {
 }
 
 /** A native Wayland client on a wlroots-style compositor: overlays are
- *  layer-shell surfaces, input comes from evdev and a virtual keyboard, and
- *  nothing goes through XWayland. Null when the layer-shell host is
- *  unavailable. */
+ *  layer-shell surfaces, input comes from evdev, keys go out through a virtual
+ *  keyboard or uinput, and nothing goes through XWayland. Null when the
+ *  layer-shell host is unavailable. */
 export function createLayerShellBackend(): Backend | null {
   if (!OverlayController.useLayerShell()) return null
   const input = createLayerShellInput(waylandNative, getLayerPointer)

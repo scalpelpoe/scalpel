@@ -122,7 +122,8 @@ type Listeners = { [K in keyof InputEvents]: InputEvents[K][] }
 
 /**
  * Global input without an X server. Events come from evdev and keys are typed
- * with a Wayland virtual keyboard.
+ * with a Wayland virtual keyboard, or a uinput keyboard where the compositor
+ * has none.
  *
  * Presses are delivered only while the game has keyboard focus, and mouse
  * input only while the pointer is not over an overlay, as an X11 hook only
@@ -172,6 +173,8 @@ export function createLayerShellInput(native: NativeInput, overlayPointer: () =>
    * virtual key does not combine with physically held modifiers. Physical
    * modifiers are pressed on the virtual keyboard too before typing, except
    * those this process released, matching an X11 or Windows global key state.
+   * Compositors that share one modifier state between keyboards (KWin with
+   * uinput) ignore the extra presses, but also keep released modifiers held.
    */
   const press = (key: number, pressed: boolean): void => {
     const code = keyToEvdev(key)

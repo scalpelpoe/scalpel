@@ -33,10 +33,11 @@ needs `grim` on PATH. Other compositors under XWayland keep the X11 tracker.
 
 `relaunchArgs` tells the app, before any window exists, whether to relaunch
 Electron on another Ozone platform. A Wayland session relaunches as a native
-Wayland client where `layerShellSupported()` finds wlr-layer-shell v4 and a
-virtual keyboard (wlroots compositors such as Hyprland, niri and Sway; not GNOME,
-which lacks layer-shell, nor KWin, which lacks the virtual keyboard), and under
-XWayland elsewhere. Passing `--ozone-platform` skips the relaunch.
+Wayland client where `layerShellSupported()` finds wlr-layer-shell v4,
+wlr-foreign-toplevel, and a virtual keyboard or a writable `/dev/uinput`
+(wlroots compositors such as Hyprland, niri and Sway; not GNOME, which lacks
+layer-shell, nor KWin, which lacks foreign-toplevel), and under XWayland
+elsewhere. Passing `--ozone-platform` skips the relaunch.
 
 ## Input
 
@@ -44,7 +45,9 @@ The XWayland, Windows and macOS backends use uiohook-napi for global key and
 mouse hooks and for key injection. `layer-shell` reads keys, buttons and the
 wheel from evdev while the game has focus (the user needs read access to
 `/dev/input`, usually the `input` group) and types with a Wayland virtual
-keyboard. Its pointer positions are the last known position, refreshed by
+keyboard, or with a uinput keyboard where the compositor has none (this needs
+write access to `/dev/uinput`, and a modifier the user holds cannot be released
+for the game). Its pointer positions are the last known position, refreshed by
 `cursor.refresh()` and by modified wheel events. Key codes are `Key` values (PC
 scancodes). A hook that only sees physical devices reports
 `seesInjectedKeys: false` and answers `physicallyHeld()`, so the app can track
