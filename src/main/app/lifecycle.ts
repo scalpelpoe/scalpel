@@ -10,6 +10,7 @@
 import { type BrowserWindow, powerMonitor } from 'electron'
 import type Store from 'electron-store'
 import type { AppSettings } from '@shared/types'
+import { onWaylandGameFocusChange } from '@scalpel/platform'
 import { refreshPrices, invalidatePriceCache } from '../trade/prices'
 import { onRateLimitUpdate } from '../trade/trade'
 import { startOnlineSync } from '../online-sync'
@@ -44,6 +45,19 @@ export function startLiveServices(deps: LiveServicesDeps): void {
   // Boot disarmed until PoE actually gains focus. Uses the idempotent focus
   // gate (not the recorder refcount) so it pairs with resumeHotkeysForFocusReturn.
   suspendHotkeysForFocusAway()
+
+  // Native Wayland: no electron-overlay-window focus events, so drive the same
+  // focus gate from the compositor's activated toplevel (zwlr foreign-toplevel).
+  onWaylandGameFocusChange((focus) => {
+    if (focus?.game) {
+      resumeHotkeysForFocusReturn()
+      restoreAllOnPoeFocus()
+      return
+    }
+    if (isAnyScalpelWindowFocused()) return
+    suspendHotkeysForFocusAway()
+    hideAllOnPoeBlur()
+  })
 
   refreshManifest().catch(() => {})
 

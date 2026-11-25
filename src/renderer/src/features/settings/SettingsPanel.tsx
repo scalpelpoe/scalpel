@@ -7,7 +7,7 @@ import type {
   ProfileSettingValue,
   RuntimeSettings,
 } from '@shared/types'
-import { GeneralTab, ViewTab, MacrosTab, FilterTab, PriceCheckTab, FaqTab, CheatSheetsTab } from './tabs'
+import { GeneralTab, ViewTab, MacrosTab, FilterTab, PriceCheckTab, FaqTab, CheatSheetsTab, PlatformTab } from './tabs'
 import { DeveloperSection } from './tabs/DeveloperSection'
 import { PluginsSection } from './tabs/PluginsSection'
 import { StreamSection } from './tabs/StreamSection'
@@ -51,6 +51,7 @@ const TAB_KEYS = [
   'plugins',
   'faq',
   'developer',
+  'platform',
 ] as const
 type TabKey = (typeof TAB_KEYS)[number]
 // Message functions (not literals) so labels re-resolve when the locale changes.
@@ -66,6 +67,7 @@ const TAB_LABELS: Record<TabKey, () => string> = {
   plugins: m.settings_tab_plugins,
   faq: m.settings_tab_faq,
   developer: m.settings_tab_developer,
+  platform: m.settings_tab_platform,
 }
 
 export function SettingsPanel({
@@ -89,10 +91,17 @@ export function SettingsPanel({
     const t = tabRequest?.tab
     if (!t || !(TAB_KEYS as readonly string[]).includes(t)) return 'general'
     if (mode === 'overlay' && t === 'profiles') return 'general'
+    if (t === 'platform' && !settings.platformSettingsAvailable) return 'general'
     return t as TabKey
   })
-  // Scalpel Stream is PoE2-only; a leftover Stream selection shows General on PoE1.
-  const tab: TabKey = selectedTab === 'stream' && currentGame !== 2 ? 'general' : selectedTab
+  // Stream is PoE2-only and the platform tab is host-specific; stale selections
+  // fall back to General instead of rendering an empty screen.
+  const tab: TabKey =
+    selectedTab === 'stream' && currentGame !== 2
+      ? 'general'
+      : selectedTab === 'platform' && !settings.platformSettingsAvailable
+        ? 'general'
+        : selectedTab
   const [localError, setLocalError] = useState<string | null>(null)
   const [localErrorTone, setLocalErrorTone] = useState<'error' | 'warn'>('error')
 
@@ -101,6 +110,7 @@ export function SettingsPanel({
   useEffect(() => {
     if (!tabRequest) return
     if (mode === 'overlay' && tabRequest.tab === 'profiles') return
+    if (tabRequest.tab === 'platform' && !settings.platformSettingsAvailable) return
     if ((TAB_KEYS as readonly string[]).includes(tabRequest.tab)) setTab(tabRequest.tab as TabKey)
   }, [mode, tabRequest?.n])
 
@@ -162,6 +172,7 @@ export function SettingsPanel({
             .filter((t) => t !== 'developer' || settings.developerMode || !isOverlay)
             .filter((t) => t !== 'profiles' || !isOverlay)
             .filter((t) => t !== 'stream' || currentGame === 2)
+            .filter((t) => t !== 'platform' || settings.platformSettingsAvailable)
             .map((t) => (
               <button
                 key={t}
@@ -220,6 +231,9 @@ export function SettingsPanel({
       )}
       {tab === 'faq' && <FaqTab />}
       {tab === 'developer' && <DeveloperSection settings={settings} update={update} onError={showError} />}
+      {tab === 'platform' && settings.platformSettingsAvailable && (
+        <PlatformTab settings={settings} update={update} onError={showError} />
+      )}
     </div>
   )
 }

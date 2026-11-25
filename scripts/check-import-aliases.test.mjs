@@ -115,6 +115,67 @@ describe('classify - out of scope', () => {
   })
 })
 
+describe('classify - platform desktop adapters', () => {
+  const desktop = 'packages/platform/src/linux/desktops/niri/geometry.ts'
+
+  it('rewrites shared imports to @platform', () => {
+    expect(classify(desktop, '../../../common/game-window-identity')).toEqual({
+      kind: 'fix',
+      replacement: '@platform/common/game-window-identity',
+    })
+    expect(classify(desktop, '../../common/game-display-mode')).toEqual({
+      kind: 'fix',
+      replacement: '@platform/linux/common/game-display-mode',
+    })
+    expect(classify(desktop, '../../../select')).toEqual({
+      kind: 'fix',
+      replacement: '@platform/select',
+    })
+  })
+
+  it('keeps imports inside the desktops tree relative', () => {
+    expect(classify('packages/platform/src/linux/desktops/index.ts', './kde-plasma/adapter')).toEqual({ kind: 'ok' })
+    expect(classify('packages/platform/src/linux/desktops/kde-plasma/adapter.ts', './tracker')).toEqual({ kind: 'ok' })
+  })
+
+  it('applies the alias rule to the registry root too', () => {
+    expect(classify('packages/platform/src/linux/desktops/index.ts', '../../select')).toEqual({
+      kind: 'fix',
+      replacement: '@platform/select',
+    })
+    expect(classify('packages/platform/src/linux/desktops/backend-policy.ts', '../../types')).toEqual({
+      kind: 'fix',
+      replacement: '@platform/types',
+    })
+  })
+
+  it('accepts existing @platform imports', () => {
+    expect(classify(desktop, '@platform/linux/common/wayland/geometry-provider')).toEqual({ kind: 'ok' })
+  })
+
+  it('forbids cross-desktop imports', () => {
+    expect(
+      classify('packages/platform/src/linux/desktops/niri/geometry.ts', '../sway/geometry').kind,
+    ).toBe('error')
+    expect(
+      classify('packages/platform/src/linux/desktops/niri/geometry.ts', '@platform/linux/desktops/sway/geometry').kind,
+    ).toBe('error')
+  })
+
+  it('forbids linux/common importing a desktop adapter', () => {
+    expect(
+      classify('packages/platform/src/linux/common/wayland/focus.ts', '../../desktops/kde-plasma/focus').kind,
+    ).toBe('error')
+    expect(
+      classify('packages/platform/src/linux/common/wayland/focus.ts', '@platform/linux/desktops/kde-plasma/focus').kind,
+    ).toBe('error')
+  })
+
+  it('leaves non-desktop platform files to the src-area rules', () => {
+    expect(classify('packages/platform/src/linux/common/desktop.ts', '../../select')).toEqual({ kind: 'ok' })
+  })
+})
+
 describe('processSource', () => {
   const file = 'src/main/handlers/prices.ts'
   const src = [

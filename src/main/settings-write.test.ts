@@ -36,6 +36,7 @@ vi.mock('./filter-state', () => ({
 
 vi.mock('./overlay', () => ({
   getOverlayWindow: vi.fn(() => null),
+  refreshOverlayGameTitles: vi.fn(),
   setCloseOnClickOutside: vi.fn(),
 }))
 
@@ -91,6 +92,15 @@ vi.mock('./trade/prices', () => ({
 
 vi.mock('./update/updater', () => ({
   setUpdateChannel: vi.fn(),
+}))
+
+vi.mock('@scalpel/platform', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@scalpel/platform')>()),
+  setGameTitleOverrides: vi.fn(),
+  setLinuxClipboardBackend: vi.fn(),
+  setLinuxDesktop: vi.fn(),
+  setLinuxGameDisplayModeOverride: vi.fn(),
+  setLinuxInputBackend: vi.fn(),
 }))
 
 describe('settings-write side effects', () => {
@@ -500,5 +510,34 @@ describe('applyProfileSettingForGame edit side effects', () => {
     expect(loadFilter).not.toHaveBeenCalled()
     expect(updateOnlineSyncDir).not.toHaveBeenCalled()
     expect(profiles.getProfile(poe2.id)?.filterPath).toBe('C:\\poe2.filter')
+  })
+})
+
+describe('applySetting platform backend routing', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('applies every platform selector to its runtime setter', async () => {
+    const platform = await import('@scalpel/platform')
+    const { applySetting } = await import('./settings-write')
+    const profiles = setupProfiles()
+    const poe1 = profiles.createDefault(1)
+    profiles.saveProfile(poe1)
+    const store = makeStore({
+      [PROFILE_VERSION_KEY]: 1,
+      [ACTIVE_PROFILE_ID_KEY]: poe1.id,
+      [LAST_PROFILE_ID_POE1_KEY]: poe1.id,
+    })
+
+    applySetting(store, 'platformInputBackend', 'ydotool', null)
+    applySetting(store, 'platformClipboardBackend', 'wl-clipboard', null)
+    applySetting(store, 'platformDesktopEnvironment', 'niri', null)
+    applySetting(store, 'platformGameDisplayMode', 'wayland', null)
+
+    expect(vi.mocked(platform.setLinuxInputBackend)).toHaveBeenCalledWith('ydotool')
+    expect(vi.mocked(platform.setLinuxClipboardBackend)).toHaveBeenCalledWith('wl-clipboard')
+    expect(vi.mocked(platform.setLinuxDesktop)).toHaveBeenCalledWith('niri')
+    expect(vi.mocked(platform.setLinuxGameDisplayModeOverride)).toHaveBeenCalledWith('wayland')
   })
 })

@@ -19,6 +19,7 @@ vi.mock('electron', () => ({
       return sender.id === 2 ? mock.secondary : window
     }
     setIgnoreMouseEvents = mock.ignore
+    getBounds = () => ({ x: 0, y: 0, width: 1000, height: 800 })
     webContents = { send: vi.fn(), id: 1 }
     on = vi.fn()
     loadFile = vi.fn()
@@ -60,13 +61,20 @@ vi.mock('@scalpel/platform', () => {
       gameBounds: () => targetBounds,
       overlayWindowOptions: () => ({}),
       adoptOverlay: vi.fn(),
+      setInputRects: vi.fn(),
       attach: vi.fn(),
     },
   }
-  return { platform: () => instance }
+  return {
+    platform: () => instance,
+    overlayBoundsAreLogical: () => false,
+    getAllGameTitles: () => ['Path of Exile', 'Path of Exile 2'],
+    getGameTitlesForVariant: (variant: number) => [variant === 2 ? 'Path of Exile 2' : 'Path of Exile'],
+  }
 })
 vi.mock('./diagnostics', () => ({
   guardNativeListener: (_: string, cb: any) => cb,
+  recordMainBreadcrumb: vi.fn(),
   registerDiagnosticProvider: vi.fn(),
 }))
 vi.mock('./client-log', () => ({ startClientLogWatcher: vi.fn() }))
@@ -85,7 +93,13 @@ vi.mock('./windowing', () => ({
 }))
 vi.mock('./whiteboard', () => ({ getWhiteboardOverlay: () => null }))
 
-import { createOverlayWindow, hideOverlay, showOverlay, setCloseOnClickOutside } from './overlay'
+import {
+  createOverlayWindow,
+  hideOverlay,
+  installOverlayInputListeners,
+  showOverlay,
+  setCloseOnClickOutside,
+} from './overlay'
 import { desktop } from './desktop'
 let window: ReturnType<typeof createOverlayWindow>
 
@@ -93,6 +107,7 @@ describe('Hyprland manual dialog focus', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     mock.allowed = true
+    installOverlayInputListeners()
     window = createOverlayWindow(2)
     setCloseOnClickOutside(false)
     showOverlay()
