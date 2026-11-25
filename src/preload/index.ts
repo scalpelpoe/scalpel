@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { IPC_CHANNELS } from '@shared/contracts/ipc'
 import type { BugReportResult, RendererDiagnosticPayload } from '@shared/diagnostics'
 import type { ExternalLinkTarget } from '@shared/external-link'
+import type { PlatformSettingResult, PlatformSettingsPayload } from '@shared/contracts/platform-settings'
 import type {
   AppSettings,
   AuthResult,
@@ -33,6 +34,9 @@ export const api = {
   getSettings: (): Promise<RuntimeSettings> => ipcRenderer.invoke('get-settings'),
   setSetting: <K extends keyof AppSettings>(key: K, value: AppSettings[K]): Promise<void> =>
     ipcRenderer.invoke('set-setting', key, value),
+  getPlatformSettings: (): Promise<PlatformSettingsPayload> => ipcRenderer.invoke(IPC_CHANNELS.SETTINGS.GET_PLATFORM),
+  setPlatformSetting: (id: string, value: string): Promise<PlatformSettingResult> =>
+    ipcRenderer.invoke(IPC_CHANNELS.SETTINGS.SET_PLATFORM, id, value),
   finishOnboarding: (): Promise<{ ok: true; restarting?: true; devRestartRequired?: true }> =>
     ipcRenderer.invoke('finish-onboarding'),
   setProfileSettingForGame: (
@@ -226,6 +230,7 @@ export const api = {
   closeOverlay: (): void => ipcRenderer.send('close-overlay'),
   getOverlayState: (): Promise<{
     poeVersion: 1 | 2
+    windowLocal: boolean
     gameBounds: { gameWidth: number; gameHeight: number; sidebarWidth: number } | null
   }> => ipcRenderer.invoke('get-overlay-state'),
   getIconCache: (): Promise<Record<string, string>> => ipcRenderer.invoke('get-icon-cache'),

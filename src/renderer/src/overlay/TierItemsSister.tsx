@@ -23,13 +23,13 @@ interface TierItemsSisterProps {
    *  unique for each base rather than a generic base price. */
   uniqueTier?: boolean
   /** Positioning + slide-animation props are passed straight to SisterShell. */
-  left: number
-  top: number
-  width: number
+  left: number | string
+  top: number | string
+  width: number | string
   dragOffset?: { x: number; y: number }
   scale?: number
   scaleOrigin?: 'top left' | 'top right'
-  maxHeight?: number
+  maxHeight?: number | string
   /** Key the slide animation off the tier so switching tiers re-animates entry. */
   animKey?: string
   /** Fires immediately before lookupBaseType so the parent can flag the resulting

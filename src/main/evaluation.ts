@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { desktop } from './desktop'
 import { screen } from 'electron'
 import { platform } from '@scalpel/platform'
@@ -8,6 +9,7 @@ import type { AppSettings, OverlayData, PoeItem } from '@shared/types'
 import { buildTierGroup } from './filter/tier-group'
 import { getCurrentZone } from './client-log'
 import { snapshotClipboard } from './clipboard-preserve'
+import { recordMainBreadcrumb, recordMainDiagnostic } from './diagnostics'
 import { getProfileBackedSetting } from './profiles/profile-settings'
 import {
   findMatchingBlocks,
@@ -187,13 +189,59 @@ export async function preloadPriceCheck(item: PoeItem, store: Store<AppSettings>
 
 let hotkeyProcessing = false
 let consecutiveClipboardFailures = 0
+let clipboardFlowSeq = 0
+
+/** One-line trace for the hotkey -> Ctrl+C -> clipboard flow. Logs sizes and a
+ *  short hash only; item text never lands in diagnostics. */
+function recordClipboardFlow(message: string): void {
+  recordMainBreadcrumb(`clipboard flow ${message}`, 'debug')
+}
+
+function clipboardSummary(text: string): string {
+  if (!text) return 'chars=0 lines=0 sha=empty'
+  const sha = createHash('sha256').update(text).digest('hex').slice(0, 8)
+  return `chars=${text.length} lines=${text.split('\n').length} sha=${sha}`
+}
+
+interface ClipboardFlow {
+  id: number
+  stage: string
+  startedAt: number
+}
+
+function readClipboardTextWithSource(): { text: string; source?: string } {
+  const clipboard = platform().clipboard as {
+    readTextWithSource?: () => { text: string; source: string }
+    readText: () => string
+  }
+  return clipboard.readTextWithSource?.() ?? { text: clipboard.readText() }
+}
 
 /** Poll the clipboard for a parseable item, giving PoE `tries` x 50ms to land it. */
-async function pollClipboardForItem(tries: number): Promise<PoeItem | null> {
+async function pollClipboardForItem(tries: number, flow?: ClipboardFlow): Promise<PoeItem | null> {
   for (let i = 0; i < tries; i++) {
-    const item = parseItemText(platform().clipboard.readText())
-    if (item) return item
+    const { text, source } = readClipboardTextWithSource()
+    const item = parseItemText(text)
+    if (item) {
+      if (flow) {
+        recordClipboardFlow(
+          `#${flow.id} ${flow.stage} ok attempt=${i + 1}/${tries} source=${source ?? 'unknown'} ${clipboardSummary(text)} +${Date.now() - flow.startedAt}ms`,
+        )
+      }
+      return item
+    }
+    if (flow && i === 0) {
+      recordClipboardFlow(
+        `#${flow.id} ${flow.stage} first-read source=${source ?? 'unknown'} ${clipboardSummary(text)} +${Date.now() - flow.startedAt}ms`,
+      )
+    }
     await new Promise((r) => setTimeout(r, 50))
+  }
+  if (flow) {
+    const { text, source } = readClipboardTextWithSource()
+    recordClipboardFlow(
+      `#${flow.id} ${flow.stage} miss attempts=${tries} source=${source ?? 'unknown'} ${clipboardSummary(text)} +${Date.now() - flow.startedAt}ms`,
+    )
   }
   return null
 }
@@ -216,7 +264,11 @@ async function captureItemFromClipboard(
   opts?: { showOverlay?: boolean },
 ): Promise<PoeItem | null> {
   const showOverlayFlag = opts?.showOverlay ?? true
+  const flow: ClipboardFlow = { id: ++clipboardFlowSeq, stage: 'capture', startedAt: Date.now() }
   const restoreClip = snapshotClipboard()
+  recordClipboardFlow(
+    `#${flow.id} start elevated=${isElevated()} showOverlay=${showOverlayFlag} targetFocus=${platform().windowTracker.targetHasFocus}`,
+  )
 
   let item: PoeItem | null = null
   // Focusing the game and injecting keys are both native calls that can throw.
@@ -227,19 +279,23 @@ async function captureItemFromClipboard(
     // Hotkeys are also valid while a gameplay overlay owns focus. Hand input
     // back to PoE before copying so that path is as immediate as game focus.
     if (!platform().windowTracker.targetHasFocus) focusGameWindow()
+    recordClipboardFlow(`#${flow.id} focused +${Date.now() - flow.startedAt}ms`)
     const withAlt = advancedCopyTracker.needsAlt()
     platform().clipboard.clear()
+    recordClipboardFlow(`#${flow.id} cleared withAlt=${withAlt} +${Date.now() - flow.startedAt}ms`)
     await sendCtrlCToPoE({ withAlt })
+    recordClipboardFlow(`#${flow.id} copy-sent withAlt=${withAlt} +${Date.now() - flow.startedAt}ms`)
 
-    item = await pollClipboardForItem(3)
+    item = await pollClipboardForItem(3, { ...flow, stage: 'primary' })
 
     // Fallback for windowed mode
     if (!item) {
+      recordClipboardFlow(`#${flow.id} primary-miss fallback=windowed +${Date.now() - flow.startedAt}ms`)
       platform().clipboard.clear()
       focusGameWindow()
       await new Promise((r) => setTimeout(r, 50))
       await sendCtrlCToPoE({ withAlt })
-      item = await pollClipboardForItem(10)
+      item = await pollClipboardForItem(10, { ...flow, stage: 'fallback' })
     }
 
     // A modded item that came back without advanced-mod headers means this client
@@ -247,9 +303,10 @@ async function captureItemFromClipboard(
     // copy before latching -- see advanced-copy.ts. Costs nothing once both games
     // honour a plain Ctrl+C (#560), since the probe never fires.
     if (item && advancedCopyTracker.shouldProbe(item)) {
+      recordClipboardFlow(`#${flow.id} advanced-probe +${Date.now() - flow.startedAt}ms`)
       platform().clipboard.clear()
       await sendCtrlCToPoE({ withAlt: true })
-      item = advancedCopyTracker.recordProbe(await pollClipboardForItem(3)) ?? item
+      item = advancedCopyTracker.recordProbe(await pollClipboardForItem(3, { ...flow, stage: 'probe' })) ?? item
     }
   } finally {
     restoreClip()
@@ -257,6 +314,9 @@ async function captureItemFromClipboard(
 
   if (!item) {
     consecutiveClipboardFailures++
+    recordClipboardFlow(
+      `#${flow.id} result=no-item failures=${consecutiveClipboardFailures} +${Date.now() - flow.startedAt}ms`,
+    )
     if (consecutiveClipboardFailures >= 3 && !isElevated()) {
       getOverlayWindow()?.webContents.send('elevation-hint')
     }
@@ -266,6 +326,7 @@ async function captureItemFromClipboard(
   }
 
   consecutiveClipboardFailures = 0
+  recordClipboardFlow(`#${flow.id} result=item rarity=${item.rarity} +${Date.now() - flow.startedAt}ms`)
   return item
 }
 
@@ -306,12 +367,20 @@ export async function runMainHotkeyFlow(
 
   const item = await captureItemFromClipboard(isElevated, { showOverlay: showOverlayFlag })
   if (!item) return null
+  recordClipboardFlow(`#after-capture dispatch=${dispatchFlag} showOverlay=${showOverlayFlag} item=${item.name}`)
 
   if (dispatchFlag) {
     evaluateAndSend(item)
+    recordClipboardFlow('#after-evaluateAndSend')
     preloadPriceCheck(item, store)
+    recordClipboardFlow('#after-preloadPriceCheck')
   }
-  if (showOverlayFlag) showOverlay()
+  if (showOverlayFlag) {
+    showOverlay()
+    recordClipboardFlow(
+      `#after-showOverlay window=${Boolean(getOverlayWindow() && !getOverlayWindow()?.isDestroyed())}`,
+    )
+  }
   return item
 }
 
@@ -329,6 +398,7 @@ export function createHotkeyHandler(store: Store<AppSettings>, isElevated: () =>
       getOverlayWindow()?.webContents.send('filter-hotkey-open')
       await runMainHotkeyFlow(store, isElevated)
     } catch (err) {
+      recordMainDiagnostic('hotkey-flow', err)
       console.error('[hotkey] Error during hotkey processing:', err)
     } finally {
       hotkeyProcessing = false
@@ -339,10 +409,15 @@ export function createHotkeyHandler(store: Store<AppSettings>, isElevated: () =>
 /** Switch the overlay into price-check view and populate it with `item`. Shared by the
  *  clipboard hotkey path and UI-triggered lookups (e.g. clicking a sister overlay row). */
 export async function runPriceCheck(item: PoeItem, store: Store<AppSettings>): Promise<void> {
-  getOverlayWindow()?.webContents.send(IPC_CHANNELS.OVERLAY.PRICE_CHECK_OPEN_EVENT)
+  const win = getOverlayWindow()
+  recordClipboardFlow(`price-check open window=${Boolean(win && !win.isDestroyed())} item=${item.name}`)
+  win?.webContents.send(IPC_CHANNELS.OVERLAY.PRICE_CHECK_OPEN_EVENT)
   await preloadPriceCheck(item, store)
+  recordClipboardFlow('price-check preloaded')
   showOverlay()
+  recordClipboardFlow(`price-check shown visible=${win?.isVisible() ?? false}`)
   if (getCurrentFilter()) evaluateAndSend(item)
+  else recordClipboardFlow('price-check no-filter-loaded')
 }
 
 export function createPriceCheckHandler(store: Store<AppSettings>, isElevated: () => boolean): () => Promise<void> {
@@ -357,7 +432,9 @@ export function createPriceCheckHandler(store: Store<AppSettings>, isElevated: (
       if (!item) return
 
       await runPriceCheck(item, store)
+      recordClipboardFlow('handler complete')
     } catch (err) {
+      recordMainDiagnostic('hotkey-flow', err)
       console.error('[hotkey] Error during price check processing:', err)
     } finally {
       hotkeyProcessing = false

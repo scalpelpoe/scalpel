@@ -103,6 +103,7 @@ vi.mock('electron', () => ({
 }))
 vi.mock('@scalpel/platform', () => ({
   Key: keyMock,
+  isNativeWayland: () => false,
   platform: () => ({
     clipboard: clipboardMock,
     shortcuts: { register: vi.fn(() => true), unregister: vi.fn(), unregisterAll: vi.fn() },

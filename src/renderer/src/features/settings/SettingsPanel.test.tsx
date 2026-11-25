@@ -14,6 +14,7 @@ vi.mock('./tabs', () => ({
   PriceCheckTab: () => <div>Trade Tab</div>,
   FaqTab: () => <div>FAQ Tab</div>,
   CheatSheetsTab: () => <div>Sheets Tab</div>,
+  PlatformTab: () => <div>Platform Tab</div>,
   prettyHotkey: (hotkey: string) => hotkey,
 }))
 
@@ -40,6 +41,8 @@ function settings(input: Partial<RuntimeSettings> = {}): RuntimeSettings {
     lastProfileIdPoe1: 'poe1',
     lastProfileIdPoe2: '',
     activeProfile: null,
+    platform: 'win32',
+    platformSettingsAvailable: false,
     onboardingCompleted: true,
     hotkey: '',
     priceCheckHotkey: '',
@@ -176,5 +179,22 @@ describe('SettingsPanel tab routing', () => {
     )
 
     expect(screen.getByText('Filter Tab')).toBeInTheDocument()
+  })
+
+  it('shows the platform tab only when the platform reports settings', () => {
+    const other = render(<SettingsPanel settings={settings()} onSettingsChange={vi.fn()} mode="app" />)
+    expect(screen.queryByRole('button', { name: 'Platform' })).toBeNull()
+    other.unmount()
+
+    render(
+      <SettingsPanel
+        settings={settings({ platform: 'linux', platformSettingsAvailable: true })}
+        onSettingsChange={vi.fn()}
+        mode="app"
+        tabRequest={{ tab: 'platform', n: 1 }}
+      />,
+    )
+    expect(screen.getByRole('button', { name: 'Platform' })).toBeInTheDocument()
+    expect(screen.getByText('Platform Tab')).toBeInTheDocument()
   })
 })

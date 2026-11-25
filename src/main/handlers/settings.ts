@@ -1,6 +1,13 @@
 import { app, ipcMain } from 'electron'
 import type Store from 'electron-store'
 import type { AppSettings, GameVariant, RegexPreset } from '@shared/types'
+import { IPC_CHANNELS } from '@shared/contracts/ipc'
+import {
+  capturePlatformStartupValues,
+  findPlatformSetting,
+  platformBanners,
+  readRecentWindowHints,
+} from '@scalpel/platform'
 import { backfillPresetNames } from './regex-preset-names'
 import { broadcastToWindows } from '../window-broadcast'
 import { getColorFrequencies } from '../filter-state'
@@ -29,8 +36,15 @@ import { getOverlayAttachedVersion } from '../overlay'
 import { shouldRelaunchAfterOnboarding } from '../onboarding-relaunch'
 import { getGameSwitchCoordinator } from '../experimental'
 import { relaunchApp } from '../relaunch'
+import { PLATFORM_SETTING_KEYS, readPlatformSettingsView } from '../platform-settings'
+import { recordMainBreadcrumb } from '../diagnostics'
 
-export function register(store: Store<AppSettings>): void {
+export function register(
+  store: Store<AppSettings>,
+  platformStartupValues: Readonly<Record<string, string>> = capturePlatformStartupValues(
+    readPlatformSettingsView(store),
+  ),
+): void {
   ipcMain.handle('get-settings', () => getEffectiveSettings(store))
 
   ipcMain.handle('get-color-frequencies', () => getColorFrequencies())
@@ -45,6 +59,47 @@ export function register(store: Store<AppSettings>): void {
     // requestGameSwitch() in main/game-switch.ts is the user-facing toggle that
     // adds a relaunch prompt; this IPC is the lower-level write.
     applySetting(store, key, value, event.sender)
+  })
+
+  ipcMain.handle(IPC_CHANNELS.SETTINGS.GET_PLATFORM, () => {
+    const view = readPlatformSettingsView(store)
+    return {
+      view,
+      startupValues: platformStartupValues,
+      banners: platformBanners(view, platformStartupValues),
+      recentWindowTitles: readRecentWindowHints(),
+    }
+  })
+
+  // Opaque descriptor ids cross IPC; only main maps them to persisted keys. The
+  // package owns availability and restart semantics, so a stale/hidden control
+  // cannot be written by a renderer that missed a refresh.
+  ipcMain.handle(IPC_CHANNELS.SETTINGS.SET_PLATFORM, (event, id: string, value: string) => {
+    const key = (PLATFORM_SETTING_KEYS as Readonly<Record<string, keyof AppSettings>>)[id]
+    if (!key) throw new Error(`unknown platform setting: ${id}`)
+
+    const view = readPlatformSettingsView(store)
+    const setting = findPlatformSetting(view, id)
+    if (!setting || setting.availability !== 'available') throw new Error(`unavailable platform setting: ${id}`)
+    if (!setting.options.some((option) => option.id === value)) throw new Error(`invalid value for ${id}: ${value}`)
+
+    const previousValue = setting.value
+    applySetting(store, key, value as never, event.sender)
+
+    const restartRequired = Boolean(setting.requiresRestart)
+    const devRestartRequired = restartRequired && !app.isPackaged
+    const nextSetting = findPlatformSetting(readPlatformSettingsView(store), id)
+    if (previousValue !== value) {
+      recordMainBreadcrumb(
+        `platform setting changed id=${id} key=${key} value=${previousValue}->${value} ` +
+          `applied=${nextSetting?.appliedValue ?? '-'} effective=${nextSetting?.effectiveValue ?? '-'} ` +
+          `availability=${nextSetting?.availability ?? '-'} restart=${restartRequired}` +
+          (devRestartRequired ? ' (dev build: restart the dev app manually)' : ''),
+      )
+    } else {
+      recordMainBreadcrumb(`platform setting unchanged id=${id} key=${key} value=${value}`, 'debug')
+    }
+    return { restartRequired, devRestartRequired }
   })
 
   // Onboarding's final step. The overlay attached to a game window once at

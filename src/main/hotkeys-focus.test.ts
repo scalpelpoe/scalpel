@@ -81,6 +81,10 @@ vi.mock('electron', () => ({
 
 vi.mock('@scalpel/platform', () => ({
   Key: mock.keycodes,
+  getLinuxGameDisplayModeStatus: () => ({ mode: null, detected: null, source: null, override: 'auto' }),
+  isNativeWayland: () => false,
+  isWaylandGameFocused: () => false,
+  readWaylandGameFocus: () => null,
   platform: () => ({
     clipboard: {
       readText: vi.fn(() => mock.clip.text),

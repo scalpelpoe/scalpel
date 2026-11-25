@@ -12,10 +12,12 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./settings": "./src/common/platform-settings.ts"
   },
   "files": ["src", "README.md"],
   "peerDependencies": {
+    "dbus-next": "*",
     "electron": "*",
     "electron-overlay-window": "*",
     "koffi": "*",

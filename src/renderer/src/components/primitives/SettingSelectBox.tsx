@@ -10,11 +10,16 @@ export function SettingSelectBox<T extends string>({
   value,
   options,
   onChange,
+  disabled = false,
+  labelClassName,
 }: {
   label: string
   value: T
   options: ReadonlyArray<{ value: T; label: string; group?: string }>
   onChange: (v: T) => void
+  disabled?: boolean
+  /** Optional emphasis for tabs that need a clearer title/value distinction. */
+  labelClassName?: string
 }): JSX.Element {
   const current = options.find((o) => o.value === value) ?? options[0]
   // Stable DOM id per-mount so the button's click target is unique when multiple of these
@@ -22,11 +27,14 @@ export function SettingSelectBox<T extends string>({
   const id = `setting-select-${label.replace(/\s+/g, '-').toLowerCase()}`
   return (
     <section>
-      <label>{label}</label>
+      <label className={labelClassName} htmlFor={id}>
+        {label}
+      </label>
       <div className="setting-box mt-[2px] relative">
         <span className="value">{current?.label ?? ''}</span>
         <button
-          className="primary"
+          disabled={disabled}
+          className={disabled ? 'opacity-40 cursor-not-allowed' : 'primary'}
           onClick={() => {
             const sel = document.getElementById(id) as HTMLSelectElement | null
             sel?.showPicker?.()
@@ -39,7 +47,8 @@ export function SettingSelectBox<T extends string>({
           id={id}
           value={value}
           onChange={(e) => onChange(e.target.value as T)}
-          className="absolute inset-0 opacity-0 cursor-pointer"
+          disabled={disabled}
+          className={`absolute inset-0 opacity-0 ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
         >
           {renderSelectOptions(options)}
         </select>

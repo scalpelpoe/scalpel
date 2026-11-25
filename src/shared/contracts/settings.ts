@@ -8,6 +8,15 @@ import type { HideableTabKey } from './items'
 import type { GameVariant } from './game-variant'
 import type { RadialMenuSettings } from './radial'
 import type { StreamSettings } from './stream'
+import type {
+  PlatformClipboardBackend,
+  PlatformDesktopPreference,
+  PlatformDisplayMode,
+  PlatformGameDisplayModePreference,
+  PlatformInputBackend,
+  PlatformShortcutBackend,
+  PlatformWindowingMode,
+} from './platform-settings'
 
 export interface LegacyAppSettings {
   filterPathPoe1?: string
@@ -75,6 +84,19 @@ export interface AppSettings {
   hiddenTabs?: HideableTabKey[]
   hiddenPluginTabIds?: string[]
   developerMode?: boolean
+  /** Machine-local selections owned by `@scalpel/platform`. The option ids are
+   *  opaque here; the settings view decides what is meaningful on this host. */
+  platformDisplayMode?: PlatformDisplayMode
+  platformGameDisplayMode?: PlatformGameDisplayModePreference
+  platformDesktopEnvironment?: PlatformDesktopPreference
+  platformWindowingMode?: PlatformWindowingMode
+  platformInputBackend?: PlatformInputBackend
+  platformClipboardBackend?: PlatformClipboardBackend
+  platformShortcutBackend?: PlatformShortcutBackend
+  /** Full game window title aliases used by Linux window detection. Empty means
+   *  use the canonical Path of Exile / Path of Exile 2 titles. */
+  gameTitlePoe1?: string
+  gameTitlePoe2?: string
   pluginRegistryUrl?: string
   /** When true, opted-in: outdated registry plugins update silently in the
    *  background (curated registry only). Default false. */
@@ -125,4 +147,6 @@ export type NodePlatform =
 export interface RuntimeSettings extends AppSettings {
   activeProfile: PoeProfile | null
   platform: NodePlatform
+  /** Neutral capability flag supplied by `@scalpel/platform`. */
+  platformSettingsAvailable?: boolean
 }

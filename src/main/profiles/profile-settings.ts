@@ -1,4 +1,5 @@
 import Store from 'electron-store'
+import { currentEnv, platformSettingsView } from '@scalpel/platform'
 import type {
   AppSettings,
   GameVariant,
@@ -84,7 +85,12 @@ export function getProfileBackedSetting<K extends ProfileSettingKey>(
 
 export function getEffectiveSettings(store: Store<AppSettings>): RuntimeSettings {
   const settings = { ...store.store } as AppSettings
-  return { ...settings, activeProfile: getActiveProfile(store), platform: process.platform }
+  return {
+    ...settings,
+    activeProfile: getActiveProfile(store),
+    platform: process.platform,
+    platformSettingsAvailable: platformSettingsView({ env: currentEnv() }).available,
+  }
 }
 
 export function listProfilesByGameVariant(variant: GameVariant): PoeProfile[] {

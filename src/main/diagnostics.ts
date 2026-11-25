@@ -3,6 +3,7 @@ import { release } from 'node:os'
 import { join } from 'node:path'
 import { app, type BrowserWindow, ipcMain, screen, shell } from 'electron'
 import type Store from 'electron-store'
+import { resolveLinuxEffectiveBackendsSnapshot } from '@scalpel/platform'
 import type { BugReportResult, RendererDiagnosticPayload, SerializedDiagnosticError } from '@shared/diagnostics'
 import { serializeDiagnosticError } from '@shared/diagnostics'
 import { DISCORD_INVITE_URL, GITHUB_NEW_ISSUE_URL } from '@shared/endpoints'
@@ -144,13 +145,16 @@ export function recordMainDiagnostic(kind: string, error: unknown): void {
   appendDiagnosticLine(`[${new Date().toISOString()}] [main:${kind}] ${formatError(serialized)}`)
 }
 
-/** Synchronous one-line breadcrumb (no stack). Used to trace the shutdown
- *  sequence: appendFileSync flushes before returning, so the last line written
- *  survives even a native abort or a hang in the very next call. If the log ends
- *  at "uIOhook.stop() calling" with no "returned", the uiohook worker-thread
- *  join wedged; if it ends earlier, the crash beat the quit handlers. */
-export function recordMainBreadcrumb(message: string): void {
-  appendDiagnosticLine(`[${new Date().toISOString()}] [main:breadcrumb] ${message}`)
+function debugLoggingEnabled(): boolean {
+  return isDevRuntime() || process.env.SCALPEL_DEBUG_LOG === '1' || process.env.SCALPEL_DEBUG_LOG === 'true'
+}
+
+/** Synchronous one-line breadcrumb (no stack). Debug breadcrumbs are written in
+ *  dev mode or when SCALPEL_DEBUG_LOG is enabled; info breadcrumbs always write. */
+export function recordMainBreadcrumb(message: string, level: 'info' | 'debug' = 'info'): void {
+  if (level === 'debug' && !debugLoggingEnabled()) return
+  const tag = level === 'debug' ? 'main:debug' : 'main:breadcrumb'
+  appendDiagnosticLine(`[${new Date().toISOString()}] [${tag}] ${message}`)
 }
 
 /** Wrap a native-event listener (uiohook-napi, electron-overlay-window) so a
@@ -226,6 +230,20 @@ function collectPlatformDiagnostics(): Record<string, unknown> {
     result.desktopSession = process.env.XDG_CURRENT_DESKTOP || process.env.DESKTOP_SESSION
     result.waylandDisplayPresent = Boolean(process.env.WAYLAND_DISPLAY)
     result.x11DisplayPresent = Boolean(process.env.DISPLAY)
+    try {
+      const s = (storeRef?.store ?? {}) as Record<string, unknown>
+      const effective = resolveLinuxEffectiveBackendsSnapshot({
+        displayMode: s.platformDisplayMode,
+        desktopEnvironment: s.platformDesktopEnvironment,
+        windowingMode: s.platformWindowingMode,
+        shortcutBackend: s.platformShortcutBackend,
+        clipboardBackend: s.platformClipboardBackend,
+        inputBackend: s.platformInputBackend,
+      })
+      if (effective) result.effectiveBackends = effective
+    } catch (err) {
+      result.effectiveBackendsError = String(err)
+    }
   }
 
   try {
@@ -387,6 +405,32 @@ export function installEarlyDiagnostics(): void {
   process.on('unhandledRejection', (err) => {
     console.error('[UNHANDLED REJECTION]', err)
     recordMainDiagnostic('unhandledRejection', err)
+  })
+  // A JS exception is survivable; a native SIGSEGV is not. `exit` fires for a
+  // clean quit but NOT for a fatal signal, so its presence/absence in the log
+  // distinguishes a deliberate close from a crash in a native addon.
+  process.on('exit', (code) => {
+    recordMainBreadcrumb(`process-exit code=${code}`)
+  })
+
+  // Liveness trace: if the main event loop is blocked, the heartbeat stops; if
+  // the process dies from a native crash, it stops AND no `process-exit` line is
+  // written. Off by default because it fires every 5s and drowns real debug
+  // output; enable with SCALPEL_HEARTBEAT_LOG=1. `unref` keeps it from holding
+  // the app open.
+  if (debugLoggingEnabled() && process.env.SCALPEL_HEARTBEAT_LOG) {
+    const heartbeat = setInterval(() => recordMainBreadcrumb('main-heartbeat', 'debug'), 5000)
+    heartbeat.unref?.()
+  }
+
+  // Electron-side crashes are invisible to Node's uncaughtException handler.
+  app.on('render-process-gone', (_event, _webContents, details) => {
+    recordMainBreadcrumb(`render-process-gone reason=${details.reason} exitCode=${details.exitCode}`)
+  })
+  app.on('child-process-gone', (_event, details) => {
+    recordMainBreadcrumb(
+      `child-process-gone type=${details.type} reason=${details.reason} exitCode=${details.exitCode}`,
+    )
   })
 }
 

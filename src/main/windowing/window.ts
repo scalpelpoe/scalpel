@@ -2,8 +2,7 @@ import { join } from 'node:path'
 import { BrowserWindow } from 'electron'
 import type { Rect } from './snap-canvas'
 import { desktop, type OverlayInteraction } from '../desktop'
-import { platform } from '@scalpel/platform'
-import { GAME_TITLES } from '@shared/contracts/game-variant'
+import { getGameTitleForVariant, platform } from '@scalpel/platform'
 import { getPoeVersion } from '../game-state'
 
 interface CreateOptions {
@@ -69,7 +68,7 @@ function installOpacityHideShow(win: BrowserWindow, interaction: () => OverlayIn
     opacityHidden = true
   }
   win.show = (): void => {
-    platform().windowTracker.beforeOverlayShow(win, GAME_TITLES[getPoeVersion()])
+    platform().windowTracker.beforeOverlayShow(win, getGameTitleForVariant(getPoeVersion()))
     const bounds = process.platform === 'linux' ? win.getBounds() : null
     win.setOpacity(1)
     opacityHidden = false

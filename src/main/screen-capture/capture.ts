@@ -1,5 +1,6 @@
-import type { CaptureFrame, CaptureOptions, CaptureResult } from '@scalpel/platform'
+import { getGameTitleForVariant, type CaptureFrame, type CaptureOptions, type CaptureResult } from '@scalpel/platform'
 import { desktop } from '../desktop'
+import { getPoeVersion } from '../game-state'
 
 export type { CaptureFailure, CaptureFrame, CaptureOptions, CaptureResult } from '@scalpel/platform'
 
@@ -11,5 +12,5 @@ export async function captureGameWindow(opts?: CaptureOptions): Promise<CaptureF
 }
 
 export async function captureGameWindowResult(opts?: CaptureOptions): Promise<CaptureResult> {
-  return desktop.captureGame(opts)
+  return desktop.captureGame({ ...opts, title: getGameTitleForVariant(getPoeVersion()) })
 }

@@ -9,6 +9,7 @@ const mock = vi.hoisted(() => ({
 }))
 vi.mock('../desktop', () => ({ desktop: { applyInteraction: mock.apply, releaseOverlay: mock.release } }))
 vi.mock('@scalpel/platform', () => ({
+  getGameTitleForVariant: (variant: number) => (variant === 2 ? 'Path of Exile 2' : 'Path of Exile'),
   platform: () => ({
     traits: {
       get compositorFocus() {

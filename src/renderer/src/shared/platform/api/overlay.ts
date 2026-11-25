@@ -15,6 +15,7 @@ export function closeOverlay(): void {
 
 export function getOverlayState(): Promise<{
   poeVersion: 1 | 2
+  windowLocal: boolean
   gameBounds: { gameWidth: number; gameHeight: number; sidebarWidth: number } | null
 }> {
   return window.api.getOverlayState()
