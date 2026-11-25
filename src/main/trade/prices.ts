@@ -187,6 +187,11 @@ export function fetchJson(url: string): Promise<unknown> {
 // Separate price map for div cards to avoid name collisions with other item types
 let divCardPriceMap = new Map<string, PriceInfo>()
 
+// Scrying Orb prices keyed by lowercased map area. Ninja's ScryingOrb overview
+// names each line by its bare area ("Dunes", not "Scrying Orb (Dunes)"), a
+// name that means nothing on its own in the shared name-keyed map.
+let scryingOrbPriceMap = new Map<string, PriceInfo>()
+
 // Gem names seen in the most recent poe.ninja response. Used by the item-search
 // handler to populate the gem section of the combobox -- static gem data would quickly
 // rot as GGG adds/renames gems, so we rely on the live overview instead.
@@ -280,6 +285,7 @@ export function processDenseResponse(resp: DenseResponse, entriesOut: PriceEntry
 
   for (const overview of allOverviews) {
     const isDivCards = overview.type === 'DivinationCard'
+    const isScryingOrb = overview.type === 'ScryingOrb'
     const isSkillGem = overview.type === 'SkillGem'
     const category = poe1Category(overview.type)
     for (const line of overview.lines ?? []) {
@@ -302,6 +308,7 @@ export function processDenseResponse(resp: DenseResponse, entriesOut: PriceEntry
       // the caller has full item context.
       pricesByVariant.set(`${name.toLowerCase()}|${line.variant ?? ''}`, info)
       if (isDivCards) divCardPriceMap.set(name.toLowerCase(), info)
+      if (isScryingOrb) scryingOrbPriceMap.set(name.toLowerCase(), info)
 
       entriesOut.push({
         name,
@@ -361,6 +368,7 @@ function resetCache(league: string, now: number): void {
   priceMap = new Map()
   pricesByVariant = new Map()
   divCardPriceMap = new Map()
+  scryingOrbPriceMap = new Map()
   gemNames = new Set()
   priceEntries = []
   ninjaTypeByName = null
@@ -486,6 +494,9 @@ export function lookupPriceForItem(item: NinjaItemRef): PriceInfo | undefined {
   // Orb", #501), so price them by base type only -- the name carries no
   // pricing identity for these rarities.
   if (hasGeneratedName(item.rarity)) return lookupPrice(item.baseType, item.baseType)
+  // A Scrying Orb is priced by its bound area: ninja has one line per area and
+  // none for the bare "Scrying Orb", so an orb with no area stays unpriced.
+  if (item.baseType === 'Scrying Orb') return item.scryingArea ? lookupScryingOrbPrice(item.scryingArea) : undefined
   const variant = deriveItemVariant(item)
   if (variant != null) {
     const exact = pricesByVariant.get(`${item.name.toLowerCase()}|${variant}`)
@@ -517,6 +528,12 @@ export function _setPricesForTests(entries: Array<{ name: string; variant?: stri
 /** Look up a divination card price specifically (avoids name collisions with other item types) */
 export function lookupDivCardPrice(cardName: string): PriceInfo | undefined {
   return divCardPriceMap.get(cardName.toLowerCase())
+}
+
+/** Look up the poe.ninja price of a Scrying Orb bound to `area`, the bare map
+ *  area name ("Dunes"). PoE1 only: nothing populates this map in PoE2. */
+export function lookupScryingOrbPrice(area: string): PriceInfo | undefined {
+  return scryingOrbPriceMap.get(area.toLowerCase())
 }
 
 /** Gem names from the most recent poe.ninja SkillGem overview. Empty until the first

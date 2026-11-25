@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { SCRYING_ORB_AREAS } from '@shared/data/trade/scrying-orbs'
+import { SCRYING_ORB_AREAS, scryingAreaForMap } from '@shared/data/trade/scrying-orbs'
 import { getTradeUrls } from '@shared/endpoints'
 import { CurrencyIcon } from '../../shared/CurrencyIcon'
 import { formatPriceTooltip } from '../../shared/currency-short-labels'
@@ -59,13 +59,15 @@ function renderContent(status: Status, result: ScryingResult | null): JSX.Elemen
 }
 
 /** "Scrying Orb" button for the Div Card Explorer's expanded map panel. A
- *  Scrying Orb is bound to a single map area, and poe.ninja carries no data for
- *  it, so the only price source is a live trade search. Two clicks: the first
- *  prices the area, the second opens the trade site to that same query. Renders
- *  nothing for a map with no `SCRYING_ORB_AREAS` entry: a data-drift guard, not
- *  a live case today (all 100 atlas maps resolve). */
+ *  Scrying Orb is bound to a single map area. The map row already shows
+ *  poe.ninja's price for it (ScryingOrbPriceChip); this button is the live
+ *  side: the cheapest current listing, and the only price for an area ninja
+ *  doesn't list. Two clicks: the first prices the area, the second opens the
+ *  trade site to that same query. Renders nothing for a map with no
+ *  `SCRYING_ORB_AREAS` entry: a data-drift guard, not a live case today (every
+ *  explorer map resolves). */
 export function ScryingOrbButton({ mapName }: ScryingOrbButtonProps): JSX.Element | null {
-  const area = mapName.replace(/ Map$/, '')
+  const area = scryingAreaForMap(mapName)
   const cached = sessionCache.get(area)
   const [status, setStatus] = useState<Status>(cached ? 'priced' : 'idle')
   const [result, setResult] = useState<ScryingResult | null>(cached ?? null)

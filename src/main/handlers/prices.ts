@@ -1,6 +1,7 @@
 import { ipcMain } from 'electron'
 import type Store from 'electron-store'
 import type { ExchangeDetails } from '@shared/contracts/exchange'
+import { IPC_CHANNELS } from '@shared/contracts/ipc'
 import type { UniqueTrackerDetails, UniqueTrackerQuery } from '@shared/contracts/unique-tracker'
 import divCardsData from '@shared/data/economy/div-cards.json'
 import { getItemClasses } from '@shared/data/items/item-classes'
@@ -27,6 +28,7 @@ import {
   lookupBestUniquePrice,
   lookupDivCardPrice,
   lookupPrice,
+  lookupScryingOrbPrice,
   refreshPrices,
 } from '../trade/prices'
 
@@ -516,6 +518,25 @@ export function register(store: Store<AppSettings>): void {
       const result: Record<string, { chaosValue: number; divineValue?: number } | null> = {}
       for (const name of cardNames) {
         result[name] = lookupDivCardPrice(name) ?? null
+      }
+      return result
+    },
+  )
+
+  // Div Card Explorer: poe.ninja's Scrying Orb price per map area, keyed by the
+  // bare area name the renderer sent ("Dunes"). Same refresh-then-read shape as
+  // the div card batch above, so both read one price snapshot.
+  ipcMain.handle(
+    IPC_CHANNELS.PRICES.BATCH_LOOKUP_SCRYING_ORB,
+    async (
+      _event,
+      areas: string[],
+      league: string,
+    ): Promise<Record<string, { chaosValue: number; divineValue?: number } | null>> => {
+      await refreshPrices(league)
+      const result: Record<string, { chaosValue: number; divineValue?: number } | null> = {}
+      for (const area of areas) {
+        result[area] = lookupScryingOrbPrice(area) ?? null
       }
       return result
     },

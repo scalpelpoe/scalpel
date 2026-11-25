@@ -20,6 +20,13 @@
  */
 export const SCRYING_ORB_DISCRIMINATOR = 'scrying_orb'
 
+/** The area a map's Scrying Orb binds to: the map name minus its " Map" suffix
+ *  ("Dunes Map" -> "Dunes"). poe.ninja's ScryingOrb overview names its lines
+ *  the same way, so this one key reaches both the trade data and ninja. */
+export function scryingAreaForMap(mapName: string): string {
+  return mapName.replace(/ Map$/, '')
+}
+
 export const SCRYING_ORB_AREAS: Record<string, string> = {
   Academy: '54575',
   Alleyways: '42968',

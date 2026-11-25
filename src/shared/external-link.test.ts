@@ -78,6 +78,14 @@ describe('ninjaLinkUrl', () => {
     )
   })
 
+  it('routes a Scrying Orb to /scrying-orbs/<bound area>, and hides it with no area', () => {
+    const orb = { name: 'Scrying Orb', baseType: 'Scrying Orb', rarity: 'Currency', itemClass: 'Stackable Currency' }
+    expect(ninjaLinkUrl({ ...orb, scryingArea: 'Sunken City' }, 1, 'Mirage', POE1_SLUGS)).toBe(
+      'https://poe.ninja/poe1/economy/mirage/scrying-orbs/sunken-city',
+    )
+    expect(ninjaLinkUrl(orb, 1, 'Mirage', POE1_SLUGS)).toBeNull()
+  })
+
   it('strips apostrophes from the slug', () => {
     const item = { name: "Volkuur's Guidance", baseType: 'Sorcerer Boots', rarity: 'Unique', itemClass: 'Boots' }
     expect(ninjaLinkUrl(item, 1, 'Mirage', POE1_SLUGS)).toBe(
