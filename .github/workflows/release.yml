@@ -62,7 +62,8 @@ jobs:
           node-version: 22
       - name: Install Linux native build deps
         # uiohook-napi and electron-overlay-window's X11 backends link against
-        # the X11/xcb dev headers. libfuse2 is the AppImage Type 2 runtime
+        # the X11/xcb dev headers; the Wayland backend needs libwayland headers
+        # and wayland-scanner. libfuse2 is the AppImage Type 2 runtime
         # dependency used by electron-builder's appimagetool. Building on
         # 22.04 (glibc 2.35) is intentional: the resulting AppImage runs on
         # most distros from 2022+; building on 24.04 (glibc 2.39) would
@@ -72,7 +73,8 @@ jobs:
           sudo apt-get install -y --no-install-recommends \
               libxcb1-dev libxtst-dev libxss-dev libxkbfile-dev \
               libx11-dev libxext-dev libxrandr-dev libxinerama-dev \
-              libxcursor-dev libxi-dev libxkbcommon-dev libfuse2
+              libxcursor-dev libxi-dev libxkbcommon-dev libfuse2 \
+              libwayland-dev libwayland-bin
       - name: Install dependencies
         run: npm ci
       - name: Test

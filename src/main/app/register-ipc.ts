@@ -40,15 +40,16 @@ export interface IpcRegistrationDeps {
   getAppWindow: () => BrowserWindow | null
   showAppWindow: () => void
   hideOverlay: () => void
+  platformStartupValues: Readonly<Record<string, string>>
 }
 
 export function registerAllIpc(deps: IpcRegistrationDeps): void {
-  const { store, isElevated, getAppWindow, showAppWindow, hideOverlay } = deps
+  const { store, isElevated, getAppWindow, showAppWindow, hideOverlay, platformStartupValues } = deps
 
   // ── Domain handler modules ────────────────────────────────────────────────
 
   tradeHandlers.register(store)
-  settingsHandlers.register(store)
+  settingsHandlers.register(store, platformStartupValues)
   filesHandlers.register(store)
   editingHandlers.register(store)
   versionsHandlers.register(store)

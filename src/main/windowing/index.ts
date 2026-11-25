@@ -335,28 +335,37 @@ function scheduleSnapGhostSafetyClear(): void {
   snapGhostSafetyTimer = setTimeout(runSnapGhostSafetyClear, 300)
 }
 
-platform().input.on(
-  'mousedown',
-  guardNativeListener('mousedown-snap', (e) => {
-    if (e.button === 1) {
-      leftMouseHeld = true
-      cancelSnapGhostSafetyClear()
-    }
-  }),
-)
-platform().input.on(
-  'mouseup',
-  guardNativeListener('mouseup-snap', (e) => {
-    if (e.button === 1) {
-      leftMouseHeld = false
-      // Don't clear snapGhostActive here - the gridWin 'moved' event fires
-      // *after* this mouseup and needs the flag set to know whether to commit
-      // the snap. Clearing it here would silently break the snap. Schedule a
-      // fallback in case 'moved' never arrives.
-      scheduleSnapGhostSafetyClear()
-    }
-  }),
-)
+let inputListenersInstalled = false
+
+/** Called from main boot after native overlay services are registered. These
+ *  listeners reach the input service, which would otherwise select the X11
+ *  fallback before `platform()` can see the layer-shell backend. */
+export function installWindowingInputListeners(): void {
+  if (inputListenersInstalled) return
+  inputListenersInstalled = true
+  platform().input.on(
+    'mousedown',
+    guardNativeListener('mousedown-snap', (e) => {
+      if (e.button === 1) {
+        leftMouseHeld = true
+        cancelSnapGhostSafetyClear()
+      }
+    }),
+  )
+  platform().input.on(
+    'mouseup',
+    guardNativeListener('mouseup-snap', (e) => {
+      if (e.button === 1) {
+        leftMouseHeld = false
+        // Don't clear snapGhostActive here - the gridWin 'moved' event fires
+        // *after* this mouseup and needs the flag set to know whether to commit
+        // the snap. Clearing it here would silently break the snap. Schedule a
+        // fallback in case 'moved' never arrives.
+        scheduleSnapGhostSafetyClear()
+      }
+    }),
+  )
+}
 
 export function registerSecondaryOverlay(spec: OverlaySpec): SecondaryOverlay {
   if (overlays.has(spec.id)) {

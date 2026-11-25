@@ -34,18 +34,19 @@ interface SisterOverlayProps {
   poeVersion: 1 | 2
   league: string
   chaosPerDivine?: number
-  /** Absolute px offsets inside the overlay canvas. */
-  left: number
-  top: number
-  width: number
+  /** Absolute offsets inside the overlay canvas. Strings let the regular
+   *  window use viewport-relative CSS instead of reporting geometry back. */
+  left: number | string
+  top: number | string
+  width: number | string
   /** Drag offset applied by the main panel so the sister follows it around. */
   dragOffset?: { x: number; y: number }
   /** Multiplier applied to match the main panel's scale setting. */
   scale?: number
   /** Origin edge for the scale transform -- matches the main panel's mount side. */
   scaleOrigin?: 'top left' | 'top right'
-  /** Pre-scale max height in CSS px. Falls back to viewport-based bound if absent. */
-  maxHeight?: number
+  /** Pre-scale max height. Falls back to viewport-based bound if absent. */
+  maxHeight?: number | string
 }
 
 export const SisterOverlay = forwardRef<HTMLDivElement, SisterOverlayProps>(function SisterOverlay(

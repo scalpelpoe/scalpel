@@ -2,7 +2,7 @@ import { desktop } from './desktop'
 import { join } from 'node:path'
 import { BrowserWindow, ipcMain, screen, webContents } from 'electron'
 import { startClientLogWatcher } from './client-log'
-import { guardNativeListener, registerDiagnosticProvider } from './diagnostics'
+import { guardNativeListener, recordMainBreadcrumb, registerDiagnosticProvider } from './diagnostics'
 import { setGameAttached } from './game-presence'
 import { getPoeVersion, setPoeVersion } from './game-state'
 import { loadTierData, refreshTierData } from './tier-data'
@@ -16,9 +16,8 @@ import {
 } from './windowing'
 import { getWhiteboardOverlay } from './whiteboard'
 import { POE_SIDEBAR_RATIO } from '@shared/poe-geometry'
-import { GAME_TITLES } from '@shared/contracts/game-variant'
 import { IPC_CHANNELS } from '@shared/contracts/ipc'
-import { platform } from '@scalpel/platform'
+import { getAllGameTitles, getGameTitlesForVariant, overlayBoundsAreLogical, platform } from '@scalpel/platform'
 
 const { cursor, input, traits, windowTracker } = platform()
 
@@ -76,6 +75,18 @@ interface PanelEntry {
 }
 const panelRectsBySender = new Map<number, PanelEntry>()
 
+// Native layer-shell surfaces get their own input regions in CSS pixels. Keep
+// the last reported rects per window so show/hide can clear and restore them
+// without waiting for the renderer to report again.
+type LayerRect = { left: number; top: number; width: number; height: number }
+const layerPanelRects = new WeakMap<BrowserWindow, LayerRect[]>()
+
+function applyLayerInputRects(win: BrowserWindow): void {
+  if (win.isDestroyed()) return
+  const hidden = win === overlayWindow && !overlayVisible
+  windowTracker.setInputRects(win, hidden ? [] : (layerPanelRects.get(win) ?? []))
+}
+
 function flatPanelRects(): PhysRect[] {
   const out: PhysRect[] = []
   for (const entry of panelRectsBySender.values()) out.push(...entry.rects)
@@ -99,6 +110,10 @@ function windowAtPoint(x: number, y: number): BrowserWindow | null {
 }
 
 function getScaleFactor(): number {
+  // Native compositor trackers report logical (DIP) coordinates already.
+  // This matches the working layer-shell implementation; without it the compositor
+  // branch below divides tracker bounds by a DIP copy of themselves.
+  if (overlayBoundsAreLogical()) return 1
   // Use the display the game is actually on, not the primary display.
   // Multi-monitor setups with different DPIs need the correct scale factor.
   const tb = windowTracker.targetBounds
@@ -112,29 +127,65 @@ function getScaleFactor(): number {
   return screen.getPrimaryDisplay().scaleFactor
 }
 
+/** Debug-only geometry trace. Costs nothing for end users unless SCALPEL_DEBUG_LOG
+ *  is set; dev builds always emit it. */
+let lastGeometryReport = ''
+let lastGameBoundsKey = ''
+
+function reportOverlayGeometry(label: string): void {
+  const tb = windowTracker.targetBounds
+  let wb: Electron.Rectangle | null = null
+  try {
+    if (overlayWindow && !overlayWindow.isDestroyed()) wb = overlayWindow.getBounds()
+  } catch {}
+  const fmt = (r: { x: number; y: number; width: number; height: number } | null): string =>
+    r ? `x=${Math.round(r.x)} y=${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)}` : '-'
+  // This runs on every geometry poll; only a changed projection is interesting.
+  const line = `overlay geometry ${label} sf=${getScaleFactor().toFixed(3)} target=${fmt(tb)} surface=${fmt(wb)}`
+  if (line === lastGeometryReport) return
+  lastGeometryReport = line
+  recordMainBreadcrumb(line, 'debug')
+}
+
 ipcMain.on('report-panel-rect', (event, payload: unknown) => {
   // Accept either a single rect (legacy) or an array of rects (main + sister etc.).
   const rects = Array.isArray(payload)
     ? (payload as Array<{ left: number; top: number; width: number; height: number }>)
     : [payload as { left: number; top: number; width: number; height: number }]
+  const win = BrowserWindow.fromWebContents(event.sender)
+  if (!win) return
+  const interactive = rects.filter((r) => r.width > 0 && r.height > 0)
+  if (overlayBoundsAreLogical()) {
+    // Layer-shell surfaces live in logical coordinates already; the backend
+    // converts CSS pixels to its own input-region scale.
+    layerPanelRects.set(win, interactive)
+    applyLayerInputRects(win)
+    if (interactive.length === 0 && currentInteractiveWindow === win) setInteractiveWindow(null)
+    return
+  }
   const tb = windowTracker.targetBounds
   if (!tb?.width) return
   const sf = getScaleFactor()
-  const phys = rects
-    .filter((r) => r.width > 0 && r.height > 0)
-    .map((r) => ({
-      left: tb.x + r.left * sf,
-      top: tb.y + r.top * sf,
-      right: tb.x + (r.left + r.width) * sf,
-      bottom: tb.y + (r.top + r.height) * sf,
-    }))
-  const win = BrowserWindow.fromWebContents(event.sender)
-  if (!win) return
+  const phys = interactive.map((r) => ({
+    left: tb.x + r.left * sf,
+    top: tb.y + r.top * sf,
+    right: tb.x + (r.left + r.width) * sf,
+    bottom: tb.y + (r.top + r.height) * sf,
+  }))
   panelRectsBySender.set(event.sender.id, { win, rects: phys })
   if (phys.length === 0 && currentInteractiveWindow === win) setInteractiveWindow(null)
 })
 
 ipcMain.on('clear-panel-rect', (event) => {
+  if (overlayBoundsAreLogical()) {
+    const win = BrowserWindow.fromWebContents(event.sender)
+    if (win && !win.isDestroyed()) {
+      layerPanelRects.delete(win)
+      applyLayerInputRects(win)
+    }
+    if (currentInteractiveWindow === win) currentInteractiveWindow = null
+    return
+  }
   const entry = panelRectsBySender.get(event.sender.id)
   panelRectsBySender.delete(event.sender.id)
   // Restore click-through on the window we just dropped rects for, in case
@@ -154,13 +205,16 @@ ipcMain.handle('get-overlay-state', () => {
   const sf = getScaleFactor()
   return {
     poeVersion: getPoeVersion(),
-    gameBounds: tb?.width
-      ? {
-          gameWidth: Math.round(tb.width / sf),
-          gameHeight: Math.round(tb.height / sf),
-          sidebarWidth: Math.round((tb.height / sf) * POE_SIDEBAR_RATIO),
-        }
-      : null,
+    windowLocal: traits.windowLocal === true,
+    gameBounds: traits.windowLocal
+      ? null
+      : tb?.width
+        ? {
+            gameWidth: Math.round(tb.width / sf),
+            gameHeight: Math.round(tb.height / sf),
+            sidebarWidth: Math.round((tb.height / sf) * POE_SIDEBAR_RATIO),
+          }
+        : null,
   }
 })
 
@@ -257,100 +311,110 @@ let exitTimer: ReturnType<typeof setTimeout> | null = null
 let lastTrackerPointerCheck = 0
 let trackerPointerTimer: ReturnType<typeof setTimeout> | null = null
 
-input.on(
-  'mousemove',
-  guardNativeListener('mousemove', function trackPointer(e) {
-    // A dialog owns input until explicitly dismissed. Hit-test updates can lag
-    // behind dragging; neither leaving a rect nor stale geometry may release it.
-    if (traits.compositorFocus && overlayVisible) return
-    if (traits.compositorFocus && desktop.hasInteractiveDialog()) {
-      setInteractiveWindow(null)
-      return
-    }
-    // No rects reported yet -- skip hit testing. (Whiteboard registers its own
-    // rects independently of the main overlay's `overlayVisible` flag.)
-    if (panelRectsBySender.size === 0) return
-    let point = e
-    if (traits.compositorFocus) {
-      // Limit compositor queries for high polling-rate gaming mice.
-      const elapsed = Date.now() - lastTrackerPointerCheck
-      if (elapsed < 32) {
-        // Sample once more after the last motion event, even if the pointer
-        // stops immediately upon entering a button or drag grip.
-        if (!trackerPointerTimer)
-          trackerPointerTimer = setTimeout(() => {
-            trackerPointerTimer = null
-            trackPointer(e)
-          }, 32 - elapsed)
+let inputListenersInstalled = false
+
+/** Registered from main boot after native overlay services exist. Reaching the
+ *  input service at module scope would select the X11 fallback before
+ *  `platform()` can see the layer-shell backend. */
+export function installOverlayInputListeners(): void {
+  if (inputListenersInstalled) return
+  inputListenersInstalled = true
+
+  input.on(
+    'mousemove',
+    guardNativeListener('mousemove', function trackPointer(e) {
+      // A dialog owns input until explicitly dismissed. Hit-test updates can lag
+      // behind dragging; neither leaving a rect nor stale geometry may release it.
+      if (traits.compositorFocus && overlayVisible) return
+      if (traits.compositorFocus && desktop.hasInteractiveDialog()) {
+        setInteractiveWindow(null)
         return
       }
-      lastTrackerPointerCheck = Date.now()
-      const trackerPoint = cursor.trackerPoint()
-      if (!trackerPoint) return
-      point = { ...e, ...trackerPoint }
-    }
-    const winUnder = windowAtPoint(point.x, point.y)
-    if (winUnder) {
-      if (exitTimer) {
-        clearTimeout(exitTimer)
-        exitTimer = null
+      // No rects reported yet -- skip hit testing. (Whiteboard registers its own
+      // rects independently of the main overlay's `overlayVisible` flag.)
+      if (panelRectsBySender.size === 0) return
+      let point = e
+      if (traits.compositorFocus) {
+        // Limit compositor queries for high polling-rate gaming mice.
+        const elapsed = Date.now() - lastTrackerPointerCheck
+        if (elapsed < 32) {
+          // Sample once more after the last motion event, even if the pointer
+          // stops immediately upon entering a button or drag grip.
+          if (!trackerPointerTimer)
+            trackerPointerTimer = setTimeout(() => {
+              trackerPointerTimer = null
+              trackPointer(e)
+            }, 32 - elapsed)
+          return
+        }
+        lastTrackerPointerCheck = Date.now()
+        const trackerPoint = cursor.trackerPoint()
+        if (!trackerPoint) return
+        point = { ...e, ...trackerPoint }
       }
-      if (currentInteractiveWindow !== winUnder) {
-        mouseOverPanel = true
-        setInteractiveWindow(winUnder)
+      const winUnder = windowAtPoint(point.x, point.y)
+      if (winUnder) {
+        if (exitTimer) {
+          clearTimeout(exitTimer)
+          exitTimer = null
+        }
+        if (currentInteractiveWindow !== winUnder) {
+          mouseOverPanel = true
+          setInteractiveWindow(winUnder)
+        }
+      } else if (currentInteractiveWindow && !exitTimer) {
+        exitTimer = setTimeout(() => {
+          exitTimer = null
+          mouseOverPanel = false
+          if (!interactiveLocked) setInteractiveWindow(null)
+        }, 50)
       }
-    } else if (currentInteractiveWindow && !exitTimer) {
-      exitTimer = setTimeout(() => {
-        exitTimer = null
-        mouseOverPanel = false
-        if (!interactiveLocked) setInteractiveWindow(null)
-      }, 50)
-    }
-  }),
-)
+    }),
+  )
 
-// Close overlay when clicking outside the panel
-// Use mousedown (not click) so the overlay hides immediately on press,
-// before PoE grabs focus and causes a flash.
-input.on(
-  'mousedown',
-  guardNativeListener('mousedown-overlay', (e) => {
-    if (!overlayVisible && !desktop.hasInteractiveDialog() && windowTracker.inputAllowed()) {
-      const point = traits.compositorFocus ? cursor.trackerPoint() : e
-      if (point && !windowAtPoint(point.x, point.y) && (windowTracker.targetHasFocus || traits.compositorFocus)) {
-        if (hideOverlaysOnGameClick()) {
-          setInteractiveWindow(null)
-          desktop.focusGame()
+  // Close overlay when clicking outside the panel
+  // Use mousedown (not click) so the overlay hides immediately on press,
+  // before PoE grabs focus and causes a flash.
+  input.on(
+    'mousedown',
+    guardNativeListener('mousedown-overlay', (e) => {
+      if (!overlayVisible && !desktop.hasInteractiveDialog() && windowTracker.inputAllowed()) {
+        const point = traits.compositorFocus ? cursor.trackerPoint() : e
+        if (point && !windowAtPoint(point.x, point.y) && (windowTracker.targetHasFocus || traits.compositorFocus)) {
+          if (hideOverlaysOnGameClick()) {
+            setInteractiveWindow(null)
+            desktop.focusGame()
+          }
         }
       }
-    }
-    if (!overlayVisible) return
-    if (!windowTracker.inputAllowed()) return
-    // Only process clicks if the overlay window is actually visible on screen
-    if (!overlayWindow || overlayWindow.isDestroyed() || !overlayWindow.isVisible()) return
-    if (!isInsidePanel(e.x, e.y)) {
-      // A click on any visible Scalpel secondary overlay (cheat sheets etc.) is
-      // an interaction with our app, not a "click outside" - don't hide.
-      if (isInsideAnySecondaryOverlay(e.x, e.y)) return
-      // A native <select> dropdown is open -- its option list lives outside our reported
-      // panel rect, so every click on it looks like a click "outside". Bail so we don't
-      // disable interactivity (click-through to PoE) or close the overlay.
-      if (interactiveLocked) return
-      if (traits.compositorFocus) {
-        hideOverlay()
-        return
+      if (!overlayVisible) return
+      if (!windowTracker.inputAllowed()) return
+      // Only process clicks if the overlay window is actually visible on screen
+      if (!overlayWindow || overlayWindow.isDestroyed() || !overlayWindow.isVisible()) return
+      if (!isInsidePanel(e.x, e.y)) {
+        // A click on any visible Scalpel secondary overlay (cheat sheets etc.) is
+        // an interaction with our app, not a "click outside" - don't hide.
+        if (isInsideAnySecondaryOverlay(e.x, e.y)) return
+        // A native <select> dropdown is open -- its option list lives outside our reported
+        // panel rect, so every click on it looks like a click "outside". Bail so we don't
+        // disable interactivity (click-through to PoE) or close the overlay.
+        if (interactiveLocked) return
+        if (traits.compositorFocus) {
+          hideOverlay()
+          return
+        }
+        // Ensure click-through is enabled so the click reaches the game
+        if (mouseOverPanel) {
+          mouseOverPanel = false
+          setInteractive(false)
+        }
+        if (closeOnClickOutside) {
+          hideOverlay()
+        }
       }
-      // Ensure click-through is enabled so the click reaches the game
-      if (mouseOverPanel) {
-        mouseOverPanel = false
-        setInteractive(false)
-      }
-      if (closeOnClickOutside) {
-        hideOverlay()
-      }
-    }
-  }),
-)
+    }),
+  )
+}
 
 /** The PoE version the overlay's native tracker bound to at createOverlayWindow
  *  time. In single-title (stable) mode electron-overlay-window attaches once per
@@ -390,10 +454,14 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
     .then(() => refreshEndgameFilterSupport())
     .catch(() => {})
   setInterval(() => refreshEndgameFilterSupport().catch(() => {}), 24 * 60 * 60 * 1000)
+  const windowOptions = windowTracker.overlayWindowOptions()
   overlayWindow = new BrowserWindow({
-    ...windowTracker.overlayWindowOptions(),
+    ...windowOptions,
     show: false,
     webPreferences: {
+      // Native backends (e.g. layer-shell) contribute their own preferences;
+      // the host only adds its preload and safety settings.
+      ...windowOptions.webPreferences,
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false,
       contextIsolation: true,
@@ -407,8 +475,8 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
     overlayWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
-  // Click-through by default
-  overlayWindow.setIgnoreMouseEvents(true)
+  // Regular windows stay focusable and interactive; overlays start click-through.
+  if (!traits.windowLocal) overlayWindow.setIgnoreMouseEvents(true)
 
   overlayWindow.on('closed', () => {
     overlayWindow = null
@@ -427,16 +495,18 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
   }
 
   overlayWindow.hide = () => {
-    if (!traits.compositorFocus && Date.now() - lastShowTime < 100) return
+    if (!traits.windowLocal && !traits.compositorFocus && Date.now() - lastShowTime < 100) return
 
     // electron-overlay-window's native code calls .hide() on PoE blur. Skip
     // the hide when focus actually moved to another Scalpel window (cheat
     // sheets etc.) - that's an in-app interaction, not "user left the app".
-    if (traits.compositorFocus ? windowTracker.inputAllowed() : isAnyScalpelWindowFocused()) return
+    // A regular window is managed by our own show/hide flow instead.
+    if (!traits.windowLocal && (traits.compositorFocus ? windowTracker.inputAllowed() : isAnyScalpelWindowFocused()))
+      return
 
     // Linux setOpacity is a no-op; unmap so a hidden, click-through overlay
     // cannot remain painted over another application. Windows avoids animation.
-    if (process.platform === 'linux' || traits.compositorFocus) origHide()
+    if (traits.windowLocal || process.platform === 'linux' || traits.compositorFocus) origHide()
     else overlayWindow?.setOpacity(0)
     overlayWindow?.setIgnoreMouseEvents(true)
     currentInteractiveWindow = null
@@ -450,8 +520,14 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
   }
 
   overlayWindow.showInactive = () => {
-    // Only show the overlay if POE actually has focus (alt-tab fix)
-    if (traits.compositorFocus ? !windowTracker.inputAllowed() : !windowTracker.targetHasFocus) return
+    // A closed overlay must stay unmapped. The native tracker still calls
+    // showInactive() when the game regains focus, which otherwise remaps the
+    // hidden window for a frame (visible as a flash after Esc + alt-tab).
+    if (!overlayVisible) return
+    // Regular windows are shown explicitly by the hotkey flow, not by native
+    // focus callbacks. Overlays still require the game to have focus.
+    if (!traits.windowLocal && (traits.compositorFocus ? !windowTracker.inputAllowed() : !windowTracker.targetHasFocus))
+      return
 
     // Restore opacity before showing so it's visible immediately
     overlayWindow?.setOpacity(1)
@@ -473,11 +549,17 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
   // In multi-title mode (experimental), pass both titles so the native tracker
   // can find either PoE1 or PoE2 without a restart. In single-title mode
   // (stable), attach to the specific game version only.
-  windowTracker.attach(overlayWindow, multiTitleMode ? [GAME_TITLES[1], GAME_TITLES[2]] : [GAME_TITLES[version]])
+  if (!traits.windowLocal) {
+    windowTracker.attach(
+      overlayWindow,
+      multiTitleMode ? [...getAllGameTitles()] : [...getGameTitlesForVariant(version)],
+    )
+  }
 
   windowTracker.events.on('attach', (ev) => {
     lastAttachAt = Date.now()
     setGameAttached(true)
+    reportOverlayGeometry('attach')
     try {
       // During a retarget, poeVersion was already set by retargetForGame()
       // so we skip titleIndex inference.
@@ -511,7 +593,7 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
       // whiteboard to re-resolve and re-open its live-mirror stream.
       getWhiteboardOverlay()?.send(IPC_CHANNELS.SCREEN.SOURCE_INVALIDATED_EVENT)
       mouseOverPanel = false
-      if (overlayVisible && overlayWindow && !overlayWindow.isDestroyed()) {
+      if (overlayVisible && overlayWindow && !overlayWindow.isDestroyed() && !traits.windowLocal) {
         overlayWindow.setIgnoreMouseEvents(!traits.compositorFocus)
         if (currentInteractiveWindow === overlayWindow) currentInteractiveWindow = null
         overlayWindow.webContents.send('skip-animation')
@@ -601,6 +683,16 @@ function sendGameBounds(physWidth: number, physHeight: number): void {
     gameHeight,
     sidebarWidth,
   })
+  const boundsKey = `${Math.round(physWidth)}x${Math.round(physHeight)}@${sf.toFixed(3)}`
+  if (boundsKey !== lastGameBoundsKey) {
+    lastGameBoundsKey = boundsKey
+    recordMainBreadcrumb(
+      `overlay game-bounds raw=${Math.round(physWidth)}x${Math.round(physHeight)} sf=${sf.toFixed(3)} ` +
+        `dip=${gameWidth}x${gameHeight} sidebar=${sidebarWidth}`,
+      'debug',
+    )
+  }
+  reportOverlayGeometry('game-bounds')
 }
 
 /** Switch overlay attachment to a different PoE version in-process.
@@ -623,7 +715,7 @@ export function retargetForGame(target: 1 | 2): void {
   hideOverlay()
   setPoeVersion(target)
   overlayAttachedVersion = target
-  windowTracker.setTargetTitles([GAME_TITLES[target]])
+  windowTracker.setTargetTitles([...getGameTitlesForVariant(target)])
   retargetWatchdog = setTimeout(() => {
     retargeting = false
     retargetWatchdog = null
@@ -641,6 +733,17 @@ export function showOverlay(): void {
   if (wb && !wb.getPersistOverOthers()) wb.hide()
   overlayVisible = true
   lastShowTime = Date.now()
+  // Tell the renderer to build the content before we reveal the window, so the
+  // first painted frame is not empty.
+  try {
+    const tb = windowTracker.targetBounds
+    if (!traits.windowLocal && tb?.width) sendGameBounds(tb.width, tb.height)
+    overlayWindow.webContents.send('poe-version', getPoeVersion())
+    overlayWindow.webContents.send('overlay-show')
+  } catch (err) {
+    lastOverlayError = String(err)
+    console.error('[overlay] Error in showOverlay:', err)
+  }
   // Call the overridden showInactive() to properly reset opacityHidden and restore visibility.
   // Direct setOpacity(1) alone doesn't reset the closure flag, so the next hide/show cycle
   // from electron-overlay-window can re-zero the opacity.
@@ -648,6 +751,17 @@ export function showOverlay(): void {
     if (traits.compositorFocus) setInteractive(true)
     overlayWindow.showInactive()
   } catch {}
+  if (traits.windowLocal && overlayWindow && !overlayWindow.isDestroyed()) {
+    try {
+      // The main overlay is not created through windowing/window.ts, so this
+      // is the only place its backend show preparation runs. It unlocks the
+      // first-map size and sets always-on-top; without it the window stays a
+      // locked dialog that a tiling compositor can bury behind the game.
+      windowTracker.beforeOverlayShow(overlayWindow, getGameTitlesForVariant(getPoeVersion())[0] ?? '')
+      overlayWindow.setIgnoreMouseEvents(false)
+      overlayWindow.moveTop()
+    } catch {}
+  }
   // If a persisting whiteboard is visible, raise the eval above it so the
   // popup is never buried under the annotations.
   if (wb && wb.getPersistOverOthers() && wb.isVisible()) {
@@ -655,16 +769,8 @@ export function showOverlay(): void {
       overlayWindow.moveTop()
     } catch {}
   }
-  try {
-    const tb = windowTracker.targetBounds
-    if (tb?.width) sendGameBounds(tb.width, tb.height)
-    overlayWindow.webContents.send('poe-version', getPoeVersion())
-    overlayWindow.webContents.send('overlay-show')
-  } catch (err) {
-    lastOverlayError = String(err)
-    console.error('[overlay] Error in showOverlay:', err)
-  }
   overlayVisibilityListener?.(true)
+  if (overlayBoundsAreLogical() && overlayWindow) applyLayerInputRects(overlayWindow)
   if (traits.compositorFocus) {
     if (exitTimer) clearTimeout(exitTimer)
     exitTimer = null
@@ -677,7 +783,12 @@ export function hideOverlay(): void {
   if (!overlayWindow || overlayWindow.isDestroyed() || !overlayVisible) return
   overlayVisible = false
   mouseOverPanel = false
-  if (traits.compositorFocus) {
+  if (traits.windowLocal) {
+    // A regular window is unmapped by us, not by a native tracker. Hand focus
+    // back to PoE first so the next hotkey still reaches the game.
+    windowTracker.focusTarget()
+    unmapMainOverlay?.()
+  } else if (traits.compositorFocus) {
     interactiveLocked = false
     currentInteractiveWindow = null
     if (exitTimer) clearTimeout(exitTimer)
@@ -695,7 +806,8 @@ export function hideOverlay(): void {
   // Tell renderer to hide its content (don't call overlayWindow.hide() -
   // The window tracker manages window visibility and would re-show it, causing flicker)
   overlayWindow.webContents.send('overlay-hide')
-  if (!traits.compositorFocus) windowTracker.focusTarget()
+  if (overlayBoundsAreLogical()) applyLayerInputRects(overlayWindow)
+  if (!traits.compositorFocus && !traits.windowLocal) windowTracker.focusTarget()
   overlayVisibilityListener?.(false)
 }
 
@@ -733,6 +845,14 @@ export function toggleOverlay(): void {
 
 export function getOverlayWindow(): BrowserWindow | null {
   return overlayWindow
+}
+
+/** Rebind a live overlay after the user changes custom game window titles. */
+export function refreshOverlayGameTitles(): void {
+  if (!overlayWindow || overlayWindow.isDestroyed()) return
+  windowTracker.setTargetTitles(
+    multiTitleMode ? [...getAllGameTitles()] : [...getGameTitlesForVariant(getPoeVersion())],
+  )
 }
 
 /** Make PoE the OS foreground window so SendInput reaches it, not the overlay. */

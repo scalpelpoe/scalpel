@@ -7,14 +7,87 @@
 //     downgrade it back to a warning so the rebuild completes. Linux also
 //     force-rebuilds uiohook-napi from the patched source (see the block
 //     below) since its N-API prebuilt would otherwise mask the patch.
+//   - Linux: also build the separate `overlay-wayland-host` executable from the
+//     same binding.gyp, which electron-rebuild does not build on its own.
 //   - Windows/macOS: invoke electron-rebuild with no extra flags.
 //
 // The cross-platform npm invocation is what required this script: npm runs
 // postinstall via cmd.exe on Windows, which can't parse POSIX shell guards.
 const { spawnSync } = require('node:child_process')
-const { rmSync } = require('node:fs')
+const { existsSync, readFileSync, rmSync } = require('node:fs')
+const { join } = require('node:path')
 
 const env = { ...process.env }
+
+// electron-rebuild only builds the addon target when its configure step cannot
+// find the Wayland development packages. The generic layer-shell backend needs
+// the separate `overlay-wayland-host` executable, so build that target
+// explicitly whenever the toolchain is available. Without it, native Wayland
+// silently falls back to the X11 path and the overlay lands on the wrong screen.
+function buildWaylandHost() {
+  const moduleDir = join('node_modules', 'electron-overlay-window')
+  const configPath = join(moduleDir, 'build', 'config.gypi')
+  if (!existsSync(configPath)) {
+    console.warn('[postinstall] electron-overlay-window config.gypi missing; layer-shell host not built')
+    return
+  }
+
+  const scanner = spawnSync('sh', ['-c', 'command -v wayland-scanner >/dev/null 2>&1'], { stdio: 'ignore' })
+  const libraries = spawnSync(
+    'sh',
+    ['-c', 'pkg-config --exists wayland-client wayland-cursor xkbcommon'],
+    { stdio: 'ignore' },
+  )
+  if (scanner.status !== 0 || libraries.status !== 0) {
+    const missing = [
+      ...(scanner.status !== 0 ? ['wayland-scanner on PATH'] : []),
+      ...(libraries.status !== 0 ? ['wayland-client/wayland-cursor/xkbcommon dev packages'] : []),
+    ]
+    console.warn(
+      `[postinstall] ${missing.join(' and ')} not found; layer-shell host not built. ` +
+        'Rerun npm ci from a shell with the Wayland toolchain available.',
+    )
+    return
+  }
+
+  // config.gypi starts with a `# Do not edit` comment, so strip comment lines.
+  const gypConfig = readFileSync(configPath, 'utf8')
+    .split('\n')
+    .filter((line) => !line.startsWith('#'))
+    .join('\n')
+  const { variables = {} } = JSON.parse(gypConfig)
+  const gypArgs = []
+  if (variables.nodedir) gypArgs.push(`--nodedir=${variables.nodedir}`)
+  if (variables.target) gypArgs.push(`--target=${variables.target}`)
+
+  // node-gyp's nopt parser drops unknown flags before gyp sees them, so
+  // `--wayland_host=1` silently does nothing. GYP_DEFINES is passed straight to
+  // gyp and reliably forces the host target on.
+  const configureEnv = {
+    ...env,
+    GYP_DEFINES: `${env.GYP_DEFINES ?? ''} wayland_host=1`.trim(),
+  }
+  const configured = spawnSync('node-gyp', ['configure', ...gypArgs], {
+    cwd: moduleDir,
+    stdio: 'inherit',
+    shell: true,
+    env: configureEnv,
+  })
+  if ((configured.status ?? 1) !== 0) {
+    console.warn('[postinstall] node-gyp configure for layer-shell host failed')
+    return
+  }
+
+  const built = spawnSync('node-gyp', ['build', ...gypArgs], {
+    cwd: moduleDir,
+    stdio: 'inherit',
+    shell: true,
+    env,
+  })
+  if ((built.status ?? 1) !== 0) {
+    console.warn('[postinstall] layer-shell host build failed; native Wayland overlays unavailable')
+  }
+}
 
 // Compile Paraglide messages into src/shared/paraglide/ (gitignored, auto-generated).
 // Runs here so a fresh checkout has the i18n runtime before the husky pre-commit
@@ -54,6 +127,8 @@ const rebuildStatus = result.status ?? 1
 if (rebuildStatus !== 0) {
   process.exit(rebuildStatus)
 }
+
+if (process.platform === 'linux') buildWaylandHost()
 
 // uiohook-napi ships an ABI-stable N-API prebuilt, so electron-rebuild leaves it
 // untouched and the patched libuiohook source (patches/uiohook-napi+1.5.4.patch)

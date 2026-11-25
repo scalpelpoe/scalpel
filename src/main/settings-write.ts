@@ -1,6 +1,6 @@
 import type { WebContents } from 'electron'
 import type Store from 'electron-store'
-import { getOverlayWindow, setCloseOnClickOutside } from './overlay'
+import { getOverlayWindow, refreshOverlayGameTitles, setCloseOnClickOutside } from './overlay'
 import { withPluginHotkeys } from './app-macros'
 import { getAppWindow } from './app-window'
 import { applyCheatSheetHotkeys, getCheatSheetsOverlay } from './cheat-sheets'
@@ -23,6 +23,13 @@ import { getRadialMenuOverlay } from './radial-menu'
 import { updateOnlineSyncDir } from './online-sync'
 import { refreshPrices } from './trade/prices'
 import { setUpdateChannel } from './update/updater'
+import {
+  setGameTitleOverrides,
+  setLinuxClipboardBackend,
+  setLinuxDesktop,
+  setLinuxGameDisplayModeOverride,
+  setLinuxInputBackend,
+} from '@scalpel/platform'
 import type { AppSettings, CheatSheetsSettings, GameVariant, PoeProfile, RuntimeSettings } from '@shared/types'
 import {
   ACTIVE_PROFILE_ID_KEY,
@@ -181,6 +188,27 @@ export function applySetting<K extends keyof AppSettings>(
   } else {
     store.set(key, value)
     changes = [{ key, value } as ProfileChangedSetting]
+  }
+
+  if (key === 'platformInputBackend') {
+    setLinuxInputBackend(value)
+  }
+
+  if (key === 'platformClipboardBackend') {
+    setLinuxClipboardBackend(value)
+  }
+
+  if (key === 'platformDesktopEnvironment') {
+    setLinuxDesktop(value)
+  }
+
+  if (key === 'platformGameDisplayMode') {
+    setLinuxGameDisplayModeOverride(value)
+  }
+
+  if (key === 'gameTitlePoe1' || key === 'gameTitlePoe2') {
+    setGameTitleOverrides({ poe1: store.get('gameTitlePoe1'), poe2: store.get('gameTitlePoe2') })
+    refreshOverlayGameTitles()
   }
 
   if (key === ACTIVE_PROFILE_ID_KEY && changes.length === 0) {

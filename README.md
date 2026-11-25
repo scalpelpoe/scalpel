@@ -53,6 +53,39 @@ paru -S scalpel-poe-bin
 
 [FAQ](https://scalpel.fourth.party/faq)
 
+## Linux game window identity (developers)
+
+The custom game-title settings accept a compact identity string:
+
+```text
+Title|appId[,alternativeAppId]|className|instance
+```
+
+A plain title still works. The part before `|` is the window title used by title-only attach paths. Later parts are identity hints enforced by the shared matcher when the window exposes an app id, class, or instance. Comma-separated app ids let one value cover Steam's different game-window identities.
+
+The **Copy into the field below** readout in Platform settings shows exactly this string for the currently and previously activated windows, so it can be pasted directly.
+
+Identity hints are enforced on native Wayland, Sway, and Umbriel, where compositor/foreign-toplevel data is available. The X11/XWayland native hook and Electron `desktopCapturer` only see window titles, so they cannot enforce the identity part; title-only matching remains the fallback there.
+
+## Regular window mode
+
+Windowing mode `Regular window` opens the panel as a normal focusable floating `Scalpel` window instead of an overlay. It works on X11/XWayland and native Wayland, including compositors without `wlr-layer-shell` support. Auto selects it when native Wayland is active but no overlay backend is available.
+
+There is no game-relative attach, click-through, input shaping, or screencopy in this mode. Hotkeys, clipboard price checks, and the in-window tools still work; capture-based visual features are limited.
+
+### Linux backend defaults on native Wayland
+
+- With layer-shell available: Auto windowing selects layer-shell. The native overlay backend supplies evdev shortcuts, so Auto shortcuts select `evdev`; clipboard uses the compositor data-control clipboard; input prefers a working `ydotool`/`wtype`, otherwise uIOhook.
+- With Regular window: no native overlay shortcut backend is registered, so Auto shortcuts select the GlobalShortcuts portal. The compositor clipboard is registered directly, and input still prefers `ydotool`/`wtype` with a uIOhook fallback. Auto selects Regular window only when layer-shell is unavailable.
+
+`x11`/`layer-shell`/`window` explicit choices are never overridden by these Auto rules.
+
+Known limitations of Regular window mode:
+
+- `Overlay scale` has no effect here (the panel fills the window viewport). Resize the window instead.
+- `wtype` input injection is unreliable on Wayland compositors with XWayland games (e.g. Umbriel): the virtual keyboard can send stray keys and miss the copy combo. `ydotool`, `Compositor keyboard` and `uIOhook` work.
+- The initial window size is locked so tiling compositors map it as a dialog; resizing is unlocked after the first show.
+
 ## Notes from Fred
 
 The PoE2 era has begun for Scalpel. Enjoy 0.5 and all the new content and please feel free to bug me about what works and what doesn't. I have tried to smoke test PoE2 as best I can, but that is short of actually using it during gameplay.
@@ -89,12 +122,20 @@ There are two ways to contribute to Scalpel - fork this repo and make a PR (duh)
 
 ## Building from Source
 
-Running it is easy:
+Requires Node 22 and npm. From a fresh clone:
 
-```
-npm install
+```sh
+npm ci
 npm run dev
 ```
+
+`npm ci` also rebuilds native modules and, on Linux, builds
+`overlay-wayland-host`. That needs `wayland-scanner` plus the
+`wayland-client`, `wayland-cursor` and `xkbcommon` development packages; when
+they are missing, install warns and native Wayland falls back to X11.
+
+Running `npm run dev` without dependencies installed stops with a short notice
+instead of failing later with `paraglide-js: command not found`.
 
 ## License
 

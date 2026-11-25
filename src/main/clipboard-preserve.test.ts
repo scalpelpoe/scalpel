@@ -27,6 +27,7 @@ vi.mock('electron', () => ({
   ipcMain: { on: vi.fn(), handle: vi.fn() },
 }))
 vi.mock('@scalpel/platform', () => ({
+  isNativeWayland: () => false,
   Key: {
     Escape: 1,
     Ctrl: 2,

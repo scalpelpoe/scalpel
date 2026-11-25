@@ -7,6 +7,10 @@ const resolveAlias = {
   '@shared': resolve(__dirname, 'src/shared'),
   '@main': resolve(__dirname, 'src/main'),
   '@renderer': resolve(__dirname, 'src/renderer/src'),
+  // Package-internal alias: compositor dirs use it to make the shared layer
+  // they import obvious. Public consumers still import @scalpel/platform.
+  '@platform': resolve(__dirname, 'packages/platform/src'),
+  '@scalpel/platform/settings': resolve(__dirname, 'packages/platform/src/common/platform-settings.ts'),
 }
 
 export default defineConfig({

@@ -7,7 +7,9 @@
     "paths": {
       "@shared/*": ["src/shared/*"],
       "@main/*": ["src/main/*"],
-      "@renderer/*": ["src/renderer/src/*"]
+      "@renderer/*": ["src/renderer/src/*"],
+      "@platform/*": ["packages/platform/src/*"],
+      "@scalpel/platform/settings": ["packages/platform/src/common/platform-settings.ts"]
     },
     "jsx": "react-jsx",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
