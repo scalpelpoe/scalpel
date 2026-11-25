@@ -7,6 +7,8 @@ import { zebraRowBg } from '../../shared/utils'
 export interface ModListMod {
   id: string | number
   text: string
+  /** Secondary line for map reward percentages. */
+  detail?: string
   /** Optional badge label rendered on the right (e.g. "NM" for nightmare on maps). */
   badge?: { label: string; color: string }
 }
@@ -90,6 +92,15 @@ export function ModList({
                   <div
                     key={m.id}
                     onClick={() => toggle(m.id)}
+                    role={onValueChange ? undefined : 'checkbox'}
+                    aria-checked={onValueChange ? undefined : isSelected}
+                    tabIndex={onValueChange ? undefined : 0}
+                    onKeyDown={(event) => {
+                      if (!onValueChange && (event.key === ' ' || event.key === 'Enter')) {
+                        event.preventDefault()
+                        toggle(m.id)
+                      }
+                    }}
                     className="flex items-center gap-2 px-3 py-[4px] cursor-pointer select-none transition-colors"
                     style={{
                       background: isSelected ? selectedTint : zebraRowBg(mi),
@@ -98,9 +109,14 @@ export function ModList({
                     <RegexCheckbox checked={isSelected} color={tabColor} />
                     <span
                       className="text-[11px] flex-1"
-                      style={{ color: isSelected ? 'var(--text)' : 'var(--text-dim)' }}
+                      style={{ color: isSelected || m.detail ? 'var(--text)' : 'var(--text-dim)' }}
                     >
                       {formatModText(m.text)}
+                      {m.detail && (
+                        <span className="block text-[10px] text-text-dim tabular-nums" title="Base map bonuses">
+                          {m.detail}
+                        </span>
+                      )}
                     </span>
                     {isSelected && onValueChange && valueHint && (
                       // Wrapper stops the scrubber's mousedown/click from bubbling to the

@@ -22,6 +22,7 @@
 const crypto = require('node:crypto')
 const fs = require('node:fs')
 const path = require('node:path')
+const { syncMapRewards } = require('./build-map-rewards')
 
 const ORIGIN = 'https://data.poe.re'
 const OUTPUT_DIR = path.join(__dirname, '..', 'src', 'shared', 'data', 'regex', 'vendor')
@@ -153,7 +154,7 @@ function mapModsTarget(language) {
         exportLine: `export const regexMapMods${language}: Regex<MapModsTokenOption>`,
         json,
         renderOptions: (o) => {
-          // Rewards became {type, value} objects on data.poe.re; the app only reads the type.
+          // Locale files keep category names. build-map-rewards emits the numeric table once for all locales.
           const rewards = (o.rewards ?? []).map((r) => (typeof r === 'string' ? r : r.type))
           const tail = rewards.length ? `, rewards: [${rewards.map(str).join(', ')}]` : ''
           return `{scary: ${o.scary}, nm: ${o.nm}, prefix: ${o.prefix}${tail}}`
@@ -490,6 +491,17 @@ async function sync() {
   const { timestamp: _ts, ...prevComparable } = meta
   if (updated > 0 || JSON.stringify(prevComparable) !== JSON.stringify(next)) {
     fs.writeFileSync(META_FILE, `${JSON.stringify({ ...next, timestamp: new Date().toISOString() }, null, 2)}\n`)
+  }
+  const source = 'mapmods/Generated.Map.ENGLISH.json'
+  const english = files[`poe1/${source}`]
+  if (english) {
+    await syncMapRewards({
+      tokenUrl: `${ORIGIN}/generated/poe1/${english.patch}/${source}`,
+      sha256: english.sha256,
+      force: FORCE,
+      userAgent: USER_AGENT,
+      get,
+    })
   }
   console.log(
     `[sync-regex] poe1 ${current.poe1.patch}, poe2 ${current.poe2.patch}: ${updated} file(s) updated${failed ? `, ${failed} failed` : ''}.`,

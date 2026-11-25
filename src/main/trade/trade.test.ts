@@ -120,6 +120,7 @@ import {
   modEntryText,
   parseFetchedListings,
   searchTrade,
+  searchMapsByRegex,
   searchTabletsByRegex,
   searchWaystonesByRegex,
   searchNeedsLogin,
@@ -2777,6 +2778,35 @@ describe('buildRegexStatGroups', () => {
     expect(groups).toHaveLength(1)
     expect(groups[0].type).toBe('count')
     expect(groups[0].filters[0].id).toBe('explicit.stat_custom_id')
+  })
+})
+
+it('sends Maps reward minimums to the corresponding trade filters', async () => {
+  capturedRequests.length = 0
+  _resetRateLimitsForTests()
+  setPoeVersion(1)
+  await searchMapsByRegex(
+    'Standard',
+    16,
+    [],
+    [],
+    'any',
+    { quantity: 80, morecurrency: 90, rarity: 70 },
+    false,
+    false,
+    false,
+    'any',
+    'divine',
+  )
+  const { query } = parseCapturedBody(capturedRequests.find((r) => r.url.includes('/search/')))
+  expect(query.filters.map_filters?.filters).toEqual({
+    map_tier: { min: 16, max: 16 },
+    map_bonus: { min: 80 },
+    map_iir: { min: 70 },
+  })
+  expect(query.stats).toContainEqual({
+    type: 'and',
+    filters: [{ id: 'pseudo.pseudo_map_more_currency_drops', value: { min: 90 } }],
   })
 })
 

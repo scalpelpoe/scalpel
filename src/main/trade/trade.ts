@@ -2212,7 +2212,7 @@ export async function searchMapsByRegex(
   const mapFilterObj: Record<string, unknown> = {
     map_tier: { min: tier, max: tier },
   }
-  if (qualifiers.quantity) mapFilterObj.map_iiq = { min: qualifiers.quantity }
+  if (qualifiers.quantity) mapFilterObj.map_bonus = { min: qualifiers.quantity } // saved Maps key for Atlas Drops
   if (qualifiers.packsize) mapFilterObj.map_packsize = { min: qualifiers.packsize }
   if (qualifiers.rarity) mapFilterObj.map_iir = { min: qualifiers.rarity }
 

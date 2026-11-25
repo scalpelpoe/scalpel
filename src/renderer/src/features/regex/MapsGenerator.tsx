@@ -5,6 +5,7 @@ import { DEFAULT_MAP_STATE, sanitizeMapState, type MapStateSettings } from '@sha
 import { buildMapRegex } from './regex-engine'
 import { buildMapStateRegex } from './map-state-regex'
 import { buildQualifierRegex, QUALIFIERS, QUALIFIER_GROUPS, type QualifierValues } from './Qualifiers'
+import { DEFAULT_REWARD_TARGETS, formatRewards, rankMapRewards, rewardTargets } from './map-reward-plan'
 import {
   AddOne,
   Forbid,
@@ -65,7 +66,9 @@ export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functio
   const [mapState, setMapState] = useState<MapStateSettings>(() =>
     loadStorage(key('map-state'), DEFAULT_MAP_STATE, (s) => sanitizeMapState(JSON.parse(s))),
   )
-  const [optimizeNumbers, setOptimizeNumbers] = useState(() => loadStorage(key('optimize'), true, (s) => s !== 'false'))
+  const [optimizeNumbers, setOptimizeNumbers] = useState(() =>
+    loadStorage(key('optimize'), false, (s) => s !== 'false'),
+  )
   const [showNightmare, setShowNightmare] = useState(() => loadStorage(key('nightmare'), false, (s) => s === 'true'))
 
   useEffect(() => {
@@ -107,6 +110,7 @@ export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functio
     if (panel !== null) onPanelOpenRef.current?.()
   }, [panel])
   const [search, setSearch] = useState('')
+  const [reviewRewards, setReviewRewards] = useState(false)
   const [showAllTiers, setShowAllTiers] = useState(false)
   const [avoidCollapsed, setAvoidCollapsed] = useState<Set<string>>(
     new Set(['dangerous', 'annoying', 'mild', 'harmless', 'beneficial']),
@@ -135,7 +139,7 @@ export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functio
 
   const visibleMods = MAP_MODS.filter((m) => {
     if (!showNightmare && m.nightmare) return false
-    if (search && !m.text.toLowerCase().includes(search.toLowerCase())) return false
+    if (search && !`${m.text} ${formatRewards(m.rewards)}`.toLowerCase().includes(search.toLowerCase())) return false
     return true
   })
 
@@ -166,7 +170,29 @@ export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functio
         ]
       : []
 
-  const grouped = tab === 'want' ? [...regularGroups, ...nightmareGroup] : [...nightmareGroup, ...regularGroups]
+  const targets = rewardTargets(qualifiers)
+  const hasTargets = Object.keys(targets).length > 0
+  const reviewing = tab === 'avoid' && reviewRewards && hasTargets
+  const grouped = reviewing
+    ? rankMapRewards(visibleMods, targets).map((g) => ({ ...g, color: TAB_COLORS.qualifiers }))
+    : tab === 'want'
+      ? [...regularGroups, ...nightmareGroup]
+      : [...nightmareGroup, ...regularGroups]
+
+  const optimize = (): void => {
+    if (!hasTargets) setQualifiers((prev) => ({ ...prev, ...DEFAULT_REWARD_TARGETS }))
+    setSearch('')
+    setPanel(null)
+    onPanelOpen?.()
+    setShowNightmare(true)
+    setReviewRewards(true)
+    setAvoidCollapsed((prev) => {
+      const next = new Set(prev)
+      next.delete('contributors')
+      return next
+    })
+    setTab('avoid')
+  }
 
   const avoidMods = MAP_MODS.filter((m) => avoid.has(m.id))
   const wantMods = MAP_MODS.filter((m) => want.has(m.id))
@@ -223,6 +249,7 @@ export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functio
   // Hydrate every piece of Maps state a preset carries. Shared by the container's
   // load-a-saved-preset path and the poe.re import, which builds the same shape.
   const hydrate = (preset: RegexPreset): void => {
+    setReviewRewards(false)
     setAvoid(new Set(preset.avoid))
     setWant(new Set(preset.want))
     setWantMode(preset.wantMode)
@@ -279,6 +306,13 @@ export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functio
   }
   const toggle = (id: string | number): void => {
     const numId = typeof id === 'string' ? Number(id) : id
+    const opposite = tab === 'avoid' ? want : avoid
+    if (!selected.has(numId) && opposite.has(numId)) {
+      const next = new Set(opposite)
+      next.delete(numId)
+      const setOpposite = tab === 'avoid' ? setWant : setAvoid
+      setOpposite(next)
+    }
     setSelected((prev) => {
       const next = new Set(prev)
       if (next.has(numId)) next.delete(numId)
@@ -397,6 +431,11 @@ export const MapsGenerator = forwardRef<GeneratorHandle, GeneratorProps>(functio
         avoid={avoid}
         want={want}
         qualifierCount={qualifierCount}
+        targetSummary={formatRewards(hasTargets ? targets : DEFAULT_REWARD_TARGETS, true)}
+        hasTargets={hasTargets}
+        reviewing={reviewing}
+        optimize={optimize}
+        endReview={() => setReviewRewards(false)}
         showTradeResults={showTradeResults}
         optimizeNumbers={optimizeNumbers}
         setOptimizeNumbers={setOptimizeNumbers}
@@ -446,6 +485,11 @@ interface MapsGeneratorBodyProps {
   avoid: Set<number>
   want: Set<number>
   qualifierCount: number
+  targetSummary: string
+  hasTargets: boolean
+  reviewing: boolean
+  optimize: () => void
+  endReview: () => void
   showTradeResults: boolean
   optimizeNumbers: boolean
   setOptimizeNumbers: React.Dispatch<React.SetStateAction<boolean>>
@@ -460,7 +504,7 @@ interface MapsGeneratorBodyProps {
   search: string
   qualCollapsed: Set<string>
   setQualCollapsed: React.Dispatch<React.SetStateAction<Set<string>>>
-  grouped: Array<{ mods: typeof MAP_MODS; label: string; color: string; key: string; danger: Danger }>
+  grouped: Array<{ mods: typeof MAP_MODS; label: string; color: string; key: string }>
   selected: Set<number>
   collapsed: Set<string>
   toggle: (id: string | number) => void
@@ -474,6 +518,11 @@ function MapsGeneratorBody({
   avoid,
   want,
   qualifierCount,
+  targetSummary,
+  hasTargets,
+  reviewing,
+  optimize,
+  endReview,
   showTradeResults,
   optimizeNumbers,
   setOptimizeNumbers,
@@ -551,17 +600,17 @@ function MapsGeneratorBody({
 
       {!showTradeResults && tab === 'qualifiers' && (
         <div
-          className="flex items-center gap-[6px] px-3 py-[6px] border-b border-border"
+          className="flex flex-wrap items-center gap-[6px] px-3 py-[6px] border-b border-border"
           style={{ background: 'var(--bg-solid)' }}
         >
           <FilterChip
-            label="Regular"
+            label="Exact"
             active={!optimizeNumbers}
             onClick={() => setOptimizeNumbers(false)}
             color={TAB_COLORS.qualifiers}
           />
           <FilterChip
-            label="Optimized"
+            label="Round down to 10s"
             active={optimizeNumbers}
             onClick={() => {
               setOptimizeNumbers(true)
@@ -576,14 +625,42 @@ function MapsGeneratorBody({
             }}
             color={TAB_COLORS.qualifiers}
           />
+          <button
+            type="button"
+            onClick={optimize}
+            aria-describedby="map-optimize-hint"
+            className="ml-auto shrink-0 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-accent hover:bg-white/20 focus-visible:ring-1 focus-visible:ring-accent"
+          >
+            Optimize
+          </button>
+          <span id="map-optimize-hint" className="w-full text-[11px] text-text-dim">
+            {hasTargets
+              ? 'Optimize ranks mods by their contribution to your minimums.'
+              : `Optimize starts with ${targetSummary}.`}
+          </span>
         </div>
       )}
 
       {!showTradeResults && tab === 'avoid' && (
         <div
-          className="flex items-center justify-center gap-[6px] px-3 py-[6px] border-b border-border"
+          className="flex flex-wrap items-center justify-center gap-[6px] px-3 py-[6px] border-b border-border"
           style={{ background: 'var(--bg-solid)' }}
         >
+          {reviewing && (
+            <div className="flex-1 min-w-[160px] text-[11px]">
+              <div className="font-semibold text-text">{targetSummary}</div>
+              <div className="text-text-dim">Check mods you avoid. Maps must meet every minimum.</div>
+            </div>
+          )}
+          {reviewing && (
+            <button
+              type="button"
+              className="text-[11px] text-accent focus-visible:ring-1 focus-visible:ring-accent"
+              onClick={endReview}
+            >
+              Group by danger
+            </button>
+          )}
           <FilterChip
             label="Show Nightmare mods"
             active={showNightmare}
@@ -706,6 +783,8 @@ function MapsGeneratorBody({
                       <ScrubInput
                         value={qualifiers[q.id] ?? null}
                         placeholder="--"
+                        max={999}
+                        suffix={qualifiers[q.id] ? '%' : ''}
                         step={optimizeNumbers ? 10 : 1}
                         onChange={(val) => {
                           const snapped =
@@ -736,6 +815,7 @@ function MapsGeneratorBody({
             mods: mods.map((m) => ({
               id: m.id,
               text: m.text,
+              detail: formatRewards(m.rewards),
               badge: m.nightmare ? { label: 'NM', color: TAB_COLORS.avoid } : undefined,
             })),
           }))}
