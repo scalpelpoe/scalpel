@@ -15,7 +15,13 @@ vi.mock('@scalpel/platform', () => ({
         return mock.compositorFocus
       },
     },
-    windowTracker: { overlayWindowOptions: () => ({}), adoptOverlay: vi.fn(), beforeOverlayShow: mock.beforeShow },
+    windowTracker: {
+      overlayWindowOptions: () => ({}),
+      overlayWebPreferences: (prefs: object) => prefs,
+      adoptSurface: vi.fn(),
+      adoptOverlay: vi.fn(),
+      beforeOverlayShow: mock.beforeShow,
+    },
   }),
 }))
 vi.mock('../game-state', () => ({ getPoeVersion: () => 2 }))

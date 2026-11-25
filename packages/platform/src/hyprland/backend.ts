@@ -18,12 +18,13 @@ import {
  *  the pointer, and `grim` for capture. Requires `grim` on PATH. */
 export function createHyprlandBackend(): Backend {
   return {
-    traits: { compositorFocus: true },
+    traits: { compositorFocus: true, inputRegions: false },
     capture: { captureGame: captureHyprlandGame, gameWindowSource: electronGameWindowSource },
     cursor: {
       screenPoint: getHyprlandCursorDip,
       trackerPoint: getHyprlandPointerPhysical,
       warpTo: warpHyprlandCursor,
+      refresh: async () => {},
     },
     windowTracker: controllerTracker({
       gameBounds: getHyprlandGameBounds,
@@ -45,6 +46,9 @@ export function createHyprlandBackend(): Backend {
       // user's overlay window rule.
       overlayWindowOptions: () => ({ ...OVERLAY_WINDOW_OPTS, type: 'utility', title: 'Scalpel Overlay' }),
       adoptOverlay: nameHyprlandOverlay,
+      overlayWebPreferences: (prefs) => prefs,
+      adoptSurface: () => {},
+      setInputRegion: () => {},
       beforeOverlayShow: () => {},
     }),
   }

@@ -268,6 +268,10 @@ async function captureItemFromClipboard(
   }
 
   consecutiveClipboardFailures = 0
+  // Under layer-shell, finding the pointer briefly takes pointer focus from the
+  // game, which would end the hover the copy needs, so it waits until now.
+  await desktop.refreshCursor()
+  lastCursorX = desktop.getCursorScreenPoint()?.x ?? lastCursorX
   return item
 }
 

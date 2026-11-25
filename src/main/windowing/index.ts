@@ -521,6 +521,17 @@ function wireWindowEvents(state: OverlayState, win: BrowserWindow): void {
     win.hide()
     state.wasVisibleBeforeFocusLoss = false
   })
+  if (platform().traits.inputRegions) {
+    // The input hook never sees presses on an overlay with input regions; the
+    // window reports its own drags instead.
+    win.on('will-move', () => {
+      leftMouseHeld = true
+      cancelSnapGhostSafetyClear()
+    })
+    win.on('moved', () => {
+      leftMouseHeld = false
+    })
+  }
   win.on('move', () => {
     if (state.inProgrammaticMove) return
     maybeUpdateSnap(state)

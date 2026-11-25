@@ -25,12 +25,13 @@ export function createOverlayWindow({ htmlEntry, bounds, interaction }: CreateOp
     y: bounds.y,
     backgroundColor: '#00000000',
     show: false,
-    webPreferences: {
+    webPreferences: platform().windowTracker.overlayWebPreferences({
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-    },
+    }),
   })
+  platform().windowTracker.adoptSurface(win)
   platform().windowTracker.adoptOverlay(win)
   // 'screen-saver' is the level the main overlay uses (set by electron-overlay-
   // window on attach). It sits above PoE, the taskbar, and other floating

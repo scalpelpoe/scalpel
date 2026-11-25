@@ -1,7 +1,7 @@
 import { desktop } from '../desktop'
 import { join } from 'node:path'
 import { BrowserWindow, screen } from 'electron'
-import { OVERLAY_WINDOW_OPTS } from '@scalpel/platform'
+import { OVERLAY_WINDOW_OPTS, platform } from '@scalpel/platform'
 
 /** Shared transparent click-through window used by the secondary-overlay system
  *  to render the snap-target ghost during drag. Sized to PoE's current display
@@ -61,12 +61,13 @@ function ensureCanvasWindow(): BrowserWindow {
   canvasWin = new BrowserWindow({
     ...OVERLAY_WINDOW_OPTS,
     focusable: false,
-    webPreferences: {
+    webPreferences: platform().windowTracker.overlayWebPreferences({
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
-    },
+    }),
   })
+  platform().windowTracker.adoptSurface(canvasWin)
   // 'screen-saver' lifts the canvas above PoE + taskbar + other floating
   // windows. Same level the main overlay runs at after attach.
   canvasWin.setAlwaysOnTop(true, 'screen-saver')

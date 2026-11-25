@@ -18,7 +18,9 @@ export function matchGameWindowSource(sources: Array<{ id: string; name: string 
   return prefix ? prefix.id : null
 }
 
-export async function electronGameWindowSource(title: string): Promise<GameWindowSource | null> {
+/** The window source for the game. `logicalBounds` says the tracker reports
+ *  bounds in DIP already, as the layer-shell tracker does. */
+export async function electronGameWindowSource(title: string, logicalBounds = false): Promise<GameWindowSource | null> {
   const tb = OverlayController.targetBounds
   if (!tb?.width || !tb.height) return null
   try {
@@ -31,7 +33,7 @@ export async function electronGameWindowSource(title: string): Promise<GameWindo
     }
     if (!sourceId) return null
     const display = screen.getDisplayNearestPoint({ x: tb.x + tb.width / 2, y: tb.y + tb.height / 2 })
-    const sf = display.scaleFactor
+    const sf = logicalBounds ? 1 : display.scaleFactor
     return { sourceId, gameSize: { w: Math.round(tb.width / sf), h: Math.round(tb.height / sf) } }
   } catch (err) {
     if (process.env.SCALPEL_DEBUG_LOG) console.error('[screen-source] resolve failed', err)

@@ -42,7 +42,7 @@ vi.mock('electron', () => ({
 vi.mock('@scalpel/platform', () => {
   const targetBounds = { x: 0, y: 0, width: 1000, height: 800 }
   const instance = {
-    traits: { compositorFocus: true },
+    traits: { compositorFocus: true, inputRegions: false },
     input: {
       on: (name: string, cb: any) => {
         mock.mouse[name] = cb
@@ -59,6 +59,8 @@ vi.mock('@scalpel/platform', () => {
       inputAllowed: () => mock.allowed,
       gameBounds: () => targetBounds,
       overlayWindowOptions: () => ({}),
+      overlayWebPreferences: (prefs: object) => prefs,
+      adoptSurface: vi.fn(),
       adoptOverlay: vi.fn(),
       attach: vi.fn(),
     },
