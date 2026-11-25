@@ -1,9 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { ScryingOrbPriceChip } from './ScryingOrbPriceChip'
 
-/** ScryingOrbPriceChip is the right-hand column on each Div Card Explorer map
- *  row: poe.ninja's price for that area's Scrying Orb, promoted to divines once
- *  it clears one. Prices and divine rate below are Covens snapshots. */
+/** ScryingOrbPriceChip is the right-hand bookend of each Div Card Explorer map
+ *  row: the orb, and poe.ninja's price for that area's Scrying Orb in the same
+ *  pill as the map's EV, promoted to divines once it clears one. Prices and
+ *  divine rate below are Covens snapshots. */
 const meta: Meta<typeof ScryingOrbPriceChip> = {
   title: 'Div Card Explorer / ScryingOrbPriceChip',
   component: ScryingOrbPriceChip,
