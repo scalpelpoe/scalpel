@@ -1,4 +1,4 @@
-import type { AdaptiveMode, AffixesPrechecked } from '@shared/types'
+import type { AdaptiveMode, AffixesPrechecked, TimelessSearch } from '@shared/types'
 import { TRADE_PRICE_OPTIONS, type TradePriceOption, type TradePriceOptionEntry } from '@shared/trade-price-options'
 export type { AdaptiveMode, AffixesPrechecked }
 export { defaultPriceOption, normalizePriceOption } from '@shared/trade-price-options'
@@ -75,4 +75,11 @@ export const AFFIXES_PRECHECKED_OPTIONS: Array<{ value: AffixesPrechecked; label
   { value: 'default', label: 'Default - Smart, best effort' },
   { value: 'base', label: 'Base - All unchecked' },
   { value: 'all', label: 'All - All checked' },
+]
+
+/** PoE1 Timeless Jewel chip a fresh price check opens on. */
+export const TIMELESS_SEARCH_OPTIONS: Array<{ value: TimelessSearch; label: string }> = [
+  { value: 'seed', label: 'Seed - Any leader' },
+  { value: 'leader', label: 'Leader - Any seed' },
+  { value: 'both', label: 'Both - Seed + leader' },
 ]

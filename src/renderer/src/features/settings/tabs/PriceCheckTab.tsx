@@ -9,6 +9,7 @@ import {
   normalizePriceOption,
   RESULTS_VIEW_OPTIONS,
   STATUS_OPTIONS,
+  TIMELESS_SEARCH_OPTIONS,
 } from '@renderer/shared/trade-settings'
 import { SettingSelectBox } from '@renderer/components/primitives/SettingSelectBox'
 import { SettingToggleBox } from '@renderer/components/primitives/SettingToggleBox'
@@ -108,6 +109,12 @@ export function PriceCheckTab({ settings, update, updateProfile, tryHotkey }: Pr
           value={settings.tradeAffixesPrechecked ?? 'default'}
           options={AFFIXES_PRECHECKED_OPTIONS}
           onChange={(v) => update('tradeAffixesPrechecked', v)}
+        />
+        <SettingSelectBox
+          label={m.settings_pc_timeless_search()}
+          value={settings.tradeTimelessSearch ?? 'seed'}
+          options={TIMELESS_SEARCH_OPTIONS}
+          onChange={(v) => update('tradeTimelessSearch', v)}
         />
       </div>
 

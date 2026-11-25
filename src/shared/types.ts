@@ -14,6 +14,7 @@ export type {
   TradePriceOption,
   AdaptiveMode,
   AffixesPrechecked,
+  TimelessSearch,
 } from './contracts/core'
 
 export type {

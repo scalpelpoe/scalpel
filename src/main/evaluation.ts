@@ -24,6 +24,7 @@ import { parseItemText } from './trade/clipboard'
 import { defensesFromPoeItem, itemInfoFromPoeItem } from './trade/item-info'
 import { buildUnidCandidates, lookupItemPrice, lookupPrice, lookupPriceForItem, refreshPrices } from './trade/prices'
 import { ensureStatsLoaded, matchItemMods } from './trade/trade'
+import { applyTimelessSearch } from './trade/stat-matcher/producers/timeless'
 import { beginSession, decisionsForSession } from './learning'
 
 // ---- Shared evaluation helper ----------------------------------------------
@@ -156,7 +157,7 @@ export async function preloadPriceCheck(item: PoeItem, store: Store<AppSettings>
   const unidCandidates = item.rarity === 'Unique' && !item.identified ? buildUnidCandidates(item.baseType) : []
 
   await ensureStatsLoaded()
-  const statFilters = matchItemMods(
+  const matched = matchItemMods(
     item.explicits,
     item.implicits,
     defensesFromPoeItem(item),
@@ -164,6 +165,7 @@ export async function preloadPriceCheck(item: PoeItem, store: Store<AppSettings>
     item.advancedMods,
     store.get('priceCheckDefaultPercent') ?? 90,
   )
+  const statFilters = applyTimelessSearch(matched, store.get('tradeTimelessSearch') ?? 'seed')
 
   const sessionId = beginSession(item)
   const learnedDecisions = decisionsForSession(statFilters, item)

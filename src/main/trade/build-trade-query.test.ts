@@ -51,6 +51,7 @@ import { setPoeVersion } from '../game-state'
 import { parseItemText } from './clipboard'
 import { defensesFromPoeItem, itemInfoFromPoeItem, tradeItemFromPoeItem } from './item-info'
 import { _setStatEntriesForTests, matchItemMods } from './stat-matcher'
+import { applyTimelessSearch } from './stat-matcher/producers/timeless'
 import { _resetRateLimitsForTests, buildTradeQuery, searchTrade } from './trade'
 import { bodyArmourText, FIXTURES, ringText, STAT_ENTRIES } from './__fixtures__/poe2-trade-items'
 
@@ -155,6 +156,65 @@ describe('buildTradeQuery: PoE1 Viscera', () => {
     expect(statFilters.map((f) => f.id)).toEqual(['implicit.stat_791154540'])
     // On by default, at the rolled value like every other implicit chip.
     expect(statFilters[0].value?.min).toBe(25)
+  })
+})
+
+describe('buildTradeQuery: PoE1 Timeless Jewel', () => {
+  // The seed line is fed straight to the matcher: real copies deliver it through the
+  // advanced mods, and a basic copy's seed section has no +/% roll for the clipboard
+  // parser to tell it apart from flavour text.
+  const item = { name: 'Glorious Vanity', baseType: 'Timeless Jewel', itemClass: 'Jewels', rarity: 'Unique' }
+  const chips = () =>
+    matchItemMods(
+      ['Bathed in the blood of 7421 sacrificed in the name of Doryani', 'Passives in radius are Conquered by the Vaal'],
+      [],
+      undefined,
+      {
+        ...item,
+        sockets: '',
+        linkedSockets: 0,
+        quality: 0,
+        itemLevel: 86,
+        gemLevel: 0,
+        corrupted: false,
+        mirrored: false,
+      },
+    )
+
+  type StatGroup = { type: string; filters: Array<{ id: string; value?: { min?: number; max?: number } }> }
+  const timelessGroups = (filters: ReturnType<typeof matchItemMods>) =>
+    (buildTradeQuery(item, filters, { loggedIn: false }).body.query.stats as StatGroup[]).filter((g) =>
+      g.filters.some((f) => f.id.startsWith('explicit.pseudo_timeless_jewel_')),
+    )
+
+  beforeEach(() => {
+    setPoeVersion(1)
+    _setStatEntriesForTests([])
+  })
+
+  it('seed (default): the seed under any leader', () => {
+    for (const filters of [chips(), applyTimelessSearch(chips(), 'seed')]) {
+      const groups = timelessGroups(filters)
+      expect(groups).toHaveLength(1)
+      expect(groups[0].type).toBe('count')
+      expect(groups[0].filters.map((f) => f.id)).toContain('explicit.pseudo_timeless_jewel_xibaqua')
+      expect(groups[0].filters.every((f) => f.value?.min === 7421 && f.value?.max === 7421)).toBe(true)
+    }
+  })
+
+  it('leader: own leader at any seed', () => {
+    expect(timelessGroups(applyTimelessSearch(chips(), 'leader'))).toEqual([
+      { type: 'and', filters: [{ id: 'explicit.pseudo_timeless_jewel_doryani', value: {} }] },
+    ])
+  })
+
+  it('both: seed + own leader', () => {
+    expect(timelessGroups(applyTimelessSearch(chips(), 'both'))).toEqual([
+      {
+        type: 'and',
+        filters: [{ id: 'explicit.pseudo_timeless_jewel_doryani', value: { min: 7421, max: 7421 } }],
+      },
+    ])
   })
 })
 

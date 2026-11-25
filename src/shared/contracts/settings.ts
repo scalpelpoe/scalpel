@@ -1,6 +1,6 @@
 import type { MacroScope } from '../macro-scope'
 import type { ThemePalette } from '../theme/palette'
-import type { AppLocale, TradePriceOption, AdaptiveMode, AffixesPrechecked } from './core'
+import type { AppLocale, TradePriceOption, AdaptiveMode, AffixesPrechecked, TimelessSearch } from './core'
 import type { CheatSheetsSettings, OverlayAnchor } from './overlay'
 import type { RegexPreset } from './regex'
 import type { PoeProfile } from './profiles'
@@ -59,6 +59,8 @@ export interface AppSettings {
   priceCheckDefaultPercent: number
   tradeAffixesPrechecked: AffixesPrechecked
   tradePoe2CraftingReadyDefault?: boolean
+  /** PoE1: which Timeless Jewel chip a price check opens on. Default 'seed'. */
+  tradeTimelessSearch?: TimelessSearch
   tradeKeepUncheckedVisible?: boolean
   /** Accessibility: render unchecked price-check rows at full opacity. */
   tradeNoFadeUnchecked?: boolean

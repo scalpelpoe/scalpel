@@ -96,6 +96,7 @@
   "settings_pc_adaptive_defaults": "Adaptive defaults",
   "settings_pc_additional": "Additional Settings",
   "settings_pc_affixes_prechecked": "Affixes prechecked",
+  "settings_pc_timeless_search": "PoE1: Timeless Jewel search",
   "settings_pc_crafting_ready": "PoE2: default white/magic items to \"Crafting Ready\" (base + ilvl + affixes)",
   "settings_pc_keep_unchecked": "Don't hide mods I uncheck",
   "settings_pc_no_fade_unchecked": "Don't fade unchecked rows (Accessibility)",
