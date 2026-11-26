@@ -1,6 +1,14 @@
 import { waylandNative } from 'electron-overlay-window'
 import { WaylandHost } from 'electron-overlay-window/dist/wayland/host'
-import { EventType, uIOhook as hook, type UiohookKeyboardEvent, UiohookKey, WheelDirection } from 'uiohook-napi'
+import {
+  EventType,
+  uIOhook as hook,
+  type UiohookKeyboardEvent,
+  UiohookKey,
+  type UiohookMouseEvent,
+  type UiohookWheelEvent,
+  WheelDirection,
+} from 'uiohook-napi'
 import type { NativeInputEvent } from './native-overlay'
 import { reportBreadcrumb, reportDiagnostic } from '../../common/diagnostics'
 import type { InputEvents, InputHook, PlatformEnv } from '../../types'
@@ -255,23 +263,36 @@ function handleNative(event: NativeInputEvent): void {
     // The native layer-shell shortcut backend already dispatched this key.
     // Emitting it again would double-fire the hotkey through the uiohook path.
     if (event.type === 'keydown' && nativeShortcutHandles(keycode)) return
-    const type = event.type === 'keydown' ? EventType.EVENT_KEY_PRESSED : EventType.EVENT_KEY_RELEASED
-    emit(event.type, { type, time, keycode, ...modifiers() } as never)
+    // Same shape as a uiohook event, so listeners see one format either way.
+    const keyEvent: UiohookKeyboardEvent = {
+      type: event.type === 'keydown' ? EventType.EVENT_KEY_PRESSED : EventType.EVENT_KEY_RELEASED,
+      time,
+      keycode,
+      ...modifiers(),
+    }
+    emit(event.type, keyEvent)
     return
   }
   if (event.type === 'mousedown' || event.type === 'mouseup') {
     const button = BUTTONS.get(event.code)
     if (!button) return
     const at = lastPointer() ?? { x: 0, y: 0 }
-    const type = event.type === 'mousedown' ? EventType.EVENT_MOUSE_PRESSED : EventType.EVENT_MOUSE_RELEASED
-    emit(event.type, { type, time, button, clicks: 1, ...at, ...modifiers() } as never)
+    const mouseEvent: UiohookMouseEvent = {
+      type: event.type === 'mousedown' ? EventType.EVENT_MOUSE_PRESSED : EventType.EVENT_MOUSE_RELEASED,
+      time,
+      button,
+      clicks: 1,
+      ...at,
+      ...modifiers(),
+    }
+    emit(event.type, mouseEvent)
     return
   }
   if (event.type !== 'wheel' || listeners.wheel.length === 0) return
   const { delta, horizontal } = event
   const mods = modifiers()
-  const wheel = (at: { x: number; y: number } | null) =>
-    emit('wheel', {
+  const wheel = (at: { x: number; y: number } | null): void => {
+    const wheelEvent: UiohookWheelEvent = {
       type: EventType.EVENT_MOUSE_WHEEL,
       time,
       ...mods,
@@ -280,7 +301,9 @@ function handleNative(event: NativeInputEvent): void {
       amount: 3,
       direction: horizontal ? WheelDirection.HORIZONTAL : WheelDirection.VERTICAL,
       rotation: -delta,
-    } as never)
+    }
+    emit('wheel', wheelEvent)
+  }
   const fresh = pointer && time - pointer.at < POINTER_PROBE_REUSE_MS
   if (!(mods.ctrlKey || mods.shiftKey || mods.altKey) || fresh) {
     wheel(lastPointer())
@@ -292,12 +315,12 @@ function handleNative(event: NativeInputEvent): void {
 function attachUiohook(): void {
   if (backend === 'uiohook') return
   backend = 'uiohook'
-  hook.on('keydown', (e) => emit('keydown', e as never))
-  hook.on('keyup', (e) => emit('keyup', e as never))
-  hook.on('mousedown', (e) => emit('mousedown', e as never))
-  hook.on('mouseup', (e) => emit('mouseup', e as never))
-  hook.on('mousemove', (e) => emit('mousemove', e as never))
-  hook.on('wheel', (e) => emit('wheel', e as never))
+  hook.on('keydown', (e) => emit('keydown', e))
+  hook.on('keyup', (e) => emit('keyup', e))
+  hook.on('mousedown', (e) => emit('mousedown', e))
+  hook.on('mouseup', (e) => emit('mouseup', e))
+  hook.on('mousemove', (e) => emit('mousemove', e))
+  hook.on('wheel', (e) => emit('wheel', e))
 }
 
 function sendVirtual(code: number, pressed: boolean): void {
