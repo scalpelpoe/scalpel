@@ -113,11 +113,16 @@ function isRegularWindowBackend(): boolean {
   return platform().traits.windowLocal === true
 }
 
-/** Ctrl+letter combos used by chat/regex paste. wtype cannot hold a modifier
- *  across separate process invocations, so the regular-window Wayland path must
- *  send the whole combo in one call; other modes keep the existing uiohook path. */
+/** Whether combos must go out as one `injectCombo` sequence: the injector
+ *  cannot hold a modifier between calls (wtype), or a native-Wayland regular
+ *  window must hand focus back to the game first. */
+function injectsWholeCombos(): boolean {
+  return !input.holdsKeys || (isNativeWayland() && isRegularWindowBackend())
+}
+
+/** Ctrl+letter combos used by chat/regex paste. */
 async function pasteCombo(key: number): Promise<void> {
-  if (isNativeWayland() && isRegularWindowBackend() && input.injectCombo) {
+  if (injectsWholeCombos()) {
     await input.injectCombo([Key.Ctrl, key])
     return
   }
@@ -1231,7 +1236,7 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
 export async function sendCtrlCToPoE(opts?: { withAlt?: boolean }): Promise<void> {
   if (!windowTracker.inputAllowed()) return
 
-  if (isNativeWayland() && isRegularWindowBackend()) {
+  if (injectsWholeCombos()) {
     const restore = releaseCKeyedRegistrationsForInjection()
     injecting = true
     try {
@@ -1242,7 +1247,7 @@ export async function sendCtrlCToPoE(opts?: { withAlt?: boolean }): Promise<void
       // One coherent combo handed to the OS as a single sequence. wtype cannot
       // hold a modifier across separate process invocations, so pressing Ctrl
       // and tapping C in separate calls silently produced a bare "c".
-      await input.injectCombo?.(opts?.withAlt === true ? [Key.Ctrl, Key.Alt, Key.C] : [Key.Ctrl, Key.C])
+      await input.injectCombo(opts?.withAlt === true ? [Key.Ctrl, Key.Alt, Key.C] : [Key.Ctrl, Key.C])
     } finally {
       injecting = false
       restore?.()

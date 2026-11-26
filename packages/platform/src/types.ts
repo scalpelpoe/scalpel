@@ -75,8 +75,11 @@ export interface InputHook {
   keyTap(key: number, modifiers?: number[]): void
   keyToggle(key: number, state: 'down' | 'up'): void
   /** Send a whole combo as one coherent sequence, resolving when it has been
-   *  handed to the OS. Optional so host-side mocks can stay minimal. */
-  injectCombo?(keys: readonly number[]): Promise<void>
+   *  handed to the OS. Modifiers first, the main key last. */
+  injectCombo(keys: readonly number[]): Promise<void>
+  /** Whether `keyToggle` can hold a key down across calls. When false (wtype),
+   *  a combo must go out through `injectCombo`. */
+  readonly holdsKeys: boolean
   /** Whether listeners also receive the keys this process injects. */
   readonly seesInjectedKeys: boolean
   /** Whether the user physically holds `key`, or null when injected keys make

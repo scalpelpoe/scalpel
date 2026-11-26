@@ -52,6 +52,7 @@ vi.mock('@scalpel/platform', () => ({
       stop: vi.fn(),
       keyToggle: vi.fn(),
       keyTap: vi.fn(),
+      holdsKeys: true,
       seesInjectedKeys: true,
       physicallyHeld: () => null,
     },

@@ -83,7 +83,10 @@ const input: InputHook = {
   stop: () => service('input').stop(),
   keyTap: (key, modifiers) => service('input').keyTap(key, modifiers),
   keyToggle: (key, state) => service('input').keyToggle(key, state),
-  injectCombo: (keys) => service('input').injectCombo?.(keys) ?? Promise.resolve(),
+  injectCombo: (keys) => service('input').injectCombo(keys),
+  get holdsKeys() {
+    return service('input').holdsKeys
+  },
   get seesInjectedKeys() {
     return service('input').seesInjectedKeys
   },

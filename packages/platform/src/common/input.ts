@@ -27,6 +27,7 @@ export const uiohookInput: InputHook = {
     uIOhook.keyTap(key)
     for (const mod of keys.slice(0, -1).reverse()) uIOhook.keyToggle(mod, 'up')
   },
+  holdsKeys: true,
   seesInjectedKeys: true,
   physicallyHeld: () => null,
 }

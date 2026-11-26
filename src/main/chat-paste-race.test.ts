@@ -90,6 +90,7 @@ const inputMock = {
     if (code === keyMock.Ctrl) queue(() => (game.ctrlHeld = dir === 'down'))
   }),
   keyTap: vi.fn((code: number) => queue(() => handleKey(code))),
+  holdsKeys: true,
   seesInjectedKeys: true,
   physicallyHeld: () => null,
 }

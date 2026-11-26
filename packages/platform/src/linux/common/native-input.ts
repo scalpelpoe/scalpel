@@ -462,6 +462,13 @@ export function createLinuxInput(env: PlatformEnv): InputHook {
       for (const mod of keys.slice(0, -1).reverse()) hook.keyToggle(mod, 'up')
       return Promise.resolve()
     },
+    get holdsKeys() {
+      // wtype's virtual keyboard lives only as long as one process call.
+      const services = nativeOverlayServices()
+      const explicit = explicitTool()
+      const tool = services ? explicit && preferredTool(explicit) : resolveExternalTool(nativeWayland)
+      return tool !== 'wtype'
+    },
     get seesInjectedKeys() {
       if (nativeOverlayServices()) return backend !== 'native'
       return true
