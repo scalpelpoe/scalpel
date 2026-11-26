@@ -12,6 +12,7 @@ export type LinuxLayerShellReasonKey =
   | 'settings_linux_layer_shell_toplevel_unavailable'
   | 'settings_linux_layer_shell_clipboard_unavailable'
   | 'settings_linux_layer_shell_input_unavailable'
+  | 'settings_linux_layer_shell_keyboard_unavailable'
 
 export interface LinuxLayerShellSupport extends LinuxLayerShellCapability {
   /** Raw probe result, kept for diagnostics; never used by feature code. */
@@ -88,6 +89,17 @@ export function probeLinuxLayerShellSupport(
       available: false,
       reasonKey: 'settings_linux_layer_shell_clipboard_unavailable',
       reason: 'Wayland data-control is unavailable',
+      features,
+    }
+  }
+  // The host types into the game through a virtual keyboard, or through
+  // uinput where the compositor has none. Without either, overlays would show
+  // but every copy and paste would silently do nothing.
+  if (!features.virtualKeyboard && !features.uinput) {
+    return {
+      available: false,
+      reasonKey: 'settings_linux_layer_shell_keyboard_unavailable',
+      reason: 'no Wayland virtual keyboard and /dev/uinput is not writable',
       features,
     }
   }

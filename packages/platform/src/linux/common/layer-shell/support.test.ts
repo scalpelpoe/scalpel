@@ -58,6 +58,16 @@ describe('probeLinuxLayerShellSupport', () => {
     expect(probeLinuxLayerShellSupport(features({ dataControl: false })).reasonKey).toBe(
       'settings_linux_layer_shell_clipboard_unavailable',
     )
+    expect(probeLinuxLayerShellSupport(features({ virtualKeyboard: false })).reasonKey).toBe(
+      'settings_linux_layer_shell_keyboard_unavailable',
+    )
+  })
+
+  it('types through uinput where the compositor has no virtual keyboard', () => {
+    expect(probeLinuxLayerShellSupport(features({ virtualKeyboard: false, uinput: true }))).toMatchObject({
+      available: true,
+      backendId: 'layer-shell',
+    })
   })
 
   it('accepts a compositor with the required globals', () => {

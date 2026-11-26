@@ -146,6 +146,7 @@
   "settings_linux_layer_shell_clipboard_unavailable": "Este compositor no expone acceso al portapapeles mediante data-control.",
   "settings_linux_layer_shell_init_failed": "No se pudo inicializar la superposición nativa de layer-shell.",
   "settings_linux_layer_shell_input_unavailable": "KDE no tiene teclado virtual; inicia ydotoold para que Scalpel pueda enviar teclas.",
+  "settings_linux_layer_shell_keyboard_unavailable": "Este compositor no tiene teclado virtual y /dev/uinput no se puede escribir, así que Scalpel no puede enviar teclas al juego.",
   "settings_linux_display_layer_shell_suggested": "Este escritorio admite la superposición nativa de Wayland. Recomendamos cambiar Scalpel a Wayland; en ese caso, el juego también debe iniciarse con un Proton compatible con Wayland como GE-Proton con la variable de entorno PROTON_ENABLE_WAYLAND=1.",
   "settings_general_heading": "General",
   "settings_start_in_tray": "Iniciar en la bandeja",

@@ -146,6 +146,7 @@
   "settings_linux_layer_shell_clipboard_unavailable": "Dieser Compositor stellt keinen Datentransfer-Zugriff auf die Zwischenablage bereit.",
   "settings_linux_layer_shell_init_failed": "Das native Layer-Shell-Overlay konnte nicht initialisiert werden.",
   "settings_linux_layer_shell_input_unavailable": "KDE bietet keine virtuelle Tastatur; starte ydotoold, damit Scalpel Tasten senden kann.",
+  "settings_linux_layer_shell_keyboard_unavailable": "Dieser Compositor bietet keine virtuelle Tastatur und /dev/uinput ist nicht beschreibbar, daher kann Scalpel keine Tasten an das Spiel senden.",
   "settings_linux_display_layer_shell_suggested": "Dieser Desktop unterstützt natives Wayland-Overlaying. Wir empfehlen, Scalpel auf Wayland umzustellen; in diesem Fall muss das Spiel jedoch ebenfalls über einen Wayland-fähigen Proton wie GE-Proton mit der Umgebungsvariable PROTON_ENABLE_WAYLAND=1 gestartet werden.",
   "settings_general_heading": "Allgemein",
   "settings_start_in_tray": "Im Tray starten",

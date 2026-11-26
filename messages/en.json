@@ -146,6 +146,7 @@
   "settings_linux_layer_shell_clipboard_unavailable": "This compositor does not expose data-control clipboard access.",
   "settings_linux_layer_shell_init_failed": "Native layer-shell overlay could not be initialized.",
   "settings_linux_layer_shell_input_unavailable": "KDE has no virtual keyboard; start ydotoold so Scalpel can inject keys.",
+  "settings_linux_layer_shell_keyboard_unavailable": "This compositor has no virtual keyboard and /dev/uinput is not writable, so Scalpel cannot type into the game.",
   "settings_linux_display_layer_shell_suggested": "This desktop supports native Wayland overlaying. We recommend switching Scalpel to Wayland, however in that case the game must also be launched through a Wayland-enabled Proton like GE-Proton with env var PROTON_ENABLE_WAYLAND=1",
   "settings_general_heading": "General",
   "settings_start_in_tray": "Start in tray",
