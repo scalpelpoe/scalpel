@@ -38,13 +38,17 @@ vi.mock('./overlay-window-backend', () => ({
 beforeEach(() => {
   vi.resetModules()
   vi.clearAllMocks()
+  vi.stubGlobal('process', { ...process, platform: 'linux' })
   vi.stubEnv('HYPRLAND_INSTANCE_SIGNATURE', 'test')
   // Keep compositor probing off the host session.
   vi.stubEnv('XDG_RUNTIME_DIR', '')
   vi.stubEnv('WAYLAND_DISPLAY', '')
   mock.services.mockReturnValue(null)
 })
-afterEach(() => vi.unstubAllEnvs())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
+})
 
 it('uses shared services and selects a backend only when a service is called', async () => {
   const { platform } = await import('./platform')

@@ -202,7 +202,8 @@ describe('detectRuntimeDesktop', () => {
     vi.unstubAllGlobals()
   })
 
-  it('accepts a compositor socket whose PID is alive', () => {
+  // Liveness reads /proc, which only Linux has.
+  it.runIf(process.platform === 'linux')('accepts a compositor socket whose PID is alive', () => {
     writeFileSync(join(runtimeDir, `sway-ipc.1000.${process.pid}.sock`), '')
     expect(detectRuntimeDesktop({ XDG_RUNTIME_DIR: runtimeDir })).toBe('sway')
   })

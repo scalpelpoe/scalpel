@@ -23,6 +23,9 @@ const mock = vi.hoisted(() => ({
 }))
 
 vi.mock('electron-overlay-window', () => ({ OverlayController: mock.controller }))
+// The stubbed Linux platform would make koffi look for its Linux binary on
+// other hosts; no test here calls into it.
+vi.mock('koffi', () => ({ default: {} }))
 vi.mock('./linux/common/layer-shell/windowing', () => ({ linuxRegularWindowMode: () => mock.regularWindow }))
 vi.mock('./linux/common/regular-window/backend', () => ({
   createRegularWindowBackend: () => ({
