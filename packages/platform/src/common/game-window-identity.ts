@@ -37,6 +37,9 @@ const alternatives = (value: string | undefined): readonly string[] =>
     .map((entry) => entry.trim())
     .filter(Boolean)
 
+const hasIdentityHint = (hint: GameWindowIdentityHint): boolean =>
+  hint.appIds.length > 0 || hint.classNames.length > 0 || hint.instances.length > 0
+
 /** One string per game: `Title|appId[,alt]|className|instance`. The title part
  *  stays compatible with native title-only attach; identity parts are optional
  *  hints for paths that can see app id/class/instance. */
@@ -50,14 +53,7 @@ function parseTitleSpec(value: string | null | undefined, variant: PlatformGameV
     classNames: alternatives(parts[2]),
     instances: alternatives(parts[3]),
   }
-  if (
-    title === PLATFORM_GAME_TITLES[variant] &&
-    !hint.appIds.length &&
-    !hint.classNames.length &&
-    !hint.instances.length
-  ) {
-    return null
-  }
+  if (title === PLATFORM_GAME_TITLES[variant] && !hasIdentityHint(hint)) return null
   return { title, ...hint }
 }
 
@@ -206,12 +202,14 @@ export function matchesExpectedTitle(title: string | null | undefined, titles: r
   return value !== '' && titles.some((expected) => titleKey(expected) === value)
 }
 
+/** The configured spec for `title`, only when it names at least one identity
+ *  hint. A plain custom title has nothing to enforce. */
 function hintedSpecForTitle(title: string | null): GameTitleSpec | null {
   if (!title) return null
   const value = titleKey(title)
   for (const variant of [1, 2] as const) {
     const spec = specFor(variant)
-    if (spec && titleKey(spec.title) === value) return spec
+    if (spec && hasIdentityHint(spec) && titleKey(spec.title) === value) return spec
   }
   return null
 }

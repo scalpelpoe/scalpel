@@ -180,6 +180,14 @@ describe('game title overrides', () => {
     })
   })
 
+  it('accepts the game under a plain custom title even when it exposes an app id', () => {
+    setGameTitleOverrides({ poe1: 'My PoE' })
+    expect(matchGameWindow({ title: 'My PoE', appId: 'pathofexilesteam.exe' }, getAllGameTitles())).toMatchObject({
+      accepted: true,
+      reason: 'game',
+    })
+  })
+
   it('parses Title|appId into identity hints without changing attach titles', () => {
     setGameTitleOverrides({ poe2: 'Path of Exile 2|pathofexilesteam.exe,steam_app_2694490' })
     expect(getGameTitleForVariant(2)).toBe('Path of Exile 2')
