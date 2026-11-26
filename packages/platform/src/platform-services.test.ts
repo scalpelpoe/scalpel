@@ -8,7 +8,7 @@ const mock = vi.hoisted(() => ({
   services: vi.fn(() => null as { clipboard: { readText: () => string } } | null),
 }))
 
-vi.mock('node:child_process', () => ({ execFileSync: mock.version }))
+vi.mock('node:child_process', () => ({ execFile: vi.fn(), execFileSync: mock.version }))
 vi.mock('electron-overlay-window', () => ({ OverlayController: mock.controller }))
 vi.mock('./common/electron', () => ({
   electronClipboard: { readText: mock.electronReadText },

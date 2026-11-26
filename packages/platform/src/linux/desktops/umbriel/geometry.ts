@@ -1,9 +1,12 @@
-import { execFileSync } from 'node:child_process'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { matchGameWindow } from '@platform/common/game-window-identity'
 import { detectRuntimeDesktop } from '@platform/select'
 import type { LinuxGameDisplayMode } from '@platform/linux/common/game-display-mode'
 import type { WindowGeometryProvider } from '@platform/linux/common/wayland/geometry-provider'
 import type { WindowBounds } from '@platform/linux/common/wayland/window-geometry'
+
+const execFileAsync = promisify(execFile)
 
 interface UmbrielWindow {
   id?: string
@@ -83,19 +86,18 @@ function umbrielAvailable(env: NodeJS.ProcessEnv): boolean {
  * Umbriel reports global logical coordinates, the same space layer-shell uses.
  * Optional by design: other compositors keep the X11/generic geometry path.
  */
-export function readUmbrielWindowInfo(
+export async function readUmbrielWindowInfo(
   titles: readonly string[],
   env: NodeJS.ProcessEnv = process.env,
-): UmbrielWindowInfo | null {
+): Promise<UmbrielWindowInfo | null> {
   if (!titles.length || !umbrielAvailable(env)) return null
   try {
-    const json = execFileSync('umbriel', ['windows', '--json'], {
+    const { stdout } = await execFileAsync('umbriel', ['windows', '--json'], {
       encoding: 'utf8',
       timeout: 750,
-      stdio: ['ignore', 'pipe', 'ignore'],
       env,
     })
-    return parseUmbrielWindowInfo(json, titles)
+    return parseUmbrielWindowInfo(stdout, titles)
   } catch {
     return null
   }
@@ -111,8 +113,8 @@ export function createUmbrielGeometryProvider(): WindowGeometryProvider {
     id: 'umbriel',
     reportSource: 'umbriel',
     phase: 'preferred',
-    read: (titles) => {
-      const info = readUmbrielWindowInfo(titles)
+    read: async (titles) => {
+      const info = await readUmbrielWindowInfo(titles)
       return info
         ? {
             bounds: info.bounds,

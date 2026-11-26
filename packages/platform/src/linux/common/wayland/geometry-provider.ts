@@ -37,5 +37,6 @@ export interface WindowGeometryProvider {
   readonly reportSource: LinuxGameDisplayModeSource
   /** Defaults to `preferred` for existing providers. */
   readonly phase?: GeometryProviderPhase
-  read(titles: readonly string[]): WindowGeometryInfo | null
+  /** Must not block the main process: compositor CLIs run asynchronously. */
+  read(titles: readonly string[]): Promise<WindowGeometryInfo | null>
 }

@@ -1,4 +1,5 @@
-import { execFileSync } from 'node:child_process'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { reportBreadcrumb } from '@platform/common/diagnostics'
 import { matchGameWindow, type GameWindowMatch } from '@platform/common/game-window-identity'
 import { currentEnv } from '@platform/select'
@@ -9,6 +10,8 @@ import type {
   WindowGeometryInfo,
   WindowGeometryProvider,
 } from '@platform/linux/common/wayland/geometry-provider'
+
+const execFileAsync = promisify(execFile)
 
 interface SwayRect {
   x?: number
@@ -178,21 +181,20 @@ export function parseSwayTree(
  * not share layer-shell's origin. `preferredIdentity` keeps the selected node
  * stable when several windows share the game title across outputs.
  */
-export function readSwayWindowInfo(
+export async function readSwayWindowInfo(
   titles: readonly string[],
   env: PlatformEnv = currentEnv(),
   preferredIdentity?: string,
   onError?: (error: unknown) => void,
-): WindowGeometryInfo | null {
+): Promise<WindowGeometryInfo | null> {
   if (!titles.length) return null
   try {
-    const json = execFileSync('swaymsg', ['-t', 'get_tree'], {
+    const { stdout } = await execFileAsync('swaymsg', ['-t', 'get_tree'], {
       encoding: 'utf8',
       timeout: 750,
-      stdio: ['ignore', 'pipe', 'ignore'],
       env: env.env,
     })
-    return parseSwayTree(json, titles, preferredIdentity)
+    return parseSwayTree(stdout, titles, preferredIdentity)
   } catch (error) {
     onError?.(error)
     return null
@@ -209,8 +211,8 @@ export function createSwayGeometryProvider(env: PlatformEnv = currentEnv()): Win
   return {
     id: 'sway',
     reportSource: 'sway',
-    read: (titles) => {
-      const info = readSwayWindowInfo(titles, env, pinnedIdentity ?? undefined, (error) => {
+    read: async (titles) => {
+      const info = await readSwayWindowInfo(titles, env, pinnedIdentity ?? undefined, (error) => {
         const message = String(error)
         if (message === lastFailure) return
         lastFailure = message

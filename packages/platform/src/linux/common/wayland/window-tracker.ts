@@ -9,7 +9,7 @@ import {
   getLinuxGameDisplayModeStatus,
   reportLinuxGameDisplayMode,
 } from '../game-display-mode'
-import type { WindowGeometryProvider } from './geometry-provider'
+import type { WindowGeometryInfo, WindowGeometryProvider } from './geometry-provider'
 import { gameTitleIndex } from './title-index'
 import { mapX11BoundsToLogical, type WindowBounds } from './window-geometry'
 
@@ -52,6 +52,13 @@ const format = (r: WindowBounds): string => `x=${r.x} y=${r.y} w=${r.width} h=${
 const gameLike = (info: Pick<ToplevelInfo, 'title' | 'appId'>): boolean =>
   /path of exile|\bpoe\b|exile/i.test(info.title ?? '') || /pathofexile|(?:^|[^a-z])poe/i.test(info.appId ?? '')
 
+interface FoundGeometry {
+  readonly info: WindowGeometryInfo
+  readonly source: string
+  /** From a compositor provider, which then owns geometry over X11 events. */
+  readonly preferred: boolean
+}
+
 export interface WaylandWindowTrackerOptions {
   /** Ordered compositor-specific geometry sources, tried before X11. */
   readonly geometryProviders?: readonly WindowGeometryProvider[]
@@ -72,6 +79,8 @@ export class WaylandWindowTracker implements LayerTracker {
   private readonly fallbackGeometryProviders: readonly WindowGeometryProvider[]
   private readonly offHost: Array<() => void>
   private readonly geometryTimer: NodeJS.Timeout | null
+  private geometryQuery: Promise<void> | null = null
+  private geometryRequeried = false
   private warnedNoX11 = false
   private titles: string[]
   private attachedTid: number | null = null
@@ -159,90 +168,96 @@ export class WaylandWindowTracker implements LayerTracker {
     if (toplevel) this.host.activateToplevel(toplevel.tid)
   }
 
-  /** Polls the sources that can supply exact window geometry. A compositor
+  /** Starts a geometry poll unless one is in flight; a request made while one
+   *  runs (new titles) starts another as soon as it settles. Providers call
+   *  compositor CLIs, so the poll never blocks the main process. */
+  private queryWindowGeometry(): void {
+    if (this.stopped) return
+    if (this.geometryQuery) {
+      this.geometryRequeried = true
+      return
+    }
+    const titles = this.titles
+    this.geometryQuery = this.readGeometry(titles)
+      .then((found) => {
+        // Titles changed mid-poll: the answer is for the old target.
+        if (!this.stopped && titles === this.titles) this.applyGeometry(found)
+      })
+      .catch((error: unknown) => reportBreadcrumb(`layer-shell tracker geometry failed error=${String(error)}`))
+      .finally(() => {
+        this.geometryQuery = null
+        if (!this.geometryRequeried) return
+        this.geometryRequeried = false
+        this.queryWindowGeometry()
+      })
+  }
+
+  /** Reads the sources that can supply exact window geometry. A compositor
    *  provider wins when configured: on Sway, X11 coordinates use a different
    *  origin and would place a fullscreen game at a bogus offset. Foreign
    *  toplevels still decide attach/focus; they never provide a size. */
-  private queryWindowGeometry(): void {
-    if (this.stopped) return
-    let found: WindowBounds | null = null
-    let source = 'x11'
-    let isLogical = false
-    let preferred = false
-    let outputs: readonly string[] = []
-    let identity = ''
-    let detail = ''
-
-    for (const provider of this.geometryProviders) {
-      const info = provider.read(this.titles)
-      if (info && info.bounds.width > 0 && info.bounds.height > 0) {
-        found = info.bounds
-        source = provider.id
-        isLogical = info.logical
-        preferred = true
-        outputs = info.outputs ?? []
-        identity = info.identity ?? ''
-        detail = info.detail ?? ''
+  private async readGeometry(titles: readonly string[]): Promise<FoundGeometry | null> {
+    const fromProvider = async (
+      providers: readonly WindowGeometryProvider[],
+      preferred: boolean,
+    ): Promise<FoundGeometry | null> => {
+      for (const provider of providers) {
+        const info = await provider.read(titles)
+        if (!info || info.bounds.width <= 0 || info.bounds.height <= 0) continue
         if (info.mode) reportLinuxGameDisplayMode(info.mode, provider.reportSource)
-        break
+        return { info, source: provider.id, preferred }
       }
+      return null
     }
 
-    if (!found && !this.rawBounds && this.lib.findWindowBounds) {
+    const preferred = await fromProvider(this.geometryProviders, true)
+    if (preferred) return preferred
+
+    if (!this.rawBounds && this.lib.findWindowBounds) {
       // X11 window bounds use a different origin (and can point at a launcher),
       // so they are only a bootstrap source before any exact geometry exists.
       // Once a projection is known, a momentary provider miss keeps the last
       // good bounds instead of jumping a fullscreen game to a bogus offset.
-      for (const title of this.titles) {
-        const candidate = this.lib.findWindowBounds(title)
-        if (candidate && candidate.width > 0 && candidate.height > 0) {
-          found = candidate
+      for (const title of titles) {
+        const bounds = this.lib.findWindowBounds(title)
+        if (bounds && bounds.width > 0 && bounds.height > 0) {
           reportLinuxGameDisplayMode('x11', 'x11-geometry')
-          break
+          return { info: { bounds, logical: false }, source: 'x11', preferred: false }
         }
       }
     }
-    if (!found) {
-      for (const provider of this.fallbackGeometryProviders) {
-        const info = provider.read(this.titles)
-        if (!info || info.bounds.width <= 0 || info.bounds.height <= 0) continue
-        found = info.bounds
-        source = provider.id
-        isLogical = info.logical
-        outputs = info.outputs ?? []
-        identity = info.identity ?? ''
-        detail = info.detail ?? ''
-        if (info.mode) reportLinuxGameDisplayMode(info.mode, provider.reportSource)
-        break
-      }
-    }
+    return fromProvider(this.fallbackGeometryProviders, false)
+  }
 
-    if (found) {
-      this.usingPreferredGeometry = preferred
-      if (
-        !this.rawBounds ||
-        this.rawIsLogical !== isLogical ||
-        JSON.stringify(found) !== JSON.stringify(this.rawBounds)
-      ) {
-        this.rawBounds = found
-        this.rawIsLogical = isLogical
-        this.geometrySource = source
-        reportBreadcrumb(
-          `layer-shell tracker ${source} bounds preferred=${preferred} logical=${isLogical} raw=${format(found)} ` +
-            `identity=${identity || '-'} outputs=${outputs.join(',') || '-'}` +
-            (detail ? ` detail=${detail}` : ''),
-          'debug',
-        )
-        if (this.attachedTid !== null) this.reproject()
-        else this.updateFromToplevels()
+  private applyGeometry(found: FoundGeometry | null): void {
+    if (!found) {
+      if (!this.warnedNoX11) {
+        reportBreadcrumb(`layer-shell tracker geometry not found titles=${JSON.stringify(this.titles)}`, 'debug')
+        this.warnedNoX11 = true
       }
-      this.warnedNoX11 = false
       return
     }
-    if (!this.warnedNoX11) {
-      reportBreadcrumb(`layer-shell tracker geometry not found titles=${JSON.stringify(this.titles)}`, 'debug')
-      this.warnedNoX11 = true
+    const { info, source, preferred } = found
+    this.usingPreferredGeometry = preferred
+    this.warnedNoX11 = false
+    if (
+      this.rawBounds &&
+      this.rawIsLogical === info.logical &&
+      JSON.stringify(info.bounds) === JSON.stringify(this.rawBounds)
+    ) {
+      return
     }
+    this.rawBounds = info.bounds
+    this.rawIsLogical = info.logical
+    this.geometrySource = source
+    reportBreadcrumb(
+      `layer-shell tracker ${source} bounds preferred=${preferred} logical=${info.logical} raw=${format(info.bounds)} ` +
+        `identity=${info.identity || '-'} outputs=${info.outputs?.join(',') || '-'}` +
+        (info.detail ? ` detail=${info.detail}` : ''),
+      'debug',
+    )
+    if (this.attachedTid !== null) this.reproject()
+    else this.updateFromToplevels()
   }
 
   private gameMatch(info: Pick<ToplevelInfo, 'title' | 'appId'>): GameWindowMatch {

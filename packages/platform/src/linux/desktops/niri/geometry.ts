@@ -1,10 +1,13 @@
-import { execFileSync } from 'node:child_process'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import { currentEnv } from '@platform/select'
 import type { PlatformEnv } from '@platform/types'
 import { matchGameWindow } from '@platform/common/game-window-identity'
 import type { LinuxGameDisplayMode } from '@platform/linux/common/game-display-mode'
 import type { WindowGeometryProvider } from '@platform/linux/common/wayland/geometry-provider'
 import type { WindowBounds } from '@platform/linux/common/wayland/window-geometry'
+
+const execFileAsync = promisify(execFile)
 
 interface NiriWindowLayout {
   tile_pos_in_workspace_view?: [number, number] | null
@@ -139,24 +142,29 @@ function niriAvailable(env: PlatformEnv): boolean {
   return available
 }
 
-function niriJson(args: string[], env: PlatformEnv): string | null {
+async function niriJson(args: string[], env: PlatformEnv): Promise<string | null> {
   try {
-    return execFileSync('niri', ['msg', '--json', ...args], {
+    const { stdout } = await execFileAsync('niri', ['msg', '--json', ...args], {
       encoding: 'utf8',
       timeout: 750,
-      stdio: ['ignore', 'pipe', 'ignore'],
       env: env.env,
     })
+    return stdout
   } catch {
     return null
   }
 }
 
-export function readNiriWindowInfo(titles: readonly string[], env: PlatformEnv = currentEnv()): NiriWindowInfo | null {
+export async function readNiriWindowInfo(
+  titles: readonly string[],
+  env: PlatformEnv = currentEnv(),
+): Promise<NiriWindowInfo | null> {
   if (!titles.length || !niriAvailable(env)) return null
-  const windows = niriJson(['windows'], env)
-  const outputs = niriJson(['outputs'], env)
-  const workspaces = niriJson(['workspaces'], env)
+  const [windows, outputs, workspaces] = await Promise.all([
+    niriJson(['windows'], env),
+    niriJson(['outputs'], env),
+    niriJson(['workspaces'], env),
+  ])
   if (!windows || !outputs || !workspaces) return null
   return parseNiriWindowInfo(windows, outputs, workspaces, titles)
 }
@@ -166,8 +174,8 @@ export function createNiriGeometryProvider(env: PlatformEnv = currentEnv()): Win
     id: 'niri',
     reportSource: 'niri',
     phase: 'preferred',
-    read: (titles) => {
-      const info = readNiriWindowInfo(titles, env)
+    read: async (titles) => {
+      const info = await readNiriWindowInfo(titles, env)
       return info
         ? {
             bounds: info.bounds,
