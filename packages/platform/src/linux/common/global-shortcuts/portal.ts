@@ -159,9 +159,11 @@ export function createPortalShortcuts(): GlobalShortcuts {
     try {
       connection.on('message', onMessage)
       connection.on('error', (error: unknown) => reportDiagnostic('portal-shortcuts:bus', error))
+      // Only the portal may answer requests or activate shortcuts; another
+      // client on the session bus could otherwise fake either signal.
       await Promise.all([
-        addMatch(connection, `type='signal',interface='${REQUEST_IFACE}',member='Response'`),
-        addMatch(connection, `type='signal',interface='${SHORTCUTS_IFACE}',member='Activated'`),
+        addMatch(connection, `type='signal',sender='${PORTAL_NAME}',interface='${REQUEST_IFACE}',member='Response'`),
+        addMatch(connection, `type='signal',sender='${PORTAL_NAME}',interface='${SHORTCUTS_IFACE}',member='Activated'`),
       ])
       const portal = await connection.getProxyObject(PORTAL_NAME, PORTAL_PATH)
       shortcuts = portal.getInterface(SHORTCUTS_IFACE)
