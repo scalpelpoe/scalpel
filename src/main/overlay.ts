@@ -548,13 +548,9 @@ export function createOverlayWindow(version: 1 | 2 = 1, options?: CreateOverlayO
   // Attach to the PoE game window - syncs overlay bounds automatically.
   // In multi-title mode (experimental), pass both titles so the native tracker
   // can find either PoE1 or PoE2 without a restart. In single-title mode
-  // (stable), attach to the specific game version only.
-  if (!traits.windowLocal) {
-    windowTracker.attach(
-      overlayWindow,
-      multiTitleMode ? [...getAllGameTitles()] : [...getGameTitlesForVariant(version)],
-    )
-  }
+  // (stable), attach to the specific game version only. A window-local backend
+  // tracks the game for focus only and leaves this window where it is.
+  windowTracker.attach(overlayWindow, multiTitleMode ? [...getAllGameTitles()] : [...getGameTitlesForVariant(version)])
 
   windowTracker.events.on('attach', (ev) => {
     lastAttachAt = Date.now()

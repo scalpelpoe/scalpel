@@ -1,5 +1,5 @@
 import { BrowserWindow, screen, type BrowserWindowConstructorOptions } from 'electron'
-import { waylandClipboard } from 'electron-overlay-window'
+import { OverlayController, waylandClipboard } from 'electron-overlay-window'
 import { WaylandHost } from 'electron-overlay-window/dist/wayland/host'
 import { createOverlayWindowBackend } from '../../../overlay-window-backend'
 import { reportBreadcrumb, reportDiagnostic } from '../../../common/diagnostics'
@@ -155,11 +155,22 @@ function nativeRegularWindowBackend(): Backend {
 function x11RegularWindowBackend(): Backend {
   const base = createOverlayWindowBackend('x11')
   const unlocked = { value: false }
+  let win: BrowserWindow | null = null
   // Keep the base tracker on the prototype: `targetBounds`/`targetHasFocus` are
   // live getters, and spreading them would freeze stale values at construction.
   const windowTracker: WindowTracker = Object.create(base.windowTracker)
   windowTracker.overlayWindowOptions = regularWindowOptions
-  windowTracker.beforeOverlayShow = (win) => prepareRegularWindow(win, unlocked)
+  // Start the tracker for game focus without a window: the controller then
+  // never moves or hides this window to follow the game.
+  windowTracker.attach = (_target, titles) => OverlayController.attachByTitles(undefined, titles)
+  windowTracker.adoptOverlay = (target) => {
+    win = target
+  }
+  // The native tracker knows no overlay window, so it cannot focus one.
+  windowTracker.activateOverlay = () => {
+    if (win && !win.isDestroyed()) win.focus()
+  }
+  windowTracker.beforeOverlayShow = (target) => prepareRegularWindow(target, unlocked)
   return { ...base, traits: { ...base.traits, windowLocal: true }, windowTracker }
 }
 

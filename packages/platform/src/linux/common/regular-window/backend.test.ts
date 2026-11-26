@@ -1,4 +1,7 @@
+import type { BrowserWindow } from 'electron'
 import { describe, expect, it, vi } from 'vitest'
+
+const mock = vi.hoisted(() => ({ attachByTitles: vi.fn() }))
 
 vi.mock('electron', () => ({
   BrowserWindow: { getFocusedWindow: () => null },
@@ -10,7 +13,7 @@ vi.mock('electron', () => ({
 }))
 vi.mock('electron-overlay-window', () => ({
   OVERLAY_WINDOW_OPTS: { transparent: true },
-  OverlayController: { targetBounds: null, events: { on: vi.fn() } },
+  OverlayController: { targetBounds: null, events: { on: vi.fn() }, attachByTitles: mock.attachByTitles },
   waylandClipboard: {
     available: () => false,
     readText: () => '',
@@ -27,10 +30,23 @@ vi.mock('../../../common/diagnostics', () => ({ reportBreadcrumb: vi.fn(), repor
 vi.mock('../x11-xwayland/dip', () => ({ x11ScreenDip: { rect: (r: unknown) => r } }))
 vi.mock('../x11-xwayland/transient', () => ({ linkX11Transient: vi.fn() }))
 
-import { regularWindowOptions, unlockRegularWindow } from './backend'
+import { createRegularWindowBackend, regularWindowOptions, unlockRegularWindow } from './backend'
 import { REGULAR_WINDOW_HEIGHT, REGULAR_WINDOW_WIDTH } from '../../../common/window-layout'
 
 describe('regular window backend', () => {
+  it('tracks the X11 game for focus without binding the window to it', () => {
+    const focus = vi.fn()
+    const win = { isDestroyed: () => false, focus } as unknown as BrowserWindow
+    const { windowTracker } = createRegularWindowBackend()
+
+    windowTracker.adoptOverlay(win)
+    windowTracker.attach(win, ['Path of Exile'])
+    windowTracker.activateOverlay()
+
+    expect(mock.attachByTitles).toHaveBeenCalledWith(undefined, ['Path of Exile'])
+    expect(focus).toHaveBeenCalledOnce()
+  })
+
   it('creates one centered, focusable, fixed-size normal window', () => {
     const opts = regularWindowOptions()
     expect(opts).toMatchObject({
