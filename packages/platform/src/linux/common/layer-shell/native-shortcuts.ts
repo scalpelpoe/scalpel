@@ -49,10 +49,12 @@ export class NativeLayerShortcuts implements GlobalShortcuts {
     process.on('exit', this.dispose)
   }
 
-  /** True once raw evdev is delivering keys; the layer-surface key handler
-   *  must then step aside so one press does not dispatch twice. */
+  /** True while raw evdev can deliver keys; the layer-surface key handler
+   *  must then step aside so one press does not dispatch twice. The host
+   *  reports readable devices after `evdev on` and on hotplug, so without
+   *  any the layer-surface keys stay the fallback. */
   get rawListening(): boolean {
-    return this.stopRaw !== null
+    return this.stopRaw !== null && (WaylandHost.get()?.evdevDevices ?? 0) > 0
   }
 
   /** Switches to the host's unfiltered evdev stream once the Wayland host is

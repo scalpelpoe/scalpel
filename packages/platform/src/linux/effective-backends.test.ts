@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from 'vitest'
 
+vi.mock('./common/global-shortcuts/evdev', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./common/global-shortcuts/evdev')>()),
+  evdevKeyboardsReadable: () => true,
+}))
+
 vi.mock('./common/key-injection', () => ({
   preferredTool: vi.fn(() => null),
 }))

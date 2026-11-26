@@ -1,4 +1,9 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+
+vi.mock('./common/global-shortcuts/evdev', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./common/global-shortcuts/evdev')>()),
+  evdevKeyboardsReadable: () => true,
+}))
 import {
   capturePlatformStartupValues,
   platformBanners,

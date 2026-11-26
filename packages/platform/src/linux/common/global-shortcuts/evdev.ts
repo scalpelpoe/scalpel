@@ -111,6 +111,18 @@ function discoverKeyboardDevices(): string[] {
   return devices
 }
 
+/** Whether this user can read at least one keyboard device. */
+export function evdevKeyboardsReadable(): boolean {
+  return discoverKeyboardDevices().some((device) => {
+    try {
+      fs.accessSync(device, fs.constants.R_OK)
+      return true
+    } catch {
+      return false
+    }
+  })
+}
+
 /** Standalone evdev global shortcuts. Reads /dev/input/event* keyboard devices
  *  directly, so it works on native Wayland without the electron-overlay-window
  *  addon. Requires read access to input devices (typically `input` group). */

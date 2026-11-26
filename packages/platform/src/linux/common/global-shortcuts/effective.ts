@@ -8,6 +8,8 @@ export interface LinuxShortcutFacts {
   readonly nativeWayland: boolean
   /** A native overlay backend can supply its own evdev shortcut transport. */
   readonly nativeOverlay: boolean
+  /** This user can read at least one keyboard under /dev/input. */
+  readonly evdevReadable: boolean
   /** Per-compositor default from the settings map, used only for `auto`. */
   readonly defaultBackend?: ConcreteLinuxShortcutBackend
 }
@@ -15,9 +17,10 @@ export interface LinuxShortcutFacts {
 /** Resolve an explicit preference or the `auto` choice to one implementation.
  *
  *  - X11/XWayland stays on Electron: native grabs and the portal add nothing.
- *  - Native Wayland without a layer-shell host uses the GlobalShortcuts portal.
- *  - A native overlay can match evdev keys itself (deferred until that host is
- *    ported); until then the selector falls back from `evdev` to portal/electron.
+ *  - Native Wayland uses the compositor default, then evdev under a native
+ *    overlay, then the GlobalShortcuts portal.
+ *  - Auto never picks evdev without a readable keyboard: those shortcuts would
+ *    register but never fire while the game has focus.
  */
 export function resolveLinuxShortcutBackend(
   preference: LinuxShortcutBackend,
@@ -25,6 +28,6 @@ export function resolveLinuxShortcutBackend(
 ): ConcreteLinuxShortcutBackend {
   if (preference !== 'auto') return preference
   if (!facts.nativeWayland) return 'electron'
-  if (facts.defaultBackend) return facts.defaultBackend
-  return facts.nativeOverlay ? 'evdev' : 'portal'
+  const preferred = facts.defaultBackend ?? (facts.nativeOverlay ? 'evdev' : 'portal')
+  return preferred === 'evdev' && !facts.evdevReadable ? 'portal' : preferred
 }

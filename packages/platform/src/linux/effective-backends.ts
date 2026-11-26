@@ -6,6 +6,7 @@ import { linuxCompositorClipboardAvailable } from './common/clipboard'
 import { toLinuxClipboardBackend, type LinuxClipboardBackend } from './common/clipboard-backend'
 import { effectiveLinuxDisplayMode, isNativeWayland, toLinuxDisplayMode } from './common/display'
 import {
+  evdevKeyboardsReadable,
   resolveLinuxShortcutBackend,
   toLinuxShortcutBackend,
   type LinuxShortcutBackend,
@@ -81,6 +82,7 @@ export function resolveLinuxEffectiveBackendsSnapshot(
   const shortcutResolved = resolveLinuxShortcutBackend(shortcutPreference, {
     nativeWayland,
     nativeOverlay: nativeOverlayActive(),
+    evdevReadable: evdevKeyboardsReadable(),
     defaultBackend: suggestedShortcut === 'auto' ? undefined : suggestedShortcut,
   })
 

@@ -29,30 +29,32 @@ describe('Linux shortcut backend preference', () => {
 })
 
 describe('Linux shortcut auto resolution', () => {
+  const facts = { nativeWayland: true, nativeOverlay: false, evdevReadable: true }
+
   it('uses Electron on X11/XWayland', () => {
-    expect(resolveLinuxShortcutBackend('auto', { nativeWayland: false, nativeOverlay: false })).toBe('electron')
+    expect(resolveLinuxShortcutBackend('auto', { ...facts, nativeWayland: false })).toBe('electron')
   })
 
   it('uses the portal on native Wayland without a native overlay', () => {
-    expect(resolveLinuxShortcutBackend('auto', { nativeWayland: true, nativeOverlay: false })).toBe('portal')
+    expect(resolveLinuxShortcutBackend('auto', facts)).toBe('portal')
   })
 
   it('uses the compositor default for Auto when one is configured', () => {
-    expect(
-      resolveLinuxShortcutBackend('auto', {
-        nativeWayland: true,
-        nativeOverlay: false,
-        defaultBackend: 'evdev',
-      }),
-    ).toBe('evdev')
+    expect(resolveLinuxShortcutBackend('auto', { ...facts, defaultBackend: 'evdev' })).toBe('evdev')
   })
 
   it('uses evdev once a native overlay is available', () => {
-    expect(resolveLinuxShortcutBackend('auto', { nativeWayland: true, nativeOverlay: true })).toBe('evdev')
+    expect(resolveLinuxShortcutBackend('auto', { ...facts, nativeOverlay: true })).toBe('evdev')
+  })
+
+  it('falls back to the portal when no keyboard is readable', () => {
+    const unreadable = { ...facts, evdevReadable: false }
+    expect(resolveLinuxShortcutBackend('auto', { ...unreadable, nativeOverlay: true })).toBe('portal')
+    expect(resolveLinuxShortcutBackend('auto', { ...unreadable, defaultBackend: 'evdev' })).toBe('portal')
   })
 
   it('never overrides an explicit choice', () => {
-    expect(resolveLinuxShortcutBackend('portal', { nativeWayland: false, nativeOverlay: false })).toBe('portal')
-    expect(resolveLinuxShortcutBackend('electron', { nativeWayland: true, nativeOverlay: true })).toBe('electron')
+    expect(resolveLinuxShortcutBackend('portal', { ...facts, nativeWayland: false })).toBe('portal')
+    expect(resolveLinuxShortcutBackend('evdev', { ...facts, evdevReadable: false })).toBe('evdev')
   })
 })

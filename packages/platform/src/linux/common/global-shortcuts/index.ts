@@ -12,7 +12,7 @@ import {
   type ConcreteLinuxShortcutBackend,
 } from './backend'
 import { resolveLinuxShortcutBackend } from './effective'
-import { createEvdevShortcuts } from './evdev'
+import { createEvdevShortcuts, evdevKeyboardsReadable } from './evdev'
 import { createPortalShortcuts } from './portal'
 
 export {
@@ -21,6 +21,7 @@ export {
   toLinuxShortcutBackend,
 } from './backend'
 export { resolveLinuxShortcutBackend } from './effective'
+export { evdevKeyboardsReadable } from './evdev'
 export { acceleratorToTrigger, createPortalShortcuts, portalShortcutsUnavailable } from './portal'
 export type { ConcreteLinuxShortcutBackend, LinuxShortcutBackend } from './backend'
 export type { LinuxShortcutFacts } from './effective'
@@ -62,6 +63,7 @@ function selectedBackend(env: PlatformEnv): ConcreteLinuxShortcutBackend {
   const selected = resolveLinuxShortcutBackend(getLinuxShortcutBackend(), {
     nativeWayland,
     nativeOverlay,
+    evdevReadable: evdevKeyboardsReadable(),
     defaultBackend: defaultShortcutBackend(),
   })
   if (selected !== lastSelectedBackend) {

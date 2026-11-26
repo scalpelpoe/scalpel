@@ -29,6 +29,7 @@ import { toLinuxInputBackend, type LinuxInputBackend } from './common/input-back
 import { preferredTool } from './common/key-injection'
 import {
   portalShortcutsUnavailable,
+  evdevKeyboardsReadable,
   resolveLinuxShortcutBackend,
   toLinuxShortcutBackend,
   type LinuxShortcutBackend,
@@ -571,6 +572,7 @@ export function linuxSettingsView(input: LinuxSettingsInput = {}): PlatformSetti
   const shortcutFacts = {
     nativeWayland,
     nativeOverlay,
+    evdevReadable: evdevKeyboardsReadable(),
     defaultBackend: suggestedShortcut === 'auto' ? undefined : suggestedShortcut,
   }
   const shortcutResolved = resolveLinuxShortcutBackend(shortcutPreference, shortcutFacts)
