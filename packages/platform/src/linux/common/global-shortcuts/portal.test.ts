@@ -217,7 +217,7 @@ describe('portal shortcut client', () => {
     expect(callsOf('Session.Close')).toEqual([{ member: 'Session.Close', args: ['/session/one'] }])
   })
 
-  it('keeps bindings and callbacks across suspend', async () => {
+  it('keeps the approved binding but not the callbacks across suspend', async () => {
     const client = createPortalShortcuts()
     const suspended = vi.fn()
     client.register('Ctrl+D', suspended)
@@ -241,11 +241,46 @@ describe('portal shortcut client', () => {
       member: 'Activated',
       body: ['/session/one', 'Ctrl+D', 1234, {}],
     })
-    // The hotkey gate logs the suspend reason; the portal layer must not drop
-    // the signal before that gate sees it.
-    expect(suspended).toHaveBeenCalledOnce()
-    expect(callsOf('BindShortcuts')).toHaveLength(1)
+    expect(suspended).not.toHaveBeenCalled()
     expect(callsOf('Session.Close')).toHaveLength(0)
+  })
+
+  it('dispatches the re-armed callback without asking for approval again', async () => {
+    const client = createPortalShortcuts()
+    const stale = vi.fn()
+    await bindInitial(client, 'Ctrl+D', stale)
+    client.unregisterAll()
+
+    const rearmed = vi.fn()
+    expect(client.register('Ctrl+D', rearmed)).toBe(true)
+    await settle()
+    emit({
+      interface: 'org.freedesktop.portal.GlobalShortcuts',
+      member: 'Activated',
+      body: ['/session/one', 'Ctrl+D', 1234, {}],
+    })
+
+    expect(rearmed).toHaveBeenCalledOnce()
+    expect(stale).not.toHaveBeenCalled()
+    expect(callsOf('BindShortcuts')).toHaveLength(1)
+  })
+
+  it('rebinds once with only the re-armed accelerators when the set changed', async () => {
+    const client = createPortalShortcuts()
+    client.register('Ctrl+D', vi.fn())
+    await bindInitial(client, 'Ctrl+A')
+    client.unregisterAll()
+
+    client.register('Ctrl+D', vi.fn())
+    client.register('Escape', vi.fn())
+    await settle()
+    respond(4, 0, { session_handle: { value: '/session/two' } })
+    await settle()
+    respond(5)
+    await settle()
+
+    expect(callsOf('BindShortcuts')).toHaveLength(2)
+    expect(boundIds(callsOf('BindShortcuts')[1])).toEqual(['Ctrl+D', 'Escape'])
   })
 
   it('logs activations even when no callback is registered', async () => {

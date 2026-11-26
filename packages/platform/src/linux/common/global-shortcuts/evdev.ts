@@ -122,13 +122,16 @@ export function createEvdevShortcuts(): GlobalShortcuts & { available(): boolean
   let unavailableReason: string | null = null
   let loggedFirstEvent = false
 
-  function closeStreams(): void {
-    for (const s of streams) {
+  function stop(): void {
+    for (const stream of streams) {
       try {
-        s.destroy()
-      } catch {}
+        stream.destroy()
+      } catch {
+        // A device removed while open can throw on destroy; it is closed either way.
+      }
     }
     streams.length = 0
+    started = false
   }
 
   function dispatch(keycode: number | null): boolean {
@@ -272,13 +275,11 @@ export function createEvdevShortcuts(): GlobalShortcuts & { available(): boolean
     },
     unregister(accelerator) {
       bindings.delete(accelerator)
-      if (bindings.size === 0) {
-        closeStreams()
-        started = false
-      }
+      if (bindings.size === 0) stop()
     },
     unregisterAll() {
-      // Keep bindings/devices like portal; dispatch gated by hotkeys suspend.
+      bindings.clear()
+      stop()
     },
     isRegistered(accelerator) {
       return bindings.has(accelerator)

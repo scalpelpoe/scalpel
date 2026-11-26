@@ -78,7 +78,9 @@ export function createPortalShortcuts(): GlobalShortcuts {
   const callbacks = new Map<string, () => void>()
   // Portal bindings are expensive to approve and are kept across the app's
   // suspend/rearm cycles. `callbacks` is the dispatch gate; `bound` is the
-  // accelerator set the compositor has (or is about to have) approved.
+  // accelerator set the compositor has (or is about to have) approved. While
+  // suspended (no callbacks) `bound` keeps the approved set; the next sync
+  // after a re-arm trims it to what is registered again.
   const bound = new Set<string>()
   const waiters = new Map<string, (response: Response) => void>()
   const pending = new Map<string, Response>()
@@ -253,6 +255,7 @@ export function createPortalShortcuts(): GlobalShortcuts {
   }
 
   function desired(): { signature: string; shortcuts: Shortcut[] } {
+    if (callbacks.size > 0) for (const accelerator of bound) if (!callbacks.has(accelerator)) bound.delete(accelerator)
     const accelerators = [...bound].sort()
     return {
       signature: accelerators.join('\0'),
@@ -367,9 +370,9 @@ export function createPortalShortcuts(): GlobalShortcuts {
       scheduleSync()
     },
     unregisterAll() {
-      // Suspend/shutdown must not tear down portal bindings: approval is
-      // expensive, and clearing callbacks here hid activations from the hotkey
-      // gate's accept/reject logging. Dispatch is gated in hotkeys.ts instead.
+      // Drop dispatch but keep the portal session: approval is expensive, and
+      // a suspend/re-arm cycle usually registers the same accelerators again.
+      callbacks.clear()
     },
     isRegistered(accelerator) {
       return callbacks.has(accelerator)
