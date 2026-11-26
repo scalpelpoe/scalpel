@@ -13,12 +13,7 @@ import {
   type OperatingSystem,
 } from '../select'
 import type { PlatformEnv } from '../types'
-import {
-  explicitLinuxDisplayMode,
-  isNativeWayland,
-  toLinuxDisplayMode,
-  type LinuxDisplayMode,
-} from './common/display'
+import { explicitLinuxDisplayMode, isNativeWayland, toLinuxDisplayMode, type LinuxDisplayMode } from './common/display'
 import { getLinuxGameDisplayModeStatus } from './common/game-display-mode'
 import {
   defaultLinuxLayerShellCapability,
