@@ -6,7 +6,7 @@ export type PlatformGameMode = 'x11' | 'wayland'
 
 type ReadClients = () => readonly CompositorWindowInfo[]
 
-export { gameModeFromClients } from './desktops/hyprland/old/game-mode'
+export { gameModeFromClients } from './desktops/hyprland/game-mode'
 
 /** Compositor-backed detection for the PoE game-mode warning. Desktop-specific
  *  probing lives behind the adapter registry; this is the neutral entry point

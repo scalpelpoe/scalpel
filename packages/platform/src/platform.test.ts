@@ -8,7 +8,7 @@ const mock = vi.hoisted(() => ({
 }))
 vi.mock('node:child_process', () => ({ execFile: vi.fn(), execFileSync: mock.version, execSync: mock.elevation }))
 vi.mock('electron-overlay-window', () => ({ OverlayController: mock.controller }))
-vi.mock('./linux/desktops/hyprland/old/backend', () => ({
+vi.mock('./linux/desktops/hyprland/backend', () => ({
   createHyprlandBackend: () => ({
     traits: { compositorFocus: mock.hyprland.compositorFocus },
     cursor: { warpTo: mock.hyprland.warpTo },

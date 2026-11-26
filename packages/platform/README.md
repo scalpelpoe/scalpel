@@ -22,7 +22,7 @@ packages/platform/src/
     desktops/                desktop adapters, registry and geometry providers
       index.ts               registry: adapters, providers, defaults, game mode, backends
       backend-policy.ts      desktop-specific backend gates (Hyprland version)
-      kde-plasma/ niri/ sway/ umbriel/ hyprland/old/
+      kde-plasma/ niri/ sway/ umbriel/ hyprland/
   ms-windows/                Windows admin check, cursor warp, DIP conversion
 ```
 
@@ -213,8 +213,9 @@ external dependency.
 
 - Windows code is preserved under `ms-windows/` and macOS uses the generic
   overlay backend, but neither was tested on this branch.
-- The Hyprland backend is the legacy 1:1 port under
-  `linux/desktops/hyprland/old/`; it needs `grim` and has not been revalidated.
+- The Hyprland backend under `linux/desktops/hyprland/` is the one from
+  `main`, moved without changes; it needs `grim` and has not been revalidated
+  on this branch.
 - GNOME, COSMIC, XFCE and other non-layer-shell desktops use X11/XWayland or
   regular-window mode; they do not get the native overlay.
 - Native layer-shell overlays do not support interactive child popups (native

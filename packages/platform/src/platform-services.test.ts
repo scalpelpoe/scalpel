@@ -18,7 +18,7 @@ vi.mock('./common/input', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./common/input')>()),
   uiohookInput: {},
 }))
-vi.mock('./linux/desktops/hyprland/old/backend', () => ({
+vi.mock('./linux/desktops/hyprland/backend', () => ({
   createHyprlandBackend: () => ({
     traits: {},
     cursor: {},

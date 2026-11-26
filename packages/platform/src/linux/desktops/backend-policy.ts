@@ -1,5 +1,5 @@
 import type { DesktopEnvironment } from '@platform/select'
-import { hyprlandBackendSupported } from './hyprland/old/adapter'
+import { hyprlandBackendSupported } from './hyprland/adapter'
 
 /**
  * Desktop-specific backend policy the OS router consults after detection.
