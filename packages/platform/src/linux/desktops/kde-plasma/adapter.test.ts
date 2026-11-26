@@ -23,6 +23,7 @@ const features = (overrides: Partial<HostFeatures> = {}): HostFeatures => ({
   cursorShape: true,
   viewporter: true,
   virtualKeyboard: false,
+  uinput: false,
   virtualPointer: false,
   screencopy: false,
   ...overrides,

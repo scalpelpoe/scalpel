@@ -50,7 +50,7 @@
     "@coooookies/windows-smtc-monitor": "^1.0.12",
     "@scalpel/item-data": "file:vendor/scalpel-item-data-0.1.0.tgz",
     "dbus-next": "^0.10.2",
-    "electron-overlay-window": "https://codeload.github.com/kristoferssolo/electron-overlay-window/tar.gz/369a1a68031a7c534031810b83f9607099697b88",
+    "electron-overlay-window": "https://codeload.github.com/kristoferssolo/electron-overlay-window/tar.gz/c56186b11e33bccd252516862566f9e2eeafc4ea",
     "electron-store": "^8.2.0",
     "koffi": "^3.1.6",
     "konva": "^9.3.22",
