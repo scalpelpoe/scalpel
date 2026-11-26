@@ -1,27 +1,23 @@
 import { desktopCapturer, screen } from 'electron'
 import { OverlayController } from 'electron-overlay-window'
 import { reportBreadcrumb } from './diagnostics'
-import { expectedGameVariants, matchGameWindow } from './game-window-identity'
+import { expectedGameVariants, matchesExpectedTitle, matchGameWindow } from './game-window-identity'
 import type { GameWindowSource } from '../types'
 
 type CapturerSource = { id: string; name: string }
 
-/** Profiles may override the game title, so keep exact/whitespace-suffix
- *  fallback for those while the shared matcher handles canonical PoE names. */
-function matchesConfiguredTitle(name: string, title: string): boolean {
-  const value = name.trim().toLowerCase()
-  const expected = title.trim().toLowerCase()
-  return value === expected || (value.startsWith(expected) && value.slice(expected.length).trim() === '')
-}
+/** Bonus for a source named exactly like the active title. Capture sources
+ *  carry only a title, so a loose PoE-like name (`poe.ninja - Google Chrome`)
+ *  can match as well as the game; the exact title must still win. */
+const EXACT_TITLE_BONUS = 20
 
 function scoreSource(source: CapturerSource, title: string, titles: readonly string[]): number {
+  const exact = matchesExpectedTitle(source.name, [title]) ? EXACT_TITLE_BONUS : 0
   const match = matchGameWindow({ title: source.name }, titles)
-  if (match.accepted) {
-    const variants = expectedGameVariants(titles)
-    const preferred = variants.length === 1 && match.variant === variants[0] ? 10 : 0
-    return match.score + preferred
-  }
-  return matchesConfiguredTitle(source.name, title) ? 3 : 0
+  if (!match.accepted) return exact && 3
+  const variants = expectedGameVariants(titles)
+  const preferred = variants.length === 1 && match.variant === variants[0] ? 10 : 0
+  return match.score + preferred + exact
 }
 
 function bestSource(sources: readonly CapturerSource[], title: string, titles: readonly string[]): string | null {

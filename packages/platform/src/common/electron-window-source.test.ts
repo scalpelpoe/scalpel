@@ -10,6 +10,14 @@ describe('matchGameWindowSource', () => {
     expect(matchGameWindowSource(sources, 'Path of Exile')).toBe('window:2')
   })
 
+  it('prefers the exact title over an earlier PoE-like browser tab', () => {
+    const sources = [
+      { id: 'window:1', name: 'poe.ninja - Builds - Google Chrome' },
+      { id: 'window:2', name: 'Path of Exile' },
+    ]
+    expect(matchGameWindowSource(sources, 'Path of Exile')).toBe('window:2')
+  })
+
   it('does not match PoE1 title against a PoE2 window', () => {
     const sources = [
       { id: 'window:8', name: 'Path of Exile' },

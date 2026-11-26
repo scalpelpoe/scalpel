@@ -28,6 +28,9 @@ let titleSpecs: Record<PlatformGameVariant, GameTitleSpec | null> = { 1: null, 2
 const normalizeTitle = (value: string | null | undefined): string =>
   typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : ''
 
+/** Comparison key for window titles: trimmed, whitespace collapsed, lowercase. */
+export const titleKey = (value: string | null | undefined): string => normalizeTitle(value).toLowerCase()
+
 const alternatives = (value: string | undefined): readonly string[] =>
   (value ?? '')
     .split(',')
@@ -91,7 +94,7 @@ export function getGameTitleForVariant(variant: PlatformGameVariant): string {
 export function getGameTitlesForVariant(variant: PlatformGameVariant): readonly string[] {
   const canonical = PLATFORM_GAME_TITLES[variant]
   const override = specFor(variant)?.title
-  return override && override.toLowerCase() !== canonical.toLowerCase() ? [canonical, override] : [canonical]
+  return override && titleKey(override) !== titleKey(canonical) ? [canonical, override] : [canonical]
 }
 
 /** Canonical slots stay at 0/1 for the two variants; aliases follow them. */
@@ -99,7 +102,7 @@ export function getAllGameTitles(): readonly string[] {
   const titles: string[] = [PLATFORM_GAME_TITLES[1], PLATFORM_GAME_TITLES[2]]
   for (const variant of [1, 2] as const) {
     const override = specFor(variant)?.title
-    if (override && !titles.some((title) => title.toLowerCase() === override.toLowerCase())) titles.push(override)
+    if (override && !titles.some((title) => titleKey(title) === titleKey(override))) titles.push(override)
   }
   return titles
 }
@@ -138,11 +141,8 @@ const UTILITY_TITLE_RE =
   /(?:wiki|trade|forum|news|updater|installer|library|store|shop|friends|chat|browser|overlay|launcher|compendium)/i
 
 function titleVariant(value: string | null | undefined): PlatformGameVariant | null {
-  if (!value) return null
-  const title = value
-    .trim()
-    .toLowerCase()
-    .replace(/[\s_]+/g, ' ')
+  const title = titleKey(value?.replace(/_/g, ' '))
+  if (!title) return null
   // A suffix after a separator is allowed: "Path of Exile 2 (GOG)", "PoE - Standard".
   if (/^(?:path ?of ?exile ?2|path ?of ?exile ?ii|poe ?2|poe2|pathofexile2)(?:$|[^a-z0-9])/.test(title)) return 2
   if (/^(?:path ?of ?exile|poe ?1|poe|pathofexile)(?:$|[^a-z0-9])/.test(title)) return 1
@@ -201,18 +201,17 @@ export function expectedGameVariants(titles: readonly string[]): readonly Platfo
 
 /** Profiles may override the window title. An exact configured title is a valid
  *  game signal even when it cannot be classified as PoE1 or PoE2 by name. */
-function matchesExpectedTitle(title: string | null, titles: readonly string[]): boolean {
-  if (!title) return false
-  const value = title.trim().toLowerCase().replace(/\s+/g, ' ')
-  return titles.some((expected) => expected.trim().toLowerCase().replace(/\s+/g, ' ') === value)
+export function matchesExpectedTitle(title: string | null | undefined, titles: readonly string[]): boolean {
+  const value = titleKey(title)
+  return value !== '' && titles.some((expected) => titleKey(expected) === value)
 }
 
 function hintedSpecForTitle(title: string | null): GameTitleSpec | null {
   if (!title) return null
-  const value = normalizeTitle(title).toLowerCase()
+  const value = titleKey(title)
   for (const variant of [1, 2] as const) {
     const spec = specFor(variant)
-    if (spec && normalizeTitle(spec.title).toLowerCase() === value) return spec
+    if (spec && titleKey(spec.title) === value) return spec
   }
   return null
 }
