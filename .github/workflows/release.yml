@@ -83,6 +83,10 @@ jobs:
         run: npm run build
       - name: Build AppImage
         run: npx electron-builder --linux AppImage --x64 --publish never
+      - name: Check the Wayland overlay host is packaged
+        # postinstall only warns when the host fails to build. Without it,
+        # native Wayland overlays silently fall back on users' machines.
+        run: test -x dist/linux-unpacked/resources/app.asar.unpacked/node_modules/electron-overlay-window/build/Release/overlay-wayland-host
       - name: Extract version
         id: version
         run: echo "version=$(node -p 'require("./package.json").version')" >>$GITHUB_OUTPUT
