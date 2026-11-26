@@ -45,6 +45,7 @@ export function preparePlatformLaunch(env: PlatformEnv = currentEnv(), savedDisp
  *  always rewrites the Ozone flag so the newly saved display mode takes effect.
  *  A real CLI flag stays authoritative. */
 export function restartPlatformArgs(env: PlatformEnv, savedDisplayMode?: unknown): string[] {
+  if (detectOperatingSystem(env) !== 'linux') return env.argv.slice(1)
   if (explicitLinuxDisplayMode(env.argv, env.env)) return env.argv.slice(1)
   env.env[MANAGED_OZONE_ENV] = '1'
   return ozoneArgsForMode(env.argv.slice(1), toLinuxDisplayMode(savedDisplayMode))

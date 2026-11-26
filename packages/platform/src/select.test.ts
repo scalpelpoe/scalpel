@@ -1,6 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  __resetRuntimeDesktopCacheForTests,
   detectDesktopEnvironment,
+  detectRuntimeDesktop,
   detectOperatingSystem,
   probeRuntimeDesktop,
   relaunchArgs,
@@ -182,5 +187,35 @@ describe('relaunchArgs', () => {
   it('keeps X11 sessions and other systems as they are', () => {
     expect(relaunchArgs(env('linux'))).toBeNull()
     expect(relaunchArgs(env('win32', { WAYLAND_DISPLAY: 'wayland-1' }))).toBeNull()
+  })
+})
+
+describe('detectRuntimeDesktop', () => {
+  let runtimeDir: string
+
+  beforeEach(() => {
+    __resetRuntimeDesktopCacheForTests()
+    runtimeDir = mkdtempSync(join(tmpdir(), 'scalpel-runtime-'))
+  })
+  afterEach(() => {
+    rmSync(runtimeDir, { recursive: true, force: true })
+    vi.unstubAllGlobals()
+  })
+
+  it('accepts a compositor socket whose PID is alive', () => {
+    writeFileSync(join(runtimeDir, `sway-ipc.1000.${process.pid}.sock`), '')
+    expect(detectRuntimeDesktop({ XDG_RUNTIME_DIR: runtimeDir })).toBe('sway')
+  })
+
+  it('ignores a socket left behind by a dead compositor', () => {
+    writeFileSync(join(runtimeDir, 'sway-ipc.1000.999999999.sock'), '')
+    writeFileSync(join(runtimeDir, 'niri.wayland-1.999999999.sock'), '')
+    expect(detectRuntimeDesktop({ XDG_RUNTIME_DIR: runtimeDir })).toBeNull()
+  })
+
+  it('never probes off Linux', () => {
+    vi.stubGlobal('process', { ...process, platform: 'win32' })
+    writeFileSync(join(runtimeDir, `sway-ipc.1000.${process.pid}.sock`), '')
+    expect(detectRuntimeDesktop({ XDG_RUNTIME_DIR: runtimeDir })).toBeNull()
   })
 })

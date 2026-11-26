@@ -29,6 +29,9 @@ beforeEach(() => {
   mock.elevation.mockReset()
   vi.stubGlobal('process', { ...process, platform: 'linux' })
   vi.stubEnv('HYPRLAND_INSTANCE_SIGNATURE', 'test')
+  // Keep compositor probing off the host session.
+  vi.stubEnv('XDG_RUNTIME_DIR', '')
+  vi.stubEnv('WAYLAND_DISPLAY', '')
 })
 afterEach(() => {
   vi.unstubAllGlobals()

@@ -39,6 +39,9 @@ beforeEach(() => {
   vi.resetModules()
   vi.clearAllMocks()
   vi.stubEnv('HYPRLAND_INSTANCE_SIGNATURE', 'test')
+  // Keep compositor probing off the host session.
+  vi.stubEnv('XDG_RUNTIME_DIR', '')
+  vi.stubEnv('WAYLAND_DISPLAY', '')
   mock.services.mockReturnValue(null)
 })
 afterEach(() => vi.unstubAllEnvs())

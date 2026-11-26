@@ -27,12 +27,16 @@ export type DesktopEnvironment =
   | 'x11'
   | 'unknown'
 
+/** The running process. Compositor probing runs on first read of
+ *  `runtimeDesktop`, so callers that only need the OS or argv never spawn it. */
 export function currentEnv(): PlatformEnv {
   return {
     platform: process.platform,
     env: process.env,
     argv: process.argv,
-    runtimeDesktop: detectRuntimeDesktop(process.env),
+    get runtimeDesktop() {
+      return detectRuntimeDesktop(process.env)
+    },
   }
 }
 
@@ -56,13 +60,21 @@ function runtimeEntries(env: NodeJS.ProcessEnv): string[] {
   }
 }
 
+/** Niri and Sway put the compositor PID in the socket name. A socket left by a
+ *  crashed compositor names a dead PID and does not count. */
+const liveSocket = (entries: readonly string[], pattern: RegExp): boolean =>
+  entries.some((name) => {
+    const pid = pattern.exec(name)?.[1]
+    return pid !== undefined && existsSync(`/proc/${pid}`)
+  })
+
 const defaultRuntimeProbe: RuntimeDesktopProbe = {
   socket(kind, env) {
     const dir = env.XDG_RUNTIME_DIR
     if (!dir) return false
     const entries = runtimeEntries(env)
-    if (kind === 'niri') return entries.some((name) => /^niri\.wayland-.*\.sock$/.test(name))
-    if (kind === 'sway') return entries.some((name) => /^sway-ipc\..*\.sock$/.test(name))
+    if (kind === 'niri') return liveSocket(entries, /^niri\.wayland-\d+\.(\d+)\.sock$/)
+    if (kind === 'sway') return liveSocket(entries, /^sway-ipc\.\d+\.(\d+)\.sock$/)
     // Hyprland keeps its socket in `hypr/<instance-signature>/.socket.sock`.
     const signature = env.HYPRLAND_INSTANCE_SIGNATURE
     if (signature) return existsSync(join(dir, 'hypr', signature, '.socket.sock'))
@@ -73,6 +85,9 @@ const defaultRuntimeProbe: RuntimeDesktopProbe = {
     }
   },
   umbrielRunning(env) {
+    // Umbriel is a Wayland compositor; without a Wayland display it cannot be
+    // the session, so skip the subprocess.
+    if (!env.WAYLAND_DISPLAY) return false
     try {
       execFileSync('umbriel', ['windows', '--json'], {
         timeout: 750,
@@ -90,8 +105,10 @@ const defaultRuntimeProbe: RuntimeDesktopProbe = {
 let runtimeCache: { dir: string; value: RuntimeDesktop | null } | null = null
 
 /** Compositor proven by runtime facts rather than environment names. Probing
- *  is stable for the process lifetime, so the result is cached per runtime dir. */
+ *  is stable for the process lifetime, so the result is cached per runtime dir.
+ *  Always null off Linux. */
 export function detectRuntimeDesktop(env: NodeJS.ProcessEnv = process.env): RuntimeDesktop | null {
+  if (process.platform !== 'linux') return null
   const dir = env.XDG_RUNTIME_DIR ?? ''
   if (runtimeCache?.dir === dir) return runtimeCache.value
   const value = probeRuntimeDesktop(env, defaultRuntimeProbe)

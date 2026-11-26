@@ -88,6 +88,12 @@ describe('platform boot helpers', () => {
     expect(explicit.env[MANAGED_OZONE_ENV]).toBeUndefined()
   })
 
+  it('restarts other systems with their arguments unchanged', () => {
+    const windows: PlatformEnv = { platform: 'win32', env: {}, argv: ['scalpel.exe', '--flag'] }
+    expect(restartPlatformArgs(windows, 'wayland')).toEqual(['--flag'])
+    expect(windows.env[MANAGED_OZONE_ENV]).toBeUndefined()
+  })
+
   it('applies Electron defaults only on Linux', () => {
     mock.disableHardwareAcceleration.mockClear()
     mock.setDesktopName.mockClear()
