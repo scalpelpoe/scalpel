@@ -1,20 +1,17 @@
 import { OverlayController } from 'electron-overlay-window'
 import type { WindowTracker } from '../types'
 
-type ControllerMembers =
-  | 'events'
-  | 'targetBounds'
-  | 'targetHasFocus'
-  | 'setTargetTitles'
-  | 'focusTarget'
-  | 'activateOverlay'
-  | 'setInputRects'
+/** Game window state the controller reports for every backend. */
+export type ControllerState = 'events' | 'targetBounds' | 'targetHasFocus'
+
+/** Methods with a controller or no-op default that a backend may omit. */
+type ControllerDefaults = 'setTargetTitles' | 'focusTarget' | 'activateOverlay' | 'setInputRects'
 
 /** A window tracker over electron-overlay-window's controller. Backends that
  *  track the game differently still report through the controller, replacing
  *  its methods and emitting its events, so these members read it at call time. */
 export function controllerTracker(
-  backend: Omit<WindowTracker, ControllerMembers> & Partial<Pick<WindowTracker, ControllerMembers | 'setInputRects'>>,
+  backend: Omit<WindowTracker, ControllerState | ControllerDefaults> & Partial<Pick<WindowTracker, ControllerDefaults>>,
 ): WindowTracker {
   return {
     setInputRects: () => {},

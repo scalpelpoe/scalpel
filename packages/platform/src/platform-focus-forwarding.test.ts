@@ -1,3 +1,4 @@
+import type { BrowserWindow } from 'electron'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 
 /** A native-Wayland regular window has no X11 tracker connection. Calling the
@@ -16,6 +17,7 @@ const mock = vi.hoisted(() => ({
     focusTarget: vi.fn(),
     activateOverlay: vi.fn(),
     setTargetTitles: vi.fn(),
+    setInputRects: vi.fn(),
   },
   regularWindow: true,
 }))
@@ -59,4 +61,14 @@ it('routes focus and activation through the backend instead of the X11 controlle
   expect(mock.controller.focusTarget).not.toHaveBeenCalled()
   expect(mock.controller.activateOverlay).not.toHaveBeenCalled()
   expect(mock.controller.setTargetTitles).not.toHaveBeenCalled()
+})
+
+it('forwards input regions to the selected backend', async () => {
+  const { platform } = await import('./platform')
+  const win = {} as BrowserWindow
+  const rects = [{ left: 1, top: 2, width: 3, height: 4 }]
+
+  platform().windowTracker.setInputRects(win, rects)
+
+  expect(mock.backend.setInputRects).toHaveBeenCalledWith(win, rects)
 })

@@ -1,4 +1,4 @@
-import { controllerTracker } from './common/controller'
+import { type ControllerState, controllerTracker } from './common/controller'
 import { reportBreadcrumb } from './common/diagnostics'
 import { electronClipboard } from './common/electron'
 import { uiohookInput } from './common/input'
@@ -14,7 +14,16 @@ import { createLinuxDesktopBackend, readLinuxDesktopVersion } from './linux/desk
 import { createOverlayWindowBackend, type OverlayWindowBackendId } from './overlay-window-backend'
 import { isElevated as windowsIsElevated } from './ms-windows/elevation'
 import { currentEnv, detectOperatingSystem, selectBackend } from './select'
-import type { Backend, BackendId, BackendServices, Clipboard, GlobalShortcuts, InputHook, Platform } from './types'
+import type {
+  Backend,
+  BackendId,
+  BackendServices,
+  Clipboard,
+  GlobalShortcuts,
+  InputHook,
+  Platform,
+  WindowTracker,
+} from './types'
 
 let selected: { id: BackendId; backend: Backend } | null = null
 
@@ -99,6 +108,24 @@ const clipboard: Clipboard = {
   readImage: () => service('clipboard').readImage(),
 }
 
+/** Every tracker method routes through the selected backend. The controller's
+ *  X11 defaults for focus, activation and titles dereference a null xcb
+ *  connection on native Wayland and crash the process. Typed without the
+ *  controller defaults, so a method missing here is a compile error. */
+const trackerMethods: Omit<WindowTracker, ControllerState> = {
+  gameBounds: (win) => backend().windowTracker.gameBounds(win),
+  attach: (win, titles) => backend().windowTracker.attach(win, titles),
+  setTargetTitles: (titles) => backend().windowTracker.setTargetTitles(titles),
+  focusTarget: () => backend().windowTracker.focusTarget(),
+  activateOverlay: () => backend().windowTracker.activateOverlay(),
+  focusOverlay: (win) => backend().windowTracker.focusOverlay(win),
+  inputAllowed: () => backend().windowTracker.inputAllowed(),
+  overlayWindowOptions: () => backend().windowTracker.overlayWindowOptions(),
+  adoptOverlay: (win) => backend().windowTracker.adoptOverlay(win),
+  setInputRects: (win, rects) => backend().windowTracker.setInputRects(win, rects),
+  beforeOverlayShow: (win, gameTitle) => backend().windowTracker.beforeOverlayShow(win, gameTitle),
+}
+
 /** Stable views of the active backend. Holding or destructuring them does not
  *  select a backend; the first call through one does. */
 const facade: Platform = {
@@ -130,22 +157,7 @@ const facade: Platform = {
   },
   // Every backend reports the game window through electron-overlay-window's
   // controller, so its events and target state never select a backend.
-  windowTracker: controllerTracker({
-    // These three also have an X11-native implementation in the controller. A
-    // native-Wayland backend has no X connection there, so calling the default
-    // would dereference a null xcb connection and segfault the process. Always
-    // route them through the selected backend.
-    focusTarget: () => backend().windowTracker.focusTarget(),
-    activateOverlay: () => backend().windowTracker.activateOverlay(),
-    setTargetTitles: (titles) => backend().windowTracker.setTargetTitles(titles),
-    gameBounds: (win) => backend().windowTracker.gameBounds(win),
-    attach: (win, titles) => backend().windowTracker.attach(win, titles),
-    focusOverlay: (win) => backend().windowTracker.focusOverlay(win),
-    inputAllowed: () => backend().windowTracker.inputAllowed(),
-    overlayWindowOptions: () => backend().windowTracker.overlayWindowOptions(),
-    adoptOverlay: (win) => backend().windowTracker.adoptOverlay(win),
-    beforeOverlayShow: (win, gameTitle) => backend().windowTracker.beforeOverlayShow(win, gameTitle),
-  }),
+  windowTracker: controllerTracker(trackerMethods),
   // The Windows admin check is inert on every other OS: it is not called at
   // all there, so no `net session` subprocess is started on Linux or macOS.
   isElevated: () => (bootOs === 'windows' ? windowsIsElevated() : false),
