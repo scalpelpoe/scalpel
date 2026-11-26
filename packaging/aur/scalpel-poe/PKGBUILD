@@ -28,7 +28,7 @@ source=(
     "scalpel-poe.desktop"
 )
 sha256sums=('f256dc3568de4765d518c0fc422d48baad5a8a24c075a0ef38bdf86f84490a52'
-            'aec6807cc11a1f0f172577d5d24744d457c2d52fd51c4b92d1e6b8bfbb943b1f'
+            '26d4b0537ef74cac07f86b8658438ec7255b9bcd353b88a89d73a160b8b3f3fe'
             'be4904493f9322e59649768c209eeeed71ebf8f4f92321614967f749807794dc')
 
 _check_node_version() {
