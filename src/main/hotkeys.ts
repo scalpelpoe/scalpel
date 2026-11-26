@@ -163,18 +163,21 @@ function recordHotkeyFire(
   accepted: boolean,
   reason: string,
 ): void {
-  const wf = readWaylandGameFocus()
-  const gameMode = getLinuxGameDisplayModeStatus()
-  recordMainBreadcrumb(
-    `hotkey fired label=${label} source=${source} accelerator="${accelerator ?? '-'}" accepted=${accepted} reason=${reason} ` +
+  recordMainBreadcrumb(() => {
+    // Only native Wayland has a compositor focus reader; elsewhere it would
+    // open the focus socket for nothing.
+    const wf = isNativeWayland() ? readWaylandGameFocus() : null
+    const gameMode = getLinuxGameDisplayModeStatus()
+    return (
+      `hotkey fired label=${label} source=${source} accelerator="${accelerator ?? '-'}" accepted=${accepted} reason=${reason} ` +
       `focusAway=${focusAway} suspendDepth=${suspendDepth} injecting=${injecting} typing=${isTypingInOverlay()} ` +
       `inputAllowed=${windowTracker.inputAllowed()} targetFocus=${windowTracker.targetHasFocus} ` +
       `scalpelFocus=${isAnyScalpelBrowserWindowFocused()} gameMode=${gameMode.mode ?? '-'} ` +
       `gameModeSource=${gameMode.source ?? '-'} waylandGame=${wf?.game ?? false} ` +
       `waylandVariant=${wf?.variant ?? '-'} waylandMatch=${wf?.reason ?? '-'} ` +
-      `waylandTitle="${wf?.title ?? '-'}" waylandAppId="${wf?.appId ?? '-'}"`,
-    'debug',
-  )
+      `waylandTitle="${wf?.title ?? '-'}" waylandAppId="${wf?.appId ?? '-'}"`
+    )
+  }, 'debug')
 }
 
 function hotkeyBlockReason(escape: boolean): string | null {
