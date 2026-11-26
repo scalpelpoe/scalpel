@@ -22,8 +22,8 @@ export const PLATFORM_SETTING_IDS = {
 
 export type PlatformSettingId = (typeof PLATFORM_SETTING_IDS)[keyof typeof PLATFORM_SETTING_IDS]
 
-/** Legacy polling interval kept for callers that still poll; native trackers
- *  now push live game-mode updates, so new code should not need it. */
+/** How often a renderer showing platform banners or settings refreshes the
+ *  view, so a game display mode mismatch appears without reopening settings. */
 export const PLATFORM_GAME_MODE_POLL_MS = 5000
 
 export type PlatformDisplayMode = 'x11' | 'wayland'

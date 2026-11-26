@@ -29,7 +29,9 @@ export function devOzoneBootstrap({
   let mode = 'x11'
   try {
     if (JSON.parse(read(config, 'utf8')).platformDisplayMode === 'wayland') mode = 'wayland'
-  } catch {}
+  } catch {
+    // No or unreadable config: keep the X11 default.
+  }
 
   nextEnv[MANAGED_OZONE_ENV] = '1'
   return { args: [...passthrough, `--ozone-platform=${mode}`], env: nextEnv }

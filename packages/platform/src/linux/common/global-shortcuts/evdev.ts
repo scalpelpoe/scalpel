@@ -220,7 +220,9 @@ export function createEvdevShortcuts(): GlobalShortcuts & { available(): boolean
               reportDiagnostic('evdev-shortcuts:read', err)
               try {
                 fs.closeSync(fd)
-              } catch {}
+              } catch {
+                // The read error is already reported; the device may be gone.
+              }
               return
             }
             if (bytesRead > 0) {
@@ -243,7 +245,9 @@ export function createEvdevShortcuts(): GlobalShortcuts & { available(): boolean
             closed = true
             try {
               fs.closeSync(fd)
-            } catch {}
+            } catch {
+              // Already closed after a read error, or the device was unplugged.
+            }
           },
         })
         readLoop()

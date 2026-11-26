@@ -110,9 +110,8 @@ function windowAtPoint(x: number, y: number): BrowserWindow | null {
 }
 
 function getScaleFactor(): number {
-  // Native compositor trackers report logical (DIP) coordinates already.
-  // This matches the working layer-shell implementation; without it the compositor
-  // branch below divides tracker bounds by a DIP copy of themselves.
+  // Native compositor trackers report logical (DIP) coordinates already;
+  // dividing them by the display scale below would shrink them twice.
   if (overlayBoundsAreLogical()) return 1
   // Use the display the game is actually on, not the primary display.
   // Multi-monitor setups with different DPIs need the correct scale factor.
@@ -137,7 +136,9 @@ function reportOverlayGeometry(label: string): void {
   let wb: Electron.Rectangle | null = null
   try {
     if (overlayWindow && !overlayWindow.isDestroyed()) wb = overlayWindow.getBounds()
-  } catch {}
+  } catch {
+    // Diagnostics only: a window closing mid-call reports no surface.
+  }
   const fmt = (r: { x: number; y: number; width: number; height: number } | null): string =>
     r ? `x=${Math.round(r.x)} y=${Math.round(r.y)} ${Math.round(r.width)}x${Math.round(r.height)}` : '-'
   // This runs on every geometry poll; only a changed projection is interesting.
@@ -756,7 +757,9 @@ export function showOverlay(): void {
       windowTracker.beforeOverlayShow(overlayWindow, getGameTitlesForVariant(getPoeVersion())[0] ?? '')
       overlayWindow.setIgnoreMouseEvents(false)
       overlayWindow.moveTop()
-    } catch {}
+    } catch {
+      // The window can close between the check above and these calls.
+    }
   }
   // If a persisting whiteboard is visible, raise the eval above it so the
   // popup is never buried under the annotations.
