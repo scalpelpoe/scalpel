@@ -6,6 +6,7 @@ const mock = vi.hoisted(() => ({
   construct: vi.fn(),
   beforeShow: vi.fn(),
   compositorFocus: true,
+  windowOptions: {} as Record<string, unknown>,
 }))
 vi.mock('../desktop', () => ({ desktop: { applyInteraction: mock.apply, releaseOverlay: mock.release } }))
 vi.mock('@scalpel/platform', () => ({
@@ -16,7 +17,11 @@ vi.mock('@scalpel/platform', () => ({
         return mock.compositorFocus
       },
     },
-    windowTracker: { overlayWindowOptions: () => ({}), adoptOverlay: vi.fn(), beforeOverlayShow: mock.beforeShow },
+    windowTracker: {
+      overlayWindowOptions: () => mock.windowOptions,
+      adoptOverlay: vi.fn(),
+      beforeOverlayShow: mock.beforeShow,
+    },
   }),
 }))
 vi.mock('../game-state', () => ({ getPoeVersion: () => 2 }))
@@ -52,6 +57,22 @@ import type { OverlayInteraction } from '../desktop'
 beforeEach(() => {
   vi.clearAllMocks()
   mock.compositorFocus = true
+  mock.windowOptions = {}
+})
+
+it('keeps the backend web preferences next to the host preload', () => {
+  mock.windowOptions = { webPreferences: { offscreen: true, additionalArguments: ['--layer'] } }
+  createOverlayWindow({ htmlEntry: 'plugin-overlay.html', bounds: { x: 0, y: 0, width: 100, height: 100 } })
+  expect(mock.construct).toHaveBeenCalledWith(
+    expect.objectContaining({
+      webPreferences: expect.objectContaining({
+        offscreen: true,
+        additionalArguments: ['--layer'],
+        preload: expect.any(String),
+        contextIsolation: true,
+      }),
+    }),
+  )
 })
 afterEach(() => vi.unstubAllGlobals())
 it('prepares the overlay for the current game before applying interaction', () => {

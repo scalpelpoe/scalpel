@@ -16,8 +16,9 @@ interface CreateOptions {
  *  cycles never trigger Windows zoom animation. Returns the window with .show
  *  /.hide /.isVisible already overridden. */
 export function createOverlayWindow({ htmlEntry, bounds, interaction }: CreateOptions): BrowserWindow {
+  const windowOptions = platform().windowTracker.overlayWindowOptions()
   const win = new BrowserWindow({
-    ...platform().windowTracker.overlayWindowOptions(),
+    ...windowOptions,
     width: bounds.width,
     height: bounds.height,
     x: bounds.x,
@@ -25,6 +26,9 @@ export function createOverlayWindow({ htmlEntry, bounds, interaction }: CreateOp
     backgroundColor: '#00000000',
     show: false,
     webPreferences: {
+      // Backends such as layer-shell need their own preferences (offscreen
+      // rendering); the host only adds its preload and safety settings.
+      ...windowOptions.webPreferences,
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
