@@ -67,10 +67,11 @@ function buildWaylandHost() {
     ...env,
     GYP_DEFINES: `${env.GYP_DEFINES ?? ''} wayland_host=1`.trim(),
   }
+  // Linux only, so no shell is needed to resolve the .bin shim, and passing the
+  // args directly keeps a `nodedir` with spaces in one argument.
   const configured = spawnSync('node-gyp', ['configure', ...gypArgs], {
     cwd: moduleDir,
     stdio: 'inherit',
-    shell: true,
     env: configureEnv,
   })
   if ((configured.status ?? 1) !== 0) {
@@ -81,7 +82,6 @@ function buildWaylandHost() {
   const built = spawnSync('node-gyp', ['build', ...gypArgs], {
     cwd: moduleDir,
     stdio: 'inherit',
-    shell: true,
     env,
   })
   if ((built.status ?? 1) !== 0) {
