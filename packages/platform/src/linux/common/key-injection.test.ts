@@ -15,6 +15,24 @@ describe('key-injection', () => {
     vi.resetModules()
   })
 
+  it('probes again for a tool that was missing at first', async () => {
+    vi.useFakeTimers()
+    try {
+      const { preferredTool } = await import('./key-injection')
+      execFileSync.mockImplementation(() => {
+        throw new Error('not running')
+      })
+      expect(preferredTool()).toBeNull()
+
+      execFileSync.mockReset()
+      expect(preferredTool()).toBeNull()
+      vi.advanceTimersByTime(30_000)
+      expect(preferredTool()).toBe('ydotool')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('taps ydotool with evdev keycodes', async () => {
     const { tapWithTool } = await import('./key-injection')
     tapWithTool('ydotool', UiohookKey.A)

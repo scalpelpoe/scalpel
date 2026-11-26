@@ -27,9 +27,11 @@ const TOOL_PROBES: Record<InjectionTool, string[]> = {
   wtype: ['-k', 'VoidSymbol'],
 }
 
-let cachedTool: InjectionTool | null | undefined
+/** A working tool stays cached; a miss is re-probed after the TTL so a
+ *  ydotoold started after Scalpel is picked up. */
+let cachedTool: { tool: InjectionTool | null; at: number } | undefined
 const cachedExplicit = new Map<InjectionTool, { ok: boolean; at: number }>()
-const EXPLICIT_PROBE_TTL_MS = 30_000
+const PROBE_TTL_MS = 30_000
 let queue: Promise<void> = Promise.resolve()
 
 function probeTool(tool: InjectionTool): boolean {
@@ -42,15 +44,10 @@ function probeTool(tool: InjectionTool): boolean {
 }
 
 function getTool(): InjectionTool | null {
-  if (cachedTool !== undefined) return cachedTool
-  for (const tool of ['ydotool', 'wtype'] as const) {
-    if (probeTool(tool)) {
-      cachedTool = tool
-      return tool
-    }
-  }
-  cachedTool = null
-  return null
+  if (cachedTool && (cachedTool.tool !== null || Date.now() - cachedTool.at < PROBE_TTL_MS)) return cachedTool.tool
+  const tool = (['ydotool', 'wtype'] as const).find(probeTool) ?? null
+  cachedTool = { tool, at: Date.now() }
+  return tool
 }
 
 /** Resolves an explicit ydotool/wtype preference, falling back to whichever
@@ -58,7 +55,7 @@ function getTool(): InjectionTool | null {
 export function preferredTool(preferred: InjectionTool | 'auto' = 'auto'): InjectionTool | null {
   if (preferred !== 'auto') {
     const cached = cachedExplicit.get(preferred)
-    if (cached && Date.now() - cached.at < EXPLICIT_PROBE_TTL_MS) {
+    if (cached && Date.now() - cached.at < PROBE_TTL_MS) {
       if (cached.ok) return preferred
     } else {
       const ok = probeTool(preferred)

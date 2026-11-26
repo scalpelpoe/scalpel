@@ -48,7 +48,8 @@ export interface LinuxSettingsFacts {
   readonly desktopEnvironment: PlatformDesktopPreference
   readonly detectedDesktopEnvironment: LinuxDesktopKey
   readonly windowingMode: PlatformWindowingMode
-  readonly inputBackend: PlatformInputBackend
+  /** Effective backend; 'unavailable' on native Wayland without a working tool. */
+  readonly inputBackend: PlatformInputBackend | 'unavailable'
   readonly clipboardBackend: PlatformClipboardBackend
   readonly shortcutBackend: PlatformShortcutBackend
   readonly nativeWayland: boolean

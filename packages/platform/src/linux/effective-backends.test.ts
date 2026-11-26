@@ -47,7 +47,7 @@ describe('resolveLinuxEffectiveBackendsSnapshot', () => {
       nativeWayland: true,
       shortcuts: { preference: 'auto', resolved: 'portal' },
       clipboard: { preference: 'auto', resolved: 'wl-clipboard' },
-      input: { preference: 'auto', resolved: 'uiohook' },
+      input: { preference: 'auto', resolved: 'unavailable' },
     })
   })
 

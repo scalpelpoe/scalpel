@@ -34,7 +34,7 @@ import {
   toLinuxShortcutBackend,
   type LinuxShortcutBackend,
 } from './common/global-shortcuts'
-import { nativeOverlayActive } from './common/native-overlay'
+import { nativeOverlayActive, nativeOverlayServices } from './common/native-overlay'
 import {
   evaluateLinuxSettingsRules,
   linuxDesktopDefaults,
@@ -147,18 +147,22 @@ const CLIPBOARD_HINT_KEYS: Record<ConcreteLinuxClipboardBackend, string> = {
   native: 'settings_linux_clipboard_desc_native',
 }
 
-type ConcreteLinuxInputBackend = Exclude<LinuxInputBackend, 'auto'>
-const INPUT_LABEL_KEYS: Record<ConcreteLinuxInputBackend, string> = {
+/** What actually injects keys: a backend, or nothing on native Wayland
+ *  without a working tool. */
+type EffectiveLinuxInputBackend = Exclude<LinuxInputBackend, 'auto'> | 'unavailable'
+const INPUT_LABEL_KEYS: Record<EffectiveLinuxInputBackend, string> = {
   uiohook: 'settings_linux_input_uiohook',
   ydotool: 'settings_linux_input_ydotool',
   wtype: 'settings_linux_input_wtype',
   compositor: 'settings_linux_input_compositor',
+  unavailable: 'settings_linux_input_unavailable',
 }
-const INPUT_HINT_KEYS: Record<ConcreteLinuxInputBackend, string> = {
+const INPUT_HINT_KEYS: Record<EffectiveLinuxInputBackend, string> = {
   uiohook: 'settings_linux_input_desc_uiohook',
   ydotool: 'settings_linux_input_desc_ydotool',
   wtype: 'settings_linux_input_desc_wtype',
   compositor: 'settings_linux_input_desc_compositor',
+  unavailable: 'settings_linux_input_desc_unavailable',
 }
 
 /** Only named desktops we expose in the selector are confident detections. */
@@ -450,21 +454,24 @@ function clipboardSetting(
   }
 }
 
+/** Mirrors the runtime in `native-input.ts`: a native overlay types through its
+ *  host (KWin's through ydotoold), and native Wayland without one needs a
+ *  working ydotool or wtype. uIOhook is never a native-Wayland fallback. */
 export function resolveLinuxInputBackend(
   preference: LinuxInputBackend,
   nativeWayland: boolean,
-): ConcreteLinuxInputBackend {
+): EffectiveLinuxInputBackend {
   if (preference !== 'auto') return preference
   if (!nativeWayland) return 'uiohook'
-  // On native Wayland, prefer a working external injection tool. The runtime
-  // falls back to uIOhook when no tool is available.
-  return preferredTool('auto') ?? 'uiohook'
+  const overlay = nativeOverlayServices()
+  if (overlay) return overlay.features.ydotoolInput ? 'ydotool' : 'compositor'
+  return preferredTool('auto') ?? 'unavailable'
 }
 
 function inputSetting(
   preference: LinuxInputBackend,
-  resolved: ConcreteLinuxInputBackend,
-  auto: ConcreteLinuxInputBackend,
+  resolved: EffectiveLinuxInputBackend,
+  auto: EffectiveLinuxInputBackend,
   rules: LinuxSettingsRulesResult,
 ): PlatformSettingDescriptor {
   return {
