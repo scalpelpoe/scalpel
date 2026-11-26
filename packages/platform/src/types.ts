@@ -1,13 +1,26 @@
 import type { BrowserWindow, BrowserWindowConstructorOptions, NativeImage, Point, Rectangle } from 'electron'
 
 /** The desktop integration selected for this process. */
-export type BackendId = 'windows' | 'macos' | 'x11' | 'hyprland'
+export type BackendId = 'windows' | 'macos' | 'x11' | 'window' | 'hyprland' | 'layer-shell' | 'kwin-layer-shell'
+
+/** A compositor proven to be running from runtime facts (socket or CLI), used
+ *  when the environment does not name the desktop. */
+export type RuntimeDesktop = 'hyprland' | 'niri' | 'sway' | 'umbriel'
 
 /** Process facts backend selection depends on. */
 export interface PlatformEnv {
   platform: NodeJS.Platform
   env: Record<string, string | undefined>
   argv: readonly string[]
+  /** Resolved by `currentEnv()` from compositor sockets/CLI. `null` means
+   *  probed with no match; `undefined` (hand-built test envs) skips probing. */
+  runtimeDesktop?: RuntimeDesktop | null
+}
+
+/** Minimal per-window facts a compositor reports for game-mode detection. */
+export interface CompositorWindowInfo {
+  readonly title: string
+  readonly xwayland?: boolean
 }
 
 export interface Traits {
@@ -16,6 +29,8 @@ export interface Traits {
    *  through compositor requests, and pointer hit tests read
    *  `cursor.trackerPoint()` because hook coordinates are unreliable. */
   readonly compositorFocus: boolean
+  /** A regular focusable window: no game attach, click-through, or input shaping. */
+  readonly windowLocal?: boolean
 }
 
 export interface InputKeyEvent {
@@ -59,6 +74,12 @@ export interface InputHook {
   stop(): void
   keyTap(key: number, modifiers?: number[]): void
   keyToggle(key: number, state: 'down' | 'up'): void
+  /** Send a whole combo as one coherent sequence, resolving when it has been
+   *  handed to the OS. Modifiers first, the main key last. */
+  injectCombo(keys: readonly number[]): Promise<void>
+  /** Whether `keyToggle` can hold a key down across calls. When false (wtype),
+   *  a combo must go out through `injectCombo`. */
+  readonly holdsKeys: boolean
   /** Whether listeners also receive the keys this process injects. */
   readonly seesInjectedKeys: boolean
   /** Whether the user physically holds `key`, or null when injected keys make
@@ -124,6 +145,9 @@ export interface CaptureOptions {
    *  Every other caller - panel detection's polling, the plugin capture API -
    *  is ambient and must keep the gate. */
   skipFocusGate?: boolean
+  /** Active profile's game title. Lets compositor capture pick the right PoE
+   *  window when both variants are open, without changing X11/Windows callers. */
+  title?: string
 }
 
 /** A capturable window source for a live stream of the game. */
@@ -182,6 +206,15 @@ export interface TrackerEvents {
   on<K extends keyof TrackerEventMap>(event: K, listener: TrackerEventMap[K]): void
 }
 
+/** Interactive region in a window's own CSS pixels. Native layer-shell
+ *  surfaces use it to open their input region; X11 ignores it. */
+export interface InputRect {
+  left: number
+  top: number
+  width: number
+  height: number
+}
+
 /** Finds the game window, follows its bounds and focus, and keeps the attached
  *  main overlay window over it. */
 export interface WindowTracker {
@@ -207,6 +240,8 @@ export interface WindowTracker {
   overlayWindowOptions(): BrowserWindowConstructorOptions
   /** Prepares a newly constructed overlay window for the backend. */
   adoptOverlay(win: BrowserWindow): void
+  /** Sets the window's interactive regions, in CSS pixels. */
+  setInputRects(win: BrowserWindow, rects: readonly InputRect[]): void
   /** Called right before an overlay window is shown over the game. */
   beforeOverlayShow(win: BrowserWindow, gameTitle: string): void
 }
@@ -224,5 +259,18 @@ export interface Platform {
   isElevated(): boolean
 }
 
-/** The parts of a platform that differ between backends. */
-export type Backend = Pick<Platform, 'traits' | 'capture' | 'cursor' | 'windowTracker'>
+/** Process-wide services a backend can replace. A session that hides its
+ *  clipboard from unfocused windows, has no global shortcut service, or cannot
+ *  be driven through uiohook supplies its own implementation here. */
+export interface BackendServices {
+  readonly input: InputHook
+  readonly shortcuts: GlobalShortcuts
+  readonly clipboard: Clipboard
+}
+
+/** The parts of a platform that differ between backends. Services are optional:
+ *  every backend uses the shared Electron/uiohook implementations unless it
+ *  needs to replace one of them. */
+export type Backend = Pick<Platform, 'traits' | 'capture' | 'cursor' | 'windowTracker'> & {
+  readonly services?: Partial<BackendServices>
+}

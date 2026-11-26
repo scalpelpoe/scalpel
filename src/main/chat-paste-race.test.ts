@@ -90,6 +90,7 @@ const inputMock = {
     if (code === keyMock.Ctrl) queue(() => (game.ctrlHeld = dir === 'down'))
   }),
   keyTap: vi.fn((code: number) => queue(() => handleKey(code))),
+  holdsKeys: true,
   seesInjectedKeys: true,
   physicallyHeld: () => null,
 }
@@ -103,6 +104,7 @@ vi.mock('electron', () => ({
 }))
 vi.mock('@scalpel/platform', () => ({
   Key: keyMock,
+  isNativeWayland: () => false,
   platform: () => ({
     clipboard: clipboardMock,
     shortcuts: { register: vi.fn(() => true), unregister: vi.fn(), unregisterAll: vi.fn() },

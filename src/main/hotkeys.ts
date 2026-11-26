@@ -11,7 +11,14 @@ import {
 } from './diagnostics'
 import { getPoeVersion } from './game-state'
 import { focusGameWindow, isTypingInOverlay, setOverlayVisibilityListener } from './overlay'
-import { Key, platform } from '@scalpel/platform'
+import {
+  Key,
+  getLinuxGameDisplayModeStatus,
+  isNativeWayland,
+  isWaylandGameFocused,
+  platform,
+  readWaylandGameFocus,
+} from '@scalpel/platform'
 import { advancedCopyTracker } from './trade/advanced-copy'
 import { hideFocusedOrAnyVisibleSecondaryOverlay, isAnyScalpelBrowserWindowFocused } from './windowing'
 import {
@@ -95,48 +102,160 @@ function matchesCombo(
  *  Modifiers are left held - they don't move the character, they're tracked by
  *  heldModifiers, and the follow-up copy relies on them. Mirrors Exiled-
  *  Exchange-2's keepModKeys release. */
+/** Portal activations can still own the keyboard with modifiers held when the
+ *  copy combo is injected. Release them first and let sendCtrlCToPoE await it.
+ *  Only the regular-window backend needs this: layer-shell's native shortcut
+ *  backend keeps its existing modifier tracking. */
+let pendingNativeHotkeyRelease: Promise<void> = Promise.resolve()
+
+function isRegularWindowBackend(): boolean {
+  // The neutral trait, not the backend id: host code must not know ids.
+  return platform().traits.windowLocal === true
+}
+
+/** Whether combos must go out as one `injectCombo` sequence: the injector
+ *  cannot hold a modifier between calls (wtype), or a native-Wayland regular
+ *  window must hand focus back to the game first. */
+function injectsWholeCombos(): boolean {
+  return !input.holdsKeys || (isNativeWayland() && isRegularWindowBackend())
+}
+
+/** Ctrl+letter combos used by chat/regex paste. */
+async function pasteCombo(key: number): Promise<void> {
+  if (injectsWholeCombos()) {
+    await input.injectCombo([Key.Ctrl, key])
+    return
+  }
+  input.keyToggle(Key.Ctrl, 'down')
+  input.keyTap(key)
+  input.keyToggle(Key.Ctrl, 'up')
+}
+
 function releaseHotkeyKey(combo: KeyCombo | null): void {
   if (!combo) return
+  if (isNativeWayland() && isRegularWindowBackend()) {
+    pendingNativeHotkeyRelease = (async () => {
+      if (combo.ctrl) {
+        input.keyToggle(Key.Ctrl, 'up')
+        if (Key.CtrlRight) input.keyToggle(Key.CtrlRight, 'up')
+      }
+      if (combo.shift) {
+        input.keyToggle(Key.Shift, 'up')
+        if (Key.ShiftRight) input.keyToggle(Key.ShiftRight, 'up')
+      }
+      if (combo.alt) {
+        input.keyToggle(Key.Alt, 'up')
+        if (Key.AltRight) input.keyToggle(Key.AltRight, 'up')
+      }
+      input.keyToggle(combo.keycode, 'up')
+    })().catch(() => {})
+    return
+  }
   input.keyToggle(combo.keycode, 'up')
 }
 
-function fireTrigger(): void {
-  if (injecting || isTypingInOverlay() || !hotkeyContextIsActive()) return
+type HotkeySource = 'globalShortcut' | 'uiohook'
+
+function recordHotkeyFire(
+  label: 'trigger' | 'price-check' | 'escape' | 'chat-command' | 'app-macro' | 'secondary-overlay',
+  source: HotkeySource,
+  accelerator: string | null,
+  accepted: boolean,
+  reason: string,
+): void {
+  recordMainBreadcrumb(() => {
+    // Only native Wayland has a compositor focus reader; elsewhere it would
+    // open the focus socket for nothing.
+    const wf = isNativeWayland() ? readWaylandGameFocus() : null
+    const gameMode = getLinuxGameDisplayModeStatus()
+    return (
+      `hotkey fired label=${label} source=${source} accelerator="${accelerator ?? '-'}" accepted=${accepted} reason=${reason} ` +
+      `focusAway=${focusAway} suspendDepth=${suspendDepth} injecting=${injecting} typing=${isTypingInOverlay()} ` +
+      `inputAllowed=${windowTracker.inputAllowed()} targetFocus=${windowTracker.targetHasFocus} ` +
+      `scalpelFocus=${isAnyScalpelBrowserWindowFocused()} gameMode=${gameMode.mode ?? '-'} ` +
+      `gameModeSource=${gameMode.source ?? '-'} waylandGame=${wf?.game ?? false} ` +
+      `waylandVariant=${wf?.variant ?? '-'} waylandMatch=${wf?.reason ?? '-'} ` +
+      `waylandTitle="${wf?.title ?? '-'}" waylandAppId="${wf?.appId ?? '-'}"`
+    )
+  }, 'debug')
+}
+
+function hotkeyBlockReason(escape: boolean): string | null {
+  if (injecting) return 'injecting'
+  if (isTypingInOverlay()) return 'typing-in-overlay'
+  if (!windowTracker.inputAllowed()) return 'input-context-inactive'
+  if (focusAway) return 'focus-away'
+  if (suspendDepth > 0) return 'suspended'
+  if (escape ? escapeContextIsActive() : hotkeyContextIsActive()) return null
+  return 'no-game-or-scalpel-focus'
+}
+
+function fireTrigger(source: HotkeySource = 'globalShortcut'): void {
+  const blocked = hotkeyBlockReason(false)
+  if (blocked) {
+    recordHotkeyFire('trigger', source, currentAccelerator, false, blocked)
+    return
+  }
   const now = Date.now()
-  if (now - lastTriggerFireAt < DEDUPE_MS) return
+  if (now - lastTriggerFireAt < DEDUPE_MS) {
+    recordHotkeyFire('trigger', source, currentAccelerator, false, 'dedupe')
+    return
+  }
   lastTriggerFireAt = now
   releaseHotkeyKey(triggerCombo)
   if (traits.compositorFocus && overlayVisibleForEscape && onEscape) {
+    recordHotkeyFire('trigger', source, currentAccelerator, true, 'escape-override')
     onEscape()
     return
   }
+  recordHotkeyFire('trigger', source, currentAccelerator, true, 'accepted')
   if (onTrigger) onTrigger()
 }
 
-function firePriceCheck(): void {
-  if (injecting || isTypingInOverlay() || !hotkeyContextIsActive()) return
+function firePriceCheck(source: HotkeySource = 'globalShortcut'): void {
+  const blocked = hotkeyBlockReason(false)
+  if (blocked) {
+    recordHotkeyFire('price-check', source, priceCheckAccelerator, false, blocked)
+    return
+  }
   const now = Date.now()
-  if (now - lastPriceCheckFireAt < DEDUPE_MS) return
+  if (now - lastPriceCheckFireAt < DEDUPE_MS) {
+    recordHotkeyFire('price-check', source, priceCheckAccelerator, false, 'dedupe')
+    return
+  }
   lastPriceCheckFireAt = now
   releaseHotkeyKey(priceCheckCombo)
   if (traits.compositorFocus && overlayVisibleForEscape && onEscape) {
+    recordHotkeyFire('price-check', source, priceCheckAccelerator, true, 'escape-override')
     onEscape()
     return
   }
+  recordHotkeyFire('price-check', source, priceCheckAccelerator, true, 'accepted')
   if (onPriceCheck) onPriceCheck()
 }
 
 /** Shared entry point for both Escape delivery paths (the globalShortcut
  *  registered by syncEscapeShortcut, and the uiohook fallback keydown branch
  *  below). Both can deliver for the same physical press - see DEDUPE_MS. */
-function fireEscape(): void {
-  if (injecting || isTypingInOverlay() || !escapeContextIsActive()) return
+function fireEscape(source: HotkeySource = 'globalShortcut'): void {
+  const blocked = hotkeyBlockReason(true)
+  if (blocked) {
+    recordHotkeyFire('escape', source, 'Escape', false, blocked)
+    return
+  }
   const now = Date.now()
-  if (now - lastEscapeFireAt < DEDUPE_MS) return
+  if (now - lastEscapeFireAt < DEDUPE_MS) {
+    recordHotkeyFire('escape', source, 'Escape', false, 'dedupe')
+    return
+  }
   lastEscapeFireAt = now
   // Secondary overlays (cheat sheets etc.) own Esc when visible - same
   // precedence as the existing uiohook branch.
-  if (hideFocusedOrAnyVisibleSecondaryOverlay()) return
+  if (hideFocusedOrAnyVisibleSecondaryOverlay()) {
+    recordHotkeyFire('escape', source, 'Escape', true, 'secondary-overlay')
+    return
+  }
+  recordHotkeyFire('escape', source, 'Escape', true, 'accepted')
   if (onEscape) onEscape()
 }
 
@@ -146,9 +265,9 @@ function fireEscape(): void {
  *  Safe to call from anywhere - it's a no-op when the desired state already
  *  matches the registered state. */
 function syncEscapeShortcut(): void {
-  // On Hyprland, activating the XWayland overlay takes focus away from PoE
-  // before Electron reliably reports the overlay BrowserWindow as focused.
-  // Keep Escape registered across that handoff; windowTracker.inputAllowed() in
+  // During a compositor focus handoff, the overlay can become visible before
+  // Electron reliably reports its BrowserWindow as focused. Keep Escape
+  // registered across that handoff; windowTracker.inputAllowed() in
   // escapeContextIsActive() still rejects delivery after leaving the gameplay
   // context or switching workspace.
   const ownsCompositorDialog = traits.compositorFocus && overlayVisibleForEscape
@@ -214,36 +333,60 @@ function fireMatchingActionBindings(e: HookKeyEvent): void {
 // The action bodies below are shared by the globalShortcut callback (Electron-
 // bindable keys) and the uiohook binding (international/OEM keys) so the guards
 // stay identical across both delivery paths.
-function runChatCommand(entry: ChatCommandConfig, autoSubmit: boolean, combo: KeyCombo | null): void {
-  if (
-    injecting ||
-    isTypingInOverlay() ||
-    !hotkeyContextIsActive() ||
-    !scopeAppliesTo(chatCommandEffectiveScope(entry), getPoeVersion())
-  )
+function runChatCommand(
+  entry: ChatCommandConfig,
+  autoSubmit: boolean,
+  combo: KeyCombo | null,
+  accelerator?: string | null,
+  source: HotkeySource = 'globalShortcut',
+): void {
+  const blocked = hotkeyBlockReason(false)
+  if (blocked || !scopeAppliesTo(chatCommandEffectiveScope(entry), getPoeVersion())) {
+    recordHotkeyFire('chat-command', source, accelerator ?? null, false, blocked ?? 'scope-inactive')
     return
+  }
   releaseHotkeyKey(combo)
+  recordHotkeyFire('chat-command', source, accelerator ?? null, true, 'accepted')
   // Fire-and-forget: a paste that never got focus (or the clipboard) rejects
   // rather than injecting, and that is a diagnostic, not a crash.
   sendChatCommand(entry.command, autoSubmit).catch((e) => recordMainDiagnostic('chat-command', e))
 }
 
-function runAppMacro(entry: AppMacroConfig, combo: KeyCombo | null): void {
-  if (
-    injecting ||
-    isTypingInOverlay() ||
-    !onAppMacro ||
-    !hotkeyContextIsActive() ||
-    !scopeAppliesTo(appMacroEffectiveScope(entry), getPoeVersion())
-  )
+function runAppMacro(
+  entry: AppMacroConfig,
+  combo: KeyCombo | null,
+  accelerator?: string | null,
+  source: HotkeySource = 'globalShortcut',
+): void {
+  const blocked = hotkeyBlockReason(false)
+  if (blocked || !onAppMacro || !scopeAppliesTo(appMacroEffectiveScope(entry), getPoeVersion())) {
+    recordHotkeyFire(
+      'app-macro',
+      source,
+      accelerator ?? null,
+      false,
+      blocked ?? (!onAppMacro ? 'no-handler' : 'scope-inactive'),
+    )
     return
+  }
   releaseHotkeyKey(combo)
+  recordHotkeyFire('app-macro', source, accelerator ?? null, true, 'accepted')
   onAppMacro(entry.action, entry.tag, entry.presetId)
 }
 
-function runSecondaryOverlay(handler: () => void, combo: KeyCombo | null): void {
-  if (isTypingInOverlay() || !hotkeyContextIsActive()) return
+function runSecondaryOverlay(
+  handler: () => void,
+  combo: KeyCombo | null,
+  accelerator?: string | null,
+  source: HotkeySource = 'globalShortcut',
+): void {
+  const blocked = hotkeyBlockReason(false)
+  if (blocked) {
+    recordHotkeyFire('secondary-overlay', source, accelerator ?? null, false, blocked)
+    return
+  }
   releaseHotkeyKey(combo)
+  recordHotkeyFire('secondary-overlay', source, accelerator ?? null, true, 'accepted')
   handler()
 }
 
@@ -283,13 +426,13 @@ export function startHotkeyListener(handler: () => void): void {
       // unfocused, etc.). fireEscape() dedupes double-delivery and holds the
       // secondary-overlay precedence + PoE/overlay focus gate.
       if (e.keycode === Key.Escape) {
-        fireEscape()
+        fireEscape('uiohook')
       }
       // Trigger + price-check also use uIOhook so bindings still work when
       // globalShortcut cannot deliver. Their shared fire functions enforce the
       // same foreground-context rule as the Electron callbacks.
-      if (triggerCombo && matchesCombo(e, triggerCombo)) fireTrigger()
-      if (priceCheckCombo && matchesCombo(e, priceCheckCombo)) firePriceCheck()
+      if (triggerCombo && matchesCombo(e, triggerCombo)) fireTrigger('uiohook')
+      if (priceCheckCombo && matchesCombo(e, priceCheckCombo)) firePriceCheck('uiohook')
       // Chat commands / app macros / secondary overlays bound to international or
       // OEM keys globalShortcut cannot register (see ActionBinding above).
       fireMatchingActionBindings(e)
@@ -429,24 +572,30 @@ function applySuspendTransition(wasSuspended: boolean, rearmReason: string): voi
 
 /** Authorize gameplay hotkeys only while focus remains within the attached game
  *  or one of Scalpel's gameplay overlays. Registration follows the same focus
- *  lifecycle, and this dispatch-time check closes uIOhook and transition races. */
+ *  lifecycle, and this dispatch-time check closes uIOhook and transition races.
+ *  Wayland focus comes from the platform's toplevel tracker because the portal
+ *  is global and does not tell us which window has focus. */
 function hotkeyContextIsActive(): boolean {
   return (
     windowTracker.inputAllowed() &&
     !hotkeysAreSuspended() &&
-    (windowTracker.targetHasFocus || isAnyScalpelBrowserWindowFocused())
+    (windowTracker.targetHasFocus || isAnyScalpelBrowserWindowFocused() || isWaylandGameFocused())
   )
 }
 
-/** Escape must remain usable during Hyprland's PoE -> XWayland overlay focus
+/** Escape must remain usable during a compositor's game -> overlay focus
  * handoff. Electron can report neither window focused until the first pointer
- * interaction, while Hyprland already considers the visible overlay part of
- * the active game context. Other hotkeys retain the stricter focus gate. */
+ * interaction, while the compositor already considers the visible overlay part
+ * of the active game context. Other hotkeys retain the stricter focus gate.
+ * Wayland focus is included for the same reason as gameplay hotkeys. */
 function escapeContextIsActive(): boolean {
   return (
     windowTracker.inputAllowed() &&
     !hotkeysAreSuspended() &&
-    (windowTracker.targetHasFocus || isAnyScalpelBrowserWindowFocused() || traits.compositorFocus)
+    (windowTracker.targetHasFocus ||
+      isAnyScalpelBrowserWindowFocused() ||
+      traits.compositorFocus ||
+      isWaylandGameFocused())
   )
 }
 
@@ -575,11 +724,16 @@ export function refreshScopedHotkeys(reason?: string): void {
     const combo = parseAccelerator(c.hotkey)
     // International/OEM keys can't go through globalShortcut; match them via uiohook.
     if (!isElectronRegisterable(c.hotkey)) {
-      if (combo) chatActionBindings.push({ combo, lastFireAt: 0, fire: () => runChatCommand(c, autoSubmit, combo) })
+      if (combo)
+        chatActionBindings.push({
+          combo,
+          lastFireAt: 0,
+          fire: () => runChatCommand(c, autoSubmit, combo, c.hotkey, 'uiohook'),
+        })
       continue
     }
     try {
-      if (shortcuts.register(c.hotkey, () => runChatCommand(c, autoSubmit, combo))) {
+      if (shortcuts.register(c.hotkey, () => runChatCommand(c, autoSubmit, combo, c.hotkey, 'globalShortcut'))) {
         registeredChatAccelerators.push(c.hotkey)
       } else {
         recordScopedRegistrationFailure('chat-command', c.hotkey)
@@ -599,11 +753,12 @@ export function refreshScopedHotkeys(reason?: string): void {
     const combo = parseAccelerator(m.hotkey)
     // International/OEM keys can't go through globalShortcut; match them via uiohook.
     if (!isElectronRegisterable(m.hotkey)) {
-      if (combo) macroActionBindings.push({ combo, lastFireAt: 0, fire: () => runAppMacro(m, combo) })
+      if (combo)
+        macroActionBindings.push({ combo, lastFireAt: 0, fire: () => runAppMacro(m, combo, m.hotkey, 'uiohook') })
       continue
     }
     try {
-      if (shortcuts.register(m.hotkey, () => runAppMacro(m, combo))) {
+      if (shortcuts.register(m.hotkey, () => runAppMacro(m, combo, m.hotkey, 'globalShortcut'))) {
         appMacroAccelerators.push(m.hotkey)
       } else {
         recordScopedRegistrationFailure('app-macro', m.hotkey)
@@ -655,11 +810,16 @@ export function setSecondaryOverlayHotkeys(hotkeys: OverlayHotkey[]): void {
     const combo = parseAccelerator(accelerator)
     // International/OEM keys can't go through globalShortcut; match them via uiohook.
     if (!isElectronRegisterable(accelerator)) {
-      if (combo) overlayActionBindings.push({ combo, lastFireAt: 0, fire: () => runSecondaryOverlay(handler, combo) })
+      if (combo)
+        overlayActionBindings.push({
+          combo,
+          lastFireAt: 0,
+          fire: () => runSecondaryOverlay(handler, combo, accelerator, 'uiohook'),
+        })
       continue
     }
     try {
-      if (shortcuts.register(accelerator, () => runSecondaryOverlay(handler, combo))) {
+      if (shortcuts.register(accelerator, () => runSecondaryOverlay(handler, combo, accelerator, 'globalShortcut'))) {
         registeredOverlayAccelerators.push(accelerator)
       }
     } catch (e) {
@@ -710,6 +870,15 @@ const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms)
  *  hotkey (see hotkeyContextIsActive). */
 async function awaitGameFocus(): Promise<void> {
   if (!windowTracker.inputAllowed()) throw new Error('Game workspace is inactive - input not sent')
+  if (isNativeWayland() && isRegularWindowBackend()) {
+    if (readWaylandGameFocus()?.game) return
+    focusGameWindow()
+    for (let waited = 0; waited < FOCUS_WAIT_MS; waited += FOCUS_POLL_MS) {
+      await wait(FOCUS_POLL_MS)
+      if (readWaylandGameFocus()?.game) return
+    }
+    throw new Error('PoE did not take focus - input not sent')
+  }
   if (windowTracker.targetHasFocus) return
   focusGameWindow()
   for (let waited = 0; waited < FOCUS_WAIT_MS; waited += FOCUS_POLL_MS) {
@@ -801,9 +970,7 @@ async function pasteToPoEChat(text: string, submit: boolean): Promise<void> {
     // opens and closes in a single frame, preventing visible flash
     openChat()
 
-    input.keyToggle(Key.Ctrl, 'down')
-    input.keyTap(Key.V)
-    input.keyToggle(Key.Ctrl, 'up')
+    await pasteCombo(Key.V)
 
     if (submit) {
       input.keyTap(Key.Enter)
@@ -870,12 +1037,8 @@ export async function pasteRegexToPoESearch(regex: string): Promise<void> {
     await writeChatText(regex)
 
     injecting = true
-    input.keyToggle(Key.Ctrl, 'down')
-    input.keyTap(Key.F)
-    input.keyToggle(Key.Ctrl, 'up')
-    input.keyToggle(Key.Ctrl, 'down')
-    input.keyTap(Key.V)
-    input.keyToggle(Key.Ctrl, 'up')
+    await pasteCombo(Key.F)
+    await pasteCombo(Key.V)
   } catch (e) {
     restoreClip()
     regexPasteLocked = false
@@ -1075,6 +1238,26 @@ function releaseCKeyedRegistrationsForInjection(): (() => void) | null {
  */
 export async function sendCtrlCToPoE(opts?: { withAlt?: boolean }): Promise<void> {
   if (!windowTracker.inputAllowed()) return
+
+  if (injectsWholeCombos()) {
+    const restore = releaseCKeyedRegistrationsForInjection()
+    injecting = true
+    try {
+      await pendingNativeHotkeyRelease
+      pendingNativeHotkeyRelease = Promise.resolve()
+      await wait(50)
+      await awaitGameFocus()
+      // One coherent combo handed to the OS as a single sequence. wtype cannot
+      // hold a modifier across separate process invocations, so pressing Ctrl
+      // and tapping C in separate calls silently produced a bare "c".
+      await input.injectCombo(opts?.withAlt === true ? [Key.Ctrl, Key.Alt, Key.C] : [Key.Ctrl, Key.C])
+    } finally {
+      injecting = false
+      restore?.()
+    }
+    return
+  }
+
   injecting = true
   const restoreCKeyedRegistrations = releaseCKeyedRegistrationsForInjection()
 

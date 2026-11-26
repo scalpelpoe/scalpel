@@ -40,6 +40,8 @@ const inputMock = {
   stop: vi.fn(),
   keyToggle: vi.fn(),
   keyTap: vi.fn(),
+  injectCombo: vi.fn(async (_keys: readonly number[]) => {}),
+  holdsKeys: true,
   seesInjectedKeys: true,
   physicallyHeld: vi.fn((_key: number): boolean | null => null),
 }
@@ -75,6 +77,10 @@ vi.mock('electron', () => ({
 
 vi.mock('@scalpel/platform', () => ({
   Key: keyMock,
+  getLinuxGameDisplayModeStatus: () => ({ mode: null, detected: null, source: null, override: 'auto' }),
+  isNativeWayland: () => false,
+  isWaylandGameFocused: () => false,
+  readWaylandGameFocus: () => null,
   platform: () => ({
     clipboard: {
       readText: vi.fn(() => ''),
@@ -580,6 +586,22 @@ describe('sendCtrlCToPoE', () => {
 
     const downs = inputMock.keyToggle.mock.calls.filter((c) => c[1] === 'down').map((c) => c[0])
     expect(downs.includes(keyMock.Shift)).toBe(repressed)
+  })
+
+  it('sends the whole combo at once when the injector cannot hold keys', async () => {
+    const hotkeys = await loadHotkeys(() => {})
+    inputMock.holdsKeys = false
+    overlayControllerState.targetHasFocus = true
+    vi.mocked(inputMock.keyToggle).mockClear()
+    try {
+      await hotkeys.sendCtrlCToPoE()
+    } finally {
+      inputMock.holdsKeys = true
+      overlayControllerState.targetHasFocus = false
+    }
+
+    expect(inputMock.injectCombo).toHaveBeenCalledWith([keyMock.Ctrl, keyMock.C])
+    expect(inputMock.keyToggle).not.toHaveBeenCalledWith(keyMock.Ctrl, 'down')
   })
 
   it('releases every modifier it pressed', async () => {

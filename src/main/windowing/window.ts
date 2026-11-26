@@ -2,8 +2,7 @@ import { join } from 'node:path'
 import { BrowserWindow } from 'electron'
 import type { Rect } from './snap-canvas'
 import { desktop, type OverlayInteraction } from '../desktop'
-import { platform } from '@scalpel/platform'
-import { GAME_TITLES } from '@shared/contracts/game-variant'
+import { getGameTitleForVariant, platform } from '@scalpel/platform'
 import { getPoeVersion } from '../game-state'
 
 interface CreateOptions {
@@ -17,8 +16,9 @@ interface CreateOptions {
  *  cycles never trigger Windows zoom animation. Returns the window with .show
  *  /.hide /.isVisible already overridden. */
 export function createOverlayWindow({ htmlEntry, bounds, interaction }: CreateOptions): BrowserWindow {
+  const windowOptions = platform().windowTracker.overlayWindowOptions()
   const win = new BrowserWindow({
-    ...platform().windowTracker.overlayWindowOptions(),
+    ...windowOptions,
     width: bounds.width,
     height: bounds.height,
     x: bounds.x,
@@ -26,6 +26,9 @@ export function createOverlayWindow({ htmlEntry, bounds, interaction }: CreateOp
     backgroundColor: '#00000000',
     show: false,
     webPreferences: {
+      // Backends such as layer-shell need their own preferences (offscreen
+      // rendering); the host only adds its preload and safety settings.
+      ...windowOptions.webPreferences,
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
@@ -69,7 +72,7 @@ function installOpacityHideShow(win: BrowserWindow, interaction: () => OverlayIn
     opacityHidden = true
   }
   win.show = (): void => {
-    platform().windowTracker.beforeOverlayShow(win, GAME_TITLES[getPoeVersion()])
+    platform().windowTracker.beforeOverlayShow(win, getGameTitleForVariant(getPoeVersion()))
     const bounds = process.platform === 'linux' ? win.getBounds() : null
     win.setOpacity(1)
     opacityHidden = false

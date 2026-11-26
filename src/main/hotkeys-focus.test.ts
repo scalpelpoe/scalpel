@@ -65,6 +65,7 @@ const mock = vi.hoisted(() => {
     stop: vi.fn(),
     keyToggle: vi.fn(),
     keyTap: vi.fn(),
+    holdsKeys: true,
     seesInjectedKeys: true,
     physicallyHeld: () => null,
   }
@@ -81,6 +82,10 @@ vi.mock('electron', () => ({
 
 vi.mock('@scalpel/platform', () => ({
   Key: mock.keycodes,
+  getLinuxGameDisplayModeStatus: () => ({ mode: null, detected: null, source: null, override: 'auto' }),
+  isNativeWayland: () => false,
+  isWaylandGameFocused: () => false,
+  readWaylandGameFocus: () => null,
   platform: () => ({
     clipboard: {
       readText: vi.fn(() => mock.clip.text),

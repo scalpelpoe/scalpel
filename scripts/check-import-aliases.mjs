@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-// Enforces Scalpel's import-path convention across src/.
+// Enforces Scalpel's import-path convention across src/ and the platform
+// package.
 //
 // Aliases (see tsconfig paths + electron.vite/vitest resolve.alias):
 //   @shared -> src/shared, @main -> src/main, @renderer -> src/renderer/src
+//   @platform -> packages/platform/src
 //
 // Rules:
 //   1. Dependency direction (hard error, not auto-fixable):
@@ -15,6 +17,12 @@
 //      path. In practice this is "import into shared uses @shared" (auto-fixable).
 //   3. Within one area, a relative import that climbs MAX_RELATIVE_DEPTH+ levels
 //      (`../../../`) must use the area alias instead (auto-fixable).
+//   4. Platform layering (hard errors):
+//        - `linux/common` must not import `linux/desktops`.
+//        - a desktop adapter must not import another desktop adapter.
+//      A file under `linux/desktops` (adapter or registry) importing anything
+//      outside that tree must use `@platform/...` (auto-fixable), so its
+//      shared dependencies are obvious.
 //
 // Usage: node scripts/check-import-aliases.mjs [--fix]
 //   default  - report violations, exit 1 if any.
@@ -69,11 +77,62 @@ function upwardDepth(spec) {
   return (spec.match(/\.\.\//g) || []).length
 }
 
+const PLATFORM_SRC = 'packages/platform/src'
+const PLATFORM_DESKTOPS = `${PLATFORM_SRC}/linux/desktops`
+
+/** Desktop directory name for a path under linux/desktops, or null for files
+ *  that sit directly in the registry directory. */
+function desktopOf(relPath) {
+  if (!relPath.startsWith(`${PLATFORM_DESKTOPS}/`)) return null
+  const rest = relPath.slice(PLATFORM_DESKTOPS.length + 1)
+  return rest.includes('/') ? rest.split('/')[0] : null
+}
+
+/** Resolve a relative or @platform specifier to a repo-relative path. */
+function platformTarget(fromRel, spec) {
+  if (spec.startsWith('@platform/')) return `${PLATFORM_SRC}/${spec.slice('@platform/'.length)}`
+  if (spec.startsWith('.')) return posix.normalize(posix.join(posix.dirname(fromRel), spec))
+  return null
+}
+
+/** Platform layering rules. Returns null when the specifier is out of scope. */
+export function classifyPlatform(fromRel, spec) {
+  if (!fromRel.startsWith(`${PLATFORM_SRC}/`)) return null
+  const target = platformTarget(fromRel, spec)
+  if (!target) return null
+  if (target !== PLATFORM_SRC && !target.startsWith(`${PLATFORM_SRC}/`)) return { kind: 'ok' }
+
+  const targetInDesktops = target === PLATFORM_DESKTOPS || target.startsWith(`${PLATFORM_DESKTOPS}/`)
+  if (fromRel.startsWith(`${PLATFORM_SRC}/linux/common/`) && targetInDesktops) {
+    return { kind: 'error', reason: `linux/common must not import a desktop adapter (${spec})` }
+  }
+
+  const fromDesktop = desktopOf(fromRel)
+  const fromInDesktops = fromRel === PLATFORM_DESKTOPS || fromRel.startsWith(`${PLATFORM_DESKTOPS}/`)
+  if (!fromInDesktops) return { kind: 'ok' }
+
+  const targetDesktop = desktopOf(target)
+  if (fromDesktop && targetDesktop && targetDesktop !== fromDesktop) {
+    return {
+      kind: 'error',
+      reason: `desktop ${fromDesktop} must not import desktop ${targetDesktop} (${spec})`,
+    }
+  }
+  if (targetInDesktops || spec.startsWith('@platform/')) return { kind: 'ok' }
+
+  return {
+    kind: 'fix',
+    replacement: `@platform/${target.slice(PLATFORM_SRC.length + 1)}`,
+  }
+}
+
 /**
  * Classify one import specifier seen in `fromRel` (an src/...-relative posix
  * path). Returns { kind: 'ok' | 'fix' | 'error', replacement?, reason? }.
  */
 export function classify(fromRel, spec) {
+  const platformVerdict = classifyPlatform(fromRel, spec)
+  if (platformVerdict) return platformVerdict
   const fromArea = areaOf(fromRel)
 
   // Alias specifier: only the dependency direction can be wrong.
@@ -149,6 +208,7 @@ function walk(dirRel, out) {
 function main() {
   const fix = process.argv.includes('--fix')
   const files = walk('src', [])
+  walk(PLATFORM_SRC, files)
   let fixed = 0
   const errors = []
 

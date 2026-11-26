@@ -12,6 +12,8 @@ export const IPC_CHANNELS = {
     SET: 'set-setting',
     FINISH_ONBOARDING: 'finish-onboarding',
     SET_PROFILE_SETTING: 'set-profile-setting-for-game',
+    GET_PLATFORM: 'get-platform-settings',
+    SET_PLATFORM: 'set-platform-setting',
     SETTING_UPDATED_EVENT: 'setting-updated',
   },
 

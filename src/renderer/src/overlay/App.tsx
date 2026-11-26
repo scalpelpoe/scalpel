@@ -13,6 +13,7 @@ import { CurrencyLabelsProvider } from '../shared/currency-labels-context'
 import { useReportInputFocus } from '../shared/use-report-input-focus'
 import { useCurrentZone } from '../shared/use-current-zone'
 import { FilterPanel } from '../features/filter/FilterPanel'
+import { PlatformBanners } from '../shared/platform-banners'
 import { SettingsPanel } from '../features/settings/SettingsPanel'
 import { SocketRecolor } from '../features/socket-recolor'
 import { DustExplorer } from '../features/dust-explorer'
@@ -22,6 +23,15 @@ import { ExtraFeaturesPanel } from '../components/extra-features/ExtraFeaturesPa
 import { PriceCheck } from '../features/price-check'
 import { PriceCheckSkeleton } from '../features/price-check/PriceCheckSkeleton'
 import { SnapGhosts } from './SnapGhosts'
+import { shouldReserveNativeSister } from './native-layout'
+import { overlayMountXs, windowLocalMountXs } from './mount-positions'
+import {
+  REGULAR_WINDOW_PANEL_MARGIN,
+  REGULAR_WINDOW_PANEL_TOP,
+  REGULAR_WINDOW_PANEL_WIDTH,
+  REGULAR_WINDOW_SISTER_GAP,
+  REGULAR_WINDOW_SISTER_WIDTH,
+} from '@shared/contracts/platform-settings'
 import { TitleBar } from './TitleBar'
 import { ErrorBanner } from '../components/ErrorBanner'
 import { UpdateBanner } from './UpdateBanner'
@@ -57,8 +67,11 @@ interface ScalpelGlobal {
   divCardArtMap: Map<string, string>
 }
 
-const PANEL_WIDTH = 540
-const PANEL_TOP = 8
+const PANEL_WIDTH = REGULAR_WINDOW_PANEL_WIDTH
+const PANEL_TOP = REGULAR_WINDOW_PANEL_TOP
+const SISTER_WIDTH = REGULAR_WINDOW_SISTER_WIDTH
+const SISTER_GAP = REGULAR_WINDOW_SISTER_GAP
+const SISTER_NAV_OFFSET = 51
 
 /** How long the macro's pending-target ref stays armed before we drop it.
  *  Without this, a failed price-check (no overlay-data ever arrives) would
@@ -87,6 +100,8 @@ export default function App(): JSX.Element {
   const [gameBounds, setGameBounds] = useState<{ gameWidth: number; gameHeight: number; sidebarWidth: number } | null>(
     null,
   )
+  const [windowLocal, setWindowLocal] = useState(false)
+  const windowLocalRef = useRef(false)
   const [cursorSide, setCursorSide] = useState<'left' | 'right'>('right')
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const dragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 })
@@ -271,6 +286,8 @@ export default function App(): JSX.Element {
     // Pull initial overlay state that may have been set before renderer loaded
     window.api.getOverlayState().then((state) => {
       if (state.poeVersion) setPoeVersion(state.poeVersion)
+      setWindowLocal(state.windowLocal === true)
+      windowLocalRef.current = state.windowLocal === true
       if (state.gameBounds) setGameBounds(state.gameBounds)
     })
     // Pull cached updater state so a late-mount overlay sees anything that already fired.
@@ -422,7 +439,9 @@ export default function App(): JSX.Element {
           if (v === 'setup' && tab) setSettingsTabRequest((prev) => ({ tab, n: (prev?.n ?? 0) + 1 }))
         }
       }),
-      window.api.onGameBounds((bounds) => setGameBounds(bounds)),
+      window.api.onGameBounds((bounds) => {
+        if (!windowLocalRef.current) setGameBounds(bounds)
+      }),
       window.api.onSkipAnimation(() => {
         if (panelRef.current) panelRef.current.style.animation = 'none'
       }),
@@ -481,10 +500,23 @@ export default function App(): JSX.Element {
     window.api.closeOverlay()
   }
 
-  // Mount positions for both sides
-  const leftMountX = gameBounds ? gameBounds.sidebarWidth - 1 : 0
-  const rightMountX = gameBounds ? gameBounds.gameWidth - gameBounds.sidebarWidth - PANEL_WIDTH + 1 : 0
-  const basePanelLeft = gameBounds ? (cursorSide === 'left' ? leftMountX : rightMountX) : undefined
+  // Mount positions for both sides. A right-docked panel keeps room for the
+  // sister to its left so neither is clipped by the game-sized layer surface.
+  // A regular window has no game to dock against and fills its viewport, so all
+  // geometry below becomes CSS-relative and scale is forced to 1.
+  const overlayScale = windowLocal ? 1 : (settings?.overlayScale ?? 1)
+  const sisterScaleOffset = (overlayScale - 1) * (PANEL_WIDTH + SISTER_WIDTH)
+  const effectiveCursorSide = windowLocal ? 'left' : cursorSide
+  const { leftMountX, rightMountX } = windowLocal
+    ? windowLocalMountXs(REGULAR_WINDOW_PANEL_MARGIN)
+    : overlayMountXs(gameBounds, PANEL_WIDTH, SISTER_WIDTH + SISTER_GAP + sisterScaleOffset)
+  const basePanelLeft = windowLocal
+    ? REGULAR_WINDOW_PANEL_MARGIN
+    : gameBounds
+      ? effectiveCursorSide === 'left'
+        ? leftMountX
+        : rightMountX
+      : undefined
 
   const skipAnimRef = useRef(false)
   const isMounted = dragOffset.x === 0 && dragOffset.y === 0
@@ -494,6 +526,22 @@ export default function App(): JSX.Element {
   const snapTargetRef = useRef<'left' | 'right' | null>(null)
   snapTargetRef.current = snapTarget
   const isHidden = view === 'idle' && !closing && !justUpdated
+
+  // The sister reserves its own right-hand column so a user resize never pushes
+  // either pane under the window border. Long tabs scroll inside the viewport.
+  const nativeSisterVisible = shouldReserveNativeSister({
+    windowLocal,
+    isHidden,
+    view,
+    tierSisterOpen,
+    overlayData,
+    priceCheckData,
+    poeVersion,
+  })
+  const nativePanelWidth = nativeSisterVisible
+    ? `calc(100vw - ${REGULAR_WINDOW_PANEL_MARGIN * 2 + SISTER_WIDTH + SISTER_GAP}px)`
+    : `calc(100vw - ${REGULAR_WINDOW_PANEL_MARGIN * 2}px)`
+  const nativePanelHeight = `calc(100vh - ${REGULAR_WINDOW_PANEL_MARGIN * 2}px)`
 
   // Increment showCount only on hidden -> visible transition
   if (wasHiddenRef.current && !isHidden) {
@@ -513,6 +561,9 @@ export default function App(): JSX.Element {
   // - getBoundingClientRect during animation returns the mid-animation position
   // - One-shot after state change would capture the animation start, not end
   useEffect(() => {
+    // A regular window is a normal BrowserWindow: Electron owns hit-testing and
+    // the renderer fills the viewport, so there are no click-through rects.
+    if (windowLocal) return
     if (isHidden) {
       window.api.reportPanelRect([])
       // Dock ghost is a sibling of the panel, so it survives panel hide. Clear it
@@ -554,7 +605,7 @@ export default function App(): JSX.Element {
     tick()
     const interval = setInterval(tick, 100)
     return () => clearInterval(interval)
-  }, [isHidden])
+  }, [isHidden, windowLocal])
 
   // Suppress slide-in animation when cursorSide changes due to a snap
   useLayoutEffect(() => {
@@ -565,6 +616,9 @@ export default function App(): JSX.Element {
   }, [cursorSide, dragOffset])
 
   const handleTitleBarMouseDown = (e: React.MouseEvent): void => {
+    // A centered window has no game sidebar to dock to; dragging would only
+    // push the panel out of its own window.
+    if (windowLocal) return
     if ((e.target as HTMLElement).closest('button')) return
     dragging.current = {
       startX: e.clientX,
@@ -661,7 +715,7 @@ export default function App(): JSX.Element {
           dragOffsetRef.current = { x: 0, y: 0 }
           setDragOffset({ x: 0, y: 0 })
           panelRef.current?.classList.remove('panel-unmounted')
-          if (snap !== cursorSide) {
+          if (snap !== effectiveCursorSide) {
             setCursorSide(snap)
           }
           // Always clear the dock ghost — transitionend can miss when the view
@@ -707,26 +761,23 @@ export default function App(): JSX.Element {
 
   // Sister overlay pinned immediately adjacent to the main panel on the opposite side
   // of where the main panel is mounted.
-  const SISTER_WIDTH = 130
-  const SISTER_GAP = 6
   // Line the sister top with the main panel's content area: 30px nav row + 10px vertical
-  // padding + 1px border ~= 51px below the panel top.
-  const SISTER_NAV_OFFSET = 51
-  // Panel and sister both scale inward (toward each other) from opposite outer edges, so
-  // overlayScale > 1 eats into the gap from both sides. Add (S-1)*(PANEL+SISTER) worth of
-  // CSS px so the post-scale visible gap stays at SISTER_GAP regardless of scale.
-  const overlayScale = settings?.overlayScale ?? 1
-  const sisterScaleOffset = (overlayScale - 1) * (PANEL_WIDTH + SISTER_WIDTH)
-  const sisterLeft =
-    cursorSide === 'left'
+  // padding + 1px border ~= 51px below the panel top. Panel and sister both scale
+  // inward from opposite outer edges, so sisterScaleOffset keeps their gap constant.
+  const sisterLeft = windowLocal
+    ? `calc(100vw - ${REGULAR_WINDOW_PANEL_MARGIN + SISTER_WIDTH}px)`
+    : effectiveCursorSide === 'left'
       ? (basePanelLeft ?? 0) + PANEL_WIDTH + SISTER_GAP + sisterScaleOffset
       : (basePanelLeft ?? 0) - SISTER_WIDTH - SISTER_GAP - sisterScaleOffset
+  const sisterTop = windowLocal ? REGULAR_WINDOW_PANEL_MARGIN + SISTER_NAV_OFFSET : PANEL_TOP + SISTER_NAV_OFFSET
   // Bound the sister to the game window the same way the main panel is, minus the
   // SISTER_NAV_OFFSET it already sits below. Scale divides out so the post-scale
   // visual height fits within the game bounds.
-  const sisterMaxHeight = gameBounds
-    ? (gameBounds.gameHeight - PANEL_TOP * 2 - 23 - SISTER_NAV_OFFSET) / (settings?.overlayScale ?? 1)
-    : undefined
+  const sisterMaxHeight = windowLocal
+    ? `calc(100vh - ${REGULAR_WINDOW_PANEL_MARGIN * 2 + SISTER_NAV_OFFSET}px)`
+    : gameBounds
+      ? (gameBounds.gameHeight - PANEL_TOP * 2 - 23 - SISTER_NAV_OFFSET) / overlayScale
+      : undefined
 
   // Compute baseTypes for the tier sister on the filter page. Uses the shared
   // getActiveMatch so the sister's items match whatever tier FilterPanel is showing.
@@ -817,11 +868,11 @@ export default function App(): JSX.Element {
             league={settings?.activeProfile?.league ?? ''}
             uniqueTier={tierSisterData?.uniqueTier}
             left={sisterLeft}
-            top={PANEL_TOP + SISTER_NAV_OFFSET}
+            top={sisterTop}
             width={SISTER_WIDTH}
             dragOffset={dragOffset}
-            scale={settings?.overlayScale}
-            scaleOrigin={cursorSide === 'left' ? 'top right' : 'top left'}
+            scale={overlayScale}
+            scaleOrigin={windowLocal ? 'top left' : effectiveCursorSide === 'left' ? 'top right' : 'top left'}
             maxHeight={sisterMaxHeight}
             onDrillDown={() => {
               drillDownPendingRef.current = true
@@ -836,11 +887,11 @@ export default function App(): JSX.Element {
             league={priceCheckData.league}
             chaosPerDivine={priceCheckData.chaosPerDivine}
             left={sisterLeft}
-            top={PANEL_TOP + SISTER_NAV_OFFSET}
+            top={sisterTop}
             width={SISTER_WIDTH}
             dragOffset={dragOffset}
-            scale={settings?.overlayScale}
-            scaleOrigin={cursorSide === 'left' ? 'top right' : 'top left'}
+            scale={overlayScale}
+            scaleOrigin={windowLocal ? 'top left' : effectiveCursorSide === 'left' ? 'top right' : 'top left'}
             maxHeight={sisterMaxHeight}
           />
         )}
@@ -850,24 +901,26 @@ export default function App(): JSX.Element {
           panelTop={PANEL_TOP}
           panelWidth={PANEL_WIDTH}
           panelHeight={isHidden ? 0 : (panelRef.current?.offsetHeight ?? 0)}
-          snapTarget={isHidden ? null : snapTarget}
-          overlayScale={settings?.overlayScale}
+          snapTarget={windowLocal || isHidden ? null : snapTarget}
+          overlayScale={overlayScale}
         />
         <div
           ref={wrapperRef}
           className="absolute"
           style={{
-            top: PANEL_TOP,
-            left: basePanelLeft ?? 0,
-            // The right mount uses the unscaled width. Offset the width difference to keep the right edge anchored.
-            marginLeft: cursorSide === 'left' ? 0 : PANEL_WIDTH * (1 - overlayScale),
-            width: PANEL_WIDTH * overlayScale,
+            top: windowLocal ? REGULAR_WINDOW_PANEL_MARGIN : PANEL_TOP,
+            left: windowLocal ? REGULAR_WINDOW_PANEL_MARGIN : (basePanelLeft ?? 0),
+            // The right mount uses the unscaled width. Offset the width difference
+            // to keep the right edge anchored (the panel is sized by zoom, #662).
+            marginLeft: windowLocal || effectiveCursorSide === 'left' ? 0 : PANEL_WIDTH * (1 - overlayScale),
+            width: windowLocal ? nativePanelWidth : PANEL_WIDTH * overlayScale,
+            height: windowLocal ? nativePanelHeight : undefined,
             display: isHidden ? 'none' : 'block',
             transform: `translate(${dragOffset.x}px, ${dragOffset.y}px)`,
           }}
         >
           {/* Size content at its final scale before Chromium animates the panel (#337). */}
-          <div style={{ zoom: overlayScale, width: PANEL_WIDTH }}>
+          <div style={{ zoom: overlayScale, width: windowLocal ? '100%' : PANEL_WIDTH }}>
             <div
               ref={panelRef}
               key={isHidden ? 'hidden' : `show-${showCountRef.current}`}
@@ -878,26 +931,33 @@ export default function App(): JSX.Element {
               }}
               style={{
                 animation:
-                  isHidden || showAnimDone.current || skipAnimRef.current
+                  windowLocal || isHidden || showAnimDone.current || skipAnimRef.current
                     ? 'none'
                     : closing
                       ? isMounted
-                        ? cursorSide === 'left'
+                        ? effectiveCursorSide === 'left'
                           ? 'panel-slide-out-left 0.15s ease-in both'
                           : 'panel-slide-out 0.15s ease-in both'
                         : 'panel-fade-out 0.15s ease-in both'
                       : isMounted
-                        ? cursorSide === 'left'
-                          ? 'panel-slide-in-left 0.2s ease-out'
-                          : 'panel-slide-in 0.2s ease-out'
-                        : 'panel-fade-in 0.15s ease-out',
-                width: PANEL_WIDTH,
-                maxHeight: gameBounds
-                  ? (gameBounds.gameHeight - PANEL_TOP * 2 - 23) / (settings?.overlayScale ?? 1)
-                  : 'calc(100vh - 16px)',
-                borderRadius: isMounted ? (cursorSide === 'left' ? '0 10px 10px 0' : '10px 0 0 10px') : '10px',
-                borderLeft: isMounted && cursorSide === 'left' ? 'none' : '1px solid var(--border)',
-                borderRight: isMounted && cursorSide === 'right' ? 'none' : '1px solid var(--border)',
+                        ? effectiveCursorSide === 'left'
+                          ? 'panel-slide-in-left 0.2s ease-out both'
+                          : 'panel-slide-in 0.2s ease-out both'
+                        : 'panel-fade-in 0.15s ease-out both',
+                width: windowLocal ? '100%' : PANEL_WIDTH,
+                height: windowLocal ? '100%' : undefined,
+                maxHeight: windowLocal
+                  ? undefined
+                  : gameBounds
+                    ? (gameBounds.gameHeight - PANEL_TOP * 2 - 23) / overlayScale
+                    : 'calc(100vh - 16px)',
+                borderRadius: isMounted
+                  ? windowLocal || effectiveCursorSide === 'left'
+                    ? '0 10px 10px 0'
+                    : '10px 0 0 10px'
+                  : '10px',
+                borderLeft: isMounted && effectiveCursorSide === 'left' ? 'none' : '1px solid var(--border)',
+                borderRight: isMounted && effectiveCursorSide === 'right' ? 'none' : '1px solid var(--border)',
                 boxShadow: '0 8px 32px rgba(0,0,0,0.7)',
               }}
             >
@@ -935,6 +995,8 @@ export default function App(): JSX.Element {
                   window.api.downloadUpdate()
                 }}
               />
+
+              <PlatformBanners enabled={settings?.platformSettingsAvailable ?? false} />
 
               {view === 'item' && settings?.activeProfile?.filterPath && (
                 <FilterInfoBanner
@@ -1036,7 +1098,7 @@ export default function App(): JSX.Element {
                     onOpenNinja={ninjaLinkHandler(overlayData?.item, overlayData?.priceInfo)}
                     tierSisterOpen={tierSisterOpen}
                     onToggleTierSister={() => setTierSisterOpen((v) => !v)}
-                    tierSisterSide={cursorSide === 'left' ? 'right' : 'left'}
+                    tierSisterSide={effectiveCursorSide === 'left' ? 'right' : 'left'}
                     currentZone={currentZone}
                     useCurrentZoneAreaLevel={settings?.useCurrentZoneAreaLevel ?? false}
                     onToggleZoneAreaLevel={handleToggleZoneAreaLevel}

@@ -1,18 +1,19 @@
 import { forwardRef, useLayoutEffect, useRef } from 'react'
 
 interface SisterShellProps {
-  /** CSS px offsets inside the overlay canvas. */
-  left: number
-  top: number
-  width: number
+  /** CSS offsets inside the overlay canvas. Strings let the regular window
+   *  use viewport-relative CSS instead of reporting geometry back to main. */
+  left: number | string
+  top: number | string
+  width: number | string
   /** Drag offset applied by the main panel so the sister follows it. */
   dragOffset?: { x: number; y: number }
   /** Multiplier to match the main panel's scale setting. */
   scale?: number
   /** Origin edge for the scale transform -- matches the main panel's mount side. */
   scaleOrigin?: 'top left' | 'top right'
-  /** Pre-scale max height in CSS px. Falls back to a viewport-based bound if absent. */
-  maxHeight?: number
+  /** Pre-scale max height. Falls back to a viewport-based bound if absent. */
+  maxHeight?: number | string
   /** React key for the inner animated element -- changing this re-triggers the slide. */
   animKey?: string
   children: React.ReactNode

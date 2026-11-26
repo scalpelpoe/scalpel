@@ -24,14 +24,39 @@ if (!IS_E2E && !app.isPackaged && process.env.SCALPEL_USER_DATA_DIR) {
 
 installEarlyDiagnostics()
 
+// Platform mechanisms report recoverable failures without importing app code.
+setDiagnosticReporter(recordMainDiagnostic)
+setBreadcrumbReporter(recordMainBreadcrumb)
+
 // Capture native aborts (the tsfn proxy calling napi_fatal_error, etc.) as local
 // minidumps under userData/Crashpad. A C-level abort never reaches the JS
 // uncaughtException handler, so this is the only trace it leaves on Windows.
 crashReporter.start({ uploadToServer: false })
 
 import Store from 'electron-store'
-import { currentEnv, platform, relaunchArgs } from '@scalpel/platform'
-import { hideOverlay, showOverlay, getOverlayWindow, setCloseOnClickOutside, setWindowInputFocused } from './overlay'
+import {
+  applyPlatformDefaults,
+  capturePlatformStartupValues,
+  currentEnv,
+  getLinuxDesktop,
+  getLinuxGameDisplayModeStatus,
+  platform,
+  resolveLinuxEffectiveBackendsSnapshot,
+  setGameTitleOverrides,
+  preparePlatformLaunch,
+  startPlatform,
+  restartPlatformArgs,
+  setBreadcrumbReporter,
+  setDiagnosticReporter,
+} from '@scalpel/platform'
+import {
+  hideOverlay,
+  showOverlay,
+  getOverlayWindow,
+  installOverlayInputListeners,
+  setCloseOnClickOutside,
+  setWindowInputFocused,
+} from './overlay'
 import { createAppWindow, showAppWindow, getAppWindow } from './app-window'
 import {
   startHotkeyListener,
@@ -87,7 +112,13 @@ import {
 import { registerWhiteboardOverlay, toggleWhiteboard } from './whiteboard'
 import { togglePluginOverlay } from './plugin-overlay'
 import { registerPinnedZoneOverlay, applyPinnedZoneEnabled } from './pinned-zone'
-import { getOverlayAnchor, setMainOverlayGetter, setOnLeaveScalpel, subscribeToPoeMoves } from './windowing'
+import {
+  getOverlayAnchor,
+  installWindowingInputListeners,
+  setMainOverlayGetter,
+  setOnLeaveScalpel,
+  subscribeToPoeMoves,
+} from './windowing'
 import { initAppMacrosRefresh, withPluginHotkeys } from './app-macros'
 import { runRadialPluginIconMigration, runRadialScaleMigration } from './radial-scale-migration'
 import { runRegexMacroMigration } from './regex-macro-migration'
@@ -128,18 +159,7 @@ import { createTray, refreshTrayMenu } from './app/tray'
 import { startLiveServices } from './app/lifecycle'
 import { getOverlayAttachStrategy } from './experimental'
 import { relaunchApp } from './relaunch'
-
-// ---- Linux display-server setup --------------------------------------------
-
-const displayServerArgs = relaunchArgs(currentEnv())
-if (displayServerArgs) {
-  relaunchApp(displayServerArgs)
-  app.exit(0)
-}
-
-if (process.platform === 'linux') {
-  app.disableHardwareAcceleration()
-}
+import { readPlatformPreferences, readPlatformSettingsView } from './platform-settings'
 
 // ---- Elevation detection ---------------------------------------------------
 
@@ -178,6 +198,15 @@ const store = new Store<AppSettings>({
     leaguesPoe1: [],
     leaguesPoe2: [],
     developerMode: false,
+    platformDisplayMode: 'x11',
+    platformGameDisplayMode: 'auto',
+    platformDesktopEnvironment: 'auto',
+    platformWindowingMode: 'auto',
+    platformInputBackend: 'auto',
+    platformClipboardBackend: 'auto',
+    platformShortcutBackend: 'auto',
+    gameTitlePoe1: '',
+    gameTitlePoe2: '',
     themeId: 'default',
     customThemePalette: null,
     locale: 'en',
@@ -209,6 +238,15 @@ if (store.get('startInTray') === undefined) store.set('startInTray', true)
 if (store.get('pluginAutoUpdate') === undefined) store.set('pluginAutoUpdate', false)
 if (store.get('locale') === undefined) store.set('locale', 'en')
 if (store.get('radialMenu') === undefined) store.set('radialMenu', { slices: [] })
+if (store.get('platformDisplayMode') === undefined) store.set('platformDisplayMode', 'x11')
+if (store.get('platformGameDisplayMode') === undefined) store.set('platformGameDisplayMode', 'auto')
+if (store.get('platformDesktopEnvironment') === undefined) store.set('platformDesktopEnvironment', 'auto')
+if (store.get('platformWindowingMode') === undefined) store.set('platformWindowingMode', 'auto')
+if (store.get('platformInputBackend') === undefined) store.set('platformInputBackend', 'auto')
+if (store.get('platformClipboardBackend') === undefined) store.set('platformClipboardBackend', 'auto')
+if (store.get('platformShortcutBackend') === undefined) store.set('platformShortcutBackend', 'auto')
+if (store.get('gameTitlePoe1') === undefined) store.set('gameTitlePoe1', '')
+if (store.get('gameTitlePoe2') === undefined) store.set('gameTitlePoe2', '')
 
 // tradeDefaultToBase (boolean) became tradeAffixesPrechecked (three-way). Gate on the OLD
 // key's presence, not on the new one being undefined: the new key is in `defaults`, so
@@ -222,6 +260,51 @@ if (store.get('radialMenu') === undefined) store.set('radialMenu', { slices: [] 
     if (legacyBase === true) store.set('tradeAffixesPrechecked', 'base')
     legacyStore.delete('tradeDefaultToBase')
   }
+}
+
+// A saved platform display mode is applied before any window exists. Platform
+// code marks its own relaunch so the injected flag does not lock the selector.
+const displayServerArgs = preparePlatformLaunch(currentEnv(), store.get('platformDisplayMode'))
+if (displayServerArgs) {
+  relaunchApp(displayServerArgs)
+  app.exit(0)
+}
+
+applyPlatformDefaults()
+setGameTitleOverrides({ poe1: store.get('gameTitlePoe1'), poe2: store.get('gameTitlePoe2') })
+// Before hotkeys or the first overlay window: backends are fixed for the process.
+startPlatform(currentEnv(), readPlatformPreferences(store))
+// Input listeners resolve the platform backend on first use, so they must be
+// installed only after native Wayland support has registered its backend.
+installWindowingInputListeners()
+installOverlayInputListeners()
+
+// Capture the values that were actually applied at boot before the renderer can
+// change them, so a restart prompt can disappear when a choice is reverted. Do
+// this after native support has probed the compositor and registered its
+// backend: capturing earlier stores Auto's pre-probe fallback (`window`) and
+// then every settings refresh shows a permanent restart banner once layer-shell
+// becomes available.
+const platformStartupValues = capturePlatformStartupValues(readPlatformSettingsView(store))
+
+// One info line showing the chosen values, the matrix's resolved backends and
+// the runtime state they were seeded with. Noisy per-event resolution traces
+// stay behind SCALPEL_DEBUG_LOG.
+const effectiveBackends = resolveLinuxEffectiveBackendsSnapshot({
+  displayMode: store.get('platformDisplayMode'),
+  desktopEnvironment: store.get('platformDesktopEnvironment'),
+  windowingMode: store.get('platformWindowingMode'),
+  shortcutBackend: store.get('platformShortcutBackend'),
+  clipboardBackend: store.get('platformClipboardBackend'),
+  inputBackend: store.get('platformInputBackend'),
+})
+if (effectiveBackends) {
+  const gameMode = getLinuxGameDisplayModeStatus()
+  recordMainBreadcrumb(
+    `platform backends effective=${JSON.stringify(effectiveBackends)} ` +
+      `desktopRuntime=${getLinuxDesktop()} gameMode=${gameMode.mode ?? '-'} ` +
+      `gameModeSource=${gameMode.source ?? '-'} gameModeOverride=${gameMode.override}`,
+  )
 }
 
 initMainLocale(store, () => refreshTrayMenu())
@@ -301,7 +384,7 @@ initAppMacrosRefresh(() => store.get('appMacros') ?? [])
 
 // ---- Register IPC handlers -------------------------------------------------
 
-registerAllIpc({ store, isElevated, getAppWindow, showAppWindow, hideOverlay })
+registerAllIpc({ store, isElevated, getAppWindow, showAppWindow, hideOverlay, platformStartupValues })
 
 // ---- Protocol scheme privileges (must run before app ready) ----------------
 
@@ -323,6 +406,7 @@ app.whenReady().then(() => {
   recordMainBreadcrumb('session-start')
   if (!IS_E2E)
     getOverlayAttachStrategy(store).createInitialOverlay((store.get(PROFILE_VERSION_KEY) as GameVariant) ?? 1)
+  recordMainBreadcrumb(`overlay initial platform=${platform().id}`, 'debug')
   setMainOverlayGetter(getOverlayWindow)
   if (!IS_E2E) setOnLeaveScalpel(() => suspendHotkeysForFocusAway())
   createAppWindow(store)
@@ -575,7 +659,7 @@ app.whenReady().then(() => {
       console.warn('[app-restart] dev build — close and `npm run dev` to re-attach')
       return
     }
-    relaunchApp()
+    relaunchApp(restartPlatformArgs(currentEnv(), store.get('platformDisplayMode')))
     app.quit()
   })
 
