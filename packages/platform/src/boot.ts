@@ -1,10 +1,5 @@
 import { app } from 'electron'
-import type {
-  PlatformDesktopPreference,
-  PlatformGameDisplayModePreference,
-  PlatformInputBackend,
-  PlatformWindowingMode,
-} from './common/platform-settings'
+import { PLATFORM_SETTING_IDS, type PlatformSettingId } from './common/platform-settings'
 import { reportBreadcrumb } from './common/diagnostics'
 import {
   MANAGED_OZONE_ENV,
@@ -15,7 +10,9 @@ import {
 } from './linux/common/display'
 import { setLinuxDesktop } from './linux/common/desktop'
 import { setLinuxGameDisplayModeOverride } from './linux/common/game-display-mode'
-import { enablePortalShortcuts } from './linux/common/global-shortcuts'
+import { setLinuxClipboardBackend } from './linux/common/clipboard-backend'
+import { enablePortalShortcuts, setLinuxShortcutBackend } from './linux/common/global-shortcuts'
+import { setLinuxInputBackend } from './linux/common/input-backend'
 import { initLinuxLayerShellBackend } from './linux/common/layer-shell/backend'
 import { probeAndReportLinuxLayerShellSupport } from './linux/common/layer-shell/support'
 import { initLinuxRegularWindowSupport } from './linux/common/regular-window/backend'
@@ -27,7 +24,7 @@ import {
 } from './linux/common/layer-shell/windowing'
 import { startWaylandFocusTracking } from './linux/common/wayland/focus'
 import { linuxDesktopAdapter, linuxDesktopAdapterForSession } from './linux/desktops'
-import { toLinuxDesktopPreference } from './linux/linux-settings'
+import { type LinuxDesktopPreference, toLinuxDesktopPreference } from './linux/linux-settings'
 import { linuxDesktopDefaults } from './linux/settings-rules'
 import { currentEnv, detectDesktopEnvironment, detectOperatingSystem, relaunchArgs } from './select'
 import type { PlatformEnv } from './types'
@@ -63,31 +60,61 @@ export function applyPlatformDefaults(env: PlatformEnv = currentEnv()): void {
   if (!isNativeWayland(env.argv)) app.disableHardwareAcceleration()
 }
 
-export interface NativeWaylandSupportOptions {
-  /** Opaque saved selector value; resolved here so compositor code stays in platform. */
-  desktopEnvironment?: PlatformDesktopPreference
-  windowingMode?: PlatformWindowingMode
-  inputBackend?: PlatformInputBackend
-  gameDisplayMode?: PlatformGameDisplayModePreference
+/** Saved platform preferences keyed by setting id. Values stay opaque here;
+ *  each OS module validates its own. */
+export type PlatformPreferences = Partial<Record<PlatformSettingId, unknown>>
+
+/** Applies the saved preferences once at boot, before the host registers
+ *  hotkeys or creates an overlay window. The display mode was already applied
+ *  by `preparePlatformLaunch`. */
+export function startPlatform(env: PlatformEnv, preferences: PlatformPreferences): void {
+  if (detectOperatingSystem(env) !== 'linux') return
+  // Hotkeys register later in boot and stay on one backend for the process,
+  // so these must be set before native Wayland support installs its services.
+  setLinuxInputBackend(preferences.inputBackend)
+  setLinuxClipboardBackend(preferences.clipboardBackend)
+  setLinuxShortcutBackend(preferences.shortcutBackend)
+  startNativeWaylandSupport(env, preferences)
+}
+
+/** Applies a preference changed while running. Display mode, windowing and the
+ *  shortcut backend take effect on the next start, as their settings say. */
+export function applyPlatformPreference(id: PlatformSettingId, value: unknown, env: PlatformEnv = currentEnv()): void {
+  if (detectOperatingSystem(env) !== 'linux') return
+  switch (id) {
+    case PLATFORM_SETTING_IDS.inputBackend:
+      setLinuxInputBackend(value)
+      return
+    case PLATFORM_SETTING_IDS.clipboardBackend:
+      setLinuxClipboardBackend(value)
+      return
+    case PLATFORM_SETTING_IDS.desktopEnvironment:
+      setLinuxDesktop(effectiveLinuxDesktop(env, value))
+      return
+    case PLATFORM_SETTING_IDS.gameDisplayMode:
+      setLinuxGameDisplayModeOverride(value)
+      return
+  }
+}
+
+/** A selected desktop profile, or the detected one for Auto. */
+function effectiveLinuxDesktop(env: PlatformEnv, preference: unknown): LinuxDesktopPreference {
+  const selected = toLinuxDesktopPreference(preference)
+  return selected === 'auto' ? toLinuxDesktopPreference(detectDesktopEnvironment(env)) : selected
 }
 
 /** Install native-Wayland services once the boot Ozone mode is known, but
  *  before the host app registers any hotkeys or creates an overlay window.
  *  X11/XWayland never enters this path. */
-export function startNativeWaylandSupport(
-  env: PlatformEnv = currentEnv(),
-  options: NativeWaylandSupportOptions = {},
-): void {
+export function startNativeWaylandSupport(env: PlatformEnv = currentEnv(), options: PlatformPreferences = {}): void {
   if (detectOperatingSystem(env) !== 'linux') return
 
   // Resolve the desktop profile for every Linux session: runtime defaults and
   // diagnostics must agree with the settings matrix even on X11/XWayland.
-  const selectedDesktop = toLinuxDesktopPreference(options.desktopEnvironment)
   const detectedEnvironment = detectDesktopEnvironment(env)
-  const detectedDesktop = toLinuxDesktopPreference(detectedEnvironment)
-  const effectiveDesktop = selectedDesktop === 'auto' ? detectedDesktop : selectedDesktop
+  const effectiveDesktop = effectiveLinuxDesktop(env, options.desktopEnvironment)
   const resolvedDesktop = effectiveDesktop === 'auto' ? undefined : effectiveDesktop
-  setLinuxDesktop(resolvedDesktop ?? detectedDesktop)
+  setLinuxDesktop(effectiveDesktop)
   setLinuxGameDisplayModeOverride(options.gameDisplayMode)
 
   if (!isNativeWayland(env.argv)) {

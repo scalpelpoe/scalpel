@@ -20,6 +20,8 @@ export const PLATFORM_SETTING_IDS = {
   shortcutBackend: 'shortcutBackend',
 } as const
 
+export type PlatformSettingId = (typeof PLATFORM_SETTING_IDS)[keyof typeof PLATFORM_SETTING_IDS]
+
 /** Legacy polling interval kept for callers that still poll; native trackers
  *  now push live game-mode updates, so new code should not need it. */
 export const PLATFORM_GAME_MODE_POLL_MS = 5000

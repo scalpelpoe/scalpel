@@ -16,6 +16,8 @@ const mock = vi.hoisted(() => {
     probeAndReportLinuxLayerShellSupport: vi.fn(() => ({ available: true, features: null })),
     setLinuxLayerShellCapability: vi.fn(),
     setLinuxGameDisplayModeOverride: vi.fn(),
+    setLinuxDesktop: vi.fn(),
+    setLinuxInputBackend: vi.fn(),
     linuxDesktopAdapter: vi.fn((desktop?: string) => adapter(desktop)),
     linuxDesktopAdapterForSession: vi.fn(() => adapter()),
   }
@@ -31,7 +33,12 @@ vi.mock('./linux/desktops', () => ({
   linuxDesktopAdapter: mock.linuxDesktopAdapter,
   linuxDesktopAdapterForSession: mock.linuxDesktopAdapterForSession,
 }))
-vi.mock('./linux/common/global-shortcuts', () => ({ enablePortalShortcuts: mock.enablePortalShortcuts }))
+vi.mock('./linux/common/global-shortcuts', () => ({
+  enablePortalShortcuts: mock.enablePortalShortcuts,
+  setLinuxShortcutBackend: vi.fn(),
+}))
+vi.mock('./linux/common/desktop', () => ({ setLinuxDesktop: mock.setLinuxDesktop }))
+vi.mock('./linux/common/input-backend', () => ({ setLinuxInputBackend: mock.setLinuxInputBackend }))
 vi.mock('./linux/common/wayland/focus', () => ({ startWaylandFocusTracking: mock.startWaylandFocusTracking }))
 vi.mock('./linux/common/layer-shell/backend', () => ({
   initLinuxLayerShellBackend: mock.initLinuxLayerShellBackend,
@@ -47,7 +54,13 @@ vi.mock('./linux/common/game-display-mode', () => ({
   setLinuxGameDisplayModeOverride: mock.setLinuxGameDisplayModeOverride,
 }))
 
-import { applyPlatformDefaults, preparePlatformLaunch, restartPlatformArgs, startNativeWaylandSupport } from './boot'
+import {
+  applyPlatformDefaults,
+  applyPlatformPreference,
+  preparePlatformLaunch,
+  restartPlatformArgs,
+  startNativeWaylandSupport,
+} from './boot'
 import { MANAGED_OZONE_ENV } from './linux/common/display'
 
 const linuxEnv = (
@@ -188,5 +201,22 @@ describe('platform boot helpers', () => {
 
     startNativeWaylandSupport(linuxEnv(['scalpel', '--ozone-platform=wayland']), { gameDisplayMode: 'x11' })
     expect(mock.setLinuxGameDisplayModeOverride).toHaveBeenLastCalledWith('x11')
+  })
+})
+
+describe('applyPlatformPreference', () => {
+  it('resolves an Auto desktop to the detected one, as boot does', () => {
+    mock.setLinuxDesktop.mockClear()
+    applyPlatformPreference('desktopEnvironment', 'auto', linuxEnv(['scalpel'], { XDG_CURRENT_DESKTOP: 'niri' }))
+    expect(mock.setLinuxDesktop).toHaveBeenCalledWith('niri')
+  })
+
+  it('leaves restart-only settings and other systems alone', () => {
+    mock.setLinuxInputBackend.mockClear()
+    mock.setLinuxLayerShellCapability.mockClear()
+    applyPlatformPreference('windowingMode', 'layer-shell', linuxEnv())
+    applyPlatformPreference('inputBackend', 'ydotool', { ...linuxEnv(), platform: 'win32' })
+    expect(mock.setLinuxInputBackend).not.toHaveBeenCalled()
+    expect(mock.setLinuxLayerShellCapability).not.toHaveBeenCalled()
   })
 })

@@ -44,13 +44,10 @@ import {
   resolveLinuxEffectiveBackendsSnapshot,
   setGameTitleOverrides,
   preparePlatformLaunch,
+  startPlatform,
   restartPlatformArgs,
   setBreadcrumbReporter,
   setDiagnosticReporter,
-  setLinuxClipboardBackend,
-  setLinuxInputBackend,
-  setLinuxShortcutBackend,
-  startNativeWaylandSupport,
 } from '@scalpel/platform'
 import {
   hideOverlay,
@@ -162,7 +159,7 @@ import { createTray, refreshTrayMenu } from './app/tray'
 import { startLiveServices } from './app/lifecycle'
 import { getOverlayAttachStrategy } from './experimental'
 import { relaunchApp } from './relaunch'
-import { readPlatformSettingsView } from './platform-settings'
+import { readPlatformPreferences, readPlatformSettingsView } from './platform-settings'
 
 // ---- Elevation detection ---------------------------------------------------
 
@@ -274,20 +271,9 @@ if (displayServerArgs) {
 }
 
 applyPlatformDefaults()
-// Hotkeys are registered later in boot; the backend preference is fixed for
-// this process so registrations stay on one implementation. Set them before
-// native Wayland boot so a layer-shell backend sees the chosen transport.
-setLinuxInputBackend(store.get('platformInputBackend'))
-setLinuxClipboardBackend(store.get('platformClipboardBackend'))
-setLinuxShortcutBackend(store.get('platformShortcutBackend'))
 setGameTitleOverrides({ poe1: store.get('gameTitlePoe1'), poe2: store.get('gameTitlePoe2') })
-// Native overlay mode is resolved once here, before the first overlay window.
-startNativeWaylandSupport(currentEnv(), {
-  desktopEnvironment: store.get('platformDesktopEnvironment'),
-  windowingMode: store.get('platformWindowingMode'),
-  inputBackend: store.get('platformInputBackend'),
-  gameDisplayMode: store.get('platformGameDisplayMode'),
-})
+// Before hotkeys or the first overlay window: backends are fixed for the process.
+startPlatform(currentEnv(), readPlatformPreferences(store))
 // Input listeners resolve the platform backend on first use, so they must be
 // installed only after native Wayland support has registered its backend.
 installWindowingInputListeners()

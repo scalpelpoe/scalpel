@@ -23,13 +23,8 @@ import { getRadialMenuOverlay } from './radial-menu'
 import { updateOnlineSyncDir } from './online-sync'
 import { refreshPrices } from './trade/prices'
 import { setUpdateChannel } from './update/updater'
-import {
-  setGameTitleOverrides,
-  setLinuxClipboardBackend,
-  setLinuxDesktop,
-  setLinuxGameDisplayModeOverride,
-  setLinuxInputBackend,
-} from '@scalpel/platform'
+import { applyPlatformPreference, setGameTitleOverrides } from '@scalpel/platform'
+import { platformSettingIdForKey } from './platform-settings'
 import type { AppSettings, CheatSheetsSettings, GameVariant, PoeProfile, RuntimeSettings } from '@shared/types'
 import {
   ACTIVE_PROFILE_ID_KEY,
@@ -190,21 +185,8 @@ export function applySetting<K extends keyof AppSettings>(
     changes = [{ key, value } as ProfileChangedSetting]
   }
 
-  if (key === 'platformInputBackend') {
-    setLinuxInputBackend(value)
-  }
-
-  if (key === 'platformClipboardBackend') {
-    setLinuxClipboardBackend(value)
-  }
-
-  if (key === 'platformDesktopEnvironment') {
-    setLinuxDesktop(value)
-  }
-
-  if (key === 'platformGameDisplayMode') {
-    setLinuxGameDisplayModeOverride(value)
-  }
+  const platformSettingId = platformSettingIdForKey(key)
+  if (platformSettingId) applyPlatformPreference(platformSettingId, value)
 
   if (key === 'gameTitlePoe1' || key === 'gameTitlePoe2') {
     setGameTitleOverrides({ poe1: store.get('gameTitlePoe1'), poe2: store.get('gameTitlePoe2') })

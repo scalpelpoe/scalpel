@@ -1,5 +1,13 @@
 export { OVERLAY_WINDOW_OPTS } from 'electron-overlay-window'
-export { applyPlatformDefaults, preparePlatformLaunch, restartPlatformArgs, startNativeWaylandSupport } from './boot'
+export {
+  applyPlatformDefaults,
+  applyPlatformPreference,
+  preparePlatformLaunch,
+  restartPlatformArgs,
+  startNativeWaylandSupport,
+  startPlatform,
+} from './boot'
+export type { PlatformPreferences } from './boot'
 export {
   PLATFORM_GAME_MODE_POLL_MS,
   PLATFORM_SETTING_IDS,
@@ -103,6 +111,7 @@ export type {
   PlatformGameDisplayModePreference,
   PlatformSettingAvailability,
   PlatformSettingDescriptor,
+  PlatformSettingId,
   PlatformSettingNotice,
   PlatformSettingOption,
   PlatformSettingResult,

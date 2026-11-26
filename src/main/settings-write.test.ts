@@ -97,10 +97,7 @@ vi.mock('./update/updater', () => ({
 vi.mock('@scalpel/platform', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@scalpel/platform')>()),
   setGameTitleOverrides: vi.fn(),
-  setLinuxClipboardBackend: vi.fn(),
-  setLinuxDesktop: vi.fn(),
-  setLinuxGameDisplayModeOverride: vi.fn(),
-  setLinuxInputBackend: vi.fn(),
+  applyPlatformPreference: vi.fn(),
 }))
 
 describe('settings-write side effects', () => {
@@ -518,7 +515,7 @@ describe('applySetting platform backend routing', () => {
     vi.clearAllMocks()
   })
 
-  it('applies every platform selector to its runtime setter', async () => {
+  it('hands platform settings to the platform package by setting id', async () => {
     const platform = await import('@scalpel/platform')
     const { applySetting } = await import('./settings-write')
     const profiles = setupProfiles()
@@ -535,9 +532,11 @@ describe('applySetting platform backend routing', () => {
     applySetting(store, 'platformDesktopEnvironment', 'niri', null)
     applySetting(store, 'platformGameDisplayMode', 'wayland', null)
 
-    expect(vi.mocked(platform.setLinuxInputBackend)).toHaveBeenCalledWith('ydotool')
-    expect(vi.mocked(platform.setLinuxClipboardBackend)).toHaveBeenCalledWith('wl-clipboard')
-    expect(vi.mocked(platform.setLinuxDesktop)).toHaveBeenCalledWith('niri')
-    expect(vi.mocked(platform.setLinuxGameDisplayModeOverride)).toHaveBeenCalledWith('wayland')
+    expect(vi.mocked(platform.applyPlatformPreference).mock.calls).toEqual([
+      ['inputBackend', 'ydotool'],
+      ['clipboardBackend', 'wl-clipboard'],
+      ['desktopEnvironment', 'niri'],
+      ['gameDisplayMode', 'wayland'],
+    ])
   })
 })

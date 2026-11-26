@@ -3,6 +3,8 @@ import type { PlatformSettingsView } from '@shared/contracts/platform-settings'
 import type { AppSettings } from '@shared/types'
 import {
   PLATFORM_SETTING_IDS,
+  type PlatformPreferences,
+  type PlatformSettingId,
   currentEnv,
   detectPlatformGameMode,
   getAllGameTitles,
@@ -22,12 +24,26 @@ export const PLATFORM_SETTING_KEYS = {
   [PLATFORM_SETTING_IDS.shortcutBackend]: 'platformShortcutBackend',
 } as const satisfies Readonly<Record<string, keyof AppSettings>>
 
-const PLATFORM_STORE_KEYS: ReadonlySet<keyof AppSettings> = new Set(Object.values(PLATFORM_SETTING_KEYS))
+const PLATFORM_SETTING_ID_BY_KEY: ReadonlyMap<keyof AppSettings, PlatformSettingId> = new Map(
+  (Object.entries(PLATFORM_SETTING_KEYS) as Array<[PlatformSettingId, keyof AppSettings]>).map(([id, key]) => [
+    key,
+    id,
+  ]),
+)
 
-/** Platform keys are written only through `SET_PLATFORM`, which checks the
- *  value against the live settings view. */
+/** The platform setting a store key persists, if any. Platform keys are written
+ *  only through `SET_PLATFORM`, which checks the value against the live view. */
+export function platformSettingIdForKey(key: keyof AppSettings): PlatformSettingId | undefined {
+  return PLATFORM_SETTING_ID_BY_KEY.get(key)
+}
+
 export function isPlatformSettingKey(key: keyof AppSettings): boolean {
-  return PLATFORM_STORE_KEYS.has(key)
+  return PLATFORM_SETTING_ID_BY_KEY.has(key)
+}
+
+/** Every saved platform preference, for `startPlatform`. */
+export function readPlatformPreferences(store: SettingsReader): PlatformPreferences {
+  return Object.fromEntries(Object.entries(PLATFORM_SETTING_KEYS).map(([id, key]) => [id, store.get(key)]))
 }
 
 export function readPlatformSettingsView(store: SettingsReader): PlatformSettingsView {
