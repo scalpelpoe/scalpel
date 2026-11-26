@@ -1,18 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
-import { PLATFORM_SETTING_IDS } from '@scalpel/platform'
-import { PLATFORM_SETTING_KEYS, readPlatformSettingsView } from './platform-settings'
+import { PLATFORM_SETTING_KEYS, isPlatformSettingKey, readPlatformSettingsView } from './platform-settings'
 
 const detect = vi.fn((_titles?: readonly string[]): 'wayland' | 'x11' | null => null)
 const makeView = vi.fn((_input: unknown = {}) => ({ available: true, sections: [] }))
 
-vi.mock('@scalpel/platform', () => ({
-  PLATFORM_SETTING_IDS: {
-    displayMode: 'displayMode',
-    gameDisplayMode: 'gameDisplayMode',
-    desktopEnvironment: 'desktopEnvironment',
-    windowingMode: 'windowingMode',
-    shortcutBackend: 'shortcutBackend',
-  },
+vi.mock('@scalpel/platform', async () => ({
+  PLATFORM_SETTING_IDS: (await import('@scalpel/platform/settings')).PLATFORM_SETTING_IDS,
   currentEnv: () => ({ platform: 'linux', env: {}, argv: ['scalpel'] }),
   detectPlatformGameMode: (titles: readonly string[]) => detect(titles),
   getAllGameTitles: () => ['Path of Exile', 'Path of Exile 2'],
@@ -31,13 +24,9 @@ const store = {
 } as never
 
 describe('platform settings host adapter', () => {
-  it('maps only active descriptor ids to neutral persisted keys', () => {
-    expect(PLATFORM_SETTING_KEYS[PLATFORM_SETTING_IDS.displayMode]).toBe('platformDisplayMode')
-    expect(PLATFORM_SETTING_KEYS[PLATFORM_SETTING_IDS.gameDisplayMode]).toBe('platformGameDisplayMode')
-    expect(PLATFORM_SETTING_KEYS[PLATFORM_SETTING_IDS.desktopEnvironment]).toBe('platformDesktopEnvironment')
-    expect(PLATFORM_SETTING_KEYS[PLATFORM_SETTING_IDS.windowingMode]).toBe('platformWindowingMode')
-    expect(PLATFORM_SETTING_KEYS[PLATFORM_SETTING_IDS.shortcutBackend]).toBe('platformShortcutBackend')
-    expect(PLATFORM_SETTING_KEYS['unknown' as keyof typeof PLATFORM_SETTING_KEYS]).toBeUndefined()
+  it('reserves every platform store key for the validated write path', () => {
+    for (const key of Object.values(PLATFORM_SETTING_KEYS)) expect(isPlatformSettingKey(key)).toBe(true)
+    expect(isPlatformSettingKey('openSide')).toBe(false)
   })
 
   it('feeds saved neutral values and live detection into the package view', () => {

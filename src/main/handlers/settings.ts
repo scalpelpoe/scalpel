@@ -36,7 +36,7 @@ import { getOverlayAttachedVersion } from '../overlay'
 import { shouldRelaunchAfterOnboarding } from '../onboarding-relaunch'
 import { getGameSwitchCoordinator } from '../experimental'
 import { relaunchApp } from '../relaunch'
-import { PLATFORM_SETTING_KEYS, readPlatformSettingsView } from '../platform-settings'
+import { PLATFORM_SETTING_KEYS, isPlatformSettingKey, readPlatformSettingsView } from '../platform-settings'
 import { recordMainBreadcrumb } from '../diagnostics'
 
 export function register(
@@ -54,6 +54,7 @@ export function register(
   })
 
   ipcMain.handle('set-setting', (event, key: keyof AppSettings, value: AppSettings[typeof key]) => {
+    if (isPlatformSettingKey(key)) throw new Error(`platform setting ${key} must be set through SET_PLATFORM`)
     // poeVersion writes are valid here: the onboarding flow uses them to switch
     // active game between PoE1 and PoE2 setup steps.
     // requestGameSwitch() in main/game-switch.ts is the user-facing toggle that

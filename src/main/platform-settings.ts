@@ -22,6 +22,14 @@ export const PLATFORM_SETTING_KEYS = {
   [PLATFORM_SETTING_IDS.shortcutBackend]: 'platformShortcutBackend',
 } as const satisfies Readonly<Record<string, keyof AppSettings>>
 
+const PLATFORM_STORE_KEYS: ReadonlySet<keyof AppSettings> = new Set(Object.values(PLATFORM_SETTING_KEYS))
+
+/** Platform keys are written only through `SET_PLATFORM`, which checks the
+ *  value against the live settings view. */
+export function isPlatformSettingKey(key: keyof AppSettings): boolean {
+  return PLATFORM_STORE_KEYS.has(key)
+}
+
 export function readPlatformSettingsView(store: SettingsReader): PlatformSettingsView {
   return platformSettingsView({
     env: currentEnv(),
