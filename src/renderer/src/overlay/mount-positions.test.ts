@@ -8,40 +8,40 @@ describe('overlayMountXs', () => {
     expect(overlayMountXs(null, PANEL_WIDTH)).toEqual({ leftMountX: 0, rightMountX: 0 })
   })
 
-  it('docks left flush with the game window', () => {
+  it('docks clear of the side panels on both sides', () => {
     expect(overlayMountXs({ gameWidth: 1704, sidebarWidth: 294 }, PANEL_WIDTH)).toEqual({
-      leftMountX: 0,
+      leftMountX: 293,
       rightMountX: 871,
     })
   })
 
   it('keeps a narrow game window from pushing the right mount off-screen', () => {
     expect(overlayMountXs({ gameWidth: 600, sidebarWidth: 294 }, PANEL_WIDTH)).toEqual({
-      leftMountX: 0,
+      leftMountX: 60,
       rightMountX: 0,
     })
     // Sway/XWayland tiled PoE at 842x601 reports a ~371px sidebar; a 540px
     // panel would overflow without clamping.
     expect(overlayMountXs({ gameWidth: 842, sidebarWidth: 371 }, PANEL_WIDTH)).toEqual({
-      leftMountX: 0,
+      leftMountX: 302,
       rightMountX: 0,
     })
   })
 
   it('reserves room for the right-docked sister overlay', () => {
     expect(overlayMountXs({ gameWidth: 842, sidebarWidth: 371 }, PANEL_WIDTH, 136)).toEqual({
-      leftMountX: 0,
+      leftMountX: 302,
       rightMountX: 136,
     })
     expect(overlayMountXs({ gameWidth: 1704, sidebarWidth: 294 }, PANEL_WIDTH, 136)).toEqual({
-      leftMountX: 0,
+      leftMountX: 293,
       rightMountX: 871,
     })
   })
 
   it('keeps the main panel inside when the game cannot fit both panels', () => {
     expect(overlayMountXs({ gameWidth: 600, sidebarWidth: 294 }, PANEL_WIDTH, 136)).toEqual({
-      leftMountX: 0,
+      leftMountX: 60,
       rightMountX: 60,
     })
   })

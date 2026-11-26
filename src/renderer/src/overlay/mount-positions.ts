@@ -12,9 +12,9 @@ export interface MountGameBounds {
 /**
  * Horizontal dock positions for the main overlay, relative to the game window.
  *
- * The left mount is flush with the game's left edge. Offsetting it by the PoE
- * sidebar width (as the right mount does) parked the panel well inside narrow
- * game windows, which read as "snapped into the middle".
+ * Both mounts clear PoE's side panels (stash on the left, inventory on the
+ * right) by `sidebarWidth`. A game window too narrow for that keeps the panel
+ * inside its edges instead.
  */
 export function overlayMountXs(
   gameBounds: MountGameBounds | null,
@@ -29,7 +29,7 @@ export function overlayMountXs(
   const maxForPanel = Math.max(0, gameBounds.gameWidth - panelWidth)
   const rightMountX = Math.max(0, Math.min(maxForPanel, Math.max(companionReserve, ideal)))
   return {
-    leftMountX: 0,
+    leftMountX: Math.min(gameBounds.sidebarWidth - 1, maxForPanel),
     rightMountX,
   }
 }
