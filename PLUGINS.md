@@ -1,6 +1,6 @@
 # Writing Scalpel plugins
 
-Scalpel supports third-party plugins that show up as new tabs in the overlay. A plugin is a single bundled JavaScript file you author against a typed SDK, distributed via your own GitHub repository, and discovered through a curated registry. This document is for plugin authors.
+Scalpel supports third-party plugins that extend the overlay. A plugin is a single bundled JavaScript file you author against a typed SDK, distributed via your own GitHub repository, and discovered through a curated registry. This document is for plugin authors.
 
 A complete reference plugin that exercises every SDK component lives at [`scalpelpoe/scalpel-plugin-examples`](https://github.com/scalpelpoe/scalpel-plugin-examples). Read it alongside this doc.
 
@@ -9,6 +9,7 @@ A complete reference plugin that exercises every SDK component lives at [`scalpe
 A plugin can:
 
 - Render arbitrary UI in its own tab (React, vanilla DOM, anything that runs in a browser)
+- Add a button to the price checker's item header
 - React to the player's most recent hotkey'd item, current zone, and league
 - Register a hotkey that the user binds in Scalpel's existing Macros settings
 - Persist its own settings to disk
@@ -19,7 +20,7 @@ A plugin can NOT:
 
 - Read Scalpel's loaded filter, audit data, or settings beyond its own storage
 - Modify or read other plugins' state
-- Affect the built-in tabs
+- Replace the built-in tabs
 
 ## Quickstart
 
@@ -97,7 +98,7 @@ interface ScalpelPluginContext {
   onLogLine(handler: (line: string) => void): () => void
   getRecentLogLines(count?: number): Promise<string[]>
 
-  // Tab registration (call exactly once).
+  // Optional tab registration (call at most once).
   // `icon` is inline SVG markup (or a data URL). Scalpel clamps the rendered
   // size to 16x16 and forces `display: flex` on any descendant SVG, so the
   // plugin doesn't manage sizing. See the Tab icons section below for the
@@ -111,6 +112,14 @@ interface ScalpelPluginContext {
   // Hotkey registration (call at most once)
   // Surfaces in Settings > Macros > Plugin Hotkeys; the user binds the key.
   registerHotkey(opts: { label: string }, handler: () => void): void
+
+  // Optional button beside the price checker's item links. Call once during activate.
+  registerPriceCheckAction(opts: {
+    label: string
+    title: string
+    isVisible?: (item: PoeItem, poeVersion: 1 | 2) => boolean
+    run: (item: PoeItem, poeVersion: 1 | 2) => void | Promise<void>
+  }): void
 
   // Overlay window (call at most once). Gives the plugin a real chrome'd,
   // draggable, game-anchored window, separate from its tab. `render` runs in
@@ -217,6 +226,21 @@ ctx.registerTab({ icon: ICON, /* ... */ })
 ```
 
 The host clamps both paths identically (`[&_svg]:w-4 [&_svg]:h-4 [&_svg]:block`). Stroke weight is the only thing you tune for visual density - `stroke-width="4"` at `viewBox="0 0 48 48"` is the iconpark default and reads correctly at 16x16.
+
+### Price-check item buttons
+
+A plugin can contribute just a price-check button. For example, this action bookmarks a displayed ring in the plugin's storage:
+
+```ts
+ctx.registerPriceCheckAction({
+  label: 'Bookmark',
+  title: 'Save this ring',
+  isVisible: (item) => item.itemClass === 'Rings',
+  run: (item, poeVersion) => ctx.storage.set('savedRing', { item, poeVersion }),
+})
+```
+
+Omit `isVisible` to show the button for every displayed item. Keep the filter synchronous and free of side effects. The callback receives the displayed item and game version even while another price check is loading. The main overlay owns the button for the plugin's lifetime. Registration in a plugin pop-out is inert. For plugins that also support older Scalpel versions, check for the method before calling it.
 
 ### Plugin as a workflow entry point
 
@@ -478,7 +502,7 @@ Launch it three ways: the **Pop out** button on the plugin's tab, the dedicated 
 
 **The render runs in a separate process.** Each window is its own renderer process, so the `render` you pass to `registerOverlay` cannot be the same live function object your tab uses - Scalpel loads (imports and runs) your plugin module a *second time* inside the overlay window and calls your `registerOverlay` render there. Two consequences:
 
-- Inside the overlay window, `registerTab` and `registerHotkey` are inert no-ops (your tab and action hotkey already took effect in the main overlay). Only the overlay `render` is used.
+- The main overlay owns tabs, price-check buttons, and action hotkeys. Their registration methods are inert in the plugin overlay window, which uses the overlay `render`.
 - **Keep `activate` idempotent.** It runs once per window. Any side effect at the top of `activate` runs again when the overlay window opens. For example, do not POST analytics or mutate a shared counter directly in `activate` - it will fire a second time. Put such work behind an event handler or guard it, and confine per-window work to the render callbacks.
 
 The full context (`getCurrentItem`, `onCurrentZone`, `onLogLine`, `storage`, `fetch`, etc.) is available inside the overlay render exactly as in a tab.
@@ -652,7 +676,7 @@ These render the standard Scalpel settings-row chrome (label on the left, contro
 **Types**
 
 - `ScalpelPluginContext`, `PluginActivate`, `PluginManifest`
-- `RegisterTabOptions`, `RegisterHotkeyOptions`, `PluginStorage`
+- `RegisterTabOptions`, `RegisterHotkeyOptions`, `RegisterPriceCheckActionOptions`, `PluginStorage`
 - `PoeItem`, `Zone`, `RelatedRef`, `RelatedEntry`, `GameFeatures`, `TrendDirection`
 - `ModTier`, `TierLadder`, `TierStat` - data shape for an affix's tier ladder (tier number, roll range, required level)
 - `GameRect`, `GameCapture` - geometry and pixel-data shapes for `captureGameWindow`

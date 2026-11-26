@@ -2,6 +2,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react
 import { PluginHost } from '../plugins/PluginHost'
 import { PluginTabHost } from '../plugins/PluginTabHost'
 import type { RegisteredTab } from '../plugins/PluginHost'
+import type { RegisteredPriceCheckAction } from '../plugins/types'
+import { usePriceCheckActions } from '../plugins/use-price-check-actions'
 import type { AppSettings, RuntimeSettings, OverlayData, PoeItem, PriceInfo } from '@shared/types'
 import { isHideableTabKey } from '@shared/types'
 import { m } from '@shared/paraglide/messages.js'
@@ -228,6 +230,7 @@ export default function App(): JSX.Element {
   const currentZone = useCurrentZone()
 
   const [pluginTabs, setPluginTabs] = useState<RegisteredTab[]>([])
+  const [priceCheckActions, setPriceCheckActions] = useState<RegisteredPriceCheckAction[]>([])
 
   const onSubscribeCurrentItem = useCallback(
     (h: (i: PoeItem) => void): (() => void) => window.api.onOverlayData((d) => h(d.item)),
@@ -256,6 +259,13 @@ export default function App(): JSX.Element {
       console.warn('[plugin error]', id, err)
     }
   }, [])
+
+  const priceCheckButtons = usePriceCheckActions(
+    priceCheckActions,
+    view === 'pricecheck' ? priceCheckData?.item : undefined,
+    poeVersion ?? 1,
+    handlePluginError,
+  )
 
   const dismissBrokenPlugin = useCallback((id: string): void => {
     setBrokenPlugins((prev) => prev.filter((p) => p.id !== id))
@@ -1067,6 +1077,7 @@ export default function App(): JSX.Element {
                       learnedDecisions={priceCheckData.learnedDecisions}
                       onClose={close}
                       onOpenWiki={externalLinkHandler('wiki', priceCheckData?.item)}
+                      pluginButtons={priceCheckButtons}
                       onOpenPoeDb={externalLinkHandler('poedb', priceCheckData?.item)}
                       onOpenNinja={ninjaLinkHandler(priceCheckData?.item, priceCheckData?.priceInfo)}
                     />
@@ -1155,6 +1166,7 @@ export default function App(): JSX.Element {
           onSubscribeLeagueChange={onSubscribeLeagueChange}
           onOpenExternal={(url) => window.api.openExternal(url)}
           onTabsChange={setPluginTabs}
+          onPriceCheckActionsChange={setPriceCheckActions}
           onOpenPluginTab={(pluginId) => {
             setView(`plugin:${pluginId}` as View)
             void window.api.pluginShowOverlay()

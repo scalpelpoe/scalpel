@@ -65,9 +65,10 @@ export function useActivatePlugin(
           }),
         onLogLine: (h) => window.api.onLogLine(h),
         getRecentLogLines: (count) => window.api.getRecentLogLines(count),
-        // Inert here: the tab + action hotkey are owned by the main overlay,
+        // Inert here: tabs, price-check actions and hotkeys are owned by the main overlay,
         // which already ran activate. Only the overlay render is used.
         registerTab: () => {},
+        registerPriceCheckAction: () => {},
         registerHotkey: () => {},
         registerOverlay: (opts, render) => {
           capHolder.value = { opts, render }

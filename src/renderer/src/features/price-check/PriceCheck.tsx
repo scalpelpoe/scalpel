@@ -76,6 +76,7 @@ export function PriceCheck({
   learnedDecisions,
   onClose: _onClose,
   onOpenWiki,
+  pluginButtons,
   onOpenPoeDb,
   onOpenNinja,
 }: PriceCheckProps): JSX.Element {
@@ -544,6 +545,7 @@ export function PriceCheck({
         areaLevel={item.monsterLevel}
         heistJobs={item.heistJobs}
         onOpenWiki={onOpenWiki}
+        pluginButtons={pluginButtons}
         onOpenPoeDb={onOpenPoeDb}
         onOpenNinja={onOpenNinja}
       />

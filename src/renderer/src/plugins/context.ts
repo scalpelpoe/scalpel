@@ -35,6 +35,7 @@ export function createPluginContext(deps: PluginContextFactoryDeps): ScalpelPlug
       hotkeyRegistered = true
       deps.registerHotkey(deps.pluginId, opts, handler)
     },
+    registerPriceCheckAction: deps.registerPriceCheckAction,
     registerOverlay: (opts, render) => {
       if (overlayRegistered) {
         throw new Error(`[plugin:${deps.pluginId}] registerOverlay already called`)

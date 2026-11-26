@@ -47,16 +47,18 @@ describe('plugin-overlay App', () => {
     await waitFor(() => expect(renderFn).toHaveBeenCalled())
   })
 
-  it('makes registerTab and registerHotkey inert (no throw) and still mounts the overlay', async () => {
+  it('ignores main-overlay registrations and still mounts the plugin overlay', async () => {
     const renderFn = vi.fn((container: HTMLElement) => {
       container.textContent = 'BODY'
     })
     const activate = (ctx: {
       registerTab: (o: unknown) => void
+      registerPriceCheckAction: (o: unknown) => void
       registerHotkey: (o: unknown, h: () => void) => void
       registerOverlay: (o: unknown, r: typeof renderFn) => void
     }): void => {
       ctx.registerTab({ label: 'x', icon: '', render: () => {} })
+      ctx.registerPriceCheckAction({ label: 'Mark', title: 'Mark item', run: vi.fn() })
       ctx.registerHotkey({ label: 'x' }, () => {})
       ctx.registerOverlay({ title: 'Demo' }, renderFn)
     }
