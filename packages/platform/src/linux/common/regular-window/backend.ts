@@ -10,14 +10,7 @@ import { currentEnv } from '../../../select'
 import { isNativeWayland } from '../display'
 import { activateWaylandGame } from '../wayland/game-activation'
 import { readWaylandGameFocus } from '../wayland/focus'
-import {
-  REGULAR_WINDOW_HEIGHT,
-  REGULAR_WINDOW_PANEL_MARGIN,
-  REGULAR_WINDOW_PANEL_WIDTH,
-  REGULAR_WINDOW_SISTER_GAP,
-  REGULAR_WINDOW_SISTER_WIDTH,
-  REGULAR_WINDOW_WIDTH,
-} from '../../../common/window-layout'
+import { REGULAR_WINDOW_HEIGHT, REGULAR_WINDOW_PANEL_WIDTH, REGULAR_WINDOW_WIDTH } from '../../../common/window-layout'
 
 function centeredBounds(): Electron.Rectangle {
   let workArea: Electron.Rectangle = {
@@ -193,7 +186,3 @@ export function initLinuxRegularWindowSupport(): boolean {
 export function createRegularWindowBackend(): Backend {
   return isNativeWayland(currentEnv().argv) ? nativeRegularWindowBackend() : x11RegularWindowBackend()
 }
-
-/** @internal For tests and diagnostics: width of the side-by-side layout. */
-export const regularWindowLayoutWidth = (): number =>
-  REGULAR_WINDOW_PANEL_MARGIN + REGULAR_WINDOW_PANEL_WIDTH + REGULAR_WINDOW_SISTER_GAP + REGULAR_WINDOW_SISTER_WIDTH

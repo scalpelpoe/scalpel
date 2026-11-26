@@ -9,7 +9,6 @@ import {
   currentWaylandGameFocus,
   publishCompositorFocus,
   publishRecentWindow,
-  subscribeRecentWindowHints,
   subscribeWaylandFocus,
   type WaylandGameFocus,
 } from './focus-cache'
@@ -336,12 +335,6 @@ export function readWaylandGameFocus(): WaylandGameFocus | null {
 export function readRecentWindowHints(): readonly string[] {
   ensureTracking()
   return currentRecentWindowHints()
-}
-
-/** Subscribe to paste-ready window-hint changes. Returns an unsubscribe function. */
-export function onRecentWindowHintsChange(listener: (hints: readonly string[]) => void): () => void {
-  ensureTracking()
-  return subscribeRecentWindowHints(listener)
 }
 
 /** Subscribe to Wayland activated-toplevel changes. Fires only when the

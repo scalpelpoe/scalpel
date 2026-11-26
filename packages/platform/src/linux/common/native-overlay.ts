@@ -103,15 +103,6 @@ export function nativeOverlayServices(): NativeOverlayServices | null {
   return services
 }
 
-export function overlayWebPreferences(prefs: WebPreferences): WebPreferences {
-  if (!services) return prefs
-  return {
-    ...prefs,
-    ...services.webPreferences,
-    additionalArguments: [...(prefs.additionalArguments ?? []), ...(services.additionalArguments ?? [])],
-  }
-}
-
 /** Must be called right after constructing an overlay window, before any
  *  show/hide wrappers are installed. No-op outside a native overlay backend. */
 export function adoptOverlayWindow(win: BrowserWindow): void {
@@ -134,28 +125,6 @@ export function overlayGameHasKeyboardFocus(): boolean {
 
 export function nativeOverlayFeature<K extends keyof NativeOverlayServices['features']>(name: K): boolean {
   return services?.features[name] ?? false
-}
-
-export function overlayPointerPosition(): { x: number; y: number } | null {
-  return services?.overlayPointer?.() ?? null
-}
-
-export async function refreshOverlayPointer(): Promise<{ x: number; y: number } | null> {
-  if (!services) return null
-  const over = services.overlayPointer?.()
-  if (over) return over
-  return services.native.probePointer()
-}
-
-export function overlayCanCapture(): boolean {
-  return !!services?.features.screencopy && services.native.canCapture()
-}
-
-export function captureOverlayGame(
-  rect: Electron.Rectangle,
-): Promise<{ width: number; height: number; data: Buffer } | null> {
-  if (!services) return Promise.resolve(null)
-  return services.native.capture(rect)
 }
 
 /** @internal Test-only reset. */

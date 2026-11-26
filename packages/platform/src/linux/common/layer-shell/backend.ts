@@ -13,7 +13,7 @@ import { WaylandHost } from 'electron-overlay-window/dist/wayland/host'
 import { reportBreadcrumb, reportDiagnostic } from '../../../common/diagnostics'
 import { controllerTracker } from '../../../common/controller'
 import { matchGameWindowSource } from '../../../common/electron-window-source'
-import type { Backend, BackendId } from '../../../types'
+import type { Backend } from '../../../types'
 import { lastPointer } from '../native-input'
 import {
   adoptOverlayWindow,
@@ -243,9 +243,4 @@ export function initLinuxLayerShellBackend(options: LinuxLayerShellBackendOption
     reportBreadcrumb(`layer-shell init failed exception=${String(error)}`)
     return false
   }
-}
-
-/** @internal Thin check for backends whose geometry is already logical DIP. */
-export function isLayerShellBackendId(id: BackendId): boolean {
-  return id === 'layer-shell' || id === 'kwin-layer-shell'
 }

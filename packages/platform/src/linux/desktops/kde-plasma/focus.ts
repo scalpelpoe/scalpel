@@ -48,12 +48,6 @@ export function startKWinFocusTracking(): void {
   watcher.start()
 }
 
-export function stopKWinFocusTracking(): void {
-  watcher?.stop()
-  watcher = null
-  setCompositorFocusSource(false)
-}
-
 /** @internal Test-only reset. */
 export function __resetKWinFocusTrackingForTests(): void {
   watcher = null

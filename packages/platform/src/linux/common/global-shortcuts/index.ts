@@ -28,8 +28,6 @@ export type { LinuxShortcutFacts } from './effective'
 
 let portalShortcuts: GlobalShortcuts | null = null
 let evdevShortcuts: (GlobalShortcuts & { available(): boolean }) | null = null
-// The native layer-shell host can supply its own evdev shortcut transport.
-let nativeShortcuts: GlobalShortcuts | null = null
 let lastSelectedBackend: ConcreteLinuxShortcutBackend | null = null
 
 /** Installs the portal implementation. Called once by the native-Wayland boot
@@ -43,13 +41,8 @@ function standaloneEvdev(): GlobalShortcuts & { available(): boolean } {
   return evdevShortcuts
 }
 
-/** Injection point for a future native overlay backend's evdev shortcuts. */
-export function setLinuxNativeShortcuts(value: GlobalShortcuts | null): void {
-  nativeShortcuts = value
-}
-
 function overlayShortcuts(): GlobalShortcuts | null {
-  return nativeOverlayServices()?.globalShortcut ?? nativeShortcuts
+  return nativeOverlayServices()?.globalShortcut ?? null
 }
 
 function defaultShortcutBackend(): ConcreteLinuxShortcutBackend | undefined {
@@ -145,7 +138,6 @@ export const platformShortcuts: GlobalShortcuts = {
 export function __resetPlatformShortcutsForTests(): void {
   portalShortcuts = null
   evdevShortcuts = null
-  nativeShortcuts = null
   lastSelectedBackend = null
   owners.clear()
   __resetLinuxShortcutBackendForTests()

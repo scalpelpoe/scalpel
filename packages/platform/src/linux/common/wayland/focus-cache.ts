@@ -41,7 +41,6 @@ let recentWindows: readonly RecentWindow[] = []
 let publishedHints: readonly string[] = []
 let compositorOwned = false
 const listeners = new Set<(focus: WaylandGameFocus | null) => void>()
-const titleListeners = new Set<(hints: readonly string[]) => void>()
 
 function sameFocus(a: WaylandGameFocus | null, b: WaylandGameFocus | null): boolean {
   if (a === b) return true
@@ -77,13 +76,6 @@ function publishRecentWindows(next: readonly RecentWindow[]): void {
   if (hints.length === publishedHints.length && hints.every((hint, index) => hint === publishedHints[index])) return
   recentWindows = next
   publishedHints = hints
-  for (const listener of titleListeners) {
-    try {
-      listener(publishedHints)
-    } catch {
-      // Listener errors must not break focus tracking.
-    }
-  }
 }
 
 /** Publish the compositor's activated window. Passing null means no window is
@@ -147,15 +139,6 @@ export function subscribeWaylandFocus(listener: (focus: WaylandGameFocus | null)
   }
 }
 
-/** Subscribe to paste-ready window-hint changes. Returns an unsubscribe function. */
-export function subscribeRecentWindowHints(listener: (hints: readonly string[]) => void): () => void {
-  titleListeners.add(listener)
-  if (publishedHints.length) listener(publishedHints)
-  return () => {
-    titleListeners.delete(listener)
-  }
-}
-
 /** A compositor adapter owns focus now; the generic zwlr reader must not start
  *  and fight it for the cache. */
 export function setCompositorFocusSource(owned: boolean): void {
@@ -179,5 +162,4 @@ export function __resetWaylandFocusCacheForTests(): void {
   publishedHints = []
   compositorOwned = false
   listeners.clear()
-  titleListeners.clear()
 }
