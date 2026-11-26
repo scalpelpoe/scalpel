@@ -150,11 +150,13 @@ function debugLoggingEnabled(): boolean {
 }
 
 /** Synchronous one-line breadcrumb (no stack). Debug breadcrumbs are written in
- *  dev mode or when SCALPEL_DEBUG_LOG is enabled; info breadcrumbs always write. */
-export function recordMainBreadcrumb(message: string, level: 'info' | 'debug' = 'info'): void {
+ *  dev mode or when SCALPEL_DEBUG_LOG is enabled; info breadcrumbs always write.
+ *  Pass a function on hot paths so the message is only built when written. */
+export function recordMainBreadcrumb(message: string | (() => string), level: 'info' | 'debug' = 'info'): void {
   if (level === 'debug' && !debugLoggingEnabled()) return
   const tag = level === 'debug' ? 'main:debug' : 'main:breadcrumb'
-  appendDiagnosticLine(`[${new Date().toISOString()}] [${tag}] ${message}`)
+  const text = typeof message === 'function' ? message() : message
+  appendDiagnosticLine(`[${new Date().toISOString()}] [${tag}] ${text}`)
 }
 
 /** Wrap a native-event listener (uiohook-napi, electron-overlay-window) so a

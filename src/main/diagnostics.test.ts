@@ -55,6 +55,21 @@ describe('recentLog', () => {
   })
 })
 
+describe('recordMainBreadcrumb', () => {
+  it('builds a lazy debug message only when debug logging is on', () => {
+    const message = vi.fn(() => 'scalpel-lazy-debug-marker')
+    vi.stubEnv('SCALPEL_DEBUG_LOG', '')
+    recordMainBreadcrumb(message, 'debug')
+    expect(message).not.toHaveBeenCalled()
+
+    vi.stubEnv('SCALPEL_DEBUG_LOG', '1')
+    recordMainBreadcrumb(message, 'debug')
+    expect(message).toHaveBeenCalledOnce()
+    expect(recentLog()).toContain('scalpel-lazy-debug-marker')
+    vi.unstubAllEnvs()
+  })
+})
+
 describe('redact', () => {
   it('scrubs the POESESSID cookie value', () => {
     const out = redact('POESESSID=abc123secret')
