@@ -28,6 +28,7 @@ import { register as registerManifest } from '../handlers/manifest'
 import { register as registerPlugins } from '../handlers/plugins'
 import { registerClientLogHandlers } from '../handlers/client-log'
 import { registerGameConfigHandlers } from '../handlers/game-config'
+import { registerPluginFilterHandlers } from '../handlers/plugin-filter'
 import { registerPluginPriceHandlers } from '../handlers/plugin-prices'
 import { registerPluginCaptureHandlers } from '../handlers/plugin-capture'
 import { registerPluginCursorHandlers } from '../handlers/plugin-cursor'
@@ -64,6 +65,7 @@ export function registerAllIpc(deps: IpcRegistrationDeps): void {
   learningHandlers.register()
   registerClientLogHandlers()
   registerGameConfigHandlers()
+  registerPluginFilterHandlers(store)
   registerPluginPriceHandlers(store)
   registerPluginCaptureHandlers()
   registerPluginCursorHandlers()

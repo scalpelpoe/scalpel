@@ -39,6 +39,11 @@ const baseDeps = () => ({
     write: vi.fn(async () => ({ backupPath: null })),
     onChange: vi.fn(() => () => {}),
   },
+  filter: {
+    read: vi.fn(async () => null),
+    moveBaseTypes: vi.fn(async () => ({ ok: true as const, moved: 0, skipped: [] })),
+    onChange: vi.fn(() => () => {}),
+  },
   prices: {
     getSkillPrice: vi.fn(async () => null),
     getPrices: vi.fn(async () => ({ prices: [], updatedAt: null })),

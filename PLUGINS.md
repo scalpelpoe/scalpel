@@ -17,7 +17,7 @@ A plugin can:
 
 A plugin can NOT:
 
-- Read Scalpel's loaded filter, audit data, or settings beyond its own storage
+- Write Scalpel's loaded filter directly, or read audit data or settings beyond its own storage (it can read the loaded filter and move base types through Scalpel, see "Reading and changing the loaded filter")
 - Modify or read other plugins' state
 - Affect the built-in tabs
 
@@ -152,6 +152,18 @@ interface ScalpelPluginContext {
     onChange(handler: () => void): () => void
   }
 
+  // Read the loaded filter and move base types in it through Scalpel's own
+  // tier-move path (user confirmation, one undo step, intents). Plugins cannot
+  // name a filter path or write it. See "Reading and changing the loaded filter".
+  filter: {
+    read(): Promise<{ content: string; path: string; revision: string } | null>
+    moveBaseTypes(req: {
+      revision: string
+      moves: { baseType: string; fromBlockLine: number; toBlockLine: number }[]
+    }): Promise<FilterMoveResult>
+    onChange(handler: () => void): () => void
+  }
+
   // Read poe.ninja price data Scalpel already maintains (read-only). The host
   // owns fetching, so plugins never hit ninja directly. See "Reading economy
   // prices" below.
@@ -277,6 +289,49 @@ Heads-up: the game only reads this file at launch and rewrites the whole file fr
 its in-memory state when it exits, so your edits apply at the next launch and can
 be clobbered if the game is running. Warn the user, prefer an explicit save, and
 use `onChange` to offer a reload when the file moves underneath you.
+
+### Reading and changing the loaded filter
+
+`ctx.filter` reads the filter Scalpel has loaded and moves base types in it
+through Scalpel's own tier-move path. A plugin never names a filter path and
+never writes the file.
+
+```tsx
+const loaded = await ctx.filter.read()   // null when no filter is loaded
+if (loaded) {
+  const res = await ctx.filter.moveBaseTypes({
+    revision: loaded.revision,
+    moves: [{ baseType: 'Exalted Orb', fromBlockLine: 120, toBlockLine: 88 }],
+  })
+  // res: { ok: true, moved, skipped } | { ok: false, error, cancelled?, skipped? }
+}
+const off = ctx.filter.onChange(() => { /* Scalpel loaded or rewrote the filter - re-read */ })
+```
+
+- `read()` resolves to `{ content, path, revision }`. `content` is the text Scalpel
+  parsed; block lines below are 1-based lines of it. `revision` is an opaque hash.
+- `moveBaseTypes({ revision, moves })` moves each `baseType` from the block whose
+  `Show` / `Hide` / `Minimal` keyword is on `fromBlockLine` to the block on
+  `toBlockLine`. Scalpel first shows the user the list and asks to apply. On yes it
+  takes one undo snapshot (one undo reverts the whole call), records one
+  `move-basetype` intent per base (so the moves replay onto a filter update like
+  hand moves), and reloads the filter in game once. Base names match without
+  regard to case and are written in the filter's own spelling.
+- A `revision` that no longer matches the loaded filter is refused: re-read and
+  re-plan. So is a filter that changes while the confirmation is open.
+- Moves Scalpel will not make come back in `skipped` with a reason, and the rest
+  still apply: `last-base` (a block never gives up its last base), `token` (the
+  block catches the base by substring), `not-named`, `no-basetype` (the
+  destination has no BaseType line), `no-block`, `same-block`, `duplicate`, and
+  `unchanged` (the base could not be removed from the source).
+- A base the destination already lists still counts as moved: it is removed from
+  the source and the destination keeps its one copy.
+- One call takes at most 1000 moves.
+- The revision covers the filter as Scalpel last loaded it. Scalpel does not
+  watch the file for outside edits, so an edit made in a text editor after the
+  load is not detected and is overwritten by the write.
+- The plugin name in the confirmation comes from the plugin's own context and is
+  shown as given.
 
 ### Reading economy prices
 

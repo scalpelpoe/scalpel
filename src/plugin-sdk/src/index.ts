@@ -8,6 +8,12 @@
 
 export * from './runtime'
 export type {
+  FilterApi,
+  FilterBaseTypeMove,
+  FilterMoveRequest,
+  FilterMoveResult,
+  FilterMoveSkip,
+  LoadedFilter,
   MediaApi,
   MediaSession,
   PluginActivate,

@@ -25,6 +25,13 @@ export type PluginContextFactoryDeps = {
     write: (content: string) => Promise<{ backupPath: string | null }>
     onChange: (handler: () => void) => () => void
   }
+  filter: {
+    read: () => Promise<import('../../../plugin-sdk/src/types').LoadedFilter | null>
+    moveBaseTypes: (
+      req: import('../../../plugin-sdk/src/types').FilterMoveRequest,
+    ) => Promise<import('../../../plugin-sdk/src/types').FilterMoveResult>
+    onChange: (handler: () => void) => () => void
+  }
   prices: {
     getSkillPrice: (
       name: string,

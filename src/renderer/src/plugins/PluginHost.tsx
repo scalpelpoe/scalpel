@@ -139,6 +139,15 @@ export function PluginHost(props: PluginHostProps): JSX.Element | null {
             return u
           },
         },
+        filter: {
+          read: () => window.api.pluginFilterRead(),
+          moveBaseTypes: (req) => window.api.pluginFilterMoveBaseTypes(m.id, req),
+          onChange: (handler) => {
+            const u = window.api.onPluginFilterChange(handler)
+            disposers.push(u)
+            return u
+          },
+        },
         prices: {
           getSkillPrice: (name, level) => window.api.pricesGetSkill(name, level),
           getPrices: (opts) => window.api.pricesGet(opts),

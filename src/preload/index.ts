@@ -425,6 +425,22 @@ export const api = {
       ipcRenderer.send('plugins:game-config-unwatch')
     }
   },
+  pluginFilterRead: (): Promise<{ content: string; path: string; revision: string } | null> =>
+    ipcRenderer.invoke('plugins:filter-read'),
+  pluginFilterMoveBaseTypes: (
+    pluginId: string,
+    req: import('../plugin-sdk/src/types').FilterMoveRequest,
+  ): Promise<import('../plugin-sdk/src/types').FilterMoveResult> =>
+    ipcRenderer.invoke('plugins:filter-move-basetypes', pluginId, req),
+  onPluginFilterChange: (cb: () => void): (() => void) => {
+    const handler = (): void => cb()
+    ipcRenderer.send('plugins:filter-watch')
+    ipcRenderer.on('plugins:filter-changed', handler)
+    return () => {
+      ipcRenderer.removeListener('plugins:filter-changed', handler)
+      ipcRenderer.send('plugins:filter-unwatch')
+    }
+  },
   pricesGet: (opts?: {
     category?: string
   }): Promise<{ prices: import('@shared/types').PriceEntry[]; updatedAt: number | null }> =>
