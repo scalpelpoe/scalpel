@@ -1,4 +1,5 @@
 import { atLeastRegex } from './number-regex'
+import { MAP_REWARD_LABELS } from '@shared/data/regex/map-mods'
 
 export interface Qualifier {
   id: string
@@ -23,13 +24,13 @@ export const QUALIFIER_GROUPS: QualifierGroup[] = [
     defaultOpen: true,
     qualifiers: [
       // 3.30 replaced Item Quantity with Atlas Drops; the id stays 'quantity' so saved presets keep working.
-      { id: 'quantity', label: 'Atlas Drops', keyword: 'as d', suffix: '%' }, // poe.re: "as d.*"
-      { id: 'packsize', label: 'Pack Size', keyword: 'r pa', suffix: '%' }, // poe.re: "r pa.*" ("iz" also hit Quality (Pack Size))
-      { id: 'morecurrency', label: 'More Currency', keyword: 'ore cu', suffix: '%' },
+      { id: 'quantity', label: MAP_REWARD_LABELS.quantity, keyword: 'as d', suffix: '%' }, // poe.re: "as d.*"
+      { id: 'packsize', label: MAP_REWARD_LABELS.packsize, keyword: 'r pa', suffix: '%' }, // "iz" also hit Quality (Pack Size)
+      { id: 'morecurrency', label: MAP_REWARD_LABELS.morecurrency, keyword: 'ore cu', suffix: '%' },
       // 3.30 replaced More Scarabs with More Threads; id kept for saved presets.
-      { id: 'morescarabs', label: 'More Threads', keyword: 'e thr', suffix: '%' }, // poe.re: "e thr.*"
-      { id: 'moremaps', label: 'More Maps', keyword: 're maps', suffix: '%' }, // poe.re: "re maps.*"
-      { id: 'rarity', label: 'Item Rarity', keyword: 'm rar', suffix: '%' }, // poe.re: "m rar.*"
+      { id: 'morescarabs', label: MAP_REWARD_LABELS.morescarabs, keyword: 'e thr', suffix: '%' },
+      { id: 'moremaps', label: MAP_REWARD_LABELS.moremaps, keyword: 're maps', suffix: '%' },
+      { id: 'rarity', label: MAP_REWARD_LABELS.rarity, keyword: 'm rar', suffix: '%' },
     ],
   },
   {

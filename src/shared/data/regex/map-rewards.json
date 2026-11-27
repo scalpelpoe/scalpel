@@ -1,0 +1,661 @@
+{
+  "tokens": "https://data.poe.re/generated/poe1/3.30.0.4.3/mapmods/Generated.Map.ENGLISH.json",
+  "tokenSha256": "aa779144e5d1d6d09dae09307f8242b9ecd94aa954d6ac2c76f295eb39e1a672",
+  "mods": "https://repoe-fork.github.io/mods.min.json",
+  "modsEtag": "W/\"6b04ab49-164d11a\"",
+  "rewards": {
+    "10729340": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "17483843": {
+      "rarity": 11,
+      "quantity": 19,
+      "packsize": 7
+    },
+    "58884108": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "127168403": {
+      "rarity": 36,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "151806012": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "156744008": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "194321329": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "246480838": {
+      "rarity": 56,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "252096506": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "284489036": {
+      "rarity": 35,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "339937661": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "357242916": {
+      "moremaps": 35,
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "429929427": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "472035128": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "583869527": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "639399394": {
+      "moremaps": 35,
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "647925005": {
+      "morescarabs": 35,
+      "rarity": 11,
+      "quantity": 13,
+      "packsize": 6
+    },
+    "670500310": {
+      "morecurrency": 47,
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "707446389": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 20
+    },
+    "775962019": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "823410479": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "829751875": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "955801458": {
+      "rarity": 11,
+      "quantity": 19,
+      "packsize": 7
+    },
+    "972998450": {
+      "rarity": 8,
+      "quantity": 16,
+      "packsize": 17
+    },
+    "980061401": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1014295028": {
+      "rarity": 49,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "1061710360": {
+      "morecurrency": 47,
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1062763755": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "1078205993": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "1082020744": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "1101434369": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1117764869": {
+      "morecurrency": 64,
+      "rarity": 12,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "1202132179": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1205583947": {
+      "rarity": 25,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "1211148661": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "1283094925": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1305115176": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "1313044496": {
+      "rarity": 8,
+      "quantity": 19,
+      "packsize": 5
+    },
+    "1333860371": {
+      "morecurrency": 45,
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1424047266": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "1428847539": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "1464066514": {
+      "morescarabs": 35,
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1469490158": {
+      "rarity": 56,
+      "quantity": 19,
+      "packsize": 7
+    },
+    "1494523238": {
+      "moremaps": 35,
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1538178254": {
+      "rarity": 27,
+      "quantity": 19,
+      "packsize": 5
+    },
+    "1541760497": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1551446200": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "1578069823": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "1598599541": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1634487773": {
+      "rarity": 11,
+      "quantity": 19,
+      "packsize": 7
+    },
+    "1665221611": {
+      "morescarabs": 53,
+      "rarity": 11,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1723792253": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1743546402": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "1756122717": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 20
+    },
+    "1799781772": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "1861748274": {
+      "rarity": 27,
+      "quantity": 16,
+      "packsize": 5
+    },
+    "1882321261": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1899039946": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1924889811": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "1932675161": {
+      "morescarabs": 36,
+      "rarity": 8,
+      "quantity": 16,
+      "packsize": 5
+    },
+    "2080363489": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "2105788016": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "2122294281": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "2132856290": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "-2064669900": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 20
+    },
+    "-2050206104": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "-2038489408": {
+      "rarity": 11,
+      "quantity": 19,
+      "packsize": 20
+    },
+    "-1940135977": {
+      "morecurrency": 47,
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-1934587276": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "-1904458859": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-1818595967": {
+      "rarity": 11,
+      "quantity": 13,
+      "packsize": 20
+    },
+    "-1772662453": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "-1647756153": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-1629200695": {
+      "rarity": 11,
+      "quantity": 16,
+      "packsize": 20
+    },
+    "-1621497665": {
+      "moremaps": 35,
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-1616686189": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-1522096580": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-1473394034": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-1430865583": {
+      "morecurrency": 47,
+      "rarity": 8,
+      "quantity": 10,
+      "packsize": 5
+    },
+    "-1358177810": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "-1344829253": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "-1274494898": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-1204380788": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "-1158025910": {
+      "rarity": 36,
+      "quantity": 19,
+      "packsize": 6
+    },
+    "-1149126072": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-1139261923": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "-1099682289": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "-1094717370": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-1088873049": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "-1075455355": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-1047451686": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-999805715": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-949334443": {
+      "rarity": 56,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "-946283701": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "-933231182": {
+      "rarity": 28,
+      "quantity": 19,
+      "packsize": 7
+    },
+    "-931745379": {
+      "moremaps": 40,
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-887278806": {
+      "rarity": 8,
+      "quantity": 16,
+      "packsize": 20
+    },
+    "-831256311": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-763914456": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-737013402": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-694214737": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-688435205": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-683043845": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-645418310": {
+      "rarity": 36,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "-627831782": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "-617888797": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-580302769": {
+      "rarity": 11,
+      "quantity": 19,
+      "packsize": 7
+    },
+    "-539026720": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-481946502": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "-477049138": {
+      "rarity": 11,
+      "quantity": 19,
+      "packsize": 7
+    },
+    "-268547495": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-258709095": {
+      "moremaps": 35,
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-235013251": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "-225071089": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-210607554": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-175714046": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-172005981": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-166549521": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-128171261": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "-126908257": {
+      "morescarabs": 60,
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-114660370": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-106750911": {
+      "rarity": 8,
+      "quantity": 13,
+      "packsize": 5
+    },
+    "-106071007": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    },
+    "-105914721": {
+      "morecurrency": 47,
+      "rarity": 8,
+      "quantity": 16,
+      "packsize": 5
+    },
+    "-80588106": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "-54649013": {
+      "rarity": 6,
+      "quantity": 10,
+      "packsize": 4
+    },
+    "-26777606": {
+      "rarity": 9,
+      "quantity": 16,
+      "packsize": 6
+    }
+  }
+}

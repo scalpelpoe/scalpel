@@ -1,7 +1,21 @@
 import { regexMapModsENGLISH } from './vendor/mapmods/Generated.MapModsV3.ENGLISH'
 import type { Regex, MapModsTokenOption } from './vendor/mapmods/GeneratedTypes'
+import rewardData from './map-rewards.json'
 
 export type Danger = 'lethal' | 'dangerous' | 'annoying' | 'mild' | 'harmless' | 'beneficial'
+
+export const MAP_REWARD_LABELS = {
+  morecurrency: 'More Currency',
+  morescarabs: 'More Threads',
+  moremaps: 'More Maps',
+  rarity: 'Item Rarity',
+  quantity: 'Atlas Drops',
+  packsize: 'Pack Size',
+} as const
+
+export type MapRewardId = keyof typeof MAP_REWARD_LABELS
+export type MapRewards = Partial<Record<MapRewardId, number>>
+const rewardsById: Readonly<Record<number, MapRewards>> = rewardData.rewards
 
 export interface MapMod {
   id: number
@@ -9,6 +23,8 @@ export interface MapMod {
   text: string
   danger: Danger
   nightmare: boolean
+  /** Known base bonuses, keyed by the Maps generator's saved qualifier IDs. */
+  rewards?: MapRewards
 }
 
 /** Override danger level for specific mods by ID */
@@ -57,6 +73,7 @@ function tokensToMods(data: Regex<MapModsTokenOption>): MapMod[] {
     text: formatText(t.rawText),
     danger: DANGER_OVERRIDES[t.id] ?? scaryToDanger(t.options.scary),
     nightmare: t.options.nm,
+    rewards: rewardsById[t.id],
   }))
 }
 

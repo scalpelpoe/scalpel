@@ -12,6 +12,10 @@ Scalpel includes the following third-party software and data:
 - Used for: Regex string generator tokens powering the regex tab.
 - Data synced into `src/shared/data/regex/vendor/`
 
+### RePoE map modifiers
+
+- Scalpel matches the [RePoE modifier data](https://repoe-fork.github.io/) to poe.re modifier IDs to display base map bonuses. The bundled table is `src/shared/data/regex/map-rewards.json`.
+
 ### poe.ninja
 
 - Source: https://poe.ninja
