@@ -77,6 +77,10 @@ export interface NinjaItemRef {
   quality?: number
   corrupted?: boolean
   linkedSockets?: number
+  /** Bound map area of a PoE1 Scrying Orb ("Dunes"). Ninja lists each area as
+   *  its own line, slugged by the area name, so it names both the price and
+   *  the page. */
+  scryingArea?: string
 }
 
 const NINJA_HOST_BY_VERSION: Record<1 | 2, string> = {
@@ -222,6 +226,7 @@ function ninjaCategory(item: { name: string; baseType: string; rarity: string; i
     if (/Lifeforce$/.test(bt) || /^(Astragali|Burial Medallion|Exotic Coinage|Scrap Metal)$/.test(bt))
       return 'artifacts'
     if (/^The .* Invitation$|Invitation$/.test(bt)) return 'invitations'
+    if (bt === 'Scrying Orb') return 'scrying-orbs'
     // Map Fragments / Misc Map Items default to /fragments when no specific
     // baseType pattern matched (sacrifice frags, breach splinters, timeless
     // emblems, etc.); everything else falls through to /currency, which also
@@ -347,8 +352,10 @@ export function ninjaLinkUrl(
   const category = poeVersion === 2 ? (priceInfo?.ninjaCategory ?? null) : ninjaCategory(item)
   if (!category) return null
 
-  const variant = deriveItemVariant(item)
-  const slug = ninjaSlug(item.name, variant)
+  // A Scrying Orb's page is its bound area's (/scrying-orbs/necropolis); with
+  // no area the slug is empty and the button hides.
+  const slug =
+    item.baseType === 'Scrying Orb' ? ninjaSlug(item.scryingArea ?? '') : ninjaSlug(item.name, deriveItemVariant(item))
   if (!slug) return null
   return `${NINJA_HOST_BY_VERSION[poeVersion]}/${leagueSegment}/${category}/${slug}`
 }

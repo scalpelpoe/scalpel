@@ -6,12 +6,16 @@ import { computeEvBarRGB } from './utils'
 import { MapInfoBlock } from './MapInfoBlock'
 import { CardChips } from './CardChips'
 import { ExpandedCardList } from './ExpandedCardList'
+import { ScryingOrbPriceChip } from './ScryingOrbPriceChip'
 import { zebraRowBg } from '../../shared/utils'
+import { scryingAreaForMap } from '@shared/data/trade/scrying-orbs'
 import { WRAECLAST_CARDS_URL } from '@shared/endpoints'
 
 export function DivCardExplorer({ onSelectItem }: Props): JSX.Element {
   const [prices, setPrices] = useState<Record<string, number>>({})
   const [divineRate, setDivineRate] = useState(0)
+  // poe.ninja Scrying Orb chaos price, keyed by bare map area ("Dunes").
+  const [scryingPrices, setScryingPrices] = useState<Record<string, number>>({})
   const [weights, setWeights] = useState<CardWeights>(BUNDLED_WEIGHTS)
   const [loading, setLoading] = useState(true)
   const [expandedMap, setExpandedMap] = useState<string | null>(null)
@@ -81,6 +85,22 @@ export function DivCardExplorer({ onSelectItem }: Props): JSX.Element {
         const currPrices = await window.api.batchLookupPrices(['Divine Orb'], settings.activeProfile?.league ?? '')
         const divPrice = currPrices['Divine Orb']?.chaosValue ?? 0
         if (divPrice > 0) setDivineRate(divPrice)
+        // Scrying Orb prices come from the same ninja snapshot the card lookup
+        // just refreshed, so this read costs no extra request. Kept out of the
+        // retry loop: a failure here only leaves the rows without the column.
+        try {
+          const scry = await window.api.batchLookupScryingOrbPrices(
+            regularMaps.map((m) => scryingAreaForMap(m.name)),
+            settings.activeProfile?.league ?? '',
+          )
+          const next: Record<string, number> = {}
+          for (const [area, info] of Object.entries(scry)) {
+            if (info?.chaosValue) next[area] = info.chaosValue
+          }
+          if (!cancelled) setScryingPrices(next)
+        } catch {
+          /* rows render without Scrying Orb prices */
+        }
       } catch {
         if (!cancelled && attempt < 3) {
           await new Promise((r) => setTimeout(r, 2000))
@@ -205,6 +225,9 @@ export function DivCardExplorer({ onSelectItem }: Props): JSX.Element {
   }
 
   const topEv = sorted.length > 0 ? sorted[0].totalEv : 1
+  // No column at all when ninja priced no area (fetch failed, or a league
+  // without the ScryingOrb overview), rather than a blank strip on every row.
+  const showScryingColumn = Object.keys(scryingPrices).length > 0
 
   return (
     <div className="flex flex-col flex-1 min-h-0">
@@ -270,6 +293,13 @@ export function DivCardExplorer({ onSelectItem }: Props): JSX.Element {
                     onSelectItem?.()
                   }}
                 />
+                {showScryingColumn && (
+                  <ScryingOrbPriceChip
+                    area={scryingAreaForMap(entry.map.name)}
+                    chaosValue={scryingPrices[scryingAreaForMap(entry.map.name)]}
+                    divineRate={divineRate}
+                  />
+                )}
               </div>
 
               {isExpanded && (

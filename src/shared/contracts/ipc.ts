@@ -69,6 +69,7 @@ export const IPC_CHANNELS = {
     GET_UNIQUES_FOR_BASE: 'get-uniques-for-base',
     GET_DIV_CARD_TIERS: 'get-div-card-tiers',
     BATCH_LOOKUP_DIV_CARD: 'batch-lookup-div-card-prices',
+    BATCH_LOOKUP_SCRYING_ORB: 'batch-lookup-scrying-orb-prices',
     BATCH_LOOKUP_PRICES: 'batch-lookup-prices',
     BATCH_LOOKUP_REF_PRICES: 'batch-lookup-ref-prices',
     SISTER_OPEN_PRICE_CHECK: 'sister-open-price-check',

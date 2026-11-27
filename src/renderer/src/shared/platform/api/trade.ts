@@ -45,6 +45,13 @@ export function batchLookupDivCardPrices(
   return window.api.batchLookupDivCardPrices(cardNames, league)
 }
 
+export function batchLookupScryingOrbPrices(
+  areas: string[],
+  league: string,
+): Promise<Record<string, { chaosValue: number; divineValue?: number } | null>> {
+  return window.api.batchLookupScryingOrbPrices(areas, league)
+}
+
 export function batchLookupPrices(
   baseTypes: string[],
   league: string,

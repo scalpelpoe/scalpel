@@ -11,6 +11,7 @@ vi.mock('../trade/prices', () => ({
   lookupPrice: vi.fn(),
   lookupBestUniquePrice: vi.fn(),
   lookupDivCardPrice: vi.fn(),
+  lookupScryingOrbPrice: vi.fn(),
   getUniquesByBase: vi.fn(() => ({})),
   getGemNames: vi.fn(() => new Set<string>()),
   getNinjaType: vi.fn(),

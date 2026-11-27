@@ -116,6 +116,11 @@ export const api = {
     league: string,
   ): Promise<Record<string, { chaosValue: number; divineValue?: number } | null>> =>
     ipcRenderer.invoke('batch-lookup-div-card-prices', cardNames, league),
+  batchLookupScryingOrbPrices: (
+    areas: string[],
+    league: string,
+  ): Promise<Record<string, { chaosValue: number; divineValue?: number } | null>> =>
+    ipcRenderer.invoke(IPC_CHANNELS.PRICES.BATCH_LOOKUP_SCRYING_ORB, areas, league),
   batchLookupPrices: (
     baseTypes: string[],
     league: string,

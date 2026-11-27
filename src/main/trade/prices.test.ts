@@ -22,6 +22,7 @@ import {
   lookupItemPrice,
   lookupPrice,
   lookupPriceForItem,
+  lookupScryingOrbPrice,
   lookupUniquePriceForBase,
   processDenseResponse,
   subscribePriceUpdates,
@@ -404,6 +405,63 @@ describe('processDenseResponse price entries', () => {
     processDenseResponse(resp as never, entries)
     expect(entries.filter((e) => e.name === 'Chaos Orb')).toHaveLength(1)
     expect(lookupPrice('Chaos Orb', 'Chaos Orb')?.graph).toEqual([0, 1])
+  })
+})
+
+describe('Scrying Orb prices', () => {
+  it('reads the ScryingOrb overview by bare area name, case-insensitively', () => {
+    processDenseResponse(
+      {
+        currencyOverviews: [{ type: 'Currency', lines: [{ name: 'Divine Orb', chaos: 172 }] }],
+        itemOverviews: [
+          {
+            type: 'ScryingOrb',
+            lines: [
+              { name: 'Necropolis', chaos: 1393 },
+              { name: 'Dunes', chaos: 8 },
+            ],
+          },
+        ],
+      },
+      [],
+    )
+    expect(lookupScryingOrbPrice('Necropolis')?.chaosValue).toBe(1393)
+    expect(lookupScryingOrbPrice('dunes')?.chaosValue).toBe(8)
+    expect(lookupScryingOrbPrice('Colonnade')).toBeUndefined()
+  })
+
+  it('keeps other overviews out of the scrying map', () => {
+    processDenseResponse(
+      {
+        currencyOverviews: [],
+        itemOverviews: [{ type: 'DivinationCard', lines: [{ name: 'Atoll', chaos: 3 }] }],
+      },
+      [],
+    )
+    expect(lookupScryingOrbPrice('Atoll')).toBeUndefined()
+  })
+
+  it('prices a Scrying Orb item by its bound area, and leaves an area-less one unpriced', () => {
+    processDenseResponse(
+      {
+        currencyOverviews: [{ type: 'Currency', lines: [{ name: 'Divine Orb', chaos: 172 }] }],
+        itemOverviews: [{ type: 'ScryingOrb', lines: [{ name: 'Sunken City', chaos: 5 }] }],
+      },
+      [],
+    )
+    const orb = (scryingArea?: string): Parameters<typeof lookupItemPrice>[0] => ({
+      ...baseItem({
+        name: 'Scrying Orb',
+        baseType: 'Scrying Orb',
+        rarity: 'Currency',
+        itemClass: 'Stackable Currency',
+      }),
+      scryingArea,
+    })
+    expect(lookupItemPrice(orb('Sunken City'))?.chaosValue).toBe(5)
+    expect(lookupPriceForItem(orb('Sunken City'))?.chaosValue).toBe(5)
+    expect(lookupItemPrice(orb('Colonnade'))).toBeUndefined()
+    expect(lookupItemPrice(orb())).toBeUndefined()
   })
 })
 
