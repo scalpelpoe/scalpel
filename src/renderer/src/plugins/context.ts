@@ -76,6 +76,7 @@ export function createPluginContext(deps: PluginContextFactoryDeps): ScalpelPlug
       keys: (): Promise<string[]> => deps.storage.keys(),
     },
     gameConfig: deps.gameConfig,
+    filter: deps.filter,
     prices: deps.prices,
     media: deps.media,
     openExternal: deps.openExternal,

@@ -71,6 +71,8 @@ Beyond a tab, the context also exposes the raw `Client.txt` log tail (`onLogLine
 
 It also exposes `ctx.gameConfig` (`read` / `write` / `onChange`) for the running game's `_Config.ini`. The host resolves the path from the detected PoE version, so a plugin never names a path and this is the only file it can touch on disk. First write of a session leaves a timestamped `.bak`. See "Editing the game config" in [PLUGINS.md](../../PLUGINS.md).
 
+`ctx.filter` (`read` / `moveBaseTypes` / `onChange`) reads the filter Scalpel has loaded and moves base types in it through Scalpel's own tier-move path, after the user confirms the list. One call is one undo step, and each move is recorded as an intent. A plugin never names a filter path or writes the file. See "Reading and changing the loaded filter" in [PLUGINS.md](../../PLUGINS.md).
+
 `ctx.prices` gives read-only access to the poe.ninja snapshot Scalpel already maintains (the same data behind Price Check). The host owns fetching - a plugin never calls ninja directly because a renderer fetch is CORS-blocked.
 
 ```tsx

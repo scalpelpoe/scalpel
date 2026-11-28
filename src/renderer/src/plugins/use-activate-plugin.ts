@@ -111,6 +111,11 @@ export function useActivatePlugin(
           write: (content: string) => window.api.gameConfigWrite(content),
           onChange: (handler: () => void) => window.api.onGameConfigChange(handler),
         },
+        filter: {
+          read: () => window.api.pluginFilterRead(),
+          moveBaseTypes: (req) => window.api.pluginFilterMoveBaseTypes(pluginId, req),
+          onChange: (handler: () => void) => window.api.onPluginFilterChange(handler),
+        },
         prices: {
           getSkillPrice: (name, level) => window.api.pricesGetSkill(name, level),
           getPrices: (opts) => window.api.pricesGet(opts),

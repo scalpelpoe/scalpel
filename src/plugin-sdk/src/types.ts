@@ -126,6 +126,55 @@ export interface GameConfigApi {
   onChange(handler: () => void): () => void
 }
 
+export interface LoadedFilter {
+  /** The filter text as Scalpel parsed it. Block lines below are 1-based lines of this text. */
+  content: string
+  path: string
+  /** Opaque content hash. Pass it back to `moveBaseTypes`; a stale one is refused. */
+  revision: string
+}
+
+export interface FilterBaseTypeMove {
+  baseType: string
+  /** 1-based line of the source block's `Show` / `Hide` / `Minimal` keyword. */
+  fromBlockLine: number
+  /** 1-based line of the destination block's `Show` / `Hide` / `Minimal` keyword. */
+  toBlockLine: number
+}
+
+export interface FilterMoveRequest {
+  /** `revision` from the `read()` the moves were planned against. */
+  revision: string
+  moves: FilterBaseTypeMove[]
+}
+
+export interface FilterMoveSkip extends FilterBaseTypeMove {
+  reason: 'no-block' | 'same-block' | 'not-named' | 'token' | 'last-base' | 'no-basetype' | 'duplicate' | 'unchanged'
+}
+
+export type FilterMoveResult =
+  | { ok: true; moved: number; skipped: FilterMoveSkip[] }
+  | { ok: false; error: string; cancelled?: boolean; skipped?: FilterMoveSkip[] }
+
+export interface FilterApi {
+  /** The filter Scalpel has loaded, or null when none is loaded. Read only. */
+  read(): Promise<LoadedFilter | null>
+  /**
+   * Move base types between blocks of the loaded filter through Scalpel's own
+   * tier-move path: Scalpel shows the user the list and asks first, then takes
+   * one undo snapshot (one undo reverts the whole call), records one
+   * `move-basetype` intent per base (so the moves replay onto a filter update
+   * like hand moves) and reloads the filter in game once. At most 1000 moves per
+   * call. Base names match without regard to case and are written in the
+   * filter's own spelling. The plugin never writes the file. Moves Scalpel will
+   * not make (a block's last base, a substring token, a destination without a
+   * BaseType line) come back in `skipped`.
+   */
+  moveBaseTypes(req: FilterMoveRequest): Promise<FilterMoveResult>
+  /** Fires (debounced) whenever Scalpel loads, reloads or rewrites the filter. Returns an unsubscribe function. */
+  onChange(handler: () => void): () => void
+}
+
 export interface GameRect {
   x: number
   y: number
@@ -367,6 +416,12 @@ export interface ScalpelPluginContext {
    * only file a plugin can touch on disk.
    */
   readonly gameConfig: GameConfigApi
+  /**
+   * Read and watch the filter Scalpel has loaded, and move base types in it
+   * through Scalpel's own tier-move path (user confirmation, undo, intents).
+   * Plugins cannot name a filter path or write the file directly.
+   */
+  readonly filter: FilterApi
   /**
    * Read the poe.ninja price data Scalpel already maintains (the same source
    * powering Price Check). Read-only; the host owns fetching, so plugins never

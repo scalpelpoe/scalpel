@@ -90,6 +90,7 @@ const EXPECTED_CONTEXT_KEYS = [
   'isOverlayVisible',
   'copyAndEvaluateItem',
   'fetch',
+  'filter',
   'gameConfig',
   'getCurrentItem',
   'getCurrentZone',
@@ -143,6 +144,11 @@ function stubDeps(): PluginContextFactoryDeps {
     gameConfig: {
       read: async () => ({ content: '', path: '' }),
       write: async () => ({ backupPath: null }),
+      onChange: () => () => {},
+    },
+    filter: {
+      read: async () => null,
+      moveBaseTypes: async () => ({ ok: true as const, moved: 0, skipped: [] }),
       onChange: () => () => {},
     },
     prices: {
